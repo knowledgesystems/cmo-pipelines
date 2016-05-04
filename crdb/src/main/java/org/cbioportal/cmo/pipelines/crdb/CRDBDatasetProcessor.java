@@ -30,23 +30,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.cbioportal.cmo.pipelines.gdd;
+package org.cbioportal.cmo.pipelines.crdb;
 
-import org.cbioportal.cmo.pipelines.gdd.model.GDDResult;
+import org.cbioportal.cmo.pipelines.crdb.model.CRDBDataset;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.batch.item.ItemProcessor;
 
 /**
  * @author Benjamin Gross
  */
-public class GDDClassifierProcessor implements ItemProcessor<GDDResult, String>
-{
+public class CRDBDatasetProcessor implements ItemProcessor<CRDBDataset, String> {
     ObjectMapper mapper = new ObjectMapper();
     
     @Override
-    public String process(final GDDResult gddResult) throws Exception
-    {
-        return gddResult.getSampleId() + "\t" + mapper.writeValueAsString(gddResult);
+    public String process(final CRDBDataset crdbDataset) throws Exception {
+        List<String> record = new ArrayList<>();
+        for (String values : crdbDataset.toString().split(",")) {
+            if (!values.startsWith("additionalProperties")) {
+                record.add(values.split("=")[1]);
+            }            
+        }
+
+        return StringUtils.join(record, "\t");
     }
 }

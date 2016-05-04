@@ -30,16 +30,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.cbioportal.cmo.pipelines.gdd;
+package org.cbioportal.cmo.pipelines.crdb;
 
-import org.cbioportal.cmo.pipelines.gdd.model.GDDResult;
+import org.cbioportal.cmo.pipelines.crdb.model.CRDBSurvey;
+import org.cbioportal.cmo.pipelines.crdb.model.CRDBDataset;
 
 import org.springframework.batch.core.*;
 import org.springframework.batch.item.*;
 import org.springframework.batch.core.configuration.annotation.*;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.context.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.batch.core.configuration.annotation.StepScope;
 
 /**
  * @author Benjamin Gross
@@ -48,7 +49,7 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 @EnableBatchProcessing
 public class BatchConfiguration
 {
-    public static final String GDD_JOB = "gddJob";
+    public static final String CRDB_JOB = "crdbJob";
 
     @Autowired
     public JobBuilderFactory jobBuilderFactory;
@@ -57,44 +58,64 @@ public class BatchConfiguration
     public StepBuilderFactory stepBuilderFactory;
 
     @Bean
-    public Job gddJob()
-    {
-        return jobBuilderFactory.get(GDD_JOB)
-            .start(step())
+    public Job crdbJob() {
+        return jobBuilderFactory.get(CRDB_JOB)
+            .start(step1())
+            .next(step2())
             .build();
     }
 
     @Bean
-    public Step step()
-    {
-        return stepBuilderFactory.get("step")
-            .<GDDResult, String> chunk(10)
-            .reader(reader())
-            .processor(processor())
-            .writer(writer())
+    public Step step1() {
+        return stepBuilderFactory.get("step1")
+            .<CRDBSurvey, String> chunk(10)
+            .reader(reader1())
+            .processor(processor1())
+            .writer(writer1())
             .build();
     }
 
     @Bean
     @StepScope
-	public ItemStreamReader<GDDResult> reader()
-    {
-		return new GDDClassifierReader();
+	public ItemStreamReader<CRDBSurvey> reader1() {
+		return new CRDBSurveyReader();
 	}
 
     @Bean
-    public GDDClassifierProcessor processor()
-    {
-        return new GDDClassifierProcessor();
+    public CRDBSurveyProcessor processor1() {
+        return new CRDBSurveyProcessor();
     }
 
     @Bean
     @StepScope
-    public ItemStreamWriter<String> writer()
-    {
-        return new GDDResultWriter();
+    public ItemStreamWriter<String> writer1() {
+        return new CRDBSurveyWriter();
     }
-    
+        
+    @Bean
+    public Step step2() {
+        return stepBuilderFactory.get("step2") 
+            .<CRDBDataset, String> chunk(10)
+            .reader(reader2())
+            .processor(processor2())
+            .writer(writer2())
+            .build();
+    }
+
+    @Bean
+    @StepScope
+	public ItemStreamReader<CRDBDataset> reader2() {
+		return new CRDBDatasetReader();
+	}
+
+    @Bean
+    public CRDBDatasetProcessor processor2() {
+        return new CRDBDatasetProcessor();
+    }
+
+    @Bean
+    @StepScope
+    public ItemStreamWriter<String> writer2() {
+        return new CRDBDatasetWriter();
+    }    
 }
-
-

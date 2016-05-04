@@ -32,7 +32,7 @@
 
 package org.cbioportal.cmo.pipelines;
 
-import org.cbioportal.cmo.pipelines.gdd.BatchConfiguration;
+import org.cbioportal.cmo.pipelines.crdb.BatchConfiguration;
 
 import org.apache.commons.cli.*;
 import org.springframework.boot.SpringApplication;
@@ -45,67 +45,46 @@ import org.springframework.batch.core.launch.JobLauncher;
  * @author Benjamin Gross
  */
 @SpringBootApplication
-public class GDDPipeline
-{
+public class CRDBPipeline {
 
-    private static Options getOptions(String[] args)
-    {
+    private static Options getOptions(String[] args) {
         Options gnuOptions = new Options();
         gnuOptions.addOption("h", "help", false, "shows this help document and quits.")
-            .addOption("maf", "maf", true, "MAF file")
-            .addOption("cna", "cna", true, "CNA file")
-            .addOption("seg", "seg", true, "SEG file")
-            .addOption("sv", "sv", true, "SV file")
-            .addOption("cl", "cl", true, "CLINICAL file")
-            .addOption("stage", "staging", true, "Staging filename");
+            .addOption("cancer_study", "cancer_study", true, "Cancer Study Identifier")
+            .addOption("stage", "staging", true, "Staging directory");
 
         return gnuOptions;
     }
 
-    private static void help(Options gnuOptions, int exitStatus)
-    {
+    private static void help(Options gnuOptions, int exitStatus) {
         HelpFormatter helpFormatter = new HelpFormatter();
-        helpFormatter.printHelp("GDDPipeline", gnuOptions);
+        helpFormatter.printHelp("CRDBPipeline", gnuOptions);
         System.exit(exitStatus);
     }
 
-    private static void launchJob(String[] args, String maf, String cna,
-                                  String seg, String sv,
-                                  String clinical, String stagingFile) throws Exception
-    {
-        SpringApplication app = new SpringApplication(GDDPipeline.class);
-        ConfigurableApplicationContext ctx= app.run(args);
-        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
-
-        Job gddJob = ctx.getBean(BatchConfiguration.GDD_JOB, Job.class);
+    private static void launchJob(String[] args, String cancerStudy, String stagingDirectory) throws Exception {
+        SpringApplication app = new SpringApplication(CRDBPipeline.class);
+        ConfigurableApplicationContext ctx = app.run(args);
+        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);        
+                
+        Job crdbJob = ctx.getBean(BatchConfiguration.CRDB_JOB, Job.class);        
         JobParameters jobParameters = new JobParametersBuilder()
-    		.addString("maf", maf)
-            .addString("cna", cna)
-            .addString("seg", seg)
-            .addString("sv", sv)
-            .addString("clinical", clinical)
-            .addString("stagingFile", stagingFile)
+    		.addString("cancerStudy", cancerStudy)
+                .addString("stagingDirectory", stagingDirectory)
     		.toJobParameters();  
-        JobExecution jobExecution = jobLauncher.run(gddJob, jobParameters);
+        JobExecution jobExecution = jobLauncher.run(crdbJob, jobParameters);
     }
     
-    public static void main(String[] args) throws Exception
-    {
-        Options gnuOptions = GDDPipeline.getOptions(args);
+    public static void main(String[] args) throws Exception {
+        Options gnuOptions = CRDBPipeline.getOptions(args);
         CommandLineParser parser = new GnuParser();
         CommandLine commandLine = parser.parse(gnuOptions, args);
         if (commandLine.hasOption("h") ||
-            !commandLine.hasOption("maf") ||
-            !commandLine.hasOption("cna") ||
-            !commandLine.hasOption("seg") ||
-            !commandLine.hasOption("sv") ||
-            !commandLine.hasOption("cl") ||
+            !commandLine.hasOption("cancer_study") ||
             !commandLine.hasOption("stage")) {
             help(gnuOptions, 0);
         }
-        launchJob(args, commandLine.getOptionValue("maf"),
-                  commandLine.getOptionValue("cna"), commandLine.getOptionValue("seg"),
-                  commandLine.getOptionValue("sv"), commandLine.getOptionValue("cl"),
+        launchJob(args, commandLine.getOptionValue("cancer_study"),
                   commandLine.getOptionValue("stage"));
     }
 }

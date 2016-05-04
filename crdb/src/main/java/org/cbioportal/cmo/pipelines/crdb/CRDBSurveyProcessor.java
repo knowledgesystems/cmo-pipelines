@@ -29,42 +29,31 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package org.cbioportal.cmo.pipelines.gdd.model;
 
-import java.util.HashMap;
-import java.util.Map;
-import javax.annotation.Generated;
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import org.apache.commons.lang.builder.ToStringBuilder;
+package org.cbioportal.cmo.pipelines.crdb;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@Generated("org.jsonschema2pojo")
-public class GDDEvidence {
+import org.cbioportal.cmo.pipelines.crdb.model.CRDBSurvey;
 
-@JsonIgnore
-private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.batch.item.ItemProcessor;
 
-@Override
-public String toString() {
-return ToStringBuilder.reflectionToString(this);
-}
-
-@JsonAnyGetter
-public Map<String, Object> getAdditionalProperties() {
-return this.additionalProperties;
-}
-
-@JsonAnySetter
-public void setAdditionalProperty(String name, Object value) {
-this.additionalProperties.put(name, value);
-}
-
-public GDDEvidence withAdditionalProperty(String name, Object value) {
-this.additionalProperties.put(name, value);
-return this;
-}
-
+/**
+ * @author Benjamin Gross
+ */
+public class CRDBSurveyProcessor implements ItemProcessor<CRDBSurvey, String> {
+    ObjectMapper mapper = new ObjectMapper();
+    
+    @Override
+    public String process(final CRDBSurvey crdbSurvey) throws Exception {
+        List<String> record = new ArrayList<>();
+        for (String values : crdbSurvey.toString().split(",")) {
+            if (!values.startsWith("additionalProperties")) {
+                record.add(values.split("=")[1]);
+            }            
+        }
+        return StringUtils.join(record, "\t");
+    }
 }
