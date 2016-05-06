@@ -11,6 +11,7 @@
 
   <modules>
     <module>gdd</module>
+    <module>crdb</module>
   </modules>
 
   <!-- inherit defaults from spring boot -->
@@ -38,6 +39,16 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
+
+      <plugin>
+        <groupId>com.querydsl</groupId>
+        <artifactId>querydsl-maven-plugin</artifactId>
+        <version>4.0.9</version>
+        <configuration>
+          <spatial>true</spatial>
+        </configuration>
+      </plugin>            
+      
     </plugins>
   </build>
 

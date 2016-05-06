@@ -90,7 +90,7 @@ public class GDDPipeline
     }
     
     public static void main(String[] args) throws Exception
-    {
+    {        
         Options gnuOptions = GDDPipeline.getOptions(args);
         CommandLineParser parser = new GnuParser();
         CommandLine commandLine = parser.parse(gnuOptions, args);
@@ -103,9 +103,20 @@ public class GDDPipeline
             !commandLine.hasOption("stage")) {
             help(gnuOptions, 0);
         }
-        launchJob(args, commandLine.getOptionValue("maf"),
+        if (args.length < 1) {
+            String maf = "/home/ochoaa/data/gdd/data_mutations_extended.txt";
+            String cna = "/home/ochoaa/data/gdd/data_CNA.txt";
+            String seg = "/home/ochoaa/data/gdd/data_seg.seg";
+            String sv = "/home/ochoaa/data/gdd/data_SV.txt";
+            String cl = "/home/ochoaa/data/gdd/data_clinical.txt";
+            String stage = "/home/ochoaa/data/gdd/Results/data_gdd.txt";
+            launchJob(args, maf,cna, seg, sv, cl, stage);
+        }
+        else {
+            launchJob(args, commandLine.getOptionValue("maf"),
                   commandLine.getOptionValue("cna"), commandLine.getOptionValue("seg"),
                   commandLine.getOptionValue("sv"), commandLine.getOptionValue("cl"),
-                  commandLine.getOptionValue("stage"));
+                  commandLine.getOptionValue("stage"));            
+        }
     }
 }
