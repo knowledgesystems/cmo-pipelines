@@ -8,7 +8,6 @@ package org.cbioportal.cmo.pipelines.crdb;
 import com.querydsl.sql.OracleTemplates;
 import com.querydsl.sql.SQLQueryFactory;
 import com.querydsl.sql.SQLTemplates;
-import oracle.jdbc.pool.OracleDataSource;
 
 import java.sql.SQLException;
 

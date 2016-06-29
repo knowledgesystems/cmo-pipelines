@@ -77,7 +77,7 @@ public class CRDBSurveyReader implements ItemStreamReader<CRDBSurvey> {
     private List<CRDBSurvey> getCrdbSurveyResults() {
         System.out.println("Beginning CRDB Survey View import...");
         
-        CRDBSurvey qCRDBS = alias(CRDBSurvey.class, crdbSurveyView);  
+        CRDBSurvey qCRDBS = alias(CRDBSurvey.class, crdbSurveyView);
         List<CRDBSurvey> crdbSurveyResults = new ArrayList<>();
         List<String> dmpIdList = crdbQueryFactory.selectDistinct($(qCRDBS.getDMP_ID())).from($(qCRDBS)).fetch();
         for (String dmpId : dmpIdList) {

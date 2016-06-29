@@ -1,0 +1,28 @@
+spring.batch.job.enabled=false
+
+#server properties
+darwin.server=
+darwin.port=
+darwin.database=
+darwin.schema=
+
+#Darwin properties
+darwin.demographics_view=
+darwin.demographics_filename=
+darwin.icdo_view=
+darwin.icdo_filename=
+darwin.timeline_view=
+darwin.timeline_bs_status=
+darwin.timeline_bs_specimen=
+darwin.timeline_bs_treatment=
+darwin.timeline_bs_imaging=
+darwin.timeline_bs_surgery=
+darwin.clinical_view=
+darwin.clinical_filename=
+
+#DB2 Connection
+darwin.username=
+darwin.password=
+darwin.driver=
+
+#NOTE: runs with two settings, -stage [stagingDirectory] -study [StudyID(MSK_IMPACT for default]
