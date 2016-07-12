@@ -7,7 +7,6 @@ package org.cbioportal.cmo.pipelines.darwin;
 
 import org.cbioportal.cmo.pipelines.darwin.model.MSK_ImpactPatientDemographics;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.batch.item.ItemProcessor;
@@ -17,7 +16,6 @@ import org.springframework.batch.item.ItemProcessor;
  * @author jake
  */
 public class MSK_ImpactPatientDemographicsProcessor implements ItemProcessor<MSK_ImpactPatientDemographics, String>{
-    ObjectMapper mapper = new ObjectMapper();
     
     @Override
     public String process(final MSK_ImpactPatientDemographics darwinPatientDemographics) throws Exception{

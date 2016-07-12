@@ -32,13 +32,9 @@
 
 package org.cbioportal.cmo.pipelines.darwin;
 
-import org.cbioportal.cmo.pipelines.darwin.model.TimelineBrainSpineComposite;
-import org.cbioportal.cmo.pipelines.darwin.model.MSK_ImpactPatientDemographics;
-import org.cbioportal.cmo.pipelines.darwin.model.MSK_ImpactPatientIcdoRecord;
-import org.cbioportal.cmo.pipelines.darwin.model.MSK_ImpactTimelineBrainSpine;
-import org.cbioportal.cmo.pipelines.darwin.model.MSK_ImpactClinicalBrainSpine;
-import org.cbioportal.cmo.pipelines.darwin.model.StudyIDRecord;
+import org.cbioportal.cmo.pipelines.darwin.model.*;
 
+import java.util.*;
 import org.springframework.batch.core.*;
 import org.springframework.batch.item.*;
 import org.springframework.batch.core.configuration.annotation.*;
@@ -52,9 +48,12 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 @Configuration
 @EnableBatchProcessing
 public class BatchConfiguration {
+    
     public static final String MSK_IMPACT_JOB = "msk_ImpactJob";
     public static final String STUDYID_JOB = "studyIDJob";
       
+    private final List<ItemProcessor> delegates = new ArrayList<>();
+    
     @Autowired
     public JobBuilderFactory jobBuilderFactory;
     
@@ -64,69 +63,69 @@ public class BatchConfiguration {
     @Bean
     public Job msk_ImpactJob(){
         return jobBuilderFactory.get(MSK_IMPACT_JOB)
-                .start(stepDPD())
-                .next(stepDTBS())
+                .start(stepDarwinPatientDemographics())
+                .next(stepDarwinTimelineBrainSpine())
                 //.next(stepDPIR())
-                .next(stepDCBS())
+                .next(stepDarwinClinicalBrainSpine())
                 .build();
     }
     
     @Bean
-    public Step stepDPD(){
+    public Step stepDarwinPatientDemographics(){
         return stepBuilderFactory.get("stepDPD")
                 .<MSK_ImpactPatientDemographics, String> chunk(10)
-                .reader(readerDPD())
-                .processor(processorDPD())
-                .writer(writerDPD())
+                .reader(readerDarwinPatientDemographics())
+                .processor(processorDarwinPatientDemographics())
+                .writer(writerDarwinPatientDemographics())
                 .build();
     }
     
     @Bean
     @StepScope
-    public ItemStreamReader<MSK_ImpactPatientDemographics> readerDPD(){
+    public ItemStreamReader<MSK_ImpactPatientDemographics> readerDarwinPatientDemographics(){
         return new MSK_ImpactPatientDemographicsReader();
     }
     
     
     
     @Bean
-    public MSK_ImpactPatientDemographicsProcessor processorDPD()
+    public MSK_ImpactPatientDemographicsProcessor processorDarwinPatientDemographics()
     {
         return new MSK_ImpactPatientDemographicsProcessor();
     }
     
     @Bean
     @StepScope
-    public ItemStreamWriter<String> writerDPD()
+    public ItemStreamWriter<String> writerDarwinPatientDemographics()
     {
         return new MSK_ImpactPatientDemographicsWriter();
     }
     
     @Bean
-    public Step stepDTBS(){
+    public Step stepDarwinTimelineBrainSpine(){
         return stepBuilderFactory.get("stepDTBS")
-                .<MSK_ImpactTimelineBrainSpine, String> chunk(10)
-                .reader(readerDTBS())
-                .processor(processorDTBS())
-                .writer(writerDTBS())
+                .<MSK_ImpactTimelineBrainSpine, TimelineBrainSpineComposite> chunk(10)
+                .reader(readerDarwinTimelineBrainSpine())
+                .processor(processorDarwinTimelineBrainSpine())
+                .writer(writerDarwinTimelineBrainSpine())
                 .build();
     }
     
     @Bean
     @StepScope
-    public ItemStreamReader<MSK_ImpactTimelineBrainSpine> readerDTBS(){
+    public ItemStreamReader<MSK_ImpactTimelineBrainSpine> readerDarwinTimelineBrainSpine(){
         return new MSK_ImpactTimelineBrainSpineReader();
     }
     
     @Bean
     @StepScope
-    public ItemProcessor processorDTBS(){
+    public MSK_ImpactTimelineBrainSpineCompositeProcessor processorDarwinTimelineBrainSpine(){
         return new MSK_ImpactTimelineBrainSpineCompositeProcessor();
     }
     
     @Bean
     @StepScope
-    public ItemStreamWriter<String> writerDTBS(){
+    public ItemStreamWriter<TimelineBrainSpineComposite> writerDarwinTimelineBrainSpine(){
         return new MSK_ImpactTimelineBrainSpineCompositeWriter();
     }
     
@@ -134,53 +133,53 @@ public class BatchConfiguration {
     public Step stepDPIR(){
         return stepBuilderFactory.get("stepDPIR")
                 .<MSK_ImpactPatientIcdoRecord, String> chunk(10)
-                .reader(readerDPIR())
-                .processor(processorDPIR())
-                .writer(writerDPIR())
+                .reader(readerDarwinPatientICDORecord())
+                .processor(processorDarwinPatientICDORecrod())
+                .writer(writerDarwinPatientICDORecord())
                 .build();
     }
     
     @Bean
     @StepScope
-    public ItemStreamReader<MSK_ImpactPatientIcdoRecord> readerDPIR(){
+    public ItemStreamReader<MSK_ImpactPatientIcdoRecord> readerDarwinPatientICDORecord(){
         return new MSK_ImpactPatientIcdoReader();
     }
     
     @Bean
-    public MSK_ImpactPatientIcdoProcessor processorDPIR(){
+    public MSK_ImpactPatientIcdoProcessor processorDarwinPatientICDORecrod(){
         return new MSK_ImpactPatientIcdoProcessor();
     }
     
     @Bean
     @StepScope
-    public ItemStreamWriter<String> writerDPIR(){
+    public ItemStreamWriter<String> writerDarwinPatientICDORecord(){
         return new MSK_ImpactPatientIcdoWriter();
     }
     
     @Bean
-    public Step stepDCBS(){
+    public Step stepDarwinClinicalBrainSpine(){
         return stepBuilderFactory.get("stepDCBS")
                 .<MSK_ImpactClinicalBrainSpine, String> chunk(10)
-                .reader(readerDCBS())
-                .processor(processorDCBS())
-                .writer(writerDCBS())
+                .reader(readerDarwinClinicalBrainSpine())
+                .processor(processorDarwinClinicalBrainSpine())
+                .writer(writerDarwinClinicalBrainSpine())
                 .build();
     }
     
     @Bean
     @StepScope
-    public ItemStreamReader<MSK_ImpactClinicalBrainSpine> readerDCBS(){
+    public ItemStreamReader<MSK_ImpactClinicalBrainSpine> readerDarwinClinicalBrainSpine(){
         return new MSK_ImpactClinicalBrainSpineReader();
     }
     
     @Bean
-    public MSK_ImpactClinicalBrainSpineProcessor processorDCBS(){
+    public MSK_ImpactClinicalBrainSpineProcessor processorDarwinClinicalBrainSpine(){
         return new MSK_ImpactClinicalBrainSpineProcessor();
     }
     
     @Bean
     @StepScope
-    public ItemStreamWriter<String> writerDCBS(){
+    public MSK_ImpactClinicalBrainSpineWriter writerDarwinClinicalBrainSpine(){
         return new MSK_ImpactClinicalBrainSpineWriter();
     }
     

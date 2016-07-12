@@ -15,12 +15,13 @@ import org.springframework.beans.factory.annotation.Value;
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
+import org.cbioportal.cmo.pipelines.darwin.model.TimelineBrainSpineComposite;
 
 /**
  *
  * @author jake
  */
-public class MSK_ImpactTimelineBrainSpineSurgeryWriter implements ItemStreamWriter<String>{
+public class MSK_ImpactTimelineBrainSpineSurgeryWriter implements ItemStreamWriter<TimelineBrainSpineComposite>{
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
     
@@ -57,12 +58,11 @@ public class MSK_ImpactTimelineBrainSpineSurgeryWriter implements ItemStreamWrit
     }
     
     @Override
-    public void write(List<? extends String> items) throws Exception{
+    public void write(List<? extends TimelineBrainSpineComposite> items) throws Exception{
         writeList.clear();
-        for (String result : items) {
-            String[] toAdd = result.split("\n");
-            if (!toAdd[4].equals("0")) {
-                writeList.add(toAdd[4]);
+        for (TimelineBrainSpineComposite result : items) {
+            if (!result.getSurgeryResult().equals("0")) {
+                writeList.add(result.getSurgeryResult());
             }
         }
         if(!writeList.isEmpty()){

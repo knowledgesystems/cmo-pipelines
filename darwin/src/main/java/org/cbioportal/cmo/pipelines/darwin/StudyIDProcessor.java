@@ -6,7 +6,6 @@
 package org.cbioportal.cmo.pipelines.darwin;
 import org.cbioportal.cmo.pipelines.darwin.model.StudyIDRecord;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.batch.item.ItemProcessor;
@@ -15,7 +14,6 @@ import org.springframework.batch.item.ItemProcessor;
  * @author jake
  */
 public class StudyIDProcessor implements ItemProcessor<StudyIDRecord, String>{
-    ObjectMapper mapper = new ObjectMapper();
     
     @Override
     public String process(final StudyIDRecord studyIDResults) throws Exception{

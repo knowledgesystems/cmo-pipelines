@@ -5,7 +5,7 @@
  */
 package org.cbioportal.cmo.pipelines.darwin;
 
-import org.cbioportal.cmo.pipelines.darwin.model.MSK_ImpactTimelineBrainSpine;
+import org.cbioportal.cmo.pipelines.darwin.model.*;
 
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
@@ -20,7 +20,7 @@ import org.apache.commons.lang.StringUtils;
  *
  * @author jake
  */
-public class MSK_ImpactTimelineBrainSpineSpecimenWriter implements ItemStreamWriter<String>{
+public class MSK_ImpactTimelineBrainSpineSpecimenWriter implements ItemStreamWriter<TimelineBrainSpineComposite>{
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
     
@@ -59,12 +59,11 @@ public class MSK_ImpactTimelineBrainSpineSpecimenWriter implements ItemStreamWri
     }
     
     @Override
-    public void write(List<? extends String> items) throws Exception{
+    public void write(List<? extends TimelineBrainSpineComposite> items) throws Exception{
         writeList.clear();
-        for(String result : items){
-            String[] toAdd = result.split("\n");
-            if (!toAdd[1].equals("0")) {
-                writeList.add(toAdd[1]);
+        for (TimelineBrainSpineComposite result : items) {
+            if (!result.getSpecimenResult().equals("0")) {
+                writeList.add(result.getSpecimenResult());
             }
         }
         if(!writeList.isEmpty()){

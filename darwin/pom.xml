@@ -37,12 +37,6 @@
             <type>jar</type>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.4.6</version>
-            <type>jar</type>
-        </dependency>
-        <dependency>
             <groupId>com.mysema.querydsl</groupId>
             <artifactId>querydsl-sql</artifactId>
             <version>3.7.2</version>
@@ -58,12 +52,6 @@
             <groupId>org.springframework.batch</groupId>
             <artifactId>spring-batch-infrastructure</artifactId>
             <version>3.0.5.RELEASE</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-dbcp2</artifactId>
-            <version>2.1.1</version>
-            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.querydsl</groupId>

@@ -12,32 +12,43 @@ import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.support.CompositeItemProcessor;
+import org.springframework.beans.factory.annotation.Autowired;
 /**
  *
  * @author jake
  */
-public class MSK_ImpactTimelineBrainSpineCompositeProcessor implements ItemProcessor<MSK_ImpactTimelineBrainSpine, String>{
+public class MSK_ImpactTimelineBrainSpineCompositeProcessor implements ItemProcessor<MSK_ImpactTimelineBrainSpine, TimelineBrainSpineComposite>{
     List<ItemProcessor> delegates = new ArrayList<>();
     List<String> record = new ArrayList<>();
     
-    MSK_ImpactTimelineBrainSpineStatusProcessor processor1 = new MSK_ImpactTimelineBrainSpineStatusProcessor();
-    MSK_ImpactTimelineBrainSpineSpecimenProcessor processor2 = new MSK_ImpactTimelineBrainSpineSpecimenProcessor();
-    MSK_ImpactTimelineBrainSpineTreatmentProcessor processor3 = new MSK_ImpactTimelineBrainSpineTreatmentProcessor();
-    MSK_ImpactTimelineBrainSpineImagingProcessor processor4 = new MSK_ImpactTimelineBrainSpineImagingProcessor();
-    MSK_ImpactTimelineBrainSpineSurgeryProcessor processor5 = new MSK_ImpactTimelineBrainSpineSurgeryProcessor();
+    @Autowired
+    private MSK_ImpactTimelineBrainSpineStatusProcessor statusProcessor;
+    
+    @Autowired
+    private MSK_ImpactTimelineBrainSpineSpecimenProcessor specimenProcessor;
+    
+    @Autowired
+    private MSK_ImpactTimelineBrainSpineTreatmentProcessor treatmentProcessor;
+    
+    @Autowired
+    private MSK_ImpactTimelineBrainSpineImagingProcessor imagingProcessor;
+    
+    @Autowired
+    private MSK_ImpactTimelineBrainSpineSurgeryProcessor surgeryProcessor;
+    
     CompositeItemProcessor compProcessor = new CompositeItemProcessor();
     
     @Override
-    public String process(MSK_ImpactTimelineBrainSpine darwinTimelineBrainSpine) throws Exception{
+    public TimelineBrainSpineComposite process(MSK_ImpactTimelineBrainSpine darwinTimelineBrainSpine) throws Exception{
         delegates.clear();
-        delegates.add(processor1);
-        delegates.add(processor2);
-        delegates.add(processor3);
-        delegates.add(processor4);
-        delegates.add(processor5);
+        delegates.add(statusProcessor);
+        delegates.add(specimenProcessor);
+        delegates.add(treatmentProcessor);
+        delegates.add(imagingProcessor);
+        delegates.add(surgeryProcessor);
         TimelineBrainSpineComposite composite = new TimelineBrainSpineComposite(darwinTimelineBrainSpine);
         compProcessor.setDelegates(delegates);
         compProcessor.process(composite);
-        return StringUtils.join(composite.getJointRecord(), "\n");
+        return composite;
     }
 }

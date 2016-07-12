@@ -5,9 +5,11 @@
  */
 package org.cbioportal.cmo.pipelines.darwin;
 
+import org.cbioportal.cmo.pipelines.darwin.model.TimelineBrainSpineComposite;
+
+import java.io.File;
 import org.springframework.batch.item.*;
 
-import org.springframework.batch.item.file.*;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.*;
@@ -16,9 +18,7 @@ import org.springframework.batch.item.support.CompositeItemWriter;
  *
  * @author jake
  */
-public class MSK_ImpactTimelineBrainSpineCompositeWriter implements ItemStreamWriter<String>{
-    
-    private final FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+public class MSK_ImpactTimelineBrainSpineCompositeWriter implements ItemStreamWriter<TimelineBrainSpineComposite>{
     
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
@@ -38,6 +38,7 @@ public class MSK_ImpactTimelineBrainSpineCompositeWriter implements ItemStreamWr
     @Value("${darwin.timeline_bs_surgery}")
     private String surgeryFilename;
     
+    private final String seperator = File.separator;
     private String statusFile;
     private String specimenFile;
     private String treatmentFile;
@@ -45,62 +46,54 @@ public class MSK_ImpactTimelineBrainSpineCompositeWriter implements ItemStreamWr
     private String surgeryFile;
     
     List<ItemStreamWriter> delegates = new ArrayList<>();
-    MSK_ImpactTimelineBrainSpineStatusWriter writer1 = new MSK_ImpactTimelineBrainSpineStatusWriter();
-    MSK_ImpactTimelineBrainSpineSpecimenWriter writer2 = new MSK_ImpactTimelineBrainSpineSpecimenWriter();
-    MSK_ImpactTimelineBrainSpineTreatmentWriter writer3 = new MSK_ImpactTimelineBrainSpineTreatmentWriter();
-    MSK_ImpactTimelineBrainSpineImagingWriter writer4 = new MSK_ImpactTimelineBrainSpineImagingWriter();
-    MSK_ImpactTimelineBrainSpineSurgeryWriter writer5 = new MSK_ImpactTimelineBrainSpineSurgeryWriter();
+    MSK_ImpactTimelineBrainSpineStatusWriter statusWriter = new MSK_ImpactTimelineBrainSpineStatusWriter();
+    MSK_ImpactTimelineBrainSpineSpecimenWriter specimenWriter = new MSK_ImpactTimelineBrainSpineSpecimenWriter();
+    MSK_ImpactTimelineBrainSpineTreatmentWriter treatmentWriter = new MSK_ImpactTimelineBrainSpineTreatmentWriter();
+    MSK_ImpactTimelineBrainSpineImagingWriter imagingWriter = new MSK_ImpactTimelineBrainSpineImagingWriter();
+    MSK_ImpactTimelineBrainSpineSurgeryWriter surgeryWriter = new MSK_ImpactTimelineBrainSpineSurgeryWriter();
     CompositeItemWriter compWriter = new CompositeItemWriter();
     @Override
     public void close() throws ItemStreamException{
-        writer1.close();
-        writer2.close();
-        writer3.close();
-        writer4.close();
-        writer5.close();
+        statusWriter.close();
+        specimenWriter.close();
+        treatmentWriter.close();
+        imagingWriter.close();
+        surgeryWriter.close();
         compWriter.close();
     }
         
     @Override
-    public void open(ExecutionContext executionContext) throws ItemStreamException{
-        if(stagingDirectory.endsWith("/")){
-            statusFile = stagingDirectory + statusFilename;
-            specimenFile = stagingDirectory + specimenFilename;
-            treatmentFile = stagingDirectory + treatmentFilename;
-            imagingFile = stagingDirectory + imagingFilename;
-            surgeryFile = stagingDirectory + surgeryFilename;
-        }
-        else{
-            statusFile = stagingDirectory + "/" + statusFilename;
-            specimenFile = stagingDirectory + "/" + specimenFilename;
-            treatmentFile = stagingDirectory + "/" + treatmentFilename;
-            imagingFile = stagingDirectory + "/" + imagingFilename;
-            surgeryFile = stagingDirectory + "/" + surgeryFilename;
-        }
+    public void open(ExecutionContext executionContext) throws ItemStreamException {
+
+        statusFile = stagingDirectory + seperator + statusFilename;
+        specimenFile = stagingDirectory + seperator + specimenFilename;
+        treatmentFile = stagingDirectory + seperator + treatmentFilename;
+        imagingFile = stagingDirectory + seperator + imagingFilename;
+        surgeryFile = stagingDirectory + seperator + surgeryFilename;
         
-        writer1.setStagingFile(statusFile);
-        writer2.setStagingFile(specimenFile); 
-        writer3.setStagingFile(treatmentFile);
-        writer4.setStagingFile(imagingFile);
-        writer5.setStagingFile(surgeryFile);
-        writer1.open(executionContext);
-        writer2.open(executionContext);
-        writer3.open(executionContext);
-        writer4.open(executionContext);
-        writer5.open(executionContext);
+        statusWriter.setStagingFile(statusFile);
+        specimenWriter.setStagingFile(specimenFile); 
+        treatmentWriter.setStagingFile(treatmentFile);
+        imagingWriter.setStagingFile(imagingFile);
+        surgeryWriter.setStagingFile(surgeryFile);
+        statusWriter.open(executionContext);
+        specimenWriter.open(executionContext);
+        treatmentWriter.open(executionContext);
+        imagingWriter.open(executionContext);
+        surgeryWriter.open(executionContext);
     }
     
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException{}
     
     @Override
-    public void write(List<? extends String> items) throws Exception{
+    public void write(List<? extends TimelineBrainSpineComposite> items) throws Exception{
         delegates.clear();
-        delegates.add(writer1);
-        delegates.add(writer2);
-        delegates.add(writer3);
-        delegates.add(writer4);
-        delegates.add(writer5);
+        delegates.add(statusWriter);
+        delegates.add(specimenWriter);
+        delegates.add(treatmentWriter);
+        delegates.add(imagingWriter);
+        delegates.add(surgeryWriter);
         compWriter.setDelegates(delegates);
         compWriter.write(items);
     }
