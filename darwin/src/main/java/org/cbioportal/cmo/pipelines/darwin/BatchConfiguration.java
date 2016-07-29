@@ -72,42 +72,6 @@ public class BatchConfiguration {
     }
     
     @Bean
-    public Job studyIDJob(){
-        return jobBuilderFactory.get(STUDYID_JOB)
-                .start(stepID())
-                .build();
-    }
-    
-    @Bean
-    public Step stepID(){
-        return stepBuilderFactory.get("stepID")
-                .<StudyIDRecord, String> chunk(10)
-                .reader(readerSID())
-                .processor(processorSID())
-                .writer(writerSID())
-                .build();
-    }
-    
-    @Bean
-    @StepScope
-    public ItemStreamReader<StudyIDRecord> readerSID(){
-        return new StudyIDReader();
-    }
-    
-    @Bean
-    public StudyIDProcessor processorSID()
-    {
-        return new StudyIDProcessor();
-    }
-    
-    @Bean
-    @StepScope
-    public ItemStreamWriter<String> writerSID()
-    {
-        return new StudyIDWriter();
-    }
-    
-    @Bean
     public Step stepDPD(){
         return stepBuilderFactory.get("stepDPD")
                 .<MSK_ImpactPatientDemographics, String> chunk(10)

@@ -50,10 +50,7 @@ public class DarwinPipeline {
                 .addString("studyID", studyID)
                 .toJobParameters();
         switch (studyID) {
-            case "SomeStudy":
-                darwinJob = ctx.getBean(BatchConfiguration.STUDYID_JOB, Job.class);
-                break;
-            case "MSK_IMPACT":
+            case "msk-impact":
                 darwinJob = ctx.getBean(BatchConfiguration.MSK_IMPACT_JOB, Job.class);
                 break;
             default:
