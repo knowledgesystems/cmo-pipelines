@@ -5,7 +5,13 @@
  */
 package org.cbioportal.cmo.pipelines.darwin.model;
 
-import java.util.*;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Calendar;
+import java.util.List;
+import java.util.ArrayList;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
 /**
  *
@@ -67,214 +73,214 @@ public class MSK_ImpactTimelineBrainSpine {
         String DIAGNOSTIC_TYPE,
         String DIAGNOSTIC_TYPE_DETAILED,
         String SOURCE){
-        this.DMT_PATIENT_ID_BRAINSPINETMLN  = DMT_PATIENT_ID_BRAINSPINETMLN != null ? DMT_PATIENT_ID_BRAINSPINETMLN : "N/A";
-        this.DMP_PATIENT_ID_MIN_BRAINSPINETMLN  = DMP_PATIENT_ID_MIN_BRAINSPINETMLN != null ? DMP_PATIENT_ID_MIN_BRAINSPINETMLN : "N/A";
-        this.DMP_PATIENT_ID_MAX_BRAINSPINETMLN  = DMP_PATIENT_ID_MAX_BRAINSPINETMLN != null ? DMP_PATIENT_ID_MAX_BRAINSPINETMLN : "N/A";
-        this.DMP_PATIENT_ID_COUNT_BRAINSPINETMLN  = DMP_PATIENT_ID_COUNT_BRAINSPINETMLN != null ? DMP_PATIENT_ID_COUNT_BRAINSPINETMLN : "N/A";
-        this.DMP_PATIENT_ID_ALL_BRAINSPINETMLN  = DMP_PATIENT_ID_ALL_BRAINSPINETMLN != null ? DMP_PATIENT_ID_ALL_BRAINSPINETMLN : "N/A";
-        this.START_DATE  = START_DATE != null ? START_DATE : "N/A";
-        this.STOP_DATE  = STOP_DATE != null ? STOP_DATE : "N/A";
-        this.EVENT_TYPE  = EVENT_TYPE != null ? EVENT_TYPE : "N/A";
-        this.TREATMENT_TYPE  = TREATMENT_TYPE != null ? TREATMENT_TYPE : "N/A";
-        this.SUBTYPE  = SUBTYPE != null ? SUBTYPE : "N/A";
-        this.AGENT  = AGENT != null ? AGENT : "N/A";
-        this.SPECIMEN_REFERENCE_NUMBER = SPECIMEN_REFERENCE_NUMBER != null ? SPECIMEN_REFERENCE_NUMBER : "N/A";
-        this.SPECIMEN_SITE = SPECIMEN_SITE != null ? SPECIMEN_SITE : "N/A";
-        this.SPECIMEN_TYPE = SPECIMEN_TYPE != null ? SPECIMEN_TYPE : "N/A";
-        this.STATUS = STATUS != null ? STATUS : "N/A";
-        this.KARNOFSKY_PERFORMANCE_SCORE = KARNOFSKY_PERFORMANCE_SCORE != null ? KARNOFSKY_PERFORMANCE_SCORE : "N/A";
-        this.SURGERY_DETAILS = SURGERY_DETAILS != null ? SURGERY_DETAILS : "N/A";
-        this.EVENT_TYPE_DETAILED = EVENT_TYPE_DETAILED != null ? EVENT_TYPE_DETAILED : "N/A";
-        this.HISTOLOGY = HISTOLOGY != null ? HISTOLOGY : "N/A";
-        this.WHO_GRADE = WHO_GRADE != null ? WHO_GRADE : "N/A";
-        this.MGMT_STATUS = MGMT_STATUS != null ? MGMT_STATUS : "N/A";
-        this.SOURCE_PATHOLOGY = SOURCE_PATHOLOGY != null ? SOURCE_PATHOLOGY : "N/A";
-        this.NOTE = NOTE != null ? NOTE : "N/A";
-        this.DIAGNOSTIC_TYPE = DIAGNOSTIC_TYPE != null ? DIAGNOSTIC_TYPE : "N/A";
-        this.DIAGNOSTIC_TYPE_DETAILED = DIAGNOSTIC_TYPE_DETAILED != null ? DIAGNOSTIC_TYPE_DETAILED : "N/A";
-        this.SOURCE = SOURCE != null ? SOURCE : "N/A";
+        this.DMT_PATIENT_ID_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMT_PATIENT_ID_BRAINSPINETMLN)  ? DMT_PATIENT_ID_BRAINSPINETMLN : "NA";
+        this.DMP_PATIENT_ID_MIN_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMP_PATIENT_ID_MIN_BRAINSPINETMLN)  ? DMP_PATIENT_ID_MIN_BRAINSPINETMLN : "NA";
+        this.DMP_PATIENT_ID_MAX_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMP_PATIENT_ID_MAX_BRAINSPINETMLN)  ? DMP_PATIENT_ID_MAX_BRAINSPINETMLN : "NA";
+        this.DMP_PATIENT_ID_COUNT_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMP_PATIENT_ID_COUNT_BRAINSPINETMLN)  ? DMP_PATIENT_ID_COUNT_BRAINSPINETMLN : "NA";
+        this.DMP_PATIENT_ID_ALL_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMP_PATIENT_ID_ALL_BRAINSPINETMLN)  ? DMP_PATIENT_ID_ALL_BRAINSPINETMLN : "NA";
+        this.START_DATE  =  StringUtils.isNotEmpty(START_DATE)  ? START_DATE : "NA";
+        this.STOP_DATE  =  StringUtils.isNotEmpty(STOP_DATE)  ? STOP_DATE : "NA";
+        this.EVENT_TYPE  =  StringUtils.isNotEmpty(EVENT_TYPE)  ? EVENT_TYPE : "NA";
+        this.TREATMENT_TYPE  =  StringUtils.isNotEmpty(TREATMENT_TYPE)  ? TREATMENT_TYPE : "NA";
+        this.SUBTYPE  =  StringUtils.isNotEmpty(SUBTYPE)  ? SUBTYPE : "NA";
+        this.AGENT  =  StringUtils.isNotEmpty(AGENT)  ? AGENT : "NA";
+        this.SPECIMEN_REFERENCE_NUMBER =  StringUtils.isNotEmpty(SPECIMEN_REFERENCE_NUMBER)  ? SPECIMEN_REFERENCE_NUMBER : "NA";
+        this.SPECIMEN_SITE =  StringUtils.isNotEmpty(SPECIMEN_SITE)  ? SPECIMEN_SITE : "NA";
+        this.SPECIMEN_TYPE =  StringUtils.isNotEmpty(SPECIMEN_TYPE)  ? SPECIMEN_TYPE : "NA";
+        this.STATUS =  StringUtils.isNotEmpty(STATUS)  ? STATUS : "NA";
+        this.KARNOFSKY_PERFORMANCE_SCORE =  StringUtils.isNotEmpty(KARNOFSKY_PERFORMANCE_SCORE)  ? KARNOFSKY_PERFORMANCE_SCORE : "NA";
+        this.SURGERY_DETAILS =  StringUtils.isNotEmpty(SURGERY_DETAILS)  ? SURGERY_DETAILS : "NA";
+        this.EVENT_TYPE_DETAILED =  StringUtils.isNotEmpty(EVENT_TYPE_DETAILED)  ? EVENT_TYPE_DETAILED : "NA";
+        this.HISTOLOGY =  StringUtils.isNotEmpty(HISTOLOGY)  ? HISTOLOGY : "NA";
+        this.WHO_GRADE =  StringUtils.isNotEmpty(WHO_GRADE)  ? WHO_GRADE : "NA";
+        this.MGMT_STATUS =  StringUtils.isNotEmpty(MGMT_STATUS)  ? MGMT_STATUS : "NA";
+        this.SOURCE_PATHOLOGY =  StringUtils.isNotEmpty(SOURCE_PATHOLOGY)  ? SOURCE_PATHOLOGY : "NA";
+        this.NOTE =  StringUtils.isNotEmpty(NOTE)  ? NOTE : "NA";
+        this.DIAGNOSTIC_TYPE =  StringUtils.isNotEmpty(DIAGNOSTIC_TYPE)  ? DIAGNOSTIC_TYPE : "NA";
+        this.DIAGNOSTIC_TYPE_DETAILED =  StringUtils.isNotEmpty(DIAGNOSTIC_TYPE_DETAILED)  ? DIAGNOSTIC_TYPE_DETAILED : "NA";
+        this.SOURCE =  StringUtils.isNotEmpty(SOURCE)  ? SOURCE : "NA";
     }
     
     public String getDMT_PATIENT_ID_BRAINSPINETMLN(){
         return DMT_PATIENT_ID_BRAINSPINETMLN;
     }
     public void setDMT_PATIENT_ID_BRAINSPINETMLN(String DMT_PATIENT_ID_BRAINSPINETMLN){
-        this.DMT_PATIENT_ID_BRAINSPINETMLN = DMT_PATIENT_ID_BRAINSPINETMLN != null ? DMT_PATIENT_ID_BRAINSPINETMLN : "N/A" ;
+        this.DMT_PATIENT_ID_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMT_PATIENT_ID_BRAINSPINETMLN)  ? DMT_PATIENT_ID_BRAINSPINETMLN : "NA" ;
     }
     
     public String getDMP_PATIENT_ID_MIN_BRAINSPINETMLN(){
         return DMP_PATIENT_ID_MIN_BRAINSPINETMLN;
     }
     public void setDMP_PATIENT_ID_MIN_BRAINSPINETMLN(String DMP_PATIENT_ID_MIN_BRAINSPINETMLN){
-        this.DMP_PATIENT_ID_MIN_BRAINSPINETMLN = DMP_PATIENT_ID_MIN_BRAINSPINETMLN != null ? DMP_PATIENT_ID_MIN_BRAINSPINETMLN : "N/A" ;
+        this.DMP_PATIENT_ID_MIN_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_MIN_BRAINSPINETMLN)  ? DMP_PATIENT_ID_MIN_BRAINSPINETMLN : "NA" ;
     }
     
     public String getDMP_PATIENT_ID_MAX_BRAINSPINETMLN(){
         return DMP_PATIENT_ID_MAX_BRAINSPINETMLN;
     }
     public void setDMP_PATIENT_ID_MAX_BRAINSPINETMLN(String DMP_PATIENT_ID_MAX_BRAINSPINETMLN){
-        this.DMP_PATIENT_ID_MAX_BRAINSPINETMLN = DMP_PATIENT_ID_MAX_BRAINSPINETMLN != null ? DMP_PATIENT_ID_MAX_BRAINSPINETMLN : "N/A" ;
+        this.DMP_PATIENT_ID_MAX_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_MAX_BRAINSPINETMLN)  ? DMP_PATIENT_ID_MAX_BRAINSPINETMLN : "NA" ;
     }
     
     public String getDMP_PATIENT_ID_COUNT_BRAINSPINETMLN(){
         return DMP_PATIENT_ID_COUNT_BRAINSPINETMLN;
     }
     public void setDMP_PATIENT_ID_COUNT_BRAINSPINETMLN(String DMP_PATIENT_ID_COUNT_BRAINSPINETMLN){
-        this.DMP_PATIENT_ID_COUNT_BRAINSPINETMLN = DMP_PATIENT_ID_COUNT_BRAINSPINETMLN != null ? DMP_PATIENT_ID_COUNT_BRAINSPINETMLN : "N/A" ;
+        this.DMP_PATIENT_ID_COUNT_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_COUNT_BRAINSPINETMLN)  ? DMP_PATIENT_ID_COUNT_BRAINSPINETMLN : "NA" ;
     }
     
     public String getDMP_PATIENT_ID_ALL_BRAINSPINETMLN(){
         return DMP_PATIENT_ID_ALL_BRAINSPINETMLN;
     }
     public void setDMP_PATIENT_ID_ALL_BRAINSPINETMLN(String DMP_PATIENT_ID_ALL_BRAINSPINETMLN){
-        this.DMP_PATIENT_ID_ALL_BRAINSPINETMLN = DMP_PATIENT_ID_ALL_BRAINSPINETMLN != null ? DMP_PATIENT_ID_ALL_BRAINSPINETMLN : "N/A" ;
+        this.DMP_PATIENT_ID_ALL_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_ALL_BRAINSPINETMLN)  ? DMP_PATIENT_ID_ALL_BRAINSPINETMLN : "NA" ;
     }
     
     public String getSTART_DATE(){
         return START_DATE;
     }
     public void setSTART_DATE(String START_DATE){
-        this.START_DATE = START_DATE != null ? START_DATE : "N/A" ;
+        this.START_DATE =  StringUtils.isNotEmpty(START_DATE)  ? START_DATE : "NA" ;
     }
     
     public String getSTOP_DATE(){
         return STOP_DATE;
     }
     public void setSTOP_DATE(String STOP_DATE){
-        this.STOP_DATE = STOP_DATE != null ? STOP_DATE : "N/A" ;
+        this.STOP_DATE =  StringUtils.isNotEmpty(STOP_DATE)  ? STOP_DATE : "NA" ;
     }
     
     public String getEVENT_TYPE(){
         return EVENT_TYPE;
     }
     public void setEVENT_TYPE(String EVENT_TYPE){
-        this.EVENT_TYPE = EVENT_TYPE != null ? EVENT_TYPE : "N/A" ;
+        this.EVENT_TYPE =  StringUtils.isNotEmpty(EVENT_TYPE)  ? EVENT_TYPE : "NA" ;
     }
     
     public String getTREATMENT_TYPE(){
         return TREATMENT_TYPE;
     }
     public void setTREATMENT_TYPE(String TREATMENT_TYPE){
-        this.TREATMENT_TYPE = TREATMENT_TYPE != null ? TREATMENT_TYPE : "N/A" ;
+        this.TREATMENT_TYPE =  StringUtils.isNotEmpty(TREATMENT_TYPE)  ? TREATMENT_TYPE : "NA" ;
     }
     
     public String getSUBTYPE(){
         return SUBTYPE;
     }
     public void setSUBTYPE(String SUBTYPE){
-        this.SUBTYPE = SUBTYPE != null ? SUBTYPE : "N/A" ;
+        this.SUBTYPE =  StringUtils.isNotEmpty(SUBTYPE)  ? SUBTYPE : "NA" ;
     }
     
     public String getAGENT(){
         return AGENT;
     }
     public void setAGENT(String AGENT){
-        this.AGENT = AGENT != null ? AGENT : "N/A" ;
+        this.AGENT =  StringUtils.isNotEmpty(AGENT)  ? AGENT : "NA" ;
     }
     
     public String getSPECIMEN_REFERENCE_NUMBER(){
         return SPECIMEN_REFERENCE_NUMBER;
     }
     public void setSPECIMEN_REFERENCE_NUMBER(String SPECIMEN_REFERENCE_NUMBER){
-        this.SPECIMEN_REFERENCE_NUMBER = SPECIMEN_REFERENCE_NUMBER != null ? SPECIMEN_REFERENCE_NUMBER : "N/A" ;
+        this.SPECIMEN_REFERENCE_NUMBER =  StringUtils.isNotEmpty(SPECIMEN_REFERENCE_NUMBER)  ? SPECIMEN_REFERENCE_NUMBER : "NA" ;
     }
     
     public String getSPECIMEN_SITE(){
         return SPECIMEN_SITE;
     }
     public void setSPECIMEN_SITE(String SPECIMEN_SITE){
-        this.SPECIMEN_SITE = SPECIMEN_SITE != null ? SPECIMEN_SITE : "N/A" ;
+        this.SPECIMEN_SITE =  StringUtils.isNotEmpty(SPECIMEN_SITE)  ? SPECIMEN_SITE : "NA" ;
     }
     
     public String getSPECIMEN_TYPE(){
         return SPECIMEN_TYPE;
     }
     public void setSPECIMEN_TYPE(String SPECIMEN_TYPE){
-        this.SPECIMEN_TYPE = SPECIMEN_TYPE != null ? SPECIMEN_TYPE : "N/A" ;
+        this.SPECIMEN_TYPE =  StringUtils.isNotEmpty(SPECIMEN_TYPE)  ? SPECIMEN_TYPE : "NA" ;
     }
     
     public String getSTATUS(){
         return STATUS;
     }
     public void setSTATUS(String STATUS){
-        this.STATUS = STATUS != null ? STATUS : "N/A" ;
+        this.STATUS =  StringUtils.isNotEmpty(STATUS)  ? STATUS : "NA" ;
     }
     
     public String getKARNOFSKY_PERFORMANCE_SCORE(){
         return KARNOFSKY_PERFORMANCE_SCORE;
     }
     public void setKARNOFSKY_PERFORMANCE_SCORE(String KARNOFSKY_PERFORMANCE_SCORE){
-        this.KARNOFSKY_PERFORMANCE_SCORE = KARNOFSKY_PERFORMANCE_SCORE != null ? KARNOFSKY_PERFORMANCE_SCORE : "N/A" ;
+        this.KARNOFSKY_PERFORMANCE_SCORE =  StringUtils.isNotEmpty(KARNOFSKY_PERFORMANCE_SCORE)  ? KARNOFSKY_PERFORMANCE_SCORE : "NA" ;
     }
     
     public String getSURGERY_DETAILS(){
         return SURGERY_DETAILS;
     }
     public void setSURGERY_DETAILS(String SURGERY_DETAILS){
-        this.SURGERY_DETAILS = SURGERY_DETAILS != null ? SURGERY_DETAILS : "N/A" ;
+        this.SURGERY_DETAILS =  StringUtils.isNotEmpty(SURGERY_DETAILS)  ? SURGERY_DETAILS : "NA" ;
     }
     
     public String getEVENT_TYPE_DETAILED(){
         return EVENT_TYPE_DETAILED;
     }
     public void setEVENT_TYPE_DETAILED(String EVENT_TYPE_DETAILED){
-        this.EVENT_TYPE_DETAILED = EVENT_TYPE_DETAILED != null ? EVENT_TYPE_DETAILED : "N/A" ;
+        this.EVENT_TYPE_DETAILED =  StringUtils.isNotEmpty(EVENT_TYPE_DETAILED)  ? EVENT_TYPE_DETAILED : "NA" ;
     }
     
     public String getHISTOLOGY(){
         return HISTOLOGY;
     }
     public void setHISTOLOGY(String HISTOLOGY){
-        this.HISTOLOGY = HISTOLOGY != null ? HISTOLOGY : "N/A" ;
+        this.HISTOLOGY =  StringUtils.isNotEmpty(HISTOLOGY)  ? HISTOLOGY : "NA" ;
     }
     
     public String getWHO_GRADE(){
         return WHO_GRADE;
     }
     public void setWHO_GRADE(String WHO_GRADE){
-        this.WHO_GRADE = WHO_GRADE != null ? WHO_GRADE : "N/A" ;
+        this.WHO_GRADE =  StringUtils.isNotEmpty(WHO_GRADE)  ? WHO_GRADE : "NA" ;
     }
     
     public String getMGMT_STATUS(){
         return MGMT_STATUS;
     }
     public void setMGMT_STATUS(String MGMT_STATUS){
-        this.MGMT_STATUS = MGMT_STATUS != null ? MGMT_STATUS : "N/A" ;
+        this.MGMT_STATUS =  StringUtils.isNotEmpty(MGMT_STATUS)  ? MGMT_STATUS : "NA" ;
     }
     
     public String getSOURCE_PATHOLOGY(){
         return SOURCE_PATHOLOGY;
     }
     public void setSOURCE_PATHOLOGY(String SOURCE_PATHOLOGY){
-        this.SOURCE_PATHOLOGY = SOURCE_PATHOLOGY != null ? SOURCE_PATHOLOGY : "N/A" ;
+        this.SOURCE_PATHOLOGY =  StringUtils.isNotEmpty(SOURCE_PATHOLOGY)  ? SOURCE_PATHOLOGY : "NA" ;
     }
     
     public String getNOTE(){
         return NOTE;
     }
     public void setNOTE(String NOTE){
-        this.NOTE = NOTE != null ? NOTE : "N/A" ;
+        this.NOTE =  StringUtils.isNotEmpty(NOTE)  ? NOTE : "NA" ;
     }
     
     public String getDIAGNOSTIC_TYPE(){
         return DIAGNOSTIC_TYPE;
     }
     public void setDIAGNOSTIC_TYPE(String DIAGNOSTIC_TYPE){
-        this.DIAGNOSTIC_TYPE = DIAGNOSTIC_TYPE != null ? DIAGNOSTIC_TYPE : "N/A" ;
+        this.DIAGNOSTIC_TYPE =  StringUtils.isNotEmpty(DIAGNOSTIC_TYPE)  ? DIAGNOSTIC_TYPE : "NA" ;
     }
     
     public String getDIAGNOSTIC_TYPE_DETAILED(){
         return DIAGNOSTIC_TYPE_DETAILED;
     }
     public void setDIAGNOSTIC_TYPE_DETAILED(String DIAGNOSTIC_TYPE_DETAILED){
-        this.DIAGNOSTIC_TYPE_DETAILED = DIAGNOSTIC_TYPE_DETAILED != null ? DIAGNOSTIC_TYPE_DETAILED : "N/A" ;
+        this.DIAGNOSTIC_TYPE_DETAILED =  StringUtils.isNotEmpty(DIAGNOSTIC_TYPE_DETAILED)  ? DIAGNOSTIC_TYPE_DETAILED : "NA" ;
     }
     
     public String getSOURCE(){
         return SOURCE;
     }
     public void setSOURCE(String SOURCE){
-        this.SOURCE = SOURCE != null ? SOURCE : "N/A" ;
+        this.SOURCE =  StringUtils.isNotEmpty(SOURCE)  ? SOURCE : "NA" ;
     }
     
     public Map<String, Object> getAditionalProperties(){
@@ -319,10 +325,10 @@ public class MSK_ImpactTimelineBrainSpine {
         fieldNames.add("DMP_PATIENT_ID_ALL_BRAINSPINETMLN");
         fieldNames.add("START_DATE");
         fieldNames.add("EVENT_TYPE");
-        fieldNames.add("SOURCE");
         fieldNames.add("SPECIMEN_REFERENCE_NUMBER");
         fieldNames.add("SPECIMEN_SITE");
         fieldNames.add("SPECIMEN_TYPE");
+        fieldNames.add("SOURCE");
         
         return fieldNames;
     }
@@ -331,10 +337,10 @@ public class MSK_ImpactTimelineBrainSpine {
         fieldNames.add("PATIENT_ID");
         fieldNames.add("START_DATE");
         fieldNames.add("EVENT_TYPE");
-        fieldNames.add("SOURCE");
         fieldNames.add("SPECIMEN_REFERENCE_NUMBER");
         fieldNames.add("SPECIMEN_SITE");
         fieldNames.add("SPECIMEN_TYPE");
+        fieldNames.add("SOURCE");
         
         return fieldNames;
     }

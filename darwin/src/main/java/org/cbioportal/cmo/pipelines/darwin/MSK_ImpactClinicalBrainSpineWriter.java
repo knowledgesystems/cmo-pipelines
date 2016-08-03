@@ -40,12 +40,7 @@ public class MSK_ImpactClinicalBrainSpineWriter implements ItemStreamWriter<Stri
                 writer.write(StringUtils.join(new MSK_ImpactClinicalBrainSpine().getHeaders(), "\t"));
             }
         });
-        if(stagingDirectory.endsWith("/")){
-            stagingFile = stagingDirectory + datasetFilename;
-        }
-        else{
-            stagingFile = stagingDirectory + "/" + datasetFilename;
-        }
+        stagingFile = stagingDirectory + File.separator + datasetFilename;
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }

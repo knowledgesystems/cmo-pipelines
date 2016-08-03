@@ -22,12 +22,14 @@ public class TimelineBrainSpineComposite {
     private String surgeryResult;
     private MSK_ImpactTimelineBrainSpine record;
     
+    public static final String NO_RESULT = "NO RESULT";
+
     public TimelineBrainSpineComposite(MSK_ImpactTimelineBrainSpine record){
-        this.statusResult = "0";
-        this.specimenResult = "0";
-        this.treatmentResult = "0";
-        this.imagingResult = "0";
-        this.surgeryResult = "0";
+        this.statusResult = NO_RESULT;
+        this.specimenResult = NO_RESULT;
+        this.treatmentResult = NO_RESULT;
+        this.imagingResult = NO_RESULT;
+        this.surgeryResult = NO_RESULT;
         this.record = record;
     }
     

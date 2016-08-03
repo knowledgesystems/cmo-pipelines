@@ -15,26 +15,24 @@ import org.springframework.beans.factory.annotation.Value;
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
+import org.cbioportal.cmo.pipelines.darwin.model.TimelineBrainSpineComposite;
 
 /**
  *
  * @author jake
  */
-public class MSK_ImpactTimelineBrainSpineSurgeryWriter implements ItemStreamWriter<String>{
+public class MSK_ImpactTimelineBrainSpineSurgeryWriter implements ItemStreamWriter<TimelineBrainSpineComposite>{
+    
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
-    
     
     private List<String> writeList = new ArrayList<>();
     private final FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
     private String stagingFile;
     
-    public void setStagingFile(String file){
-        this.stagingFile = file;
-    }
-    
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException{
+        stagingFile = stagingDirectory + File.separator + "data_timeline_surgery_caisis_gbm.txt";
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback(){
@@ -57,12 +55,11 @@ public class MSK_ImpactTimelineBrainSpineSurgeryWriter implements ItemStreamWrit
     }
     
     @Override
-    public void write(List<? extends String> items) throws Exception{
+    public void write(List<? extends TimelineBrainSpineComposite> items) throws Exception{
         writeList.clear();
-        for (String result : items) {
-            String[] toAdd = result.split("\n");
-            if (!toAdd[4].equals("0")) {
-                writeList.add(toAdd[4]);
+        for (TimelineBrainSpineComposite result : items) {
+            if (!result.getSurgeryResult().equals(TimelineBrainSpineComposite.NO_RESULT)) {
+                writeList.add(result.getSurgeryResult());
             }
         }
         if(!writeList.isEmpty()){

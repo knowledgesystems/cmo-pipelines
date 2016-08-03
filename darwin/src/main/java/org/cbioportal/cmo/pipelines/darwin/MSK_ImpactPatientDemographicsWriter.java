@@ -41,12 +41,7 @@ public class MSK_ImpactPatientDemographicsWriter implements ItemStreamWriter<Str
                 writer.write(StringUtils.join(new MSK_ImpactPatientDemographics().getHeaders(), "\t"));
             }
         });
-        if(stagingDirectory.endsWith("/")){
-            stagingFile = stagingDirectory + datasetFilename;
-        }
-        else{
-            stagingFile = stagingDirectory + "/" + datasetFilename;
-        }
+        stagingFile = stagingDirectory + File.separator + datasetFilename;
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }

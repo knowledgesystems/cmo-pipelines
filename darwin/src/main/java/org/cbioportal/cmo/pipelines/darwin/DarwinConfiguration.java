@@ -40,11 +40,6 @@ public class DarwinConfiguration {
     @Value("${darwin.schema}")
     private String schema;
     
-    @Bean
-    public static PropertySourcesPlaceholderConfigurer propertyConfigInDev() {
-        return new PropertySourcesPlaceholderConfigurer();
-    }
-    
         
     @Bean
     public SQLQueryFactory darwinQueryFactory() throws SQLException{

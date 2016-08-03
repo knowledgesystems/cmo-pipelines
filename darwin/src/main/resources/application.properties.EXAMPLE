@@ -12,6 +12,7 @@ darwin.username=
 darwin.password=
 
 #Darwin properties
+darwin.chunk_size=10
 darwin.demographics_view=DEMOGRAPHICS_V
 darwin.demographics_filename=data_clinical_supp_darwin_demographics.txt
 darwin.icdo_view=ICDO_V
@@ -21,7 +22,7 @@ darwin.timeline_bs_status=data_timeline_status_caisis_gbm.txt
 darwin.timeline_bs_specimen=data_timeline_specimen_caisis_gbm.txt
 darwin.timeline_bs_treatment=data_timeline_treatment_caisis_gbm.txt
 darwin.timeline_bs_imaging=data_timeline_diagnostics_caisis_gbm.txt
-darwin.timeline_bs_surgery=data_timeline_surgery_caisis_gbm.txtq
+darwin.timeline_bs_surgery=data_timeline_surgery_caisis_gbm.txt
 darwin.clinical_view=DMT_CLINICAL_BRAINSPINE_V
 darwin.clinical_filename=data_clinical_supp_caisis_gbm.txt
 

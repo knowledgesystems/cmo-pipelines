@@ -7,7 +7,6 @@ package org.cbioportal.cmo.pipelines.darwin;
 
 import org.cbioportal.cmo.pipelines.darwin.model.TimelineBrainSpineComposite;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.batch.item.ItemProcessor;
@@ -16,7 +15,6 @@ import org.springframework.batch.item.ItemProcessor;
  * @author jake
  */
 public class MSK_ImpactTimelineBrainSpineTreatmentProcessor implements ItemProcessor<TimelineBrainSpineComposite, TimelineBrainSpineComposite>{
-    ObjectMapper mapper = new ObjectMapper();
     
     @Override
     public TimelineBrainSpineComposite process(final TimelineBrainSpineComposite composite) throws Exception{
