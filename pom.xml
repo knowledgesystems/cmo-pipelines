@@ -13,6 +13,7 @@
     <module>gdd</module>
     <module>crdb</module>
     <module>darwin</module>
+    <module>foundation</module>
   </modules>
 
   <!-- inherit defaults from spring boot -->
