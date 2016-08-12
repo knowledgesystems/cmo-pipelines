@@ -96,7 +96,7 @@ public class MetaDataTasklet implements Tasklet {
             mutationsData.add(key+":"+value);
         }
 
-        LOG.info("Writing clinical meta file: " + metaFilename);
+        LOG.info("Writing mutations meta file: " + metaFilename);
         writeMetaStagingFile(executionContext, metaFilename, mutationsData);
     }
     
@@ -132,7 +132,7 @@ public class MetaDataTasklet implements Tasklet {
             fusionsData.add(key+":"+value);
         }
 
-        LOG.info("Writing mutations meta file: " + metaFilename);
+        LOG.info("Writing fusions meta file: " + metaFilename);
         writeMetaStagingFile(executionContext, metaFilename, fusionsData);
     }      
     
