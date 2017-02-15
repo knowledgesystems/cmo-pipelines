@@ -181,8 +181,10 @@ then
 
 	$JAVA_HOME/bin/java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182 -Xmx64g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin --update-study-data --portal mskraindance-portal --notification-file $mskraindance_notification_file
 	$JAVA_HOME/bin/java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182 -Xmx64g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin --update-study-data --portal mskheme-portal --notification-file $mskheme_notification_file
-
+else
+	echo "Not importing studies - failed to fetch"
 fi
+
 
 # redeploy war
 if [ $num_studies_updated -gt 0 ]
@@ -201,8 +203,14 @@ cd $MSK_IMPACT_DATA_HOME;$HG_BINARY push
 
 ### FAILURE EMAIL ###
 
+EMAIL_BODY="The MSKIMPACT study failed to fetch from CVR. The study has not been imported, the original study will remain on the portal."
+if [ $IMPORT_STATUS -gt 0 ]
+then
+	echo -e "Sending email $EMAIL_BODY"
+	echo -e "$EMAIL_BODY" | mail -s "MSKIMPACT Update Failure: Fetch" cbioportal-cmo-importer@cbio.mskcc.org
+fi
+
 EMAIL_BODY="The MSKIMPACT study failed import. The original study will remain on the portal."
-# send email if validation fails
 if [ $IMPORT_FAIL -gt 0 ]
 then
 	echo -e "Sending email $EMAIL_BODY"
@@ -210,7 +218,6 @@ then
 fi
 
 EMAIL_BODY="The MSKIMPACT study failed to pass the validation step in import process. The original study will remain on the portal."
-# send email if validation fails
 if [ $VALIDATION_FAIL -gt 0 ]
 then
 	echo -e "Sending email $EMAIL_BODY"
@@ -223,7 +230,6 @@ then
 	echo -e "Sending email $EMAIL_BODY"
 	echo -e "$EMAIL_BODY" | mail -s "MSKIMPACT Update Failure: Deletion" cbioportal-cmo-importer@cbio.mskcc.org
 fi
-
 
 EMAIL_BODY="Failed to backup mskimpact to yesterday_mskimpact via renaming. MSKIMPACT study did not finish updating."
 if [ $RENAME_BACKUP_FAIL -gt 0 ]
