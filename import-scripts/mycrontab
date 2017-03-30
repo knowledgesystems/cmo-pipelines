@@ -1,0 +1,11 @@
+MAILTO=wilson@cbio.mskcc.org,heinsz@mskcc.org,grossb1@mskcc.org
+*/15 * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-portal-users.sh > /dev/null 2>&1
+0 * * * * /usr/bin/flock -n /data/portal-cron/cron-lock/cronjob.lock -c ". /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-cmo-data-triage.sh >> /data/portal-cron/logs/import-cmo-data-triage.log 2>&1"
+0 2 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-cmo-data-msk.sh  >> /data/portal-cron/logs/import-cmo-data-msk.log 2>&1
+0 2 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-pdx-data.sh  >> /data/portal-cron/logs/import-pdx-data.log 2>&1
+0 6 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-dmp-impact-data.sh  >> /data/portal-cron/logs/import-dmp-impact-data.log 2>&1
+0 0 * * * /usr/sbin/logrotate -f -s /data/portal-cron/logrotate.status /data/portal-cron/portal-cron-logrotate
+# use logrotate instead (clean log files older than 8 days every Sunday at midnight)
+#0 0 * * 0 find /data/portal-cron/logs/ -maxdepth 1 -type f -name "*.log" -mtime +8 -exec rm -f {} \;
+# look into automating the below script, currently run manually
+#0 8 * * 5 . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/glioma-update-check.sh

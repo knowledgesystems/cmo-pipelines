@@ -1,0 +1,71 @@
+README for tomcatMonitorAndAutoRestart
+
+These scripts are meant to monitor a running version of the cBioPortal, and to restart the tomcat instance if necessary.
+
+There are currently two kinds of tests which are run:
+    - the AJP port of the tomcat server is probed using a "ping" / "ack" packet handshake. The test fails if there is not a prompt response.
+    - the webserver (apache) is queried from an unauthenticated session. If the request is forwarded to a foreign host, this (saml) test fails.
+
+The results of the tests are tracked in a plain text file, which stores the number of consecutive failures observed for both test types.
+Tests are run periodically via a crontab entry which executes the script "run-tomcat-tests.sh". Running the tests only updates the consecutive failure count file.
+
+In addition to the testing, there is a crontab entry which runs a restart script periodically. If the consecutive failure count file exceeds the specified limits on either test type, the tomcat instance is restarted using an external script which is not provided here (you should supply a suitable script or command). If a restart occurs, a lockout file is created with a countdown value stored - the presence of the lockout file inhibits further restarts. On each execution the restart script will instead decrement the countdown value, and when it reaches 0 it will delete the file.
+
+Files Descriptions:
+
+JKTester.java
+        A java test program for probing the AJP port of tomcat. It will also send a warning email to specified users on each test failure. This needs to be compiled with "javac JKTester.java", which will produce JKTester.class and Shell.class. The testing scripts use the JAVA_HOME environment varable to execute this java application.
+
+monitor.properties
+        This file contains all the important configuration values for the tomcat monitor scripts (see description of settings below). This file must be in a bash executable script format, since it is called at the beginning of each other bash script.
+
+restart--tomcat-when-dying.sh
+        This is the restart script. It compares the consecutive failure count file values to limits set in monitor.properties and restarts tomcat if necessary. After restart, a restart notification email is sent to the list given in monitor.properties, the lockout countdown file is created, and the consecutive failure count file is reset. 
+
+run-jktest-cbioportal.sh
+        This bash script executes the JKTester java application and probes the tomcat AJP port.
+
+run-saml-redirect-test.sh
+        This bash script runs a single test case for proper saml redirection. It takes a single integer argument which should be the test case number (1 or 2). It uses the program wget (which must be installed on the system) to query to portal URIs (specified in monitor.properties). Since wget is not initialized with a session cookie, the MSK portal will redirect the request to a saml authentication page. If that redirection is to a page located on a foreign host (a problem which has been observed, although not fully understood) it triggers a failure. Output from wget is stored in a temporary folder, and is deleted if the test passes. If the test fails, more details can be seen in the files remaining in the "tmp" folder.
+
+run-saml-redirect-tests-cbioportal.sh
+        This bash script executes run-saml-redirect-test.sh across all test cases (2 currently). If any tests fail, a worning email is sent to specified users. The email will indicate the number of the failed test.
+
+run-tomcat-tests.sh
+        This bash script calls both run-jktest-cbioportal.sh and run-saml-redirect-tests-cbioportal.sh. It updates the consecutive failure count file accordingly.
+
+Installation Instructions:
+
+For each tomcat instance to be monitored,
+    1) create a directory which is accessible to the unix user account under which tomcat runs (on dashi, these are: public-tomcat, and schultz-tomcat). For example, the directory "/srv/www/schultz-tomcat/tomcat7/monitor" was created and is owned by the user "schultz-tomcat". Install all of these files there.
+    2) run javac JKTester.java in that directory
+    3) adjust the settings in monitor.properties. Settings to check/adjust:
+        TOMCAT_MONITOR_BASE_DIRECTORY : set this to the installation directory you created
+        JAVA_HOME : set this appropriately. A jvm should exist at "$JAVA_HOME/bin/java"
+        PORTAL_LABEL : this can be any descriptor, such as "msk-portal". Don't use whitespace.
+        TOMCAT_LABEL : this can be any descriptor, such as "public-tomcat". Don't use whitespace.
+        TOMCAT_HOST_LABEL : this can be any descriptor, such as "dashi.cbio.mskcc.org". Don't use whitespace.
+        TOMCAT_AJP_HOST : this should be a valid URI host reference which is reachable by the AJP probe. Sometimes the loopback "127.0.0.1" is best to avoid firewall filtering.
+        TOMCAT_AJP_PORT : set to the tomcat AJP port number, such as "8009"
+        CONSECUTIVE_JK_FAIL_COUNT_LIMIT : set to the highest tolerable consecutive integer count before a restart would be triggered for AJP port failures.
+        CONSECUTIVE_SAML_FAIL_COUNT_LIMIT : set to the highest tolerable consecutive integer count before a restart would be triggered for saml redirect failures.
+        RESTART_LOCKOUT_PERIOD_COUNT_AFTER_RESTART : this is the number of times the restart script will be inhibitied from restarting after a restart occurs
+        MANAGE_TOMCAT_SCRIPT : this script should take one string argument. "stop" will cause the tomcat server to shutdown, "start" will cause the tomcat server to startup.
+        MANAGE_TOMCAT_SCRIPT_SLEEP_PERIOD : this is the number of seconds that the restart script will sleep between stopping tomcat and starting tomat
+        NOTIFY_EMAIL_LIST : a space separated list of email addresses to send restart notification emails to. Do not use whitespace within any single email address.
+        JK_TEST_PING_TIMEOUT : the number of milliseconds that the AJP ping must be acknowledged before considered a failed test
+        JK_TEST_NOTIFY_EMAIL_LIST : a comma separated list of email addresses to send AJP ping failure warning emails to. Do not use any whitespace.
+        SAML_TEST_QUERY_PAGE_1 : some relative uri pattern which might cause a redirect to the saml authentication page
+        SAML_TEST_QUERY_PAGE_2 : some relative uri pattern which might cause a redirect to the saml authentication page
+        SAML_TEST_HOSTNAME : this should be the symbolic hostname which is expected during a saml authenticaion page redirection, for example "cbioportal.mskcc.org". If no saml redirection is possible, use the server self-identification hostname (such as www.cbioportal.org). Do not use an alias (such as cbioportal.org).
+        SAML_TEST_NOTIFY_EMAIL_LIST : a space separated list of email addresses to send saml redirect failure warning emails to. Do not use whitespace within any single email address.
+    4) manually execute/test "run-tomcat-tests.sh". results will appear in the consecutive failure count file
+    5) manually execute/test "restart-tomcat-when-dying.sh", which should not restart the tomcat unless failures were seen in the previous step
+    6) install two records in the crontab under the userid used for running the tomcat server. For example:
+            % crontab -l
+            #min    hour    day mon d.o.w.  command
+            0,5,10,15,20,25,30,35,40,45,50,55   *   *   *   *   /srv/www/schultz-tomcat/tomcat7/monitor/run-tomcat-tests.sh > /dev/null 2>/dev/null
+            1,6,11,16,21,26,31,36,41,46,51,56   *   *   *   *   /srv/www/schultz-tomcat/tomcat7/monitor/restart-tomcat-when-dying.sh > /dev/null 2>/dev/null
+        here the tests are run every 5 minutes, and the restart script is run one minute after each test run.
+
+Because the scripts are being run under the same userid as the tomcat process, the restart script should have the privileges to cause a server stop and server start. An alternative would be to give passwordless sudo privileges to start and stop the tomcat server to another userid, and to run the scripts as that user. A MANAGE_TOMCAT_SCRIPT can probably be constructed from the /etc/rc.d/init.d/tomcat-system-startup-script .. by appropriately replacing/removing all references to rc_status, rc_failed, rc_reset, rc_success, or to other root-privilege required operations such as "chown" or "su"

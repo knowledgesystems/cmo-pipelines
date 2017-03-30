@@ -1,2 +1,0 @@
-spring.batch.job.enabled=false
-chunk.interval=30

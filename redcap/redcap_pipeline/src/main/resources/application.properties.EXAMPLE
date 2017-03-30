@@ -1,0 +1,8 @@
+spring.batch.job.enabled=false
+redcap_url=
+mapping_token=
+# The name of the project that contains the metadata about the clinical attributes in redcap
+metadata_project=
+# The name of the project that contains the namespace mapping of external column headers to normalized
+namespace_project=
+chunk=10

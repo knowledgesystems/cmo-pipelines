@@ -1,0 +1,61 @@
+#!/bin/bash
+
+tmp=/data/ben/tmp/import-cron-dmp-msk
+rm -rf "$tmp"/*
+
+# fetch clinical data mercurial
+echo "fetching updates from msk-impact repository..."
+$JAVA_HOME/bin/java -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin -fetch_data dmp-clinical-data-mercurial:latest:f
+
+# lets clean clinical data files
+echo "cleaning all clinical & timeline data files - replacing carriage returns with newlines..."
+files=$(ls $MSK_IMPACT_DATA_HOME/data_clinical*)
+files="$files $(ls $MSK_IMPACT_DATA_HOME/data_timeline*)"
+for file in $files
+do
+	tmp_file="$file.tmp"
+	tr '\r' '\n' < $file > $tmp_file
+	mv $tmp_file $file
+done
+
+# fetch new/updated IMPACT samples using CVR Web service   (must come after mercurial fetching) 
+echo "fetching samples from CVR Web service  ..."
+$JAVA_HOME/bin/java -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin -fetch_data dmp-clinical-data-darwin:latest:f
+
+# fetch CRDB data
+echo "fetching CRDB data"
+$JAVA_HOME/bin/java -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin -fetch_data crdb-clinical-data:latest:f
+
+# fetch Darwin data
+echo "fetching Darwin data"
+$JAVA_HOME/bin/java -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin -fetch_data darwin-clinical-data:latest:f
+#$JAVA_HOME/bin/java -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" cp /ssd-data/jdbc/db3jcc4.jar:/srv/www/schultz-tomcat/tomcat7/lib/*:/data/fred/cbiodev/pipelines/importer/target/* org.mskcc.cbio.importer.Admin -fetch_data darwin-clinical-data:latest:f
+
+#Refactor any residual DMP identifiers from staging files and ensure that other (i.e. legacy) identifiers are retained
+# arguments are data source name and cancer study name
+echo "refactoring legacy DMP identifiers......."
+$JAVA_HOME/bin/java -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/msk-dmp-importer.jar org.mskcc.cbio.importer.cvr.dmp.util.ImpactDataClinicalTimelineIdDRefactoringUtility dmp-clinical-data-darwin
+
+# import into portal database
+echo "importing cancer type updates into msk portal database..."
+$JAVA_HOME/bin/java -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin -import_types_of_cancer
+echo "importing DMP-IMPACT study data into msk portal database..."
+$JAVA_HOME/bin/java -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin -update_study_data mskimpact-portal:f:t
+num_studies_updated=$?
+
+# redeploy war
+if [ $num_studies_updated -gt 0 ]
+then
+	rm -rf "$tmp"/*
+	#echo "'$num_studies_updated' studies have been updated, requesting redeployment of msk portal war..."
+	#source $HOME/.keychain/dashi-dev.cbio.mskcc.org-sh
+	#ssh grossb@dashi.cbio.mskcc.org touch /srv/data/portal-cron/schultz-tomcat-restart
+	echo "'$num_studies_updated' studies have been updated (no longer need to restart schultz-tomcat server...)"
+else
+	# echo "No studies have been updated, skipping redeploy of msk portal war..."
+	echo "No studies have been updated.."
+fi
+
+# check updated data back into mercurial
+echo "Pushing DMP-IMPACT updates back to msk-impact repository..."
+cd $MSK_IMPACT_DATA_HOME;hg commit -m "latest MSK-IMPACT data" .;hg push

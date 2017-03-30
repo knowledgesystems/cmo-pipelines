@@ -1,0 +1,13 @@
+/gdd/target/
+/cvr/target/
+/crdb/target/
+/darwin/target/
+/foundation/target/
+/clinical_data/data_pipeline/target/
+/clinical_data/data_source/target/
+**/.DS_Store
+**/src/main/resources/application.properties
+/redcap/data_pipeline/target/
+/redcap/data_source/target/
+/redcap/redcap_source/target/
+/redcap/redcap_pipeline/target/

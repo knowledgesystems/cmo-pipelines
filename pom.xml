@@ -1,7 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.cbioportal.cmo.pipelines</groupId>
+  <groupId>org.mskcc.cmo.ks</groupId>
   <artifactId>master</artifactId>
   <packaging>pom</packaging>
   <name>MSKCC CMO Pipelines Master</name>
@@ -13,7 +12,8 @@
     <module>gdd</module>
     <module>crdb</module>
     <module>darwin</module>
-    <module>foundation</module>
+    <module>redcap</module>
+    <module>cvr</module>
   </modules>
 
   <!-- inherit defaults from spring boot -->
@@ -49,9 +49,7 @@
         <configuration>
           <spatial>true</spatial>
         </configuration>
-      </plugin>            
-      
+      </plugin>
     </plugins>
   </build>
-
 </project>

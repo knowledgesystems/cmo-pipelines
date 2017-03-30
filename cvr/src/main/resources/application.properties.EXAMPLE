@@ -1,0 +1,32 @@
+spring.batch.job.enabled=false
+
+tmpdir=
+chunk=
+
+# dmp
+dmp.server_name=
+dmp.user_name=
+dmp.password=
+dmp.tokens.create_session=create_session
+dmp.tokens.create_gml_session=create_gml_session
+#select one of the following dmp.tokens.retrieve_variants lines:
+#dmp.tokens.retrieve_variants=cbio_retrieve_variants
+#dmp.tokens.retrieve_variants=cbio_rdts_retrieve_variants
+#dmp.tokens.retrieve_variants=cbio_retrieve_heme_variants
+#dmp.tokens.retrieve_variants=cbio_archer_retrieve_variants
+dmp.tokens.retrieve_gml_variants=gml_cbio_retrieve_variants
+dmp.tokens.retrieve_segment_data=get_seg_data
+dmp.tokens.retrieve_gml_segment_data=gml_get_seg_data
+dmp.tokens.consume_sample=cbio_consume_sample
+dmp.tokens.consume_gml_sample=gml_cbio_consume_sample
+
+# genome nexus
+genomenexus.base_url=
+genomenexus.hgvs=variant_annotation/hgvs/
+genomenexus.isoform_override=variant_annotation/isoform_override/
+
+# email properties
+email.server=localhost
+email.sender=
+email.recipient=
+email.subject=Failure in CVR Pipeline
