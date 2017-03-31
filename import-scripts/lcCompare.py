@@ -2,9 +2,9 @@
 
 # ---------------------------------------------------------------
 # Script to check if any files were wiped out during import
-# of CRV/Darwin data. If an error occured, do not want to push 
+# of CRV/Darwin data. If an error occured, do not want to push
 # these erroneous/incomplete files to the repository.
-# Checks the output from a bash script which calculates the 
+# Checks the output from a bash script which calculates the
 # number of lines in each file before CRV/Darwin code runs,
 # and compares it to after the script run
 # ---------------------------------------------------------------
@@ -26,14 +26,14 @@ OUTPUT_FILE = sys.stdout
 # ---------------------------------------------------------------
 # create dictionary of linecounts pre java processing
 def processlinecounts(linecountsFile):
-	linecounts = {}
-	for line in linecountsFile:
-		if line.strip() != '':
-			line = line.strip()
-			splitline = line.split(' ')
-			linecounts[splitline[1]] = int(splitline[0])
+    linecounts = {}
+    for line in linecountsFile:
+        if line.strip() != '':
+            line = line.strip()
+            splitline = line.split(' ')
+            linecounts[splitline[1]] = int(splitline[0])
 
-	return linecounts
+    return linecounts
 
 def processRepoFiles(repoFilenames, linecounts, output_filename):
     ioerror = False
@@ -48,7 +48,7 @@ def processRepoFiles(repoFilenames, linecounts, output_filename):
             repoFile = open(filename,'rU')
 
             # quick lambda for file line counts
-            filelen = lambda f: sum(1 for line in f) 
+            filelen = lambda f: sum(1 for line in f)
 
             if filename in linecounts:
                 lines_in_file = filelen(repoFile)
@@ -63,7 +63,7 @@ def processRepoFiles(repoFilenames, linecounts, output_filename):
 # ---------------------------------------------------------------
 # displays usage of program
 def usage():
-	print >> OUTPUT_FILE, 'lcCompare.py --line-counts <path/to/linecounts/file> --repo-path <path/to/repository/> --fail-output <path/to/desired/output>'
+    print >> OUTPUT_FILE, 'lcCompare.py --line-counts <path/to/linecounts/file> --repo-path <path/to/repository/> --fail-output <path/to/desired/output>'
 
 # ---------------------------------------------------------------
 # the main
@@ -88,7 +88,7 @@ def main():
             repoPath = a
         if o == '--fail-output':
             output_filename = a
-	
+
     if linecountsFilename == '' or repoPath == '' or output_filename == '':
         usage()
         sys.exit(2)
@@ -115,4 +115,4 @@ def main():
 # ---------------------------------------------------------------
 # do a main
 if __name__ == '__main__':
-	main()
+    main()

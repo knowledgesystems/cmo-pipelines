@@ -41,84 +41,82 @@ current_sample_list = []
 
 
 def append_zero(number):
-	""" Appends a leading 0 to a month/day/second string for uniformity """
-	if len(number) == 1:
-		return '0' + number
-	return number
+    """ Appends a leading 0 to a month/day/second string for uniformity """
+    if len(number) == 1:
+        return '0' + number
+    return number
 
 def create_date_dict(log_lines):
 
-	""" 
+    """
 
-	Iterates through the selected log lines, creating a dictionary of changesets:dates
+    Iterates through the selected log lines, creating a dictionary of changesets:dates
 
-	Then, figures out which changesets occured on the same dates, and filteres the original
-	dictionary keeping only the latest changeset that occured in a day
+    Then, figures out which changesets occured on the same dates, and filteres the original
+    dictionary keeping only the latest changeset that occured in a day
 
-	"""
+    """
 
-	changeset_date_dict = {}
-	
-	for i,line in enumerate(log_lines):
-		if 'date:' in line:
-			changeset = log_lines[i-1].split(':')[1].strip()
-			date = time.strptime(":".join(line.split(':')[1:]).split('-')[0].strip(), "%a %b %d %H:%M:%S %Y")
-			date = time.strftime("%Y/%m/%d", date)
-			#date = ''.join(map(append_zero, map(str, date[0:5])))
-			changeset_date_dict[changeset] = date
+    changeset_date_dict = {}
 
-	changesets_by_day = {}
-	
-	for cs, d in changeset_date_dict.iteritems():
-		if d in changesets_by_day:
-			changesets_by_day[d].append(cs)
-		else:
-			changesets_by_day[d] = [cs]
+    for i,line in enumerate(log_lines):
+        if 'date:' in line:
+            changeset = log_lines[i-1].split(':')[1].strip()
+            date = time.strptime(":".join(line.split(':')[1:]).split('-')[0].strip(), "%a %b %d %H:%M:%S %Y")
+            date = time.strftime("%Y/%m/%d", date)
+            #date = ''.join(map(append_zero, map(str, date[0:5])))
+            changeset_date_dict[changeset] = date
 
-	# only take latest one in a day
-	to_include = []
-	
-	for same_day_changesets in changesets_by_day.values():
-		to_include.append(max(map(int, same_day_changesets)))
+    changesets_by_day = {}
 
-	
+    for cs, d in changeset_date_dict.iteritems():
+        if d in changesets_by_day:
+            changesets_by_day[d].append(cs)
+        else:
+            changesets_by_day[d] = [cs]
 
-	filtered_changeset_date_dict = {int(k):v for (k, v) in changeset_date_dict.iteritems() if k in map(str,to_include)}
+    # only take latest one in a day
+    to_include = []
 
-	return filtered_changeset_date_dict
+    for same_day_changesets in changesets_by_day.values():
+        to_include.append(max(map(int, same_day_changesets)))
+
+    filtered_changeset_date_dict = {int(k):v for (k, v) in changeset_date_dict.iteritems() if k in map(str,to_include)}
+
+    return filtered_changeset_date_dict
 
 def check_num_samples(last_num_samples, num_samples):
-	""" Only needed if it is desired to filter days when the number of samples decreased """
-	if last_num_samples < num_samples and last_num_samples != -1:
-		return False
-	return True
+    """ Only needed if it is desired to filter days when the number of samples decreased """
+    if last_num_samples < num_samples and last_num_samples != -1:
+        return False
+    return True
 
 def get_num_cna_events(cna_file):
-	""" 
+    """
 
-	Gets the number of CNA events from a file 
-	Only counts at deep deletions (-2) and amplificaitons (+2)
+    Gets the number of CNA events from a file
+    Only counts at deep deletions (-2) and amplificaitons (+2)
 
-	""" 
+    """
 
-	header = True
-	num_events = 0
-	for line in cna_file:
-		if header:
-			header = False
-			continue
-		data = line.strip().split('\t')[1:]
-		for datum in data:
-			# we don't care about anything that isn't a float
-			try:
-				if float(datum) != 0:
-					num_events = num_events + 1
-			except ValueError:
-				continue
-	return num_events
+    header = True
+    num_events = 0
+    for line in cna_file:
+        if header:
+            header = False
+            continue
+        data = line.strip().split('\t')[1:]
+        for datum in data:
+            # we don't care about anything that isn't a float
+            try:
+                if float(datum) != 0:
+                    num_events = num_events + 1
+            except ValueError:
+                continue
+    return num_events
 
 def map_samples_to_date(clin_file, date, first):
-	
+
     """
     Goes through samples and assigns them the date.
     Because we are going from recent -> oldest, can just replace if
@@ -152,17 +150,17 @@ def write_map_to_file(filtered_samples, hgrepo):
             writer.writerow({'PATIENT_ID':sample_patient_map[k], 'SAMPLE_ID':k, 'DATE_ADDED':v})
 
 def filter_samples():
-	filtered_samples = {}
-	for sample, date in sample_date_map.iteritems():
-		if sample in sample_list:
-			filtered_samples[sample] = date
-	return filtered_samples
+    filtered_samples = {}
+    for sample, date in sample_date_map.iteritems():
+        if sample in sample_list:
+            filtered_samples[sample] = date
+    return filtered_samples
 
 def get_patient_id(id):
     """ Get patient ids from sublist (MSKIMPACT ONLY) """
     patientid = ""
     p = re.compile('(P-\d*)-T\d\d-IM\d')
-    match = p.match(id)		
+    match = p.match(id)
     if match:
         patientid = match.group(1)
     else:
@@ -176,11 +174,11 @@ def make_sample_list(clin_filename):
         if is_first:
             is_first = False
             continue
-        current_sample_list.append(line.split('\t')[0].strip())        
+        current_sample_list.append(line.split('\t')[0].strip())
 
 def process_hg(changeset_date_dict, hgrepo):
 
-    """ 
+    """
 
     Goes through every changeset of interest and reverts the files to that state.
     Then, the files are processed for that changeset and values are extracted and mapped to dates.
@@ -202,7 +200,7 @@ def process_hg(changeset_date_dict, hgrepo):
         subprocess.call(['hg', 'revert', '-r', str(cs), clin_filename, '--cwd', hgrepo])
         #subprocess.call(['hg', 'revert', '-r', str(cs), mut_filename, '--cwd', hgrepo])
         #subprocess.call(['hg', 'revert', '-r', str(cs), cna_filename, '--cwd', hgrepo])
-		
+
         try:
             clin_file = open(os.path.join(hgrepo, CLINICAL_FILENAME), 'rU')
             #mut_file = open(os.path.join(hgrepo, MUTATION_FILENAME), 'rU')
@@ -211,7 +209,7 @@ def process_hg(changeset_date_dict, hgrepo):
             print >> ERROR_FILE, 'failed at cs ' + str(cs)
             fix_repo(hgrepo)
             sys.exit(1)
-		
+
         map_samples_to_date(clin_file, d, first)
         #num_samples = sum(1 for line in clin_file) - 1
         #num_mutations = sum(1 for line in mut_file) - 2
@@ -220,10 +218,10 @@ def process_hg(changeset_date_dict, hgrepo):
         #sample_date_dict[d] = num_samples
         #mut_date_dict[d] = num_mutations
         #cna_date_dict[d] = num_cna
-		
+
         clin_file.close()
         #mut_file.close()
-		#cna_file.close()
+        #cna_file.close()
 
         first = False
 
@@ -236,95 +234,94 @@ def process_hg(changeset_date_dict, hgrepo):
 
 
 def create_over_time(sample_date_dict, title = '', y_label = '', x_label = ''):
-	""" Creates plot for number of events/items over time """
-	x = []
-	y = []
+    """ Creates plot for number of events/items over time """
+    x = []
+    y = []
 
-	# this converts the date to epoch.
-	#fix_date = lambda x: int(datetime(int(x[0:-4][0:4]), int(x[0:-4][4:6]), int(x[0:-4][6:8])).strftime('%s'))
+    # this converts the date to epoch.
+    #fix_date = lambda x: int(datetime(int(x[0:-4][0:4]), int(x[0:-4][4:6]), int(x[0:-4][6:8])).strftime('%s'))
 
-	for k, v in sorted(sample_date_dict.items()):
-		x.append(k)
-		y.append(time.strftime('%s', v))
+    for k, v in sorted(sample_date_dict.items()):
+        x.append(k)
+        y.append(time.strftime('%s', v))
 
-	#sns.set_style('whitegrid')
-	fig, ax = plt.subplots()
-	ax.plot_date(mdate.epoch2num(x),y)
-	date_fmt = '%b-%Y'
-	date_formatter = mdate.DateFormatter(date_fmt)
-	ax.xaxis.set_major_formatter(date_formatter)
+    #sns.set_style('whitegrid')
+    fig, ax = plt.subplots()
+    ax.plot_date(mdate.epoch2num(x),y)
+    date_fmt = '%b-%Y'
+    date_formatter = mdate.DateFormatter(date_fmt)
+    ax.xaxis.set_major_formatter(date_formatter)
 
-	fig.autofmt_xdate()
-	plt.xlabel(x_label)
-	plt.ylabel(y_label)
-	plt.title(title)
-	#if set_range:
-	#	lower = y[0]
-	#	upper = y[-1]
-	#	plt.ylim([lower,upper])
-	plt.show()
+    fig.autofmt_xdate()
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    #if set_range:
+    #    lower = y[0]
+    #    upper = y[-1]
+    #    plt.ylim([lower,upper])
+    plt.show()
 
 def make_graphs(hgrepo):
 
-	""" 
+    """
 
-	Function which facilitates creation of the timeline information
-	
-	Parses the mercurial log information for changesets and dates
-	and calls the functions to process this data.
+    Function which facilitates creation of the timeline information
 
-	Returns dictionary containing dates as keys, number of samples as values
+    Parses the mercurial log information for changesets and dates
+    and calls the functions to process this data.
 
-	"""
-	#subprocess.call(['hg', 'pull', '--cwd', hgrepo])
-	fix_repo(hgrepo)
-	changesets = subprocess.check_output(['hg','identify', '--cwd', hgrepo, '--num'])
-	log = subprocess.check_output(['hg','log', '--cwd', hgrepo])
+    Returns dictionary containing dates as keys, number of samples as values
 
-	log_lines = log.split('\n')
-	log_lines = [l for l in log_lines if 'changeset:' in l or 'date:' in l]
+    """
+    #subprocess.call(['hg', 'pull', '--cwd', hgrepo])
+    fix_repo(hgrepo)
+    changesets = subprocess.check_output(['hg','identify', '--cwd', hgrepo, '--num'])
+    log = subprocess.check_output(['hg','log', '--cwd', hgrepo])
 
-	changeset_date_dict = create_date_dict(log_lines)
-	process_hg(changeset_date_dict, hgrepo)
+    log_lines = log.split('\n')
+    log_lines = [l for l in log_lines if 'changeset:' in l or 'date:' in l]
+
+    changeset_date_dict = create_date_dict(log_lines)
+    process_hg(changeset_date_dict, hgrepo)
 
 def fix_repo(hgrepo):
-	""" resets the hg repo """
-	subprocess.call(['hg', 'revert', '--cwd', hgrepo, '--all'])
+    """ resets the hg repo """
+    subprocess.call(['hg', 'revert', '--cwd', hgrepo, '--all'])
 
 def usage():
-	print >> OUTPUT_FILE, 'impact_timeline.py --hgrepo <path/to/repository>'
+    print >> OUTPUT_FILE, 'impact_timeline.py --hgrepo <path/to/repository>'
 
 def main():
 
-	""" 
+    """
 
-	Main function
+    Main function
 
-	"""
-	try:
-		opts, args = getopt.getopt(sys.argv[1:], '', ['hgrepo='])
-	except getopt.error, msg:
-		print >> ERROR_FILE, msg
-		usage()
-		sys.exit(2)
+    """
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], '', ['hgrepo='])
+    except getopt.error, msg:
+        print >> ERROR_FILE, msg
+        usage()
+        sys.exit(2)
 
-	hgrepo = ''
+    hgrepo = ''
 
-	# get the input
-	for o, a in opts:
-		if o == '--hgrepo':
-			hgrepo = a
+    # get the input
+    for o, a in opts:
+        if o == '--hgrepo':
+            hgrepo = a
 
-	# check the input
-	if not os.path.isdir(hgrepo):
-		print >> ERROR_FILE, 'not a directory'
-		usage()
-		sys.exit(2)
+    # check the input
+    if not os.path.isdir(hgrepo):
+        print >> ERROR_FILE, 'not a directory'
+        usage()
+        sys.exit(2)
 
-	# make the graphs
-	make_graphs(hgrepo)
+    # make the graphs
+    make_graphs(hgrepo)
 
 # do it up
 if __name__ == '__main__':
-	main()
-
+    main()
