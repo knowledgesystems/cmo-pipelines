@@ -47,7 +47,7 @@ DB_VERSION_FAIL=0
 # check database version before importing anything
 echo "Checking if database version is compatible"
 $JAVA_HOME/bin/java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin --check-db-version
-if [ $? -gt 0 ] ; then
+if [ $? -ne 0 ] ; then
     echo "Database version expected by portal does not match version in database!"
     DB_VERSION_FAIL=1
 fi
@@ -67,9 +67,9 @@ if [ $DB_VERSION_FAIL -eq 0 ] ; then
     fi
 fi
 
-EMAIL_BODY="The Triage database version is incompatible. Imports will be skipped until database is updated."
 # send email if db version isn't compatible
-if [ $DB_VERSION_FAIL -gt 0 ] ; then
+if [ $DB_VERSION_FAIL -ne 0 ] ; then
+    EMAIL_BODY="The Triage database version is incompatible. Imports will be skipped until database is updated."
     echo -e "Sending email $EMAIL_BODY"
     echo -e "$EMAIL_BODY" | mail -s "Triage Update Failure: DB version is incompatible" $email_list
 fi

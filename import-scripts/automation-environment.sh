@@ -10,6 +10,8 @@ export FOUNDATION_DATA_HOME=/data/portal-cron/cbio-portal-data/foundation
 # CMO_DATA_HOME looks unused
 #export CMO_DATA_HOME=/data/cbio-portal-data/bic-mskcc
 export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk.x86_64
+export JAVA_BINARY=$JAVA_HOME/bin/java
+export JAVA_DEBUG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 export PYTHON_BINARY=/home/grossb/local/bin/python
 export HG_BINARY=/home/grossb/local/bin/hg
 export PATH=/home/grossb/local/bin/:$PATH:/usr/bin/:/bin/
