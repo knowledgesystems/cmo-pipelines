@@ -162,13 +162,13 @@ def send_mail(to, subject, body, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, s
 def get_gdata_credentials(secrets, creds, scope, force=False):
     storage = Storage(creds)
     credentials = storage.get()
-    
+
     if credentials.access_token_expired:
         credentials.refresh(httplib2.Http())
 
     if credentials is None or credentials.invalid or force:
       credentials = run_flow(flow_from_clientsecrets(secrets, scope=scope), storage, argparser.parse_args([]))
-        
+
     return credentials
 
 def google_login(secrets, creds, user, pw, app_name):
@@ -206,7 +206,7 @@ def get_worksheet_feed(client, ss, ws):
 
     ss_id = get_feed_id(client.GetSpreadsheetsFeed(), ss)
     ws_id = get_feed_id(client.GetWorksheetsFeed(ss_id), ws)
-    
+
     return client.GetListFeed(ss_id, ws_id)
 
 # ------------------------------------------------------------------------------
@@ -339,7 +339,7 @@ def get_all_user_map(spreadsheet, worksheet_feed,mskcc_user_spreadsheet):
         to_return[google_email] = User(inst_email, google_email, "not_used", 1, "not_used")
 
     return to_return
-    
+
 # ------------------------------------------------------------------------------
 # get db connection
 def get_db_connection(portal_properties, port):
@@ -392,7 +392,7 @@ def get_portal_properties(portal_properties_filename):
         IMPORTER_SPREADSHEET not in properties or len(properties[IMPORTER_SPREADSHEET]) == 0):
         print >> ERROR_FILE, 'Missing one or more required properties, please check property file'
         return None
-    
+
     # return an instance of PortalProperties
     return PortalProperties(properties[CGDS_DATABASE_HOST],
                             properties[CGDS_DATABASE_NAME],
@@ -497,9 +497,9 @@ def get_email_parameters(google_spreadsheet,client):
     print >> OUTPUT_FILE, 'Getting email parameters from google spreadsheet'
     email_worksheet_feed = get_worksheet_feed(client, google_spreadsheet, IMPORTER_WORKSHEET)
     for entry in email_worksheet_feed.entry:
-    	if entry.custom[SUBJECT_KEY].text is not None and entry.custom[BODY_KEY].text is not None:
-		subject = entry.custom[SUBJECT_KEY].text.strip()
-		body = entry.custom[BODY_KEY].text.strip()
+        if entry.custom[SUBJECT_KEY].text is not None and entry.custom[BODY_KEY].text is not None:
+            subject = entry.custom[SUBJECT_KEY].text.strip()
+            body = entry.custom[BODY_KEY].text.strip()
     return subject, body
 
 def get_portal_name_map(google_spreadsheet,client):
@@ -507,7 +507,7 @@ def get_portal_name_map(google_spreadsheet,client):
     print >> OUTPUT_FILE, 'Getting access control parameter from google spreadsheet'
     access_control_worksheet_feed = get_worksheet_feed(client,google_spreadsheet,ACCESS_CONTROL_WORKSHEET)
     for entry in access_control_worksheet_feed.entry:
-        if entry.custom[PORTAL_NAME_KEY] is not None and entry.custom[SPREADSHEET_NAME_KEY] is not None: 
+        if entry.custom[PORTAL_NAME_KEY] is not None and entry.custom[SPREADSHEET_NAME_KEY] is not None:
             portal_name[entry.custom[SPREADSHEET_NAME_KEY].text.strip()] = entry.custom[PORTAL_NAME_KEY].text.strip()
             if entry.custom[PORTAL_NAME_KEY].text.strip() == 'mskcc-portal':
                 mskcc_user_spreadsheet = entry.custom[SPREADSHEET_NAME_KEY].text.strip()
@@ -556,7 +556,7 @@ def main():
         elif o == '--port':
             port = a
 
-    if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or port == '' or 
+    if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or port == '' or
         (send_email_confirm != 'true' and send_email_confirm != 'false')):
         usage()
         sys.exit(2)
@@ -606,8 +606,8 @@ def main():
                 if send_email_confirm == 'true':
                     subject,body = get_email_parameters(google_spreadsheet,client)
                     for new_user_key in new_user_map.keys():
-                    	new_user = new_user_map[new_user_key]
-                    	print >> OUTPUT_FILE, ('Sending confirmation email to new user: %s at %s' %
+                        new_user = new_user_map[new_user_key]
+                        print >> OUTPUT_FILE, ('Sending confirmation email to new user: %s at %s' %
                                                (new_user.name, new_user.inst_email))
                         if sender == 'GENIE':
                             send_mail([new_user.inst_email],subject,body, MESSAGE_FROM_GENIE, MESSAGE_BCC_GENIE)

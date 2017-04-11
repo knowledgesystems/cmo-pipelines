@@ -147,16 +147,16 @@ def get_gdata_credentials(secrets, creds, scope, force=False):
 
 def google_login(secrets, creds, user, pw, app_name):
 
-	credentials = get_gdata_credentials(secrets, creds, ["https://spreadsheets.google.com/feeds"], False)
-	client = gdata.spreadsheet.service.SpreadsheetsService(additional_headers={'Authorization' : 'Bearer %s' % credentials.access_token})
+    credentials = get_gdata_credentials(secrets, creds, ["https://spreadsheets.google.com/feeds"], False)
+    client = gdata.spreadsheet.service.SpreadsheetsService(additional_headers={'Authorization' : 'Bearer %s' % credentials.access_token})
 
-	# google spreadsheet
-	client.email = user
-	client.password = pw
-	client.source = app_name
-	client.ProgrammaticLogin()
+    # google spreadsheet
+    client.email = user
+    client.password = pw
+    client.source = app_name
+    client.ProgrammaticLogin()
 
-	return client
+    return client
 
 # ------------------------------------------------------------------------------
 # given a feed & feed name, returns its id
@@ -381,20 +381,20 @@ def main():
         sys.exit(2)
 
     # process the options
-	secrets_filename = ''
-	creds_filename = ''
+    secrets_filename = ''
+    creds_filename = ''
     properties_filename = ''
     send_email_confirm = ''
 
     for o, a in opts:
-		if o == '--secrets-file':
-			secrets_filename = a
-		elif o == '--creds-file':
-			creds_filename = a
-		elif o == '--properties-file':
-			properties_filename = a
-		elif o == '--send-email-confirm':
-			send_email_confirm = a
+        if o == '--secrets-file':
+            secrets_filename = a
+        elif o == '--creds-file':
+            creds_filename = a
+        elif o == '--properties-file':
+            properties_filename = a
+        elif o == '--send-email-confirm':
+            send_email_confirm = a
     if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or
         (send_email_confirm != 'true' and send_email_confirm != 'false')):
         usage()

@@ -9,7 +9,7 @@ rm -rf "$tmp"/*
 
 # update mellinghoff data
 # (assume MSK-IMPACT repos has been pulled in the morning - in fact we will break that process if we pull here)
-cd $IMPACT_DATA_HOME;$HG_BINARY pull
+cd $IMPACT_DATA_HOME ; $HG_BINARY pull
 
 # create list of glioma samples from MSK-IMPACT
 glioma_samples="$tmp"/glioma-samples.txt
