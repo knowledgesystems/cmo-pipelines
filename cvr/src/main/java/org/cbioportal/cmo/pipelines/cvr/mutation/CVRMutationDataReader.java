@@ -102,7 +102,7 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
                     try {
                         annotatedRecord = annotator.annotateRecord(record, false, "mskcc", false);
                     } catch (HttpServerErrorException e) {
-                        log.warn("Failed to annotate a record from json! Sample: " + sampleId + " Variant: " + record.getChromosome() + ":" + record.getStart_Position() + record.getReference_Allele() + ">" + record.getTumor_Seq_Allele2());
+                        log.warn("Failed to annotate a record from json! Sample: " + sampleId + " Variant: " + record.getChromosome() + ":" + record.getStart_Position() + " " + record.getReference_Allele() + ">" + record.getTumor_Seq_Allele2());
                         annotatedRecord = cvrUtilities.buildCVRAnnotatedRecord(record);
                     }
                     Map<String, String> additionalProperties = record.getAdditionalProperties();
