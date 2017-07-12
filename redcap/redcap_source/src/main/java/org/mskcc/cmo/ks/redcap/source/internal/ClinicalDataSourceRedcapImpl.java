@@ -36,8 +36,16 @@ import org.mskcc.cmo.ks.redcap.models.RedcapToken;
 import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.http.*;
@@ -71,6 +79,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     private String metadataProject;
           
     private Map<String, String> tokens = new HashMap<>();
+    private Map<String, String> allTokens = new HashMap<>();
     private Map<String, String>  timeline = new HashMap<>();
     private List<Map<String, String>> records;
     private List<Map<String, String>> timelineRecords;
@@ -146,6 +155,19 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     @Override
     public boolean hasMoreClinicalData() {
         return !tokens.isEmpty();
+    }
+    
+    @Override
+    public void pushClinicalData(String studyId, List<File> dataFiles) {
+        String token = allTokens.getOrDefault(studyId, null);
+        if (token == null) {
+            log.error("Study not found in redcap tokens: " + studyId);
+            return;
+        }
+        
+        deleteStudyData(token);
+        formatClinicalData(dataFiles.get(0));
+        pushStudyData(token, dataFiles.get(0));
     }
     
     private void getClinicalHeaderData() {
@@ -294,6 +316,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
                 }
                 else {
                     tokens.put(token.getStudyId(), token.getApiToken());
+                    allTokens.put(token.getStudyId(), token.getApiToken());
                 }
             }
             if (token.getStableId().equals(metadataProject)) {
@@ -385,4 +408,33 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     
     public static void main(String[] args) {}
 
+    private void deleteStudyData(String token) {
+        RestTemplate restTemplate = new RestTemplate();
+        LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
+        uriVariables.add("username", "hardcodedusername");
+        uriVariables.add("password", "hardcodedpassword");
+        uriVariables.add("hardcodedhiddeninputid", "");
+        uriVariables.add("submitted", "1");
+        
+        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        ResponseEntity<String> responseEntity = restTemplate.exchange("http://dashi-dev.cbio.mskcc.org/redcap/", HttpMethod.POST, requestEntity, String.class);     
+        HttpHeaders headers = new HttpHeaders();        
+        Predicate<String> notDeleted = (String s) -> !s.contains("deleted");
+        List<String> cookies = responseEntity.getHeaders().get("Set-Cookie").stream().filter(notDeleted).collect(Collectors.toList());
+        String cookie = cookies.get(0).split(";")[0];
+        headers.add(HttpHeaders.COOKIE, cookie);
+        HttpEntity<?> rq = new HttpEntity<>(headers);
+        HttpEntity<?> response = restTemplate.exchange("http://dashi-dev.cbio.mskcc.org/redcap/redcap_v6.11.1/ProjectGeneral/erase_project_data.php?pid=430&action=erase_data", HttpMethod.GET, rq, String.class);
+        System.out.println();                           
+        
+        
+    }
+
+    private void formatClinicalData(File dataFile) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private void pushStudyData(String token, File dataFile) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }  
 }
