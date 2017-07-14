@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -31,51 +31,71 @@
 */
 package org.mskcc.cmo.ks.redcap.source.internal;
 
-import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
-import org.mskcc.cmo.ks.redcap.models.RedcapToken;
-import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.log4j.Logger;
+import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
+import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
+import org.mskcc.cmo.ks.redcap.models.RedcapToken;
+import org.mskcc.cmo.ks.redcap.models.ProjectInfoResponse;
+import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
+import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import org.apache.log4j.Logger;
-import org.springframework.batch.core.configuration.annotation.JobScope;
 
 /**
  *
  * @author Zachary Heins
- * 
+ *
  * Use Redcap to fetch clinical metadata and data
- * 
+ *
  */
 
 @Configuration
 @JobScope
 public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
-    
-    @Value("${redcap_url}")
-    private String redcapUrl;        
-    
+
+    //Do not use these directly .. instead call redcapBaseURI() and redcapApiURI() methods
+    //TODO: move these into a URI management class/bean (singleton)
+    private static URI redcapBaseURI = null;
+    private static URI redcapApiURI = null;
+
+    @Value("${redcap_base_url}")
+    private String redcapBaseUrl;
+    @Value("${redcap_erase_project_data_url_path}")
+    private String redcapEraseProjectDataUrlPath;
+    @Value("${redcap_username}")
+    private String redcapUsername;
+    @Value("${redcap_password}")
+    private String redcapPassword;
+    @Value("${redcap_login_hidden_input_name}")
+    private String redcapLoginHiddenInputName;
     @Value("${mapping_token}")
-    private String mappingToken;        
-    
+    private String mappingToken;
     @Value("#{jobParameters[redcap_project]}")
     private String project;
-    
     @Value("${metadata_project}")
     private String metadataProject;
-          
+
     private Map<String, String> tokens = new HashMap<>();
+    private Map<String, String> allTokens = new HashMap<>();
     private Map<String, String>  timeline = new HashMap<>();
     private List<Map<String, String>> records;
     private List<Map<String, String>> timelineRecords;
     List<RedcapAttributeMetadata> metadata;
-    
+
     private List<String> sampleHeader;
     private List<String> patientHeader;
     private List<String> combinedHeader;
@@ -85,43 +105,43 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     String nextTimelineId;
     String metadataToken;
     boolean gotTokens;
-    
+
      private final Logger log = Logger.getLogger(ClinicalDataSourceRedcapImpl.class);
-    
+
     @Override
     public List<String> getSampleHeader() {
         checkTokens();
         getClinicalHeaderData();
         return sampleHeader;
     }
-    
+
     @Override
     public List<String> getPatientHeader() {
         checkTokens();
         getClinicalHeaderData();
-        return patientHeader;    
+        return patientHeader;
     }
 
     @Override
     public List<String> getTimelineHeader() {
         checkTokens();
         getTimelineHeaderData();
-        return combinedHeader;            
+        return combinedHeader;
     }
-    
+
     @Override
     public List<Map<String, String>> getClinicalData() {
         checkTokens();
-        return records = getClinicalData(false);       
-    }     
-    
+        return records = getClinicalData(false);
+    }
+
     @Override
     public List<Map<String, String>> getTimelineData() {
         checkTokens();
         return timelineRecords = getClinicalData(true);
-  
+
     }
-    
+
     @Override
     public String getNextClinicalStudyId() {
         checkTokens();
@@ -129,7 +149,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         nextClinicalId = keys.get(0);
         return nextClinicalId;
     }
-    
+
     @Override
     public String getNextTimelineStudyId() {
         checkTokens();
@@ -137,24 +157,61 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         nextTimelineId = keys.get(0);
         return nextTimelineId;
     }
-    
+
     @Override
     public boolean hasMoreTimelineData() {
         return !timeline.isEmpty();
     }
-    
+
     @Override
     public boolean hasMoreClinicalData() {
         return !tokens.isEmpty();
     }
-    
+
+    @Override
+    public void pushClinicalData(String studyId, List<File> dataFiles) {
+        String token = allTokens.getOrDefault(studyId, null);
+        if (token == null) {
+            log.error("Study not found in redcap tokens: " + studyId);
+            return;
+        }
+        deleteRedcapProjectData(token);
+        formatClinicalData(dataFiles.get(0));
+        pushStudyData(token, dataFiles.get(0));
+    }
+
+    private URI getRedcapURI() {
+        if (redcapBaseURI == null) {
+            try {
+                redcapBaseURI = new URI(redcapBaseUrl.trim() + "/");
+             } catch (URISyntaxException e) {
+                log.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
+        }
+        return redcapBaseURI;
+    }
+
+    private URI getRedcapApiURI() {
+        if (redcapApiURI == null) {
+            URI base = getRedcapURI();
+            redcapApiURI = base.resolve("api/");
+        }
+        return redcapApiURI;
+    }
+
+    private URI getRedcapEraseProjectDataURI(String projectId) {
+        URI base = getRedcapURI();
+        return base.resolve(redcapEraseProjectDataUrlPath + "/?pid=" + projectId + "&action=erase_data");
+    }
+
     private void getClinicalHeaderData() {
-        metadata = getMetadata();     
-        List<RedcapProjectAttribute> attributes = getAttributes(false); 
-        
+        metadata = getMetadata();
+        List<RedcapProjectAttribute> attributes = getAttributes(false);
+
         Map<RedcapProjectAttribute, RedcapAttributeMetadata> sampleAttributeMap = new LinkedHashMap<>();
         Map<RedcapProjectAttribute, RedcapAttributeMetadata> patientAttributeMap = new LinkedHashMap<>();
-        
+
         for (RedcapProjectAttribute attribute : attributes) {
             for (RedcapAttributeMetadata meta : metadata) {
                 if (attribute.getFieldName().toUpperCase().equals(meta.getNormalizedColumnHeader().toUpperCase())) {
@@ -172,10 +229,10 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         sampleHeader = makeHeader(sampleAttributeMap);
         patientHeader = makeHeader(patientAttributeMap);
     }
-    
+
     private void getTimelineHeaderData() {
-        metadata = getMetadata();     
-        List<RedcapProjectAttribute> attributes = getAttributes(true); 
+        metadata = getMetadata();
+        List<RedcapProjectAttribute> attributes = getAttributes(true);
         Map<RedcapProjectAttribute, RedcapAttributeMetadata> combinedAttributeMap = new LinkedHashMap<>();
          for (RedcapProjectAttribute attribute : attributes) {
             for (RedcapAttributeMetadata meta : metadata) {
@@ -184,29 +241,29 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
                 }
             }
         }
-         
+
          combinedHeader = makeHeader(combinedAttributeMap);
     }
-    
+
     private List<RedcapAttributeMetadata> getMetadata() {
         if (metadata  != null) {
             return metadata;
         }
         RestTemplate restTemplate = new RestTemplate();
-        
+
         log.info("Getting attribute metadatas...");
-        
+
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         uriVariables.add("token", metadataToken);
         uriVariables.add("content", "record");
         uriVariables.add("format", "json");
         uriVariables.add("type", "flat");
-        
+
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
-        ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(redcapUrl, HttpMethod.POST, requestEntity, RedcapAttributeMetadata[].class);
-        return Arrays.asList(responseEntity.getBody());        
+        ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapAttributeMetadata[].class);
+        return Arrays.asList(responseEntity.getBody());
     }
-    
+
     private List<RedcapProjectAttribute> getAttributes(boolean timelineData) {
         String projectToken;
         if(timelineData) {
@@ -214,22 +271,22 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         }
         else {
             projectToken = tokens.get(nextClinicalId);
-        }  
-        
+        }
+
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         uriVariables.add("token", projectToken);
         uriVariables.add("content", "metadata");
         uriVariables.add("format", "json");
         uriVariables.add("type", "flat");
-        
+
         RestTemplate restTemplate = new RestTemplate();
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
         log.info("Getting attributes for project...");
-        ResponseEntity<RedcapProjectAttribute[]> responseEntity = restTemplate.exchange(redcapUrl, HttpMethod.POST, requestEntity, RedcapProjectAttribute[].class);
+        ResponseEntity<RedcapProjectAttribute[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapProjectAttribute[].class);
         return Arrays.asList(responseEntity.getBody());
     }
-    
-    private  List<Map<String, String>> getClinicalData(boolean timelineData) {        
+
+    private  List<Map<String, String>> getClinicalData(boolean timelineData) {
         String projectToken;
         if(timelineData) {
             projectToken = timeline.remove(nextTimelineId);
@@ -238,55 +295,55 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             Set<String> keySet = tokens.keySet();
             projectToken = tokens.remove(nextClinicalId);
         }
-        
+
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         uriVariables.add("token", projectToken);
         uriVariables.add("content", "record");
         uriVariables.add("format", "json");
         uriVariables.add("type", "flat");
-        
+
         RestTemplate restTemplate = new RestTemplate();
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
         log.info("Getting data for project...");
-        ResponseEntity<ObjectNode[]> responseEntity = restTemplate.exchange(redcapUrl, HttpMethod.POST, requestEntity, ObjectNode[].class);    
+        ResponseEntity<ObjectNode[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, ObjectNode[].class);
         List<Map<String, String>> responses = new ArrayList<>();
-        
+
         for(ObjectNode response : responseEntity.getBody())
         {
             Map<String, String> map = new HashMap<>();
             Iterator<Map.Entry<String, JsonNode>> nodeIterator = response.fields();
             while (nodeIterator.hasNext()) {
-                Map.Entry<String, JsonNode> entry = (Map.Entry<String, JsonNode>) nodeIterator.next();               
+                Map.Entry<String, JsonNode> entry = (Map.Entry<String, JsonNode>) nodeIterator.next();
                 map.put(entry.getKey().toUpperCase(), entry.getValue().asText());
             }
             responses.add(map);
-        }                    
+        }
         return responses;
-    }   
+    }
 
     private List<String> makeHeader(Map<RedcapProjectAttribute, RedcapAttributeMetadata> attributeMap) {
-        List<String> header = new ArrayList<>();        
+        List<String> header = new ArrayList<>();
         for (Map.Entry<RedcapProjectAttribute, RedcapAttributeMetadata> entry : attributeMap.entrySet()) {
             header.add(entry.getValue().getNormalizedColumnHeader());
-        }        
-        
+        }
+
         return header;
-    }    
-    
+    }
+
     private void fillTokens() {
         RestTemplate restTemplate = new RestTemplate();
-        
+
         log.info("Getting tokens for clinical data processor...");
-        
+
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         uriVariables.add("token", mappingToken);
         uriVariables.add("content", "record");
         uriVariables.add("format", "json");
         uriVariables.add("type", "flat");
-        
+
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
-        ResponseEntity<RedcapToken[]> responseEntity = restTemplate.exchange(redcapUrl, HttpMethod.POST, requestEntity, RedcapToken[].class);
-        
+        ResponseEntity<RedcapToken[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapToken[].class);
+
         for (RedcapToken token : responseEntity.getBody()) {
             if (token.getStableId().equals(project)) {
                 if (token.getStudyId().toUpperCase().contains("TIMELINE")) {
@@ -294,6 +351,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
                 }
                 else {
                     tokens.put(token.getStudyId(), token.getApiToken());
+                    allTokens.put(token.getStudyId(), token.getApiToken());
                 }
             }
             if (token.getStableId().equals(metadataProject)) {
@@ -301,15 +359,15 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             }
         }
     }
-    
+
     private HttpEntity getRequestEntity(LinkedMultiValueMap<String, String> uriVariables)
-    {  
+    {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
         return new HttpEntity<LinkedMultiValueMap<String, String>>(uriVariables, headers);
     }
-    
+
     private void checkTokens() {
         if (!gotTokens) {
             fillTokens();
@@ -320,7 +378,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     /**
      * Generates list of patient attributes from full header from redcap.
      * @param fullHeader
-     * @return 
+     * @return
      */
     @Override
     public Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader) {
@@ -330,7 +388,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         List<String> priorities = new ArrayList<>();
         List<String> externalHeader = new ArrayList<>();
         List<String> header = new ArrayList<>();
-        
+
         for (int i=0; i<fullHeader.get("header").size(); i++) {
             if (fullHeader.get("attribute_types").get(i).equals("PATIENT")) {
                 displayNames.add(fullHeader.get("display_names").get(i));
@@ -349,11 +407,11 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         fullPatientHeader.put("header", header);
         return fullPatientHeader;
     }
-    
+
     /**
      * Generates list of sample attributes from full header from redcap.
      * @param fullHeader
-     * @return 
+     * @return
      */
     @Override
     public Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader) {
@@ -363,7 +421,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         List<String> priorities = new ArrayList<>();
         List<String> externalHeader = new ArrayList<>();
         List<String> header = new ArrayList<>();
-        
+
         for (int i=0; i<fullHeader.get("header").size(); i++) {
             if (fullHeader.get("attribute_types").get(i).equals("SAMPLE")) {
                 displayNames.add(fullHeader.get("display_names").get(i));
@@ -382,7 +440,79 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         fullSampleHeader.put("header", header);
         return fullSampleHeader;
     }
-    
-    public static void main(String[] args) {}
 
+    private String getSessionCookieFromRedcap() {
+        RestTemplate restTemplate = new RestTemplate();
+        LinkedMultiValueMap<String, String> loginUriVariables = new LinkedMultiValueMap<>();
+        loginUriVariables.add("username", redcapUsername);
+        loginUriVariables.add("password", redcapPassword);
+        loginUriVariables.add(redcapLoginHiddenInputName, "");
+        loginUriVariables.add("submitted", "1");
+        HttpEntity<LinkedMultiValueMap<String, Object>> loginRequestEntity = getRequestEntity(loginUriVariables);
+        ResponseEntity<String> loginResponseEntity = restTemplate.exchange(getRedcapURI(), HttpMethod.POST, loginRequestEntity, String.class);
+        HttpStatus responseStatus = loginResponseEntity.getStatusCode();
+        if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
+            log.warn("RedCap login with username/password/hiddenInput attempt failed. HTTP status code = " + Integer.toString(loginResponseEntity.getStatusCode().value()));
+            return null;
+        }
+        Predicate<String> notDeleted = (String s) -> !s.contains("deleted");
+        List<String> cookies = loginResponseEntity.getHeaders().get("Set-Cookie").stream().filter(notDeleted).collect(Collectors.toList());
+        if (cookies.size() < 1) {
+            log.warn("RedCap login succeeded but no Set-Cookie header field was included.");
+            return null;
+        }
+        return cookies.get(0).split(";")[0];
+    }
+
+    private String getProjectIdFromRedcap(String token, String cookie) {
+        RestTemplate restTemplate = new RestTemplate();
+        LinkedMultiValueMap<String, String> projectInfoUriVariables = new LinkedMultiValueMap<>();
+        projectInfoUriVariables.add("token", token);
+        projectInfoUriVariables.add("content", "project");
+        projectInfoUriVariables.add("format", "json");
+        projectInfoUriVariables.add("returnFormat", "json");
+        HttpEntity<LinkedMultiValueMap<String, Object>> projectInfoRequestEntity = getRequestEntity(projectInfoUriVariables);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.COOKIE, cookie);
+        HttpEntity<?> rq = new HttpEntity<>(headers);
+        ResponseEntity<ProjectInfoResponse> projectInfoResponseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, projectInfoRequestEntity, ProjectInfoResponse.class);
+        HttpStatus responseStatus = projectInfoResponseEntity.getStatusCode();
+        if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
+            log.warn("RedCap request for project data failed. HTTP status code = " + Integer.toString(projectInfoResponseEntity.getStatusCode().value()));
+            return null;
+        }
+        return projectInfoResponseEntity.getBody().getProjectId();
+    }
+
+    private void deleteRedcapProjectData(String cookie, String projectId) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.COOKIE, cookie);
+        HttpEntity<?> rq = new HttpEntity<>(headers);
+        HttpEntity<?> response = restTemplate.exchange(getRedcapEraseProjectDataURI(projectId), HttpMethod.GET, rq, String.class);
+    }
+
+    private void deleteRedcapProjectData(String token) {
+        String cookie = getSessionCookieFromRedcap();
+        if (cookie == null) {
+            log.warn("RedCap session cookie not available; unable to delete project data");
+            throw new RuntimeException("RedCap session cookie not available; unable to delete project data");
+        }
+        String projectId = getProjectIdFromRedcap(token, cookie);
+        if (projectId == null) {
+            log.warn("ProjectId not available from RedCap getProjectData API request");
+            throw new RuntimeException("ProjectId not available from RedCap getProjectData API request");
+        }
+        deleteRedcapProjectData(cookie, projectId);
+    }
+
+    private void formatClinicalData(File dataFile) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private void pushStudyData(String token, File dataFile) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    public static void main(String[] args) {}
 }

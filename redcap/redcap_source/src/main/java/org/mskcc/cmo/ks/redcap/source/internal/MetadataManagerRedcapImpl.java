@@ -54,8 +54,8 @@ import org.springframework.batch.core.configuration.annotation.JobScope;
 @JobScope
 public class MetadataManagerRedcapImpl implements MetadataManager {
     
-    @Value("${redcap_url}")
-    private String redcapUrl;        
+    @Value("${redcap_base_url}")
+    private String redcapBaseUrl;        
     
     @Value("${mapping_token}")
     private String mappingToken;        
@@ -116,7 +116,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         
         LinkedMultiValueMap<String, String> uriVariables = getUriVariables(metadataToken);        
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
-        ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(redcapUrl, HttpMethod.POST, requestEntity, RedcapAttributeMetadata[].class);
+        ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(redcapBaseUrl + "/api/", HttpMethod.POST, requestEntity, RedcapAttributeMetadata[].class);
         return Arrays.asList(responseEntity.getBody());        
     }
     
@@ -130,7 +130,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         
         LinkedMultiValueMap<String, String> uriVariables = getUriVariables(namespaceToken);
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
-        ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(redcapUrl, HttpMethod.POST, requestEntity, RedcapAttributeMetadata[].class);
+        ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(redcapBaseUrl + "/api/", HttpMethod.POST, requestEntity, RedcapAttributeMetadata[].class);
         return Arrays.asList(responseEntity.getBody());        
     }    
      
@@ -171,7 +171,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         
         LinkedMultiValueMap<String, String> uriVariables = getUriVariables(mappingToken);
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
-        ResponseEntity<RedcapToken[]> responseEntity = restTemplate.exchange(redcapUrl, HttpMethod.POST, requestEntity, RedcapToken[].class);
+        ResponseEntity<RedcapToken[]> responseEntity = restTemplate.exchange(redcapBaseUrl + "/api/", HttpMethod.POST, requestEntity, RedcapToken[].class);
         
         for (RedcapToken token : responseEntity.getBody()) {
             tokens.put(token.getStudyId(), token.getApiToken());

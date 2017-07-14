@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -55,7 +55,6 @@ public class RedcapPipeline {
             .addOption("p", "redcap_project", true, "Redcap Project stable ID")
             .addOption("d", "directory", true, "Output directory")
             .addOption("m", "merge-datasources", false, "Flag for merging datasources for given stable ID");
-
         return gnuOptions;
     }
 
@@ -77,21 +76,23 @@ public class RedcapPipeline {
                 .addString("mergeClinicalDataSources", String.valueOf(mergeClinicalDataSources))
                 .toJobParameters();
              
-        Job redcapJob= ctx.getBean(BatchConfiguration.REDCAP_JOB, Job.class);
+        Job redcapJob = ctx.getBean(BatchConfiguration.REDCAP_JOB, Job.class);
         JobExecution jobExecution = jobLauncher.run(redcapJob, jobParameters);    
-
     }
     
     public static void main(String[] args) throws Exception
     {        
         Options gnuOptions = RedcapPipeline.getOptions(args);
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = parser.parse(gnuOptions, args);
         if (commandLine.hasOption("h") ||
             !commandLine.hasOption("directory") ||
             !commandLine.hasOption("redcap_project")) {
             help(gnuOptions, 0);
         }
-        launchJob(args, commandLine.getOptionValue("redcap_project"), commandLine.getOptionValue("directory"), commandLine.hasOption("m"));
+        String project = commandLine.getOptionValue("redcap_project");
+        String directory = commandLine.getOptionValue("directory");
+        boolean mergeClinicalDataSources = commandLine.hasOption("m");
+        launchJob(args, project, directory, mergeClinicalDataSources);
     }    
 }

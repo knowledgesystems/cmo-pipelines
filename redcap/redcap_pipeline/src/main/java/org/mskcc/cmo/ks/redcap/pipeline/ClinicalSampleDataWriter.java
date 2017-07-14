@@ -34,12 +34,14 @@ package org.mskcc.cmo.ks.redcap.pipeline;
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
+import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 
@@ -67,6 +69,9 @@ public class ClinicalSampleDataWriter implements ItemStreamWriter<ClinicalDataCo
     @Value("#{stepExecutionContext['patientHeader']}")
     private Map<String, List<String>> patientHeader;
 
+    @Autowired
+    public ClinicalDataSource clinicalDataSource;
+    
     private File stagingFile;
     private String outputFilename = "data_clinical_sample";
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
@@ -111,6 +116,9 @@ public class ClinicalSampleDataWriter implements ItemStreamWriter<ClinicalDataCo
         if (writeClinicalSample) {
             flatFileItemWriter.close();
         }
+        List<File> files = new ArrayList<>();
+        files.add(stagingFile);
+        clinicalDataSource.pushClinicalData(studyId, files);
     }
 
     @Override

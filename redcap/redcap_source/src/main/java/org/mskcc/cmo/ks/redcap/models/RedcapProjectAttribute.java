@@ -1,8 +1,34 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
+ * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
+ * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * obligations to provide maintenance, support, updates, enhancements or
+ * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * liable to any party for direct, indirect, special, incidental or
+ * consequential damages, including lost profits, arising out of the use of this
+ * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * Center has been advised of the possibility of such damage.
  */
+
+/*
+ * This file is part of cBioPortal CMO-Pipelines.
+ *
+ * cBioPortal is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package org.mskcc.cmo.ks.redcap.models;
 
@@ -81,13 +107,13 @@ public class RedcapProjectAttribute {
 
     /**
     * No args constructor for use in serialization
-    * 
+    *
     */
     public RedcapProjectAttribute() {
     }
 
     /**
-    * 
+    *
     * @param matrixGroupName
     * @param fieldType
     * @param selectChoicesOrCalculations
@@ -129,7 +155,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The fieldName
     */
@@ -139,7 +165,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param fieldName
     * The field_name
     */
@@ -149,7 +175,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The formName
     */
@@ -159,7 +185,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param formName
     * The form_name
     */
@@ -169,7 +195,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The sectionHeader
     */
@@ -179,7 +205,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param sectionHeader
     * The section_header
     */
@@ -189,7 +215,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The fieldType
     */
@@ -199,7 +225,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param fieldType
     * The field_type
     */
@@ -209,7 +235,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The fieldLabel
     */
@@ -219,7 +245,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param fieldLabel
     * The field_label
     */
@@ -229,7 +255,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The selectChoicesOrCalculations
     */
@@ -239,7 +265,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param selectChoicesOrCalculations
     * The select_choices_or_calculations
     */
@@ -249,7 +275,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The fieldNote
     */
@@ -259,7 +285,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param fieldNote
     * The field_note
     */
@@ -269,7 +295,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The textValidationTypeOrShowSliderNumber
     */
@@ -279,7 +305,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param textValidationTypeOrShowSliderNumber
     * The text_validation_type_or_show_slider_number
     */
@@ -289,7 +315,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The textValidationMin
     */
@@ -299,7 +325,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param textValidationMin
     * The text_validation_min
     */
@@ -309,7 +335,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The textValidationMax
     */
@@ -319,7 +345,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param textValidationMax
     * The text_validation_max
     */
@@ -329,7 +355,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The identifier
     */
@@ -339,7 +365,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param identifier
     * The identifier
     */
@@ -349,7 +375,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The branchingLogic
     */
@@ -359,7 +385,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param branchingLogic
     * The branching_logic
     */
@@ -369,7 +395,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The requiredField
     */
@@ -379,7 +405,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param requiredField
     * The required_field
     */
@@ -389,7 +415,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The customAlignment
     */
@@ -399,7 +425,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param customAlignment
     * The custom_alignment
     */
@@ -409,7 +435,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The questionNumber
     */
@@ -419,7 +445,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param questionNumber
     * The question_number
     */
@@ -429,7 +455,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The matrixGroupName
     */
@@ -439,7 +465,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param matrixGroupName
     * The matrix_group_name
     */
@@ -449,7 +475,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The matrixRanking
     */
@@ -459,7 +485,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param matrixRanking
     * The matrix_ranking
     */
@@ -469,7 +495,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @return
     * The fieldAnnotation
     */
@@ -479,7 +505,7 @@ public class RedcapProjectAttribute {
     }
 
     /**
-    * 
+    *
     * @param fieldAnnotation
     * The field_annotation
     */
