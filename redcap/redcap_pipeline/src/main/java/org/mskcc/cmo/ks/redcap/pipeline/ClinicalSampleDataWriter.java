@@ -113,6 +113,7 @@ public class ClinicalSampleDataWriter implements ItemStreamWriter<ClinicalDataCo
 
     @Override
     public void close() throws ItemStreamException {
+        //TODO: move this code out of the ClinicalSampleDataWriter .. instead locate into a tasklet to handle Import to RedCap
         if (writeClinicalSample) {
             flatFileItemWriter.close();
         }

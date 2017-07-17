@@ -507,11 +507,29 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     }
 
     private void formatClinicalData(File dataFile) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     private void pushStudyData(String token, File dataFile) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        RestTemplate restTemplate = new RestTemplate();
+        LinkedMultiValueMap<String, String> importRecordUriVariables = new LinkedMultiValueMap<>();
+        importRecordUriVariables.add("token", token);
+        importRecordUriVariables.add("content", "record");
+        importRecordUriVariables.add("format", "json");
+        importRecordUriVariables.add("overwriteBehavior", "overwrite");
+        importRecordUriVariables.add("data", "{\"records\":[" +
+                                            "{\"item\":{\"sample_id\":\"testitem1\"}}," +
+                                            "{\"item\":{\"sample_id\":\"testitem1\"}}," +
+                                            "{\"item\":{\"sample_id\":\"testitem3\"}}" +
+                                            "]}");
+        HttpEntity<LinkedMultiValueMap<String, Object>> importRecordRequestEntity = getRequestEntity(importRecordUriVariables);
+        ResponseEntity<String> importRecordResponseEntity = restTemplate.exchange(getRedcapURI(), HttpMethod.POST, importRecordRequestEntity, String.class);
+        HttpStatus responseStatus = importRecordResponseEntity.getStatusCode();
+        if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
+            log.warn("RedCap import record API call failed. HTTP status code = " + Integer.toString(importRecordResponseEntity.getStatusCode().value()));
+            throw new RuntimeException("RedCap import record API call failed. HTTP status code");
+        }
+        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     public static void main(String[] args) {}

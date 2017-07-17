@@ -53,7 +53,7 @@ import org.springframework.beans.factory.annotation.Value;
 @EnableBatchProcessing
 @ComponentScan(basePackages="org.mskcc.cmo.ks.redcap.source.internal")
 public class BatchConfiguration {
-    public static final String REDCAP_JOB = "redcapJob";
+    public static final String REDCAP_EXPORT_JOB = "redcapExportJob";
 
     private final Logger log = Logger.getLogger(BatchConfiguration.class);
 
@@ -78,8 +78,8 @@ public class BatchConfiguration {
 
     // Will keep calling clinicalDataStep or timelineDataStep based on the exit status from the clinicalDataStepListener
     @Bean
-    public Job redcapJob() {
-        return jobBuilderFactory.get(REDCAP_JOB)
+    public Job redcapExportJob() {
+        return jobBuilderFactory.get(REDCAP_EXPORT_JOB)
                 .start(clinicalDataStep())
                     .on("CLINICAL")
                     .to(clinicalDataStep())
