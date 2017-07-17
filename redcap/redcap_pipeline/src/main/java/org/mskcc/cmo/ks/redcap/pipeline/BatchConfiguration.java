@@ -52,6 +52,7 @@ import org.springframework.beans.factory.annotation.Value;
 @Configuration
 @EnableBatchProcessing
 @ComponentScan(basePackages="org.mskcc.cmo.ks.redcap.source.internal")
+@PropertySource("classpath:application.properties")
 public class BatchConfiguration {
     public static final String REDCAP_EXPORT_JOB = "redcapExportJob";
     public static final String REDCAP_IMPORT_JOB = "redcapImportJob";
