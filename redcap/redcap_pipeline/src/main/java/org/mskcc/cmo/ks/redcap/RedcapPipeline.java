@@ -31,8 +31,8 @@
 */
 package org.mskcc.cmo.ks.redcap;
 
+import java.io.PrintWriter;
 import org.mskcc.cmo.ks.redcap.pipeline.BatchConfiguration;
-
 import org.apache.commons.cli.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -47,52 +47,115 @@ import org.springframework.batch.core.launch.JobLauncher;
 
 @SpringBootApplication
 public class RedcapPipeline {
-    
+
+    private static final char EXPORT_MODE = 'e';
+    private static final char IMPORT_MODE = 'i';
+    private static final char CHECK_MODE = 'c';
+    private static final String ALL_VALID_MODES = "eic";
+
     private static Options getOptions(String[] args)
     {
-        Options gnuOptions = new Options();
-        gnuOptions.addOption("h", "help", false, "shows this help document and quits.")
-            .addOption("p", "redcap_project", true, "Redcap Project stable ID")
+        Options options = new Options();
+        options.addOption("h", "help", false, "shows this help document and quits.")
+            .addOption("p", "redcap-project", true, "Redcap Project stable ID")
             .addOption("d", "directory", true, "Output directory")
-            .addOption("m", "merge-datasources", false, "Flag for merging datasources for given stable ID");
-        return gnuOptions;
+            .addOption("f", "filename", true, "Filename for import into Redcap")
+            .addOption("m", "merge-datasources", false, "Flag for merging datasources for given stable ID")
+            .addOption("i", "import-mode", false, "Import from directory to redcap-project (use one of { -i, -e, -c })")
+            .addOption("e", "export-mode", false, "Export redcap-project to directory (use one of -i, -e, -c)")
+            .addOption("c", "check-mode", false, "Check if redcap-project is present (use one of { -i, -e, -c })");
+        return options;
     }
 
-    private static void help(Options gnuOptions, int exitStatus)
+    private static void help(Options options, int exitStatus)
     {
         HelpFormatter helpFormatter = new HelpFormatter();
-        helpFormatter.printHelp("RedcapPipeline", gnuOptions);
+        helpFormatter.printHelp("RedcapPipeline", options);
         System.exit(exitStatus);
     }
 
-    private static void launchJob(String[] args, String project, String directory, boolean mergeClinicalDataSources) throws Exception
+    private static void launchJob(String[] args, char executionMode, String project, String directory, String filename, boolean mergeClinicalDataSources) throws Exception
     {
-        SpringApplication app = new SpringApplication(RedcapPipeline.class);      
+        SpringApplication app = new SpringApplication(RedcapPipeline.class);
         ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
-        JobParameters jobParameters = new JobParametersBuilder()
-                .addString("redcap_project", project)
-                .addString("directory", directory)
-                .addString("mergeClinicalDataSources", String.valueOf(mergeClinicalDataSources))
-                .toJobParameters();
-             
-        Job redcapJob = ctx.getBean(BatchConfiguration.REDCAP_JOB, Job.class);
-        JobExecution jobExecution = jobLauncher.run(redcapJob, jobParameters);    
-    }
-    
-    public static void main(String[] args) throws Exception
-    {        
-        Options gnuOptions = RedcapPipeline.getOptions(args);
-        CommandLineParser parser = new DefaultParser();
-        CommandLine commandLine = parser.parse(gnuOptions, args);
-        if (commandLine.hasOption("h") ||
-            !commandLine.hasOption("directory") ||
-            !commandLine.hasOption("redcap_project")) {
-            help(gnuOptions, 0);
+        JobParametersBuilder builder = new JobParametersBuilder();
+        builder.addString("redcap_project", project);
+        Job redcapJob = null;
+        if (executionMode == EXPORT_MODE) {
+            redcapJob = ctx.getBean(BatchConfiguration.REDCAP_EXPORT_JOB, Job.class);
+            builder.addString("directory", directory)
+                    .addString("mergeClinicalDataSources", String.valueOf(mergeClinicalDataSources));
+        } else if (executionMode == IMPORT_MODE) {
+            redcapJob = ctx.getBean(BatchConfiguration.REDCAP_IMPORT_JOB, Job.class);
+            builder.addString("filename", filename);
         }
-        String project = commandLine.getOptionValue("redcap_project");
+        if (redcapJob != null) {
+            JobExecution jobExecution = jobLauncher.run(redcapJob, builder.toJobParameters());
+        }
+    }
+
+    public static char parseModeFromOptions(CommandLine commandLine) {
+        PrintWriter errOut = new PrintWriter(System.err, true);
+        boolean optionsAreValid = true;
+        char mode = ' ';
+        if (!commandLine.hasOption("redcap-project")) {
+            errOut.println("error: -p (--redcap-project) argument must be provided");
+            optionsAreValid = false;
+        }
+        if (commandLine.hasOption("import-mode")) {
+            mode = IMPORT_MODE;
+            if (commandLine.hasOption("export-mode") || commandLine.hasOption("check-mode")) {
+                errOut.println("error: multiple modes selected. Use only one from { -i, -e, -c }");
+                optionsAreValid = false;
+            }
+            if (!commandLine.hasOption("filename")) {
+                errOut.println("error: import-mode requires a -f (--filename) argument to be provided");
+                optionsAreValid = false;
+            }
+        } else if (commandLine.hasOption("export-mode")) {
+            mode = EXPORT_MODE;
+            if (commandLine.hasOption("import-mode") || commandLine.hasOption("check-mode")) {
+                errOut.println("error: multiple modes selected. Use only one from { -i, -e, -c }");
+                optionsAreValid = false;
+            }
+            if (!commandLine.hasOption("directory")) {
+                errOut.println("error: import-mode requires a -d (--directory) argument to be provided");
+                optionsAreValid = false;
+            }
+        } else if (commandLine.hasOption("check-mode")) {
+            mode = CHECK_MODE;
+            if (commandLine.hasOption("import-mode") || commandLine.hasOption("export-mode")) {
+                errOut.println("error: multiple modes selected. Use only one from { -i, -e, -c }");
+                optionsAreValid = false;
+            }
+        } else {
+            errOut.println("error: no mode selected. Use only one from { -i, -e, -c }");
+            optionsAreValid = false;
+        }
+        if (!optionsAreValid) {
+            return ' '; //invalid options specified
+        }
+//TODO: ROB .. take separate command line arguments .. redcap project for import ... and cancer study for export
+        return mode;
+    }
+
+    public static void main(String[] args) throws Exception
+    {
+        Options options = RedcapPipeline.getOptions(args);
+        CommandLineParser parser = new DefaultParser();
+        CommandLine commandLine = parser.parse(options, args);
+        if (commandLine.hasOption("help")) {
+            help(options, 0);
+        }
+        char executionMode = parseModeFromOptions(commandLine);
+        if (ALL_VALID_MODES.indexOf(executionMode) == -1) {
+            help(options, 1);
+        }
+        String project = commandLine.getOptionValue("redcap-project");
         String directory = commandLine.getOptionValue("directory");
-        boolean mergeClinicalDataSources = commandLine.hasOption("m");
-        launchJob(args, project, directory, mergeClinicalDataSources);
-    }    
+        String filename = commandLine.getOptionValue("filename");
+        boolean mergeClinicalDataSources = commandLine.hasOption("merge-datasources");
+        launchJob(args, executionMode, project, directory, filename, mergeClinicalDataSources);
+    }
 }

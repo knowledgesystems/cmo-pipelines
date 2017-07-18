@@ -53,7 +53,8 @@ import org.springframework.beans.factory.annotation.Value;
 @EnableBatchProcessing
 @ComponentScan(basePackages="org.mskcc.cmo.ks.redcap.source.internal")
 public class BatchConfiguration {
-    public static final String REDCAP_JOB = "redcapJob";
+    public static final String REDCAP_EXPORT_JOB = "redcapExportJob";
+    public static final String REDCAP_IMPORT_JOB = "redcapImportJob";
 
     private final Logger log = Logger.getLogger(BatchConfiguration.class);
 
@@ -67,26 +68,26 @@ public class BatchConfiguration {
     public StepBuilderFactory stepBuilderFactory;
 
     @Bean
-    public ClinicalDataStepListener clinicalDataStepListener() {
+    public ClinicalDataStepListener exportClinicalDataStepListener() {
         return new ClinicalDataStepListener();
     }
 
     @Bean
-    public TimelineDataStepListener timelineDataStepListener() {
+    public TimelineDataStepListener exportTimelineDataStepListener() {
         return new TimelineDataStepListener();
     }
 
     // Will keep calling clinicalDataStep or timelineDataStep based on the exit status from the clinicalDataStepListener
     @Bean
-    public Job redcapJob() {
-        return jobBuilderFactory.get(REDCAP_JOB)
-                .start(clinicalDataStep())
+    public Job redcapExportJob() {
+        return jobBuilderFactory.get(REDCAP_EXPORT_JOB)
+                .start(exportClinicalDataStep())
                     .on("CLINICAL")
-                    .to(clinicalDataStep())
+                    .to(exportClinicalDataStep())
                 .on("TIMELINE")
-                    .to(timelineDataStep())
+                    .to(exportTimelineDataStep())
                     .on("TIMELINE")
-                    .to(timelineDataStep())
+                    .to(exportTimelineDataStep())
                 .on("FINISHED")
                 .to(metaFileStep())
                 .end()
@@ -94,9 +95,16 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step clinicalDataStep() {
-        return stepBuilderFactory.get("clinicalDataStep")
-                .listener(clinicalDataStepListener())
+    public Job redcapImportJob() {
+        return jobBuilderFactory.get(REDCAP_IMPORT_JOB)
+                .start(importRedcapProjectDataStep())
+                .build();
+    }
+
+    @Bean
+    public Step exportClinicalDataStep() {
+        return stepBuilderFactory.get("exportClinicalDataStep")
+                .listener(exportClinicalDataStepListener())
                 .<Map<String, String>, ClinicalDataComposite> chunk(chunkInterval)
                 .reader(clinicalDataReader())
                 .processor(clinicalDataprocessor())
@@ -105,9 +113,9 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step timelineDataStep() {
-        return stepBuilderFactory.get("timelineDataStep")
-                .listener(timelineDataStepListener())
+    public Step exportTimelineDataStep() {
+        return stepBuilderFactory.get("exportTimelineDataStep")
+                .listener(exportTimelineDataStepListener())
                 .<Map<String, String>, String> chunk(chunkInterval)
                 .reader(timelineReader())
                 .processor(timelineProcessor())
@@ -116,10 +124,23 @@ public class BatchConfiguration {
     }
 
     @Bean
+    public Step importRedcapProjectDataStep() {
+        return stepBuilderFactory.get("importRedcapProjectDataStep")
+                .tasklet(importRedcapProjectDataTasklet())
+                .build();
+    }
+
+    @Bean
     public Step metaFileStep() {
         return stepBuilderFactory.get("metaFileStep").tasklet(metaFileStepTasklet()).build();
     }
 
+    @Bean
+    @StepScope
+    public Tasklet importRedcapProjectDataTasklet() {
+        return new ImportRedcapProjectDataTasklet();
+    }
+    
     @Bean
     @StepScope
     public ItemStreamReader<Map<String, String>> clinicalDataReader() {
