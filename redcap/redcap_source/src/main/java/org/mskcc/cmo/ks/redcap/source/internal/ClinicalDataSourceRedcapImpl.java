@@ -89,9 +89,8 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     @Value("${metadata_project}")
     private String metadataProject;
 
-    private Map<String, String> tokens = new HashMap<>();
-    private Map<String, String> allTokens = new HashMap<>();
-    private Map<String, String>  timeline = new HashMap<>();
+    private Map<String, String> clinicalDataTokens = new HashMap<>();
+    private Map<String, String>  clinicalTimelineTokens = new HashMap<>();
     private List<Map<String, String>> records;
     private List<Map<String, String>> timelineRecords;
     List<RedcapAttributeMetadata> metadata;
@@ -145,7 +144,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     @Override
     public String getNextClinicalStudyId() {
         checkTokens();
-        List<String> keys = new ArrayList(tokens.keySet());
+        List<String> keys = new ArrayList(clinicalDataTokens.keySet());
         nextClinicalId = keys.get(0);
         return nextClinicalId;
     }
@@ -153,31 +152,33 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     @Override
     public String getNextTimelineStudyId() {
         checkTokens();
-        List<String> keys = new ArrayList(timeline.keySet());
+        List<String> keys = new ArrayList(clinicalTimelineTokens.keySet());
         nextTimelineId = keys.get(0);
         return nextTimelineId;
     }
 
     @Override
     public boolean hasMoreTimelineData() {
-        return !timeline.isEmpty();
+        return !clinicalTimelineTokens.isEmpty();
     }
 
     @Override
     public boolean hasMoreClinicalData() {
-        return !tokens.isEmpty();
+        return !clinicalDataTokens.isEmpty();
     }
 
     @Override
-    public void pushClinicalData(String studyId, List<File> dataFiles) {
-        String token = allTokens.getOrDefault(studyId, null);
+    public void importClinicalDataFile(String studyId, String filename) {
+        checkTokens();
+        String token = clinicalDataTokens.getOrDefault(studyId, null);
+//TODO: ROB .. we must also look for the timeline token here
         if (token == null) {
-            log.error("Study not found in redcap tokens: " + studyId);
+            log.error("Study not found in redcap clinicalDataTokens: " + studyId);
             return;
         }
         deleteRedcapProjectData(token);
-        formatClinicalData(dataFiles.get(0));
-        pushStudyData(token, dataFiles.get(0));
+        formatClinicalData(filename);
+        importClinicalData(token, filename);
     }
 
     private URI getRedcapURI() {
@@ -267,10 +268,10 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     private List<RedcapProjectAttribute> getAttributes(boolean timelineData) {
         String projectToken;
         if(timelineData) {
-            projectToken = timeline.get(nextTimelineId);
+            projectToken = clinicalTimelineTokens.get(nextTimelineId);
         }
         else {
-            projectToken = tokens.get(nextClinicalId);
+            projectToken = clinicalDataTokens.get(nextClinicalId);
         }
 
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
@@ -289,11 +290,11 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     private  List<Map<String, String>> getClinicalData(boolean timelineData) {
         String projectToken;
         if(timelineData) {
-            projectToken = timeline.remove(nextTimelineId);
+            projectToken = clinicalTimelineTokens.remove(nextTimelineId);
         }
         else {
-            Set<String> keySet = tokens.keySet();
-            projectToken = tokens.remove(nextClinicalId);
+            Set<String> keySet = clinicalDataTokens.keySet();
+            projectToken = clinicalDataTokens.remove(nextClinicalId);
         }
 
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
@@ -347,11 +348,10 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         for (RedcapToken token : responseEntity.getBody()) {
             if (token.getStableId().equals(project)) {
                 if (token.getStudyId().toUpperCase().contains("TIMELINE")) {
-                    timeline.put(token.getStudyId(), token.getApiToken());
+                    clinicalTimelineTokens.put(token.getStudyId(), token.getApiToken());
                 }
                 else {
-                    tokens.put(token.getStudyId(), token.getApiToken());
-                    allTokens.put(token.getStudyId(), token.getApiToken());
+                    clinicalDataTokens.put(token.getStudyId(), token.getApiToken());
                 }
             }
             if (token.getStableId().equals(metadataProject)) {
@@ -503,32 +503,34 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             log.warn("ProjectId not available from RedCap getProjectData API request");
             throw new RuntimeException("ProjectId not available from RedCap getProjectData API request");
         }
+        log.info("delete using cookie: " + cookie);
+        log.info("delete using project: " + projectId);
         deleteRedcapProjectData(cookie, projectId);
     }
 
-    private void formatClinicalData(File dataFile) {
+    private void formatClinicalData(String filename) {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    private void pushStudyData(String token, File dataFile) {
+    public void importClinicalData(String token, String dataFile) {
         RestTemplate restTemplate = new RestTemplate();
         LinkedMultiValueMap<String, String> importRecordUriVariables = new LinkedMultiValueMap<>();
         importRecordUriVariables.add("token", token);
         importRecordUriVariables.add("content", "record");
-        importRecordUriVariables.add("format", "json");
+        importRecordUriVariables.add("format", "csv");
         importRecordUriVariables.add("overwriteBehavior", "overwrite");
-        importRecordUriVariables.add("data", "{\"records\":[" +
-                                            "{\"item\":{\"sample_id\":\"testitem1\"}}," +
-                                            "{\"item\":{\"sample_id\":\"testitem1\"}}," +
-                                            "{\"item\":{\"sample_id\":\"testitem3\"}}" +
-                                            "]}");
+        String cannedData = "sample_id,patient_id\n" +
+                            "P-0000000-T01-IM3,P-0000000\n" +
+                            "P-0000000-T02-IM3,P-0000000\n";
+        importRecordUriVariables.add("data", cannedData);
         HttpEntity<LinkedMultiValueMap<String, Object>> importRecordRequestEntity = getRequestEntity(importRecordUriVariables);
-        ResponseEntity<String> importRecordResponseEntity = restTemplate.exchange(getRedcapURI(), HttpMethod.POST, importRecordRequestEntity, String.class);
+        ResponseEntity<String> importRecordResponseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, importRecordRequestEntity, String.class);
         HttpStatus responseStatus = importRecordResponseEntity.getStatusCode();
         if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
             log.warn("RedCap import record API call failed. HTTP status code = " + Integer.toString(importRecordResponseEntity.getStatusCode().value()));
             throw new RuntimeException("RedCap import record API call failed. HTTP status code");
         }
+log.info("Return from call to Import Recap Record API:" + importRecordResponseEntity.getBody());
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 

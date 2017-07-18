@@ -117,9 +117,6 @@ public class ClinicalSampleDataWriter implements ItemStreamWriter<ClinicalDataCo
         if (writeClinicalSample) {
             flatFileItemWriter.close();
         }
-        List<File> files = new ArrayList<>();
-        files.add(stagingFile);
-        clinicalDataSource.pushClinicalData(studyId, files);
     }
 
     @Override

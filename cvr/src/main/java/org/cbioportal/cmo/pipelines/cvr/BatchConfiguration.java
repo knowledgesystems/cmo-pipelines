@@ -63,7 +63,7 @@ import org.springframework.context.annotation.*;
  */
 @Configuration
 @EnableBatchProcessing
-@ComponentScan(basePackages="org.cbioportal.annotator")
+@ComponentScan(basePackages="org.cbioportal.annotator, org.mskcc.cmo.ks.redcap.source")
 public class BatchConfiguration {
     public static final String CVR_JOB = "cvrJob";
     public static final String JSON_JOB = "jsonJob";
@@ -174,6 +174,7 @@ public class BatchConfiguration {
     @Bean
     public Step gmlClinicalStep() {
         return stepBuilderFactory.get("gmlClinicalStep")
+                .listener(CVRClinicalDataListener())
                 .<CVRClinicalRecord, CompositeClinicalRecord> chunk(chunkInterval)
                 .reader(gmlClinicalDataReader())
                 .processor(clinicalDataProcessor())
@@ -194,6 +195,7 @@ public class BatchConfiguration {
     @Bean
     public Step clinicalStep() {
         return stepBuilderFactory.get("clinicalStep")
+                .listener(CVRClinicalDataListener())
                 .<CVRClinicalRecord, CompositeClinicalRecord> chunk(chunkInterval)
                 .reader(clinicalDataReader())
                 .processor(clinicalDataProcessor())
@@ -621,6 +623,11 @@ public class BatchConfiguration {
     @Bean
     public StepExecutionListener cvrRequeueListener() {
         return new CvrRequeueListener();
+    }
+
+    @Bean
+    public StepExecutionListener CVRClinicalDataListener() {
+        return new CVRClinicalDataListener();
     }
 
     @Bean

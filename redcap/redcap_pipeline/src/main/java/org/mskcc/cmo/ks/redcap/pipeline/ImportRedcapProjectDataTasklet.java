@@ -29,27 +29,38 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package org.mskcc.cmo.ks.redcap.source;
+package org.mskcc.cmo.ks.redcap.pipeline;
 
-import java.io.File;
 import java.util.*;
+import org.apache.log4j.Logger;
+import org.mskcc.cmo.ks.redcap.source.*;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemStreamException;
+import org.springframework.batch.item.ItemStreamReader;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
-/**
- *
- * @author heinsz
- */
+public class ImportRedcapProjectDataTasklet implements Tasklet {    
+    
+    @Autowired
+    public ClinicalDataSource clinicalDataSource;
+        
+    @Value("#{jobParameters[filename]}")
+    private String filename;
+    
+    @Value("#{jobParameters[redcap_project]}")
+    private String redcapProject;
+    
+    private final Logger log = Logger.getLogger(ImportRedcapProjectDataTasklet.class);
 
-public interface ClinicalDataSource {           
-    List<Map<String, String>> getClinicalData();        
-    List<String> getSampleHeader();    
-    List<String> getPatientHeader();          
-    List<String> getTimelineHeader();    
-    List<Map<String, String>> getTimelineData();
-    String getNextClinicalStudyId();
-    String getNextTimelineStudyId();
-    boolean hasMoreTimelineData();
-    boolean hasMoreClinicalData();
-    void importClinicalDataFile(String studyId, String filename);
-    Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader);
-    Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader);
+    @Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        clinicalDataSource.importClinicalDataFile(redcapProject, filename);
+        return RepeatStatus.FINISHED;
+    }
+    
 }
