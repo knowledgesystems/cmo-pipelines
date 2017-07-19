@@ -32,7 +32,7 @@
 package org.mskcc.cmo.ks.redcap.pipeline;
 
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -41,27 +41,27 @@ import org.springframework.beans.factory.annotation.Value;
  * @author heinsz
  */
 public class ClinicalSampleDataProcessor implements ItemProcessor<Map<String, String>, ClinicalDataComposite> {
-    
+
     @Value("#{stepExecutionContext['sampleHeader']}")
     private Map<String, List<String>> total_header;
-        
+
     @Override
     public ClinicalDataComposite process(Map<String, String> i) throws Exception {
         ClinicalDataComposite composite = new ClinicalDataComposite(i);
         List<String> record = new ArrayList();
         List<String> header = total_header.get("header");
-        
+
         // get the sample and patient ids first before processing the other columns
         record.add(i.get("SAMPLE_ID"));
-        record.add(i.get("PATIENT_ID"));       
-        
+        record.add(i.get("PATIENT_ID"));
+
         for(String column : header) {
             if(!column.equals("SAMPLE_ID")) {
                 record.add(i.getOrDefault(column, ""));
             }
-        }        
-        
+        }
+
         composite.setSampleResult(StringUtils.join(record, "\t"));
         return composite;
-    }       
+    }
 }

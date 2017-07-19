@@ -29,14 +29,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.redcap.pipeline;
+
 import java.util.*;
-import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.apache.log4j.Logger;
+import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.beans.factory.annotation.Autowired;
+
 /**
  *
  * @author heinsz
@@ -45,6 +48,7 @@ public class ClinicalDataStepListener implements StepExecutionListener {
     private final Logger log = Logger.getLogger(ClinicalDataStepListener.class);
     @Autowired
     public ClinicalDataSource clinicalDataSource;
+
     @Override
     public void beforeStep(StepExecution se) {
         log.info("Starting a clinical data step");
@@ -55,6 +59,7 @@ public class ClinicalDataStepListener implements StepExecutionListener {
         log.info("Checking if more data to process...");
         boolean writeClinicalSample = (boolean)se.getExecutionContext().get("writeClinicalSample");
         boolean writeClinicalPatient = (boolean)se.getExecutionContext().get("writeClinicalPatient");
+        String stableId = se.getJobParameters().getString("stableId");
         if (writeClinicalSample) {
             List<String> clinicalSampleFiles = (List<String>)se.getJobExecution().getExecutionContext().get("clinicalSampleFiles");
             if (clinicalSampleFiles == null) {
@@ -71,10 +76,10 @@ public class ClinicalDataStepListener implements StepExecutionListener {
             clinicalPatientFiles.add((String)se.getExecutionContext().get("clinicalPatientFile"));
             se.getJobExecution().getExecutionContext().put("clinicalPatientFiles", clinicalPatientFiles);
         }
-        if (clinicalDataSource.hasMoreClinicalData()) {
+        if (clinicalDataSource.hasMoreClinicalData(stableId)) {
             return new ExitStatus("CLINICAL");
         }
-        if (clinicalDataSource.hasMoreTimelineData()) {
+        if (clinicalDataSource.hasMoreTimelineData(stableId)) {
             return new ExitStatus("TIMELINE");
         }
         return ExitStatus.COMPLETED;

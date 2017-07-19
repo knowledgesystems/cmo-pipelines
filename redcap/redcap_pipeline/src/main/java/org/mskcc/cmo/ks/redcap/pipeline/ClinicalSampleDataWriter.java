@@ -33,7 +33,7 @@ package org.mskcc.cmo.ks.redcap.pipeline;
 
 import java.io.*;
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
@@ -57,8 +57,8 @@ public class ClinicalSampleDataWriter implements ItemStreamWriter<ClinicalDataCo
     @Value("#{jobParameters[mergeClinicalDataSources]}")
     private boolean mergeClinicalDataSources;
 
-    @Value("#{stepExecutionContext['studyId']}")
-    private String studyId;
+    @Value("#{stepExecutionContext['projectTitle']}")
+    private String projectTitle;
 
     @Value("#{stepExecutionContext['writeClinicalSample']}")
     private boolean writeClinicalSample;
@@ -71,22 +71,20 @@ public class ClinicalSampleDataWriter implements ItemStreamWriter<ClinicalDataCo
 
     @Autowired
     public ClinicalDataSource clinicalDataSource;
-    
+
     private File stagingFile;
-    private String outputFilename = "data_clinical_sample";
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
     private List<String> writeList = new ArrayList<>();
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         if (writeClinicalSample) {
+            String outputFilename = "data_clinical_sample";
             if (!mergeClinicalDataSources) {
-                outputFilename += "_" + studyId + ".txt";
+                outputFilename = outputFilename + "_" + projectTitle;
             }
-            else {
-                outputFilename += ".txt";
-            }
-            this.stagingFile =  new File(directory, outputFilename);
+            outputFilename = outputFilename + ".txt";
+            this.stagingFile = new File(directory, outputFilename);
             PassThroughLineAggregator aggr = new PassThroughLineAggregator();
             flatFileItemWriter.setLineAggregator(aggr);
             flatFileItemWriter.setResource( new FileSystemResource(stagingFile));

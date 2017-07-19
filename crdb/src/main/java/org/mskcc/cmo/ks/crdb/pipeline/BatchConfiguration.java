@@ -34,6 +34,7 @@ package org.mskcc.cmo.ks.crdb;
 
 import org.mskcc.cmo.ks.crdb.model.CRDBSurvey;
 import org.mskcc.cmo.ks.crdb.model.CRDBDataset;
+import org.mskcc.cmo.ks.crdb.pipeline.CRDBDatasetListener;
 
 import org.springframework.batch.core.*;
 import org.springframework.batch.item.*;
@@ -104,11 +105,17 @@ public class BatchConfiguration
     @Bean
     public Step step2() {
         return stepBuilderFactory.get("step2") 
+            .listener(CRDBDatasetListener())
             .<CRDBDataset, String> chunk(10)
             .reader(reader2())
             .processor(processor2())
             .writer(writer2())
             .build();
+    }
+
+    @Bean
+    public StepExecutionListener CRDBDatasetListener() {
+        return new CRDBDatasetListener();
     }
 
     @Bean

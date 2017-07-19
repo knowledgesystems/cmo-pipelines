@@ -141,7 +141,7 @@ public class BatchConfiguration {
     public Tasklet importRedcapProjectDataTasklet() {
         return new ImportRedcapProjectDataTasklet();
     }
-    
+
     @Bean
     @StepScope
     public ItemStreamReader<Map<String, String>> clinicalDataReader() {

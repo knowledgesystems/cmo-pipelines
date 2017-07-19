@@ -57,9 +57,10 @@ public class RedcapPipeline {
     {
         Options options = new Options();
         options.addOption("h", "help", false, "shows this help document and quits.")
-            .addOption("p", "redcap-project", true, "Redcap Project stable ID")
-            .addOption("d", "directory", true, "Output directory")
-            .addOption("f", "filename", true, "Filename for import into Redcap")
+            .addOption("p", "redcap-project", true, "RedCap project id (required for import-mode or check-mode)")
+            .addOption("s", "stable-id", true, "Stable id for cancer study (required for export-mode)")
+            .addOption("d", "directory", true, "Output directory (required for export-mode)")
+            .addOption("f", "filename", true, "Input filename (required fro input-mode)")
             .addOption("m", "merge-datasources", false, "Flag for merging datasources for given stable ID")
             .addOption("i", "import-mode", false, "Import from directory to redcap-project (use one of { -i, -e, -c })")
             .addOption("e", "export-mode", false, "Export redcap-project to directory (use one of -i, -e, -c)")
@@ -74,22 +75,24 @@ public class RedcapPipeline {
         System.exit(exitStatus);
     }
 
-    private static void launchJob(String[] args, char executionMode, String project, String directory, String filename, boolean mergeClinicalDataSources) throws Exception
+    private static void launchJob(String[] args, char executionMode, CommandLine commandLine) throws Exception
     {
         SpringApplication app = new SpringApplication(RedcapPipeline.class);
         ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
         JobParametersBuilder builder = new JobParametersBuilder();
-        builder.addString("redcap_project", project);
         Job redcapJob = null;
         if (executionMode == EXPORT_MODE) {
             redcapJob = ctx.getBean(BatchConfiguration.REDCAP_EXPORT_JOB, Job.class);
-            builder.addString("directory", directory)
-                    .addString("mergeClinicalDataSources", String.valueOf(mergeClinicalDataSources));
+            builder.addString("directory", commandLine.getOptionValue("directory"))
+                    .addString("stableId", commandLine.getOptionValue("stable-id"))
+                    .addString("mergeClinicalDataSources", String.valueOf(commandLine.hasOption("merge-datasources")));
         } else if (executionMode == IMPORT_MODE) {
             redcapJob = ctx.getBean(BatchConfiguration.REDCAP_IMPORT_JOB, Job.class);
-            builder.addString("filename", filename);
+            builder.addString("filename", commandLine.getOptionValue("filename"))
+                    .addString("redcapProject", commandLine.getOptionValue("redcap-project"));
         }
+        boolean mergeClinicalDataSources = commandLine.hasOption("merge-datasources");
         if (redcapJob != null) {
             JobExecution jobExecution = jobLauncher.run(redcapJob, builder.toJobParameters());
         }
@@ -99,14 +102,14 @@ public class RedcapPipeline {
         PrintWriter errOut = new PrintWriter(System.err, true);
         boolean optionsAreValid = true;
         char mode = ' ';
-        if (!commandLine.hasOption("redcap-project")) {
-            errOut.println("error: -p (--redcap-project) argument must be provided");
-            optionsAreValid = false;
-        }
         if (commandLine.hasOption("import-mode")) {
             mode = IMPORT_MODE;
             if (commandLine.hasOption("export-mode") || commandLine.hasOption("check-mode")) {
                 errOut.println("error: multiple modes selected. Use only one from { -i, -e, -c }");
+                optionsAreValid = false;
+            }
+            if (!commandLine.hasOption("redcap-project")) {
+                errOut.println("error: -p (--redcap-project) argument must be provided");
                 optionsAreValid = false;
             }
             if (!commandLine.hasOption("filename")) {
@@ -119,6 +122,10 @@ public class RedcapPipeline {
                 errOut.println("error: multiple modes selected. Use only one from { -i, -e, -c }");
                 optionsAreValid = false;
             }
+            if (!commandLine.hasOption("stable-id")) {
+                errOut.println("error: -s (--stable-id) argument must be provided");
+                optionsAreValid = false;
+            }
             if (!commandLine.hasOption("directory")) {
                 errOut.println("error: import-mode requires a -d (--directory) argument to be provided");
                 optionsAreValid = false;
@@ -129,6 +136,10 @@ public class RedcapPipeline {
                 errOut.println("error: multiple modes selected. Use only one from { -i, -e, -c }");
                 optionsAreValid = false;
             }
+            if (!commandLine.hasOption("redcap-project")) {
+                errOut.println("error: -p (--redcap-project) argument must be provided");
+                optionsAreValid = false;
+            }
         } else {
             errOut.println("error: no mode selected. Use only one from { -i, -e, -c }");
             optionsAreValid = false;
@@ -136,7 +147,6 @@ public class RedcapPipeline {
         if (!optionsAreValid) {
             return ' '; //invalid options specified
         }
-//TODO: ROB .. take separate command line arguments .. redcap project for import ... and cancer study for export
         return mode;
     }
 
@@ -152,10 +162,10 @@ public class RedcapPipeline {
         if (ALL_VALID_MODES.indexOf(executionMode) == -1) {
             help(options, 1);
         }
-        String project = commandLine.getOptionValue("redcap-project");
-        String directory = commandLine.getOptionValue("directory");
-        String filename = commandLine.getOptionValue("filename");
-        boolean mergeClinicalDataSources = commandLine.hasOption("merge-datasources");
-        launchJob(args, executionMode, project, directory, filename, mergeClinicalDataSources);
+        if (executionMode == CHECK_MODE) {
+            //TODO: add call to ClinicalDataSource interface for command line running of check for project existence : pass return value in process status
+        } else {
+            launchJob(args, executionMode, commandLine);
+        }
     }
 }

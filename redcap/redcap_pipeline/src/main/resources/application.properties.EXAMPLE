@@ -1,17 +1,18 @@
 spring.batch.job.enabled=false
+chunk=10
 
 # Absoulte URL to the redcap web application
-redcap_base_url=http://dashi-dev.cbio.mskcc.org/redcap
+redcap_base_url=
+redcap_api_url_path=
 # Relative URL path to the erase_project_data php module
-redcap_erase_project_data_url_path=redcap_v6.11.1/ProjectGeneral/erase_project_data.php
+redcap_erase_project_data_url_path=
 redcap_username=
 redcap_password=
 redcap_login_hidden_input_name=
 
-# mapping token for ID_MAPPING - any tables that we want to access need to be in this project
+# RedCap mapping token for ID_MAPPING - any tables that we want to access need to be in this project
 mapping_token=
-# The name of the project that contains the metadata about the clinical attributes in redcap
+# The name of the RedCap project that contains the metadata about the clinical attributes in RedCap
 metadata_project=
-# The name of the project that contains the namespace mapping of external column headers to normalized
+# The name of the RedCap project that contains the namespace mapping of external column headers to normalized
 namespace_project=
-chunk=10

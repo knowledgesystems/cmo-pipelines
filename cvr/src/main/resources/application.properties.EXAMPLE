@@ -9,6 +9,7 @@ dmp.user_name=
 dmp.password=
 dmp.tokens.create_session=create_session
 dmp.tokens.create_gml_session=create_gml_session
+dmp.tokens.requeue.impact=cbio_requeue
 
 # dmp tokens for retrieving variants
 dmp.tokens.retrieve_variants.impact=cbio_retrieve_variants
@@ -21,7 +22,6 @@ dmp.tokens.retrieve_segment_data=get_seg_data
 dmp.tokens.retrieve_gml_segment_data=gml_get_seg_data
 dmp.tokens.consume_sample=cbio_consume_sample
 dmp.tokens.consume_gml_sample=gml_cbio_consume_sample
-dmp.tokens.requeue.impact=cbio_requeue
 
 # master list
 dmp.tokens.retrieve_master_list.route=get_cbio_signedout_samples
@@ -31,12 +31,15 @@ dmp.tokens.retrieve_master_list.heme=heme
 dmp.tokens.retrieve_master_list.archer=archer
 
 # genome nexus
-genomenexus.base_url=
-genomenexus.hgvs=variant_annotation/hgvs/
-genomenexus.isoform_override=variant_annotation/isoform_override/
+genomenexus.base_url=http://annotation.genomenexus.org/hgvs/
+genomenexus.isoform_query_parameter=isoformOverrideSource
+genomenexus.hotspot_parameter=cancerHotspots
 
 # email properties
 email.server=localhost
 email.sender=
 email.recipient=
 email.subject=Failure in CVR Pipeline
+
+# redcap
+redcap.project_title_for_cvr_clinical_data_import=mskimpact_data_clinical_cvr

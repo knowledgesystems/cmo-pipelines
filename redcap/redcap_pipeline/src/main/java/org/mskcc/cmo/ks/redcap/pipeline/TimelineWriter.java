@@ -37,7 +37,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.lang.StringUtils;
+import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
@@ -55,11 +56,14 @@ public class TimelineWriter  implements ItemStreamWriter<String> {
     @Value("#{jobParameters[directory]}")
     private String directory;
 
+    @Value("#{jobParameters[mergeClinicalDataSources]}")
+    private boolean mergeClinicalDataSources;
+
     @Value("#{stepExecutionContext['combinedHeader']}")
     private List<String> combinedHeader;
 
-    @Value("#{stepExecutionContext['studyId']}")
-    private String studyId;
+    @Value("#{stepExecutionContext['projectTitle']}")
+    private String projectTitle;
 
     @Value("#stepExecutionContext['standardTimelineDataFields']")
     private List<String> standardTimelineDataFields;
@@ -70,7 +74,12 @@ public class TimelineWriter  implements ItemStreamWriter<String> {
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        this.stagingFile = new File(directory, outputFilename + studyId + ".txt");
+        String outputFilename = "data_timeline";
+        if (!mergeClinicalDataSources) {
+            outputFilename = outputFilename + "_" + projectTitle;
+        }
+        outputFilename = outputFilename + ".txt";
+        this.stagingFile = new File(directory, outputFilename);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));

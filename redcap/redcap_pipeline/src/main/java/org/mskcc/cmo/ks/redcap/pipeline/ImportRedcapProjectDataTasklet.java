@@ -44,17 +44,17 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-public class ImportRedcapProjectDataTasklet implements Tasklet {    
-    
+public class ImportRedcapProjectDataTasklet implements Tasklet {
+
     @Autowired
     public ClinicalDataSource clinicalDataSource;
-        
+
     @Value("#{jobParameters[filename]}")
     private String filename;
-    
-    @Value("#{jobParameters[redcap_project]}")
+
+    @Value("#{jobParameters[redcapProject]}")
     private String redcapProject;
-    
+
     private final Logger log = Logger.getLogger(ImportRedcapProjectDataTasklet.class);
 
     @Override
@@ -62,5 +62,5 @@ public class ImportRedcapProjectDataTasklet implements Tasklet {
         clinicalDataSource.importClinicalDataFile(redcapProject, filename);
         return RepeatStatus.FINISHED;
     }
-    
+
 }

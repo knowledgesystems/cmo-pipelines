@@ -30,27 +30,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.cbioportal.cmo.pipelines.cvr.clinical;
+package org.mskcc.cmo.ks.darwin.pipeline.mskimpactbrainspinetimeline;
 
 import java.io.*;
 import org.apache.log4j.Logger;
-import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.springframework.batch.core.*;
 import org.springframework.beans.factory.annotation.*;
 
-public class CVRClinicalDataListener implements StepExecutionListener {
-    
-    Logger log = Logger.getLogger(CVRClinicalDataListener.class);
+public class MskimpactTimelineBrainSpineListener implements StepExecutionListener {
+
+    Logger log = Logger.getLogger(MskimpactTimelineBrainSpineListener.class);
 
     @Autowired
     public ClinicalDataSource clinicalDataSource;
     
-    @Autowired
-    public CVRUtilities cvrUtilities;
-
-    @Value("${redcap.project_title_for_cvr_clinical_data_import}")
+    @Value("${redcap.project_title_for_darwin_mskimpact_brain_spine_timeline_import}")
     public String redcapProjectTitle;
+
+    //TODO: what is type and how do we get it?
+    //@Value("${we_need_to_find_this_file}")
+    public String brainSpineTimelineFilename;
 
     @Override
     public void beforeStep(StepExecution stepExecution) {
@@ -58,19 +58,21 @@ public class CVRClinicalDataListener implements StepExecutionListener {
 
     @Override
     public ExitStatus afterStep(StepExecution stepExecution) {
-        String stagingDirectory = stepExecution.getJobExecution().getJobParameters().getString("stagingDirectory");
-        File stagingFile = new File(stagingDirectory, cvrUtilities.CLINICAL_FILE);
+//TODO: work out type selection / iteration
+String type = "FINDOUTWHATTYPETOUSE";
+        String outputDirectory = stepExecution.getJobExecution().getJobParameters().getString("outputDirectory");
+        File stagingFile = new File(outputDirectory, "data_timeline_" + type.toString().toLowerCase() + "_caisis_gbm.txt");
         if (stagingFile.exists()) {
             try {
                 String clinicalDataFilename = stagingFile.getCanonicalPath();
                 clinicalDataSource.importClinicalDataFile(redcapProjectTitle, clinicalDataFilename);
             } catch (IOException e) {
-                log.error("Error: could not persist clinical file \"" + cvrUtilities.CLINICAL_FILE + "\" in directory \"" + stagingDirectory + "\" to RedCap : IO error locating/reading file");
+                log.error("Error: could not persist clinical file \"" + brainSpineTimelineFilename + "\" in directory \"" + outputDirectory + "\" to RedCap : IO error locating/reading file");
             }
         } else {
-            log.error("Error: could not persist clinical file \"" + cvrUtilities.CLINICAL_FILE + "\" in directory \"" + stagingDirectory + "\" to RedCap : file does not exist");
+            log.error("Error: could not persist clinical file \"" + brainSpineTimelineFilename  + "\" in directory \"" + outputDirectory + "\" to RedCap : file does not exist");
         }
         return ExitStatus.COMPLETED;
     }
-    
+
 }

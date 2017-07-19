@@ -31,20 +31,19 @@
 */
 package org.mskcc.cmo.ks.darwin.pipeline.skcm_mskcc_2015_chanttimeline;
 
+import java.io.*;
+import java.nio.file.Paths;
+import java.util.*;
+import org.apache.commons.lang.StringUtils;
 import org.mskcc.cmo.ks.darwin.pipeline.model.Skcm_mskcc_2015_chantClinicalRecord;
+import org.mskcc.cmo.ks.darwin.pipeline.model.Skcm_mskcc_2015_chantTimelineAdjuvantTx;
 import org.mskcc.cmo.ks.redcap.source.MetadataManager;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
-import org.springframework.core.io.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
-import java.io.*;
-import java.util.*;
-import java.nio.file.Paths;
-import org.apache.commons.lang.StringUtils;
-import org.mskcc.cmo.ks.darwin.pipeline.model.Skcm_mskcc_2015_chantTimelineAdjuvantTx;
-
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.*;
 
 /**
  *

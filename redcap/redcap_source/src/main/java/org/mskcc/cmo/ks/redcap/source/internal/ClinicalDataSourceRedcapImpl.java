@@ -31,20 +31,21 @@
 */
 package org.mskcc.cmo.ks.redcap.source.internal;
 
-import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
-import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
-import org.mskcc.cmo.ks.redcap.models.RedcapToken;
-import org.mskcc.cmo.ks.redcap.models.ProjectInfoResponse;
-import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.log4j.Logger;
-
+import org.mskcc.cmo.ks.redcap.models.ProjectInfoResponse;
+import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
+import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
+import org.mskcc.cmo.ks.redcap.models.RedcapToken;
+import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Repository;
@@ -66,6 +67,9 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     private static URI redcapBaseURI = null;
     private static URI redcapApiURI = null;
 
+    private static int FILTER_TOKEN_BY_PROJECT_ID  = 0;
+    private static int FILTER_TOKENS_BY_STABLE_ID = 1;
+
     @Value("${redcap_base_url}")
     private String redcapBaseUrl;
     @Value("${redcap_erase_project_data_url_path}")
@@ -81,9 +85,8 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     @Value("${metadata_project}")
     private String metadataProject;
 
-    private String redcapProject;
-    private Map<String, String> clinicalDataTokens;
-    private Map<String, String>  clinicalTimelineTokens;
+    private Map<String, String> clinicalDataTokens = null; // null until call to fillTokens()
+    private Map<String, String>  clinicalTimelineTokens = null; // null until call to fillTokens()
     private List<Map<String, String>> records;
     private List<Map<String, String>> timelineRecords;
     List<RedcapAttributeMetadata> metadata;
@@ -96,90 +99,111 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     String nextClinicalId;
     String nextTimelineId;
     String metadataToken;
-    boolean gotTokens;
 
-     private final Logger log = Logger.getLogger(ClinicalDataSourceRedcapImpl.class);
+    private final Logger log = Logger.getLogger(ClinicalDataSourceRedcapImpl.class);
 
-     @Override
-     public boolean projectExists(String redcapProject) {
-         this.redcapProject = redcapProject;
-         this.gotTokens = true;         
-         fillTokens();     
-         return (!clinicalDataTokens.isEmpty() || !clinicalTimelineTokens.isEmpty());
-     }
-     
     @Override
-    public List<String> getSampleHeader() {
-        checkTokens();
+    public boolean projectExists(String projectTitle) {
+        checkTokens(projectTitle, FILTER_TOKEN_BY_PROJECT_ID);
+        return (!clinicalDataTokens.isEmpty() || !clinicalTimelineTokens.isEmpty());
+    }
+
+    @Override
+    public List<String> getSampleHeader(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         getClinicalHeaderData();
         return sampleHeader;
     }
 
     @Override
-    public List<String> getPatientHeader() {
-        checkTokens();
+    public List<String> getPatientHeader(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         getClinicalHeaderData();
         return patientHeader;
     }
 
     @Override
-    public List<String> getTimelineHeader() {
-        checkTokens();
+    public List<String> getTimelineHeader(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         getTimelineHeaderData();
         return combinedHeader;
     }
 
     @Override
-    public List<Map<String, String>> getClinicalData() {
-        checkTokens();
+    public List<Map<String, String>> getClinicalData(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         return records = getClinicalData(false);
     }
 
     @Override
-    public List<Map<String, String>> getTimelineData() {
-        checkTokens();
+    public List<Map<String, String>> getTimelineData(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         return timelineRecords = getClinicalData(true);
 
     }
 
     @Override
-    public String getNextClinicalStudyId() {
-        checkTokens();
+    public String getNextClinicalProjectTitle(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         List<String> keys = new ArrayList(clinicalDataTokens.keySet());
         nextClinicalId = keys.get(0);
         return nextClinicalId;
     }
 
     @Override
-    public String getNextTimelineStudyId() {
-        checkTokens();
+    public String getNextTimelineProjectTitle(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         List<String> keys = new ArrayList(clinicalTimelineTokens.keySet());
         nextTimelineId = keys.get(0);
         return nextTimelineId;
     }
 
     @Override
-    public boolean hasMoreTimelineData() {
+    public boolean hasMoreTimelineData(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         return !clinicalTimelineTokens.isEmpty();
     }
 
     @Override
-    public boolean hasMoreClinicalData() {
+    public boolean hasMoreClinicalData(String stableId) {
+        checkTokens(stableId, FILTER_TOKENS_BY_STABLE_ID);
         return !clinicalDataTokens.isEmpty();
     }
 
     @Override
-    public void importClinicalDataFile(String studyId, String filename) {
-        checkTokens();
-        String token = clinicalDataTokens.getOrDefault(studyId, null);
-//TODO: ROB .. we must also look for the timeline token here
+    public void importClinicalDataFile(String projectTitle, String filename) {
+        checkTokens(projectTitle, FILTER_TOKEN_BY_PROJECT_ID);
+        String token = clinicalDataTokens.getOrDefault(projectTitle, null);
         if (token == null) {
-            log.error("Study not found in redcap clinicalDataTokens: " + studyId);
-            return;
+            token = clinicalTimelineTokens.getOrDefault(projectTitle, null);
+            if (token == null) {
+                log.error("Project not found in redcap clinicalDataTokens or clincalTimelineTokens: " + projectTitle);
+                return;
+            }
         }
-        deleteRedcapProjectData(token);
-        formatClinicalData(filename);
-        importClinicalData(token, filename);
+        try {
+            File file = new File(filename);
+            if (!file.exists()) {
+                log.error("error : could not find file " + filename);
+                return;
+            }
+            List<String> dataFileContentsTSV = readClinicalFile(file);
+            List<String> dataFileContentsCSV = convertTSVtoCSV(dataFileContentsTSV);
+            if (dataFileContentsCSV.size() == 0) {
+                log.error("error: file " + filename + " was empty ... aborting attempt to import data");
+                return;
+            }
+            String dataForImport = joinFileLines(dataFileContentsCSV);
+            deleteRedcapProjectData(token);
+            if (dataFileContentsCSV.size() == 1) {
+                log.warn("file " + filename + " contained a single line (presumed to be the header). RedCap project has been cleared (now has 0 records).");
+            } else {
+                importClinicalData(token, dataForImport);
+                log.info("import completed, " + Integer.toString(dataFileContentsCSV.size() - 1) + " records imported");
+            }
+        } catch (IOException e) {
+            log.error("IOException thrown while attempting to read file " + filename + " : " + e.getMessage());
+        }
     }
 
     private URI getRedcapURI() {
@@ -332,11 +356,11 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         return header;
     }
 
-    private void fillTokens() {
+    private void fillTokens(String tokenFilterString, int tokenFilterMode) {
         RestTemplate restTemplate = new RestTemplate();
         clinicalTimelineTokens = new HashMap<>();
         clinicalDataTokens = new HashMap<>();
-        
+
         log.info("Getting tokens for clinical data processor...");
 
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
@@ -349,16 +373,18 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         ResponseEntity<RedcapToken[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapToken[].class);
 
         for (RedcapToken token : responseEntity.getBody()) {
-            if (token.getStableId().equals(redcapProject)) {
+            if (token.getStableId().equals(metadataProject)) {
+                metadataToken = token.getApiToken();
+                continue;
+            }
+            if ((tokenFilterMode == FILTER_TOKENS_BY_STABLE_ID && token.getStableId().equals(tokenFilterString)) ||
+                    (tokenFilterMode == FILTER_TOKEN_BY_PROJECT_ID  && token.getStudyId().equals(tokenFilterString))) {
                 if (token.getStudyId().toUpperCase().contains("TIMELINE")) {
                     clinicalTimelineTokens.put(token.getStudyId(), token.getApiToken());
                 }
                 else {
                     clinicalDataTokens.put(token.getStudyId(), token.getApiToken());
                 }
-            }
-            if (token.getStableId().equals(metadataProject)) {
-                metadataToken = token.getApiToken();
             }
         }
     }
@@ -371,10 +397,14 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         return new HttpEntity<LinkedMultiValueMap<String, String>>(uriVariables, headers);
     }
 
-    private void checkTokens() {
-        if (!gotTokens) {
-            fillTokens();
-            gotTokens = true;
+    private boolean gotTokens() {
+        // token maps are null until created during call to fillTokens()
+        return clinicalTimelineTokens != null || clinicalDataTokens != null;
+    }
+
+    private void checkTokens(String tokenFilterString, int tokenFilterMode) {
+        if (!gotTokens()) {
+            fillTokens(tokenFilterString, tokenFilterMode);
         }
     }
 
@@ -506,26 +536,53 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             log.warn("ProjectId not available from RedCap getProjectData API request");
             throw new RuntimeException("ProjectId not available from RedCap getProjectData API request");
         }
-        log.info("delete using cookie: " + cookie);
-        log.info("delete using project: " + projectId);
+        log.info("deleting all records for RedCap projectId: " + projectId);
         deleteRedcapProjectData(cookie, projectId);
     }
 
-    private void formatClinicalData(String filename) {
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    private List<String> readClinicalFile(File file) throws IOException {
+        LinkedList<String> lineList = new LinkedList<>();
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
+        while (bufferedReader.ready()) {
+            String line = bufferedReader.readLine();
+            if (line != null) {
+                lineList.add(line);
+            }
+        }
+        return lineList;
     }
 
-    public void importClinicalData(String token, String dataFile) {
+    private List<String> convertTSVtoCSV(List<String> tsvLines) {
+        LinkedList<String> csvLines = new LinkedList<String>();
+        for (String tsvLine : tsvLines) {
+            String[] tsvFields = tsvLine.split("\t",-1);
+            String[] csvFields = new String[tsvFields.length];
+            for (int i = 0; i < tsvFields.length; i++) {
+                String tsvField = tsvFields[i];
+                String csvField = tsvField;
+                if (tsvField.indexOf(",") != -1) {
+                    csvField = StringEscapeUtils.escapeCsv(tsvField);
+                }
+                csvFields[i] = csvField;
+            }
+            csvLines.add(String.join(",", csvFields));
+        }
+        return csvLines;
+    }
+
+    private String joinFileLines(List<String> fileLines) {
+        return String.join("\n",fileLines.toArray(new String[0])) + "\n";
+    }
+
+    public void importClinicalData(String token, String dataForImport) {
+        log.info("importing data ... (" + dataForImport.length() + " characters)");
         RestTemplate restTemplate = new RestTemplate();
         LinkedMultiValueMap<String, String> importRecordUriVariables = new LinkedMultiValueMap<>();
         importRecordUriVariables.add("token", token);
         importRecordUriVariables.add("content", "record");
         importRecordUriVariables.add("format", "csv");
         importRecordUriVariables.add("overwriteBehavior", "overwrite");
-        String cannedData = "sample_id,patient_id\n" +
-                            "P-0000000-T01-IM3,P-0000000\n" +
-                            "P-0000000-T02-IM3,P-0000000\n";
-        importRecordUriVariables.add("data", cannedData);
+        importRecordUriVariables.add("data", dataForImport);
         HttpEntity<LinkedMultiValueMap<String, Object>> importRecordRequestEntity = getRequestEntity(importRecordUriVariables);
         ResponseEntity<String> importRecordResponseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, importRecordRequestEntity, String.class);
         HttpStatus responseStatus = importRecordResponseEntity.getStatusCode();

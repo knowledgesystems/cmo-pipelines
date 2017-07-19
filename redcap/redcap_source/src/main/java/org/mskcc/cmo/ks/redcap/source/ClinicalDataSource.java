@@ -38,18 +38,18 @@ import java.util.*;
  * @author heinsz
  */
 
-public interface ClinicalDataSource {           
-    List<Map<String, String>> getClinicalData();        
-    List<String> getSampleHeader();    
-    List<String> getPatientHeader();          
-    List<String> getTimelineHeader();    
-    List<Map<String, String>> getTimelineData();
-    String getNextClinicalStudyId();
-    String getNextTimelineStudyId();
-    boolean hasMoreTimelineData();
-    boolean hasMoreClinicalData();
-    void importClinicalDataFile(String studyId, String filename);
+public interface ClinicalDataSource {
+    List<Map<String, String>> getClinicalData(String stableId);
+    List<String> getSampleHeader(String stableId);
+    List<String> getPatientHeader(String stableId);
+    List<String> getTimelineHeader(String stableId);
+    List<Map<String, String>> getTimelineData(String stableId);
+    String getNextClinicalProjectTitle(String stableId);
+    String getNextTimelineProjectTitle(String stableId);
+    boolean hasMoreTimelineData(String stableId);
+    boolean hasMoreClinicalData(String stableId);
+    void importClinicalDataFile(String projectTitle, String filename);
     Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader);
     Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader);
-    boolean projectExists(String redcapProject);
+    boolean projectExists(String projectTitle);
 }

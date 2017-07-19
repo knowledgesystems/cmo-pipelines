@@ -50,7 +50,7 @@ import org.springframework.beans.factory.annotation.Value;
  */
 public class MetaFileStepTasklet implements Tasklet {
 
-    @Value("#{jobParameters[redcap_project]}")
+    @Value("#{jobParameters[redcapProject]}")
     private String cancerStudyIdentifier;
 
     @Value("#{jobParameters[directory]}")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -29,10 +29,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.redcap.pipeline;
 
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.batch.item.ItemProcessor;
 
@@ -41,24 +42,24 @@ import org.springframework.batch.item.ItemProcessor;
  * @author heinsz
  */
 public class ClinicalPatientDataProcessor implements ItemProcessor<ClinicalDataComposite, ClinicalDataComposite> {
-    
+
     @Value("#{stepExecutionContext['patientHeader']}")
     private Map<String, List<String>> total_header;
-    
+
     @Override
-    public ClinicalDataComposite process(ClinicalDataComposite composite) throws Exception {        
+    public ClinicalDataComposite process(ClinicalDataComposite composite) throws Exception {
         List<String> record = new ArrayList();
         List<String> header = total_header.get("header");
-        
+
         record.add(composite.getData().get("PATIENT_ID"));
-        
+
         for(String column : header) {
             if (!column.equals("PATIENT_ID")) {
                 record.add(composite.getData().getOrDefault(column, ""));
-            }            
-        }                        
-        
+            }
+        }
+
         composite.setPatientResult(StringUtils.join(record, "\t"));
         return composite;
-    }       
+    }
 }

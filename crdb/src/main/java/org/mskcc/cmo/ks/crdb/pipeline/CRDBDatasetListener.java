@@ -30,48 +30,46 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.redcap.pipeline;
+package org.mskcc.cmo.ks.crdb.pipeline;
 
-import java.util.*;
+import java.io.*;
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
-import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.StepExecutionListener;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.batch.core.*;
+import org.springframework.beans.factory.annotation.*;
 
-/**
- *
- * @author heinsz
- */
-public class TimelineDataStepListener implements StepExecutionListener {
+public class CRDBDatasetListener implements StepExecutionListener {
+
+    Logger log = Logger.getLogger(CRDBDatasetListener.class);
 
     @Autowired
     public ClinicalDataSource clinicalDataSource;
-    
-    private final List<String> standardTimelineDataFields = Arrays.asList(new String[] { "PATIENT_ID", "START_DATE", "STOP_DATE", "EVENT_TYPE"});    
-    private final Logger log = Logger.getLogger(TimelineDataStepListener.class);
-    
+
+    @Value("${crdb.dataset_filename}")
+    private String datasetFilename;
+
+    @Value("${redcap.project_title_for_crdb_clinical_data_import}")
+    public String redcapProjectTitle;
+
     @Override
-    public void beforeStep(StepExecution se) {
-        se.getExecutionContext().put("standardTimelineDataFields", standardTimelineDataFields);
-       log.info("Starting a timelinel data step");
+    public void beforeStep(StepExecution stepExecution) {
     }
 
     @Override
-    public ExitStatus afterStep(StepExecution se) {
-        List<String> timelineFiles = (List<String>)se.getJobExecution().getExecutionContext().get("timelineFiles");
-        String stableId = se.getJobParameters().getString("stableId");
-        if (timelineFiles == null) {
-            timelineFiles = new ArrayList<>();
+    public ExitStatus afterStep(StepExecution stepExecution) {
+        String stagingDirectory = stepExecution.getJobExecution().getJobParameters().getString("stagingDirectory");
+        File datasetFile = new File(stagingDirectory, datasetFilename);
+        if (datasetFile.exists()) {
+            try {
+                String canonicalDatasetFilename = datasetFile.getCanonicalPath();
+                clinicalDataSource.importClinicalDataFile(redcapProjectTitle, canonicalDatasetFilename);
+            } catch (IOException e) {
+                log.error("Error: could not persist clinical file \"" + datasetFilename + "\" in directory \"" + stagingDirectory + "\" to RedCap : IO error locating/reading file");
+            }
+        } else {
+            log.error("Error: could not persist clinical file \"" + datasetFilename + "\" in directory \"" + stagingDirectory + "\" to RedCap : file does not exist");
         }
-        timelineFiles.add((String)se.getExecutionContext().get("timelineFile"));
-        se.getJobExecution().getExecutionContext().put("timelineFiles", timelineFiles);
-        if (clinicalDataSource.hasMoreTimelineData(stableId)) {
-            return new ExitStatus("TIMELINE");
-        }
-        return new ExitStatus("FINISHED");
+        return ExitStatus.COMPLETED;
     }
 
 }

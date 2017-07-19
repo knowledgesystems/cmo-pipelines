@@ -45,36 +45,36 @@ import org.springframework.batch.core.configuration.annotation.JobScope;
 /**
  *
  * @author Zachary Heins
- * 
+ *
  * Use Redcap to fetch clinical metadata and data
- * 
+ *
  */
 
 @Configuration
 @JobScope
 public class MetadataManagerRedcapImpl implements MetadataManager {
-    
+
     @Value("${redcap_base_url}")
-    private String redcapBaseUrl;        
-    
+    private String redcapBaseUrl;
+
     @Value("${mapping_token}")
-    private String mappingToken;        
-    
+    private String mappingToken;
+
     @Value("${metadata_project}")
     private String metadataProject;
-    
+
     @Value("${namespace_project}")
     private String namespaceProject;
-          
+
     private Map<String, String> tokens = new HashMap<>();
     private List<RedcapAttributeMetadata> metadata;
     private List<RedcapAttributeMetadata> namespace;
-    
+
     String metadataToken;
     String namespaceToken;
-    
+
      private final Logger log = Logger.getLogger(MetadataManagerRedcapImpl.class);
-    
+
     @Override
     public Map<String, List<String>> getFullHeader(List<String> header) {
         if (tokens.isEmpty()) {
@@ -95,7 +95,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
             }
             for (RedcapAttributeMetadata meta : metadata) {
                 if (attribute.toUpperCase().equals(meta.getRedcapId().toUpperCase())) {
-                    // update external column header if not empty 
+                    // update external column header if not empty
                     if (!extColHeader.isEmpty()) {
                         meta.setExternalColumnHeader(extColHeader);
                     }
@@ -103,37 +103,37 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
                 }
             }
         }
-        return makeHeader(combinedAttributeMap);         
-    }           
-    
+        return makeHeader(combinedAttributeMap);
+    }
+
     private List<RedcapAttributeMetadata> getMetadata() {
         if (metadata != null) {
             return metadata;
-        }        
+        }
         RestTemplate restTemplate = new RestTemplate();
-        
+
         log.info("Getting attribute metadatas...");
-        
-        LinkedMultiValueMap<String, String> uriVariables = getUriVariables(metadataToken);        
+
+        LinkedMultiValueMap<String, String> uriVariables = getUriVariables(metadataToken);
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(redcapBaseUrl + "/api/", HttpMethod.POST, requestEntity, RedcapAttributeMetadata[].class);
-        return Arrays.asList(responseEntity.getBody());        
+        return Arrays.asList(responseEntity.getBody());
     }
-    
+
     private List<RedcapAttributeMetadata> getNamespace() {
         if (namespace != null) {
             return namespace;
-        }        
+        }
         RestTemplate restTemplate = new RestTemplate();
-        
+
         log.info("Getting attribute metadatas...");
-        
+
         LinkedMultiValueMap<String, String> uriVariables = getUriVariables(namespaceToken);
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(redcapBaseUrl + "/api/", HttpMethod.POST, requestEntity, RedcapAttributeMetadata[].class);
-        return Arrays.asList(responseEntity.getBody());        
-    }    
-     
+        return Arrays.asList(responseEntity.getBody());
+    }
+
     private Map<String,List<String>> makeHeader(Map<String, RedcapAttributeMetadata> attributeMap) {
         Map<String, List<String>> headerMap = new LinkedHashMap<>();
         List<String> displayNames = new ArrayList<>();
@@ -143,7 +143,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         List<String> attributeTypes = new ArrayList<>();
         List<String> externalHeader = new ArrayList<>();
         List<String> header = new ArrayList<>();
-        
+
         for (Map.Entry<String, RedcapAttributeMetadata> entry : attributeMap.entrySet()) {
             displayNames.add(entry.getValue().getDisplayName());
             descriptions.add(entry.getValue().getDescriptions());
@@ -153,26 +153,26 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
             externalHeader.add(entry.getValue().getExternalColumnHeader());
             header.add(entry.getValue().getNormalizedColumnHeader());
         }
-        
+
         headerMap.put("display_names", displayNames);
         headerMap.put("descriptions", descriptions);
         headerMap.put("datatypes", datatypes);
         headerMap.put("priorities", priorities);
         headerMap.put("attribute_types", attributeTypes);
         headerMap.put("external_header", externalHeader);
-        headerMap.put("header", header);        
+        headerMap.put("header", header);
         return headerMap;
-    }    
-    
+    }
+
     private void fillTokens() {
         RestTemplate restTemplate = new RestTemplate();
-        
+
         log.info("Getting tokens for metadata processor...");
-        
+
         LinkedMultiValueMap<String, String> uriVariables = getUriVariables(mappingToken);
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<RedcapToken[]> responseEntity = restTemplate.exchange(redcapBaseUrl + "/api/", HttpMethod.POST, requestEntity, RedcapToken[].class);
-        
+
         for (RedcapToken token : responseEntity.getBody()) {
             tokens.put(token.getStudyId(), token.getApiToken());
             if (token.getStableId().equals(metadataProject)) {
@@ -183,17 +183,17 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
             }
         }
     }
-    
+
     private LinkedMultiValueMap<String, String> getUriVariables(String token) {
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         uriVariables.add("token", token);
         uriVariables.add("content", "record");
         uriVariables.add("format", "json");
-        uriVariables.add("type", "flat");  
+        uriVariables.add("type", "flat");
         return uriVariables;
     }
     private HttpEntity getRequestEntity(LinkedMultiValueMap<String, String> uriVariables)
-    {  
+    {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));

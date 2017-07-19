@@ -1,4 +1,5 @@
 spring.batch.job.enabled=false
+chunk=10
 
 #server properties
 server.address=
@@ -14,3 +15,22 @@ crdb.dataset_filename=
 crdb.username=
 crdb.password=
 crdb.connection_string=
+
+# Absoulte URL to the redcap web application
+redcap_base_url=
+redcap_api_url_path=
+# Relative URL path to the erase_project_data php module
+redcap_erase_project_data_url_path=
+redcap_username=
+redcap_password=
+redcap_login_hidden_input_name=
+
+# RedCap mapping token for ID_MAPPING - any tables that we want to access need to be in this project
+mapping_token=
+# The name of the RedCap project that contains the metadata about the clinical attributes in RedCap
+metadata_project=
+# The name of the RedCap project that contains the namespace mapping of external column headers to normalized
+namespace_project=
+
+# The name of the RedCap project into which clinical data should be imported
+redcap.project_title_for_crdb_clinical_data_import=

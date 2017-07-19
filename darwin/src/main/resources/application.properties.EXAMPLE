@@ -5,11 +5,12 @@ darwin.server=
 darwin.port=
 darwin.database=
 darwin.schema=
-darwin.driver=com.ibm.db2.jcc.DB2SimpleDataSource
 
 #DB2 Connection
 darwin.username=
 darwin.password=
+darwin.driver=com.ibm.db2.jcc.DB2SimpleDataSource
+darwin.connection_string=
 
 #Darwin properties
 darwin.chunk_size=10
@@ -26,11 +27,15 @@ darwin.skcm_mskcc_2015_chant.primary_view=MEL_PRIMARY_V
 darwin.skcm_mskcc_2015_chant.impact_view=MEL_IMPACT_V
 darwin.skcm_mskcc_2015_chant.metastat_sites_view=MEL_METASTAT_SITES_V
 darwin.skcm_mskcc_2015_chant.systemic_tx=MEL_SYSTEMIC_TX_V
+darwin.skcm_mskcc_2015_chant.adjuvant_tx_view=MEL_ADJUVANT_TX_V
+darwin.skcm_mskcc_2015_chant.rad_therapy_view=MEL_RAD_THERAPY_V
 darwin.demographics_filename=data_clinical_supp_darwin_demographics.txt
-darwin.genie_sample_filename=darwin_genie_sample.txt
 darwin.genie_patient_filename=darwin_genie_patient.txt
-darwin.skcm_mskcc_2015_chant_clinical_filename=data_clinical_supp_darwin_skcm_mskcc_2015_chant.txt
-darwin.skcm_mskcc_2015_chant_timeline_filename=data_timeline_skcm_mskcc_2015_chant_txt
+darwin.genie_sample_filename=darwin_genie_sample.txt
+darwin.age_filename=darwin_age.txt
+darwin.skcm_mskcc_2015_chant_clinical_sample_filename=data_clinical_sample_darwin_skcm_mskcc_2015_chant.txt
+darwin.skcm_mskcc_2015_chant_clinical_patient_filename=data_clinical_patient_darwin_skcm_mskcc_2015_chant.txt
+darwin.skcm_mskcc_2015_chant_timeline_filename=data_timeline_skcm_mskcc_2015_chant.txt
 darwin.icdo_view=ICDO_V
 darwin.icdo_filename=darwinIcdoRecords.txt
 darwin.timeline_view=DMT_TIMELINE_BRAINSPINE_V
@@ -47,7 +52,19 @@ darwin.medicaltherapy_clinical_filename=data_clinical_supp_medical_therapy.txt
 darwin.medicaltherapy.skip_negative_dosage_records=true
 
 # For redcap metadata clinical attributes header generation
+redcap_url=
+mapping_token=
 metadata_project=
 namespace_project=
 
 #NOTE: runs with two settings, -d </path/to/output_directory> -s [Cancer Study ID (mskimpact for default)]
+# RedCap
+redcap.project_title_for_patient_demographics_import=darwin_patient_demographics
+redcap.project_title_for_darwin_clinical_data_import=darwin_data_clinical_cvr
+redcap.project_title_for_darwin_skcm_2015_chant_clinical_sample_import=darwin_skcm_2015_chant_clinical_sample
+redcap.project_title_for_darwin_skcm_2015_chant_timeline_import=darwin_skcm_2015_chant_timeline
+redcap.project_title_for_darwin_medical_therapy_data_import=darwin_medical_therapy
+redcap.project_title_for_darwin_mskimpact_genie_sample_data_import=darwin_mskimpact_genie_sample
+redcap.project_title_for_darwin_mskimpact_genie_patient_data_import=darwin_mskimpact_genie_patient
+redcap.project_title_for_darwin_mskimpact_brain_spine_clinical_data_import=darwin_mskimpact_brain_spine_clinical
+redcap.project_title_for_darwin_mskimpact_brain_spine_timeline_import=darwin_mskimpact_brain_spin_timeline

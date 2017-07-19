@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -29,38 +29,44 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.redcap.pipeline;
 
 import java.util.*;
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.redcap.source.*;
 import org.springframework.batch.item.ExecutionContext;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  *
  * @author heinsz
  */
-public class TimelineReader implements ItemStreamReader<Map<String, String>> {    
-    
+public class TimelineReader implements ItemStreamReader<Map<String, String>> {
+
     @Autowired
-    public ClinicalDataSource clinicalDataSource;       
+    public ClinicalDataSource clinicalDataSource;
+
     @Autowired
     public MetadataManager metadataManager;
-    
+
+    @Value("#{jobParameters[stableId]}")
+    public String stableId;
+
     private final Logger log = Logger.getLogger(ClinicalDataReader.class);
-    
-    public List<Map<String, String>> records = new ArrayList<>();        
-    
+
+    public List<Map<String, String>> records = new ArrayList<>();
+
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        String studyId = clinicalDataSource.getNextTimelineStudyId();
-        ec.put("studyId", studyId);
-        log.info("Getting timeline header for project: " + studyId);
-        ec.put("combinedHeader", clinicalDataSource.getTimelineHeader());
-        records = clinicalDataSource.getTimelineData();
+        String projectTitle = clinicalDataSource.getNextTimelineProjectTitle(stableId);
+        ec.put("projectId", projectTitle);
+        log.info("Getting timeline header for project: " + projectTitle);
+        ec.put("combinedHeader", clinicalDataSource.getTimelineHeader(stableId));
+        records = clinicalDataSource.getTimelineData(stableId);
     }
 
     @Override
@@ -71,9 +77,9 @@ public class TimelineReader implements ItemStreamReader<Map<String, String>> {
 
     @Override
     public Map<String, String> read() throws Exception {
-        if (!records.isEmpty()) {            
-            return records.remove(0);         
+        if (!records.isEmpty()) {
+            return records.remove(0);
         }
         return null;
-    }       
+    }
 }

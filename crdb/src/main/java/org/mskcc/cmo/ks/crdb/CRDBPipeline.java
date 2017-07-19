@@ -80,7 +80,7 @@ public class CRDBPipeline {
     
     public static void main(String[] args) throws Exception {
         Options gnuOptions = CRDBPipeline.getOptions(args);
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = parser.parse(gnuOptions, args);
         if (commandLine.hasOption("h") ||
             !commandLine.hasOption("stage")) {

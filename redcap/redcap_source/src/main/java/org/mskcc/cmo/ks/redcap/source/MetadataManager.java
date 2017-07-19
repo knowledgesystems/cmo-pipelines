@@ -39,6 +39,6 @@ import java.util.Map;
  * @author heinsz
  */
 
-public interface MetadataManager {             
+public interface MetadataManager {
     Map<String, List<String>> getFullHeader(List<String> header);
 }
