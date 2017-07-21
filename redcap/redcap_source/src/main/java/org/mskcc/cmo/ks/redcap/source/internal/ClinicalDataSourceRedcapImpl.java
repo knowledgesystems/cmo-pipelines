@@ -31,27 +31,23 @@
 */
 package org.mskcc.cmo.ks.redcap.source.internal;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
 import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
 import org.mskcc.cmo.ks.redcap.models.RedcapToken;
 import org.mskcc.cmo.ks.redcap.models.ProjectInfoResponse;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
-import org.springframework.batch.core.configuration.annotation.JobScope;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.net.*;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import org.apache.log4j.Logger;
+
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.*;
 import org.springframework.http.*;
+import org.springframework.stereotype.Repository;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
@@ -62,9 +58,7 @@ import org.springframework.web.client.RestTemplate;
  * Use Redcap to fetch clinical metadata and data
  *
  */
-
-@Configuration
-@JobScope
+@Repository
 public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
     //Do not use these directly .. instead call redcapBaseURI() and redcapApiURI() methods
@@ -84,13 +78,12 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     private String redcapLoginHiddenInputName;
     @Value("${mapping_token}")
     private String mappingToken;
-    @Value("#{jobParameters[redcap_project]}")
-    private String project;
     @Value("${metadata_project}")
     private String metadataProject;
 
-    private Map<String, String> clinicalDataTokens = new HashMap<>();
-    private Map<String, String>  clinicalTimelineTokens = new HashMap<>();
+    private String redcapProject;
+    private Map<String, String> clinicalDataTokens;
+    private Map<String, String>  clinicalTimelineTokens;
     private List<Map<String, String>> records;
     private List<Map<String, String>> timelineRecords;
     List<RedcapAttributeMetadata> metadata;
@@ -107,6 +100,14 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
      private final Logger log = Logger.getLogger(ClinicalDataSourceRedcapImpl.class);
 
+     @Override
+     public boolean projectExists(String redcapProject) {
+         this.redcapProject = redcapProject;
+         this.gotTokens = true;         
+         fillTokens();     
+         return (!clinicalDataTokens.isEmpty() || !clinicalTimelineTokens.isEmpty());
+     }
+     
     @Override
     public List<String> getSampleHeader() {
         checkTokens();
@@ -184,7 +185,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     private URI getRedcapURI() {
         if (redcapBaseURI == null) {
             try {
-                redcapBaseURI = new URI(redcapBaseUrl.trim() + "/");
+                redcapBaseURI = new URI(redcapBaseUrl + "/");
              } catch (URISyntaxException e) {
                 log.error(e.getMessage());
                 throw new RuntimeException(e);
@@ -333,7 +334,9 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
     private void fillTokens() {
         RestTemplate restTemplate = new RestTemplate();
-
+        clinicalTimelineTokens = new HashMap<>();
+        clinicalDataTokens = new HashMap<>();
+        
         log.info("Getting tokens for clinical data processor...");
 
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
@@ -346,7 +349,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         ResponseEntity<RedcapToken[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapToken[].class);
 
         for (RedcapToken token : responseEntity.getBody()) {
-            if (token.getStableId().equals(project)) {
+            if (token.getStableId().equals(redcapProject)) {
                 if (token.getStudyId().toUpperCase().contains("TIMELINE")) {
                     clinicalTimelineTokens.put(token.getStudyId(), token.getApiToken());
                 }

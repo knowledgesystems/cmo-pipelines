@@ -31,7 +31,6 @@
 */
 package org.mskcc.cmo.ks.redcap.source;
 
-import java.io.File;
 import java.util.*;
 
 /**
@@ -52,4 +51,5 @@ public interface ClinicalDataSource {
     void importClinicalDataFile(String studyId, String filename);
     Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader);
     Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader);
+    boolean projectExists(String redcapProject);
 }
