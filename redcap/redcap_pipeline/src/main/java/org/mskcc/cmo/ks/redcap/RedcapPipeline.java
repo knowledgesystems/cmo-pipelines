@@ -33,12 +33,14 @@ package org.mskcc.cmo.ks.redcap;
 
 import java.io.PrintWriter;
 import org.mskcc.cmo.ks.redcap.pipeline.BatchConfiguration;
+import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.apache.commons.cli.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.beans.factory.annotation.*;
 
 /**
  *
@@ -75,10 +77,24 @@ public class RedcapPipeline {
         System.exit(exitStatus);
     }
 
+    public static void checkIfProjectExistsAndExit(ClinicalDataSource clinicalDataSource, String projectTitle)
+    {
+        if (clinicalDataSource.projectExists(projectTitle)) {
+            System.out.println("project " + projectTitle + " exists in redcap");
+            System.exit(0);
+        }
+        System.out.println("project " + projectTitle + " does not exists in redcap");
+        System.exit(1);
+    }
+
     private static void launchJob(String[] args, char executionMode, CommandLine commandLine) throws Exception
     {
         SpringApplication app = new SpringApplication(RedcapPipeline.class);
         ConfigurableApplicationContext ctx = app.run(args);
+        if (executionMode == CHECK_MODE) {
+            String projectTitle = commandLine.getOptionValue("redcap-project");
+            checkIfProjectExistsAndExit(ctx.getBean("clinicalDataSource", ClinicalDataSource.class), projectTitle);
+        }
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
         JobParametersBuilder builder = new JobParametersBuilder();
         Job redcapJob = null;
@@ -162,10 +178,6 @@ public class RedcapPipeline {
         if (ALL_VALID_MODES.indexOf(executionMode) == -1) {
             help(options, 1);
         }
-        if (executionMode == CHECK_MODE) {
-            //TODO: add call to ClinicalDataSource interface for command line running of check for project existence : pass return value in process status
-        } else {
-            launchJob(args, executionMode, commandLine);
-        }
+        launchJob(args, executionMode, commandLine);
     }
 }
