@@ -29,18 +29,19 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.redcap;
 
 import java.io.PrintWriter;
+import org.apache.commons.cli.*;
 import org.mskcc.cmo.ks.redcap.pipeline.BatchConfiguration;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
-import org.apache.commons.cli.*;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.*;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  *
@@ -79,12 +80,15 @@ public class RedcapPipeline {
 
     public static void checkIfProjectExistsAndExit(ClinicalDataSource clinicalDataSource, String projectTitle)
     {
+        String message = "project " + projectTitle + " does not exists in redcap";
+        int exitStatusCode = 1;
         if (clinicalDataSource.projectExists(projectTitle)) {
-            System.out.println("project " + projectTitle + " exists in redcap");
-            System.exit(0);
+            message = "project " + projectTitle + " exists in redcap";
+            exitStatusCode = 0;
         }
-        System.out.println("project " + projectTitle + " does not exists in redcap");
-        System.exit(1);
+        System.out.println(message);
+        System.out.flush();
+        System.exit(exitStatusCode);
     }
 
     private static void launchJob(String[] args, char executionMode, CommandLine commandLine) throws Exception
@@ -93,7 +97,7 @@ public class RedcapPipeline {
         ConfigurableApplicationContext ctx = app.run(args);
         if (executionMode == CHECK_MODE) {
             String projectTitle = commandLine.getOptionValue("redcap-project");
-            checkIfProjectExistsAndExit(ctx.getBean("clinicalDataSource", ClinicalDataSource.class), projectTitle);
+            checkIfProjectExistsAndExit(ctx.getBean(ClinicalDataSource.class), projectTitle);
         }
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
         JobParametersBuilder builder = new JobParametersBuilder();
@@ -114,7 +118,8 @@ public class RedcapPipeline {
         }
     }
 
-    public static char parseModeFromOptions(CommandLine commandLine) {
+    public static char parseModeFromOptions(CommandLine commandLine)
+    {
         PrintWriter errOut = new PrintWriter(System.err, true);
         boolean optionsAreValid = true;
         char mode = ' ';

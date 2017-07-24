@@ -590,8 +590,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             log.warn("RedCap import record API call failed. HTTP status code = " + Integer.toString(importRecordResponseEntity.getStatusCode().value()));
             throw new RuntimeException("RedCap import record API call failed. HTTP status code");
         }
-log.info("Return from call to Import Recap Record API:" + importRecordResponseEntity.getBody());
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        log.info("Return from call to Import Recap Record API: " + importRecordResponseEntity.getBody());
     }
 
     public static void main(String[] args) {}
