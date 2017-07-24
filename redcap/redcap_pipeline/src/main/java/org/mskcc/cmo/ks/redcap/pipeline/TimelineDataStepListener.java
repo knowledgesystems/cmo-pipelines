@@ -44,12 +44,16 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author heinsz
  */
 public class TimelineDataStepListener implements StepExecutionListener {
-    private final Logger log = Logger.getLogger(ClinicalDataStepListener.class);
+
     @Autowired
     public ClinicalDataSource clinicalDataSource;
-
+    
+    private final List<String> standardTimelineDataFields = Arrays.asList(new String[] { "PATIENT_ID", "START_DATE", "STOP_DATE", "EVENT_TYPE"});    
+    private final Logger log = Logger.getLogger(TimelineDataStepListener.class);
+    
     @Override
     public void beforeStep(StepExecution se) {
+        se.getExecutionContext().put("standardTimelineDataFields", standardTimelineDataFields);
        log.info("Starting a timelinel data step");
     }
 
