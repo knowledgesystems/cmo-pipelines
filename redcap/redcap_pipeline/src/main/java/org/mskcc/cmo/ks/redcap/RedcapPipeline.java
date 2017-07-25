@@ -34,6 +34,7 @@ package org.mskcc.cmo.ks.redcap;
 
 import java.io.PrintWriter;
 import org.apache.commons.cli.*;
+import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.redcap.pipeline.BatchConfiguration;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.springframework.batch.core.*;
@@ -55,6 +56,8 @@ public class RedcapPipeline {
     private static final char IMPORT_MODE = 'i';
     private static final char CHECK_MODE = 'c';
     private static final String ALL_VALID_MODES = "eic";
+
+    private static final Logger log = Logger.getLogger(RedcapPipeline.class);
 
     private static Options getOptions(String[] args)
     {
@@ -78,16 +81,19 @@ public class RedcapPipeline {
         System.exit(exitStatus);
     }
 
-    public static void checkIfProjectExistsAndExit(ClinicalDataSource clinicalDataSource, String projectTitle)
+    public static void checkIfProjectExistsAndExit(String[] args, CommandLine commandLine)
     {
+        SpringApplication app = new SpringApplication(RedcapPipeline.class);
+        ConfigurableApplicationContext ctx = app.run(args);
+        String projectTitle = commandLine.getOptionValue("redcap-project");
+        ClinicalDataSource clinicalDataSource = ctx.getBean(ClinicalDataSource.class);
         String message = "project " + projectTitle + " does not exists in redcap";
         int exitStatusCode = 1;
         if (clinicalDataSource.projectExists(projectTitle)) {
             message = "project " + projectTitle + " exists in redcap";
             exitStatusCode = 0;
         }
-        System.out.println(message);
-        System.out.flush();
+        log.info(message + " : exiting with status code " + Integer.toString(exitStatusCode));
         System.exit(exitStatusCode);
     }
 
@@ -95,10 +101,6 @@ public class RedcapPipeline {
     {
         SpringApplication app = new SpringApplication(RedcapPipeline.class);
         ConfigurableApplicationContext ctx = app.run(args);
-        if (executionMode == CHECK_MODE) {
-            String projectTitle = commandLine.getOptionValue("redcap-project");
-            checkIfProjectExistsAndExit(ctx.getBean(ClinicalDataSource.class), projectTitle);
-        }
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
         JobParametersBuilder builder = new JobParametersBuilder();
         Job redcapJob = null;
@@ -182,6 +184,9 @@ public class RedcapPipeline {
         char executionMode = parseModeFromOptions(commandLine);
         if (ALL_VALID_MODES.indexOf(executionMode) == -1) {
             help(options, 1);
+        }
+        if (executionMode == CHECK_MODE) {
+            checkIfProjectExistsAndExit(args, commandLine);
         }
         launchJob(args, executionMode, commandLine);
     }

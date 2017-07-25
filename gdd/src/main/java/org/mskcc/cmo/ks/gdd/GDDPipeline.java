@@ -92,7 +92,7 @@ public class GDDPipeline
     public static void main(String[] args) throws Exception
     {        
         Options gnuOptions = GDDPipeline.getOptions(args);
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = parser.parse(gnuOptions, args);
         if (commandLine.hasOption("h") ||
             !commandLine.hasOption("maf") ||

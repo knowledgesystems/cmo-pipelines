@@ -39,7 +39,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.redcap.models.ProjectInfoResponse;
 import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
@@ -193,7 +193,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
                 log.error("error: file " + filename + " was empty ... aborting attempt to import data");
                 return;
             }
-            String dataForImport = joinFileLines(dataFileContentsCSV);
+            String dataForImport = String.join("\n",dataFileContentsCSV.toArray(new String[0])) + "\n";
             deleteRedcapProjectData(token);
             if (dataFileContentsCSV.size() == 1) {
                 log.warn("file " + filename + " contained a single line (presumed to be the header). RedCap project has been cleared (now has 0 records).");
@@ -568,10 +568,6 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             csvLines.add(String.join(",", csvFields));
         }
         return csvLines;
-    }
-
-    private String joinFileLines(List<String> fileLines) {
-        return String.join("\n",fileLines.toArray(new String[0])) + "\n";
     }
 
     public void importClinicalData(String token, String dataForImport) {

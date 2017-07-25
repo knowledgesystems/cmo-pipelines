@@ -7,10 +7,6 @@
   <version>0.1.0</version>
 
   <packaging>jar</packaging>
-  <build>
-    <finalName>crdb_fetcher</finalName>
-  </build>
-
   <parent>
     <groupId>org.mskcc.cmo.ks</groupId>
     <artifactId>master</artifactId>
@@ -100,5 +96,21 @@
       <url>http://www.querydsl.com/static/querydsl/4.0.9/</url>
     </repository>
   </repositories>
+
+  <build>
+    <finalName>crdb_fetcher</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.6.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+          <compilerArgument>-Xlint:deprecation</compilerArgument>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>

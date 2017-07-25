@@ -190,7 +190,6 @@ public class BatchConfiguration {
     @Bean
     public Step mskimpactGeniePatientClinicalStep() {
         return stepBuilderFactory.get("mskimpactGeniePatientClinicalStep")
-                .listener(MskimpactGeniePatientListener())
                 .<MskimpactNAACCRClinical, String> chunk(chunkSize)
                 .reader(mskimpactGeniePatientReader())
                 .processor(mskimpactGeniePatientProcessor())
@@ -201,7 +200,6 @@ public class BatchConfiguration {
     @Bean
     public Step mskimpactGenieSampleClinicalStep() {
         return stepBuilderFactory.get("mskimpactGenieSampleClinicalStep")
-                .listener(MskimpactGenieSampleListener())
                 .<MskimpactGenieClinical, String> chunk(chunkSize)
                 .reader(mskimpactGenieSampleReader())
                 .processor(mskimpactGenieSampleProcessor())
@@ -219,16 +217,6 @@ public class BatchConfiguration {
                 .build();
     }
 
-    @Bean
-    public StepExecutionListener MskimpactGeniePatientListener() {
-        return new MskimpactGeniePatientListener();
-    }
-
-    @Bean
-    public StepExecutionListener MskimpactGenieSampleListener() {
-        return new MskimpactGenieSampleListener();
-    }
-                
     @Bean
     public StepExecutionListener Skcm_mskcc_2015_chantTimelineListener() {
         return new Skcm_mskcc_2015_chantTimelineListener();

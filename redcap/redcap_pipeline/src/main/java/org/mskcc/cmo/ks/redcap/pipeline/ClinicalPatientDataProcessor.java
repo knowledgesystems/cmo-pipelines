@@ -48,7 +48,7 @@ public class ClinicalPatientDataProcessor implements ItemProcessor<ClinicalDataC
 
     @Override
     public ClinicalDataComposite process(ClinicalDataComposite composite) throws Exception {
-        List<String> record = new ArrayList();
+        List<String> record = new ArrayList<>();
         List<String> header = total_header.get("header");
 
         record.add(composite.getData().get("PATIENT_ID"));

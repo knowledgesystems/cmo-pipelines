@@ -87,7 +87,7 @@ public class GeneDataPipeline {
     
     public static void main(String[] args) throws Exception {
         Options gnuOptions = GeneDataPipeline.getOptions(args);
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = parser.parse(gnuOptions, args);
         if (commandLine.hasOption("h") || !commandLine.hasOption("d") || !commandLine.hasOption("l")) {
             help(gnuOptions, 0);
