@@ -48,7 +48,7 @@ public class TimelineReader implements ItemStreamReader<Map<String, String>> {
     @Autowired
     public ClinicalDataSource clinicalDataSource;       
     @Autowired
-    public MetadataManager metadataManager;    
+    public MetadataManager metadataManager;
     
     private final Logger log = Logger.getLogger(ClinicalDataReader.class);
     
