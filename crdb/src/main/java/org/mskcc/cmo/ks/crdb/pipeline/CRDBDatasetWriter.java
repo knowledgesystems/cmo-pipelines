@@ -47,22 +47,22 @@ import org.apache.commons.lang.StringUtils;
 
 /**
  * Class for writing the CRDB Dataset results to the staging file.
- * 
+ *
  * @author ochoaa
  */
 
 public class CRDBDatasetWriter implements ItemStreamWriter<String>
-{    
+{
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
-    
+
     @Value("${crdb.dataset_filename}")
     private String datasetFilename;
 
     private List<String> writeList = new ArrayList<String>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
     private String stagingFile;
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
@@ -82,7 +82,7 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String>
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }
-    
+
     private String normalizeHeaders(List<String> columns) {
         List<String> normColumns = new ArrayList<>();
         for (String col : columns){
@@ -101,7 +101,7 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String>
         }
         return StringUtils.join(normColumns, "\t");
     }
-            
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {}
 

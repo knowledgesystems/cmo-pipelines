@@ -37,7 +37,7 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
  * Model for CRDBSurvey results.
- * 
+ *
  * @author ochoaa
  */
 
@@ -54,13 +54,13 @@ public class CRDBSurvey {
 
 /**
 * No args constructor for use in serialization
-* 
+*
 */
 public CRDBSurvey() {
 }
 
 /**
-* 
+*
 * @param DMP_ID
 * @param QS_DATE
 * @param ADJ_TXT
@@ -83,25 +83,25 @@ this.COMMENTS = COMMENTS==null?"NA":COMMENTS;
 }
 
     /**
-     * 
+     *
      * @return DMP_ID
      */
     public String getDMP_ID() {
         return DMP_ID;
     }
-    
+
     /**
-     * 
-     * @param DMP_ID 
+     *
+     * @param DMP_ID
      */
     public void setDMP_ID(String DMP_ID) {
         this.DMP_ID = DMP_ID;
     }
 
     /**
-     * 
+     *
      * @param DMP_ID
-     * @return 
+     * @return
      */
     public CRDBSurvey withDMP_ID(String DMP_ID) {
         this.DMP_ID = DMP_ID;
@@ -109,77 +109,77 @@ this.COMMENTS = COMMENTS==null?"NA":COMMENTS;
     }
 
     /**
-     * 
+     *
      * @return QS_DATE
      */
     public Date getQS_DATE() {
         return QS_DATE;
     }
-    
+
     /**
-     * 
-     * @param QS_DATE 
+     *
+     * @param QS_DATE
      */
     public void setQS_DATE(Date QS_DATE) {
         this.QS_DATE = QS_DATE;
     }
-    
+
     /**
-     * 
+     *
      * @param QS_DATE
-     * @return 
+     * @return
      */
     public CRDBSurvey withQS_DATE(Date QS_DATE) {
         this.QS_DATE = QS_DATE;
         return this;
     }
-    
+
     /**
-     * 
+     *
      * @return ADJ_TXT
      */
     public String getADJ_TXT() {
         return ADJ_TXT;
     }
-    
+
     /**
-     * 
-     * @param ADJ_TXT 
+     *
+     * @param ADJ_TXT
      */
     public void setADJ_TXT(String ADJ_TXT) {
         this.ADJ_TXT = ADJ_TXT;
     }
-    
+
     /**
-     * 
+     *
      * @param ADJ_TXT
-     * @return 
+     * @return
      */
     public CRDBSurvey withADJ_TXT(String ADJ_TXT) {
         this.ADJ_TXT = ADJ_TXT;
         return this;
     }
-    
+
     /**
-     * 
+     *
      * @return NOSYSTXT
      */
     public String getNOSYSTXT() {
         return NOSYSTXT;
     }
-    
+
     /**
-     * 
-     * @param NOSYSTXT 
+     *
+     * @param NOSYSTXT
      */
     public void setNOSYSTXT(String NOSYSTXT) {
         this.NOSYSTXT = NOSYSTXT;
     }
-    
+
     /**
-     * 
+     *
      * @param NOSYSTXT
-     * @return 
+     * @return
      */
     public CRDBSurvey withNOSYSTXT(String NOSYSTXT) {
         this.NOSYSTXT = NOSYSTXT;
@@ -187,51 +187,51 @@ this.COMMENTS = COMMENTS==null?"NA":COMMENTS;
     }
 
     /**
-     * 
+     *
      * @return PRIOR_RX
      */
     public String getPRIOR_RX() {
         return PRIOR_RX;
     }
-    
+
     /**
-     * 
-     * @param PRIOR_RX 
+     *
+     * @param PRIOR_RX
      */
     public void setPRIOR_RX(String PRIOR_RX) {
         this.PRIOR_RX = PRIOR_RX;
     }
-    
+
     /**
-     * 
+     *
      * @param PRIOR_RX
-     * @return 
+     * @return
      */
     public CRDBSurvey withPRIOR_RX(String PRIOR_RX) {
         this.PRIOR_RX = PRIOR_RX;
         return this;
-    }    
-    
+    }
+
     /**
-     * 
+     *
      * @return BRAINMET
      */
     public String getBRAINMET() {
         return BRAINMET;
     }
-    
+
     /**
-     * 
-     * @param BRAINMET 
+     *
+     * @param BRAINMET
      */
     public void setBRAINMET(String BRAINMET) {
         this.BRAINMET = BRAINMET;
     }
-    
+
     /**
-     * 
+     *
      * @param BRAINMET
-     * @return 
+     * @return
      */
     public CRDBSurvey withBRAINMET(String BRAINMET) {
         this.BRAINMET = BRAINMET;
@@ -239,62 +239,62 @@ this.COMMENTS = COMMENTS==null?"NA":COMMENTS;
     }
 
     /**
-     * 
+     *
      * @return ECOG
      */
     public String getECOG() {
         return ECOG;
     }
-    
+
     /**
-     * 
-     * @param ECOG 
+     *
+     * @param ECOG
      */
     public void setECOG(String ECOG) {
         this.ECOG = ECOG;
     }
-    
+
     /**
-     * 
+     *
      * @param ECOG
-     * @return 
+     * @return
      */
     public CRDBSurvey withECOG(String ECOG) {
         this.ECOG = ECOG;
         return this;
-    }    
+    }
 
     /**
-     * 
+     *
      * @return COMMENTS
      */
     public String getCOMMENTS() {
         return COMMENTS;
     }
-    
+
     /**
-     * 
-     * @param COMMENTS 
+     *
+     * @param COMMENTS
      */
     public void setCOMMENTS(String COMMENTS) {
         this.COMMENTS = COMMENTS;
     }
-    
+
     /**
-     * 
+     *
      * @param COMMENTS
-     * @return 
+     * @return
      */
     public CRDBSurvey withCOMMENTS(String COMMENTS) {
         this.COMMENTS = COMMENTS;
         return this;
-    }     
-        
+    }
+
     @Override
     public String toString() {
         return ToStringBuilder.reflectionToString(this);
     }
-    
+
     /**
      * Returns the field names in CRDBSurvey without additional properties.
      * @return List<String>
@@ -303,7 +303,7 @@ this.COMMENTS = COMMENTS==null?"NA":COMMENTS;
         List<String> fieldNames = new ArrayList<>();
         for (String field : toString().substring(toString().indexOf("[")+1,toString().indexOf("]")).split(",")) {
             if (!field.startsWith("additionalProperties")) {
-                fieldNames.add(field.split("=")[0]);                
+                fieldNames.add(field.split("=")[0]);
             }
         }
         return fieldNames;

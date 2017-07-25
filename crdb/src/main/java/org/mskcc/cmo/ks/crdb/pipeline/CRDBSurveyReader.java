@@ -49,7 +49,7 @@ import java.util.*;
 
 /**
  * Class for querying the CRDB Survey view.
- * 
+ *
  * @author ochoaa
  */
 
@@ -60,32 +60,32 @@ public class CRDBSurveyReader implements ItemStreamReader<CRDBSurvey> {
     @Autowired
     SQLQueryFactory crdbQueryFactory;
 
-    private List<CRDBSurvey> crdbSurveyResults;    
-    
+    private List<CRDBSurvey> crdbSurveyResults;
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.crdbSurveyResults = getCrdbSurveyResults();
     }
-    
+
     /**
      * Creates an alias for the CRDB Survey view query type and projects query as
      * a list of CRDBSurvey objects
-     * 
+     *
      * @return List<CRDBSurvey>
      */
     @Transactional
     private List<CRDBSurvey> getCrdbSurveyResults() {
         System.out.println("Beginning CRDB Survey View import...");
-        
+
         CRDBSurvey qCRDBS = alias(CRDBSurvey.class, crdbSurveyView);
         List<CRDBSurvey> crdbSurveyResults = new ArrayList<>();
         List<String> dmpIdList = crdbQueryFactory.selectDistinct($(qCRDBS.getDMP_ID())).from($(qCRDBS)).fetch();
         for (String dmpId : dmpIdList) {
             CRDBSurvey record = crdbQueryFactory.select(
-                Projections.constructor(CRDBSurvey.class, $(qCRDBS.getDMP_ID()), 
-                        $(qCRDBS.getQS_DATE()), $(qCRDBS.getADJ_TXT()), 
-                        $(qCRDBS.getNOSYSTXT()), $(qCRDBS.getPRIOR_RX()), 
-                        $(qCRDBS.getBRAINMET()), $(qCRDBS.getECOG()), 
+                Projections.constructor(CRDBSurvey.class, $(qCRDBS.getDMP_ID()),
+                        $(qCRDBS.getQS_DATE()), $(qCRDBS.getADJ_TXT()),
+                        $(qCRDBS.getNOSYSTXT()), $(qCRDBS.getPRIOR_RX()),
+                        $(qCRDBS.getBRAINMET()), $(qCRDBS.getECOG()),
                         $(qCRDBS.getCOMMENTS())))
                     .from($(qCRDBS))
                     .where($(qCRDBS.getDMP_ID()).eq(dmpId))
@@ -93,7 +93,7 @@ public class CRDBSurveyReader implements ItemStreamReader<CRDBSurvey> {
                     .fetchFirst();
             crdbSurveyResults.add(record);
         }
-                             
+
         System.out.println("Imported "+crdbSurveyResults.size()+" records from CRDB Survey View.");
         return crdbSurveyResults;
     }
@@ -106,9 +106,9 @@ public class CRDBSurveyReader implements ItemStreamReader<CRDBSurvey> {
 
     @Override
     public CRDBSurvey read() throws Exception {
-        if (!crdbSurveyResults.isEmpty()) {            
-            return crdbSurveyResults.remove(0);            
+        if (!crdbSurveyResults.isEmpty()) {
+            return crdbSurveyResults.remove(0);
         }
         return null;
-    } 
+    }
 }

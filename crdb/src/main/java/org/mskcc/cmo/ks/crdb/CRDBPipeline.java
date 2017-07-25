@@ -43,7 +43,7 @@ import org.springframework.batch.core.launch.JobLauncher;
 
 /**
  * Pipeline for running the CRDB clinical data job.
- * 
+ *
  * @author ochoaa
  */
 
@@ -66,18 +66,18 @@ public class CRDBPipeline {
     private static void launchJob(String[] args, String stagingDirectory) throws Exception {
         SpringApplication app = new SpringApplication(CRDBPipeline.class);
         ConfigurableApplicationContext ctx = app.run(args);
-        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);        
+        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
 
-        Job crdbJob = ctx.getBean(BatchConfiguration.CRDB_IMPACT_JOB, Job.class);        
+        Job crdbJob = ctx.getBean(BatchConfiguration.CRDB_IMPACT_JOB, Job.class);
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("stagingDirectory", stagingDirectory)
-                .toJobParameters();  
-        JobExecution jobExecution = jobLauncher.run(crdbJob, jobParameters); 
+                .toJobParameters();
+        JobExecution jobExecution = jobLauncher.run(crdbJob, jobParameters);
 
         System.out.println("Shutting down CRDBPipeline.");
-        ctx.close();        
+        ctx.close();
     }
-    
+
     public static void main(String[] args) throws Exception {
         Options gnuOptions = CRDBPipeline.getOptions(args);
         CommandLineParser parser = new DefaultParser();
@@ -86,6 +86,6 @@ public class CRDBPipeline {
             !commandLine.hasOption("stage")) {
             help(gnuOptions, 0);
         }
-        launchJob(args, commandLine.getOptionValue("stage"));        
+        launchJob(args, commandLine.getOptionValue("stage"));
     }
 }

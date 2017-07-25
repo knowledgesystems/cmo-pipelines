@@ -42,15 +42,15 @@ import org.springframework.batch.item.ItemProcessor;
 
 /**
  * Class for processing the CRDB Dataset results for the staging file.
- * 
+ *
  * @author ochoaa
  */
 
 public class CRDBDatasetProcessor implements ItemProcessor<CRDBDataset, String> {
     ObjectMapper mapper = new ObjectMapper();
-    
+
     @Override
-    public String process(final CRDBDataset crdbDataset) throws Exception {              
+    public String process(final CRDBDataset crdbDataset) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : new CRDBDataset().getFieldNames()) {
             String value;
@@ -62,18 +62,18 @@ public class CRDBDatasetProcessor implements ItemProcessor<CRDBDataset, String> 
                 value = crdbDataset.getClass().getMethod("get"+field).invoke(crdbDataset).toString();
             }
             record.add(value);
-        }        
+        }
         return StringUtils.join(record, "\t");
     }
-    
+
     /**
      * Resolves the value for the PARTA_CONSENTED field.
      * @param consentDays
-     * @return 
+     * @return
      */
     private String resolvePartAConsented(String consentDays) {
         String value = "NO"; // default value is NO to minimize NA's in data
-        
+
         // if consent days is larger than 0 then set value to YES, else set to NO
         try {
             if (Integer.valueOf(consentDays) > 0) {

@@ -47,22 +47,22 @@ import org.apache.commons.lang.StringUtils;
 
 /**
  * Class for writing the CRDB Survey results to the staging file.
- * 
+ *
  * @author ochoaa
  */
 
 public class CRDBSurveyWriter implements ItemStreamWriter<String>
-{   
+{
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
-    
+
     @Value("${crdb.survey_filename}")
     private String surveyFilename;
 
     private final List<String> writeList = new ArrayList<>();
     private final FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
     private String stagingFile;
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
@@ -73,7 +73,7 @@ public class CRDBSurveyWriter implements ItemStreamWriter<String>
                 writer.write(normalizeHeaders(new CRDBSurvey().getFieldNames()));
             }
         });
-        
+
         if (stagingDirectory.endsWith("/")){
             stagingFile = stagingDirectory+surveyFilename;
         }
@@ -83,8 +83,8 @@ public class CRDBSurveyWriter implements ItemStreamWriter<String>
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }
-    
-    private String normalizeHeaders(List<String> columns) {        
+
+    private String normalizeHeaders(List<String> columns) {
         List<String> normColumns = new ArrayList<>();
         for (String col : columns){
             if (col.equals("DMP_ID")){
@@ -99,7 +99,7 @@ public class CRDBSurveyWriter implements ItemStreamWriter<String>
         }
         return StringUtils.join(normColumns, "\t");
     }
-            
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {}
 

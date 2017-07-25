@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Configuration for the CRDB query factory.
- * 
+ *
  * @author ochoaa
  */
 
@@ -26,25 +26,25 @@ import org.springframework.context.annotation.Configuration;
 public class CRDBConfiguration {
     @Value("${crdb.username}")
     private String username;
-    
+
     @Value("${crdb.password}")
     private String password;
-    
+
     @Value("${crdb.connection_string}")
     private String connection_string;
-        
+
     @Bean
     public SQLQueryFactory crdbQueryFactory() throws SQLException {
         SQLTemplates templates = new OracleTemplates();
         com.querydsl.sql.Configuration config = new com.querydsl.sql.Configuration(templates);
         return  new SQLQueryFactory(config, crdbDataSource());
     }
-    
+
     public OracleDataSource crdbDataSource() throws SQLException {
-        OracleDataSource crdbDataSource = new OracleDataSource();        
+        OracleDataSource crdbDataSource = new OracleDataSource();
         crdbDataSource.setUser(username);
         crdbDataSource.setPassword(password);
         crdbDataSource.setURL(connection_string);
         return crdbDataSource;
-    }        
+    }
 }

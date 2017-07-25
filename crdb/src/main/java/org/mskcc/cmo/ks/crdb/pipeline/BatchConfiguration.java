@@ -45,7 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Configuration for running the CRDB clinical data fetcher.
- * 
+ *
  * @author ochoaa
  */
 
@@ -98,13 +98,13 @@ public class BatchConfiguration
     public ItemStreamWriter<String> writer1() {
         return new CRDBSurveyWriter();
     }
-        
+
     /**
      * Step 2 reads, processes, and writes the CRDB Dataset query results
-     */    
+     */
     @Bean
     public Step step2() {
-        return stepBuilderFactory.get("step2") 
+        return stepBuilderFactory.get("step2")
             .listener(CRDBDatasetListener())
             .<CRDBDataset, String> chunk(10)
             .reader(reader2())
@@ -133,5 +133,5 @@ public class BatchConfiguration
     @StepScope
     public ItemStreamWriter<String> writer2() {
         return new CRDBDatasetWriter();
-    }    
+    }
 }
