@@ -43,6 +43,10 @@ $JAVA_HOME/bin/java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,add
 echo "fetching updates from cbio-portal-data..."
 $JAVA_HOME/bin/java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source knowledge-systems-curated-studies --run-date latest
 
+# fetch updates in immunotherapy repository
+echo "fetching updates from cbio-portal-data..."
+$JAVA_HOME/bin/java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source immunotherapy --run-date latest
+
 # import data that requires QC into triage portal
 echo "importing cancer type updates into triage portal database..."
 $JAVA_HOME/bin/java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
