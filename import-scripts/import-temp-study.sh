@@ -243,4 +243,5 @@ if [[ $IMPORT_FAIL -ne 0 || $VALIDATION_FAIL -ne 0 || $DELETE_FAIL -ne 0 || $REN
 	exit 1
 else
 	echo "Update successful for study '$CANCER_STUDY_IDENTIFIER'"
+	exit 0
 fi
