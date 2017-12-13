@@ -11,11 +11,19 @@ def get_header(file):
     header_source.close()
     return header
 
+# old format is defined as a file containing 5 header lines (PATIENT and SAMPLE attributes in same file)
+def is_old_format(file):
+    return all([linecache.getline(file, header_line).startswith("#") for header_line in range(1,6)])
+
 # get existing priority mapping in a given file
 def get_priority_mapping(file):
     priority_mapping = {}
-    attributes = linecache.getline(file, 5).rstrip().split('\t')
-    priorities = linecache.getline(file, 4).rstrip().replace("#", "").split('\t')
+    if is_old_format(file):
+        attributes = linecache.getline(file, 6).rstrip().split('\t')
+        priorities = linecache.getline(file, 5).rstrip().replace("#", "").split('\t')
+    else:
+        attributes = linecache.getline(file, 5).rstrip().split('\t')
+        priorities = linecache.getline(file, 4).rstrip().replace("#", "").split('\t')
     for i in range(len(attributes)):
         priority_mapping[attributes[i]] = priorities[i]
     return priority_mapping

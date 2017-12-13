@@ -43,6 +43,7 @@ DATATYPE_KEY = 'datatype'
 DESCRIPTIONS_KEY = 'descriptions'
 DISPLAY_NAME_KEY = 'displayname'
 NORMALIZED_COLUMN_HEADER_KEY = 'normalizedcolumnheader'
+ATTRIBUTE_TYPE_KEY = 'attributetype'
 PRIORITY_KEY = 'priority'
 # ------------------------------------------------------------------------------
 # class definitions
@@ -126,39 +127,55 @@ def get_clinical_attribute_metadata_map(google_spreadsheet, client, header):
         display_name = entry.custom[DISPLAY_NAME_KEY].text.rstrip()
         descriptions = entry.custom[DESCRIPTIONS_KEY].text.rstrip()
         datatype = entry.custom[DATATYPE_KEY].text.rstrip()
+        attribute_type = entry.custom[ATTRIBUTE_TYPE_KEY].text.rstrip()
         priority = entry.custom[PRIORITY_KEY].text
         if normalized_column_header is not None and normalized_column_header in header_set:
-            metadata_mapping[normalized_column_header] = {'DISPLAY_NAME' : display_name, 'DESCRIPTIONS' : descriptions, 'DATATYPE' : datatype, 'PRIORITY' : priority}
+            metadata_mapping[normalized_column_header] = {
+                'DISPLAY_NAME' : display_name,
+                'DESCRIPTIONS' : descriptions,
+                'DATATYPE' : datatype,
+                'ATTRIBUTE_TYPE' : attribute_type,
+                'PRIORITY' : priority}
     return metadata_mapping
 # ------------------------------------------------------------------------------
-def write_headers(header, metadata_dictionary, output_file):
+def write_headers(header, metadata_dictionary, output_file, is_new_format):
     name_line = []
     description_line = []
     datatype_line = []
+    attribute_type_line = []
     priority_line = []
     for attribute in header:
-        name_line.append(metadata_dictionary[attribute]['DISPLAY_NAME'])
-        description_line.append(metadata_dictionary[attribute]['DESCRIPTIONS'])
-        datatype_line.append(metadata_dictionary[attribute]['DATATYPE'])
-        priority_line.append(metadata_dictionary[attribute]['PRIORITY'])
+        if attribute in metadata_dictionary:
+            name_line.append(metadata_dictionary[attribute]['DISPLAY_NAME'])
+            description_line.append(metadata_dictionary[attribute]['DESCRIPTIONS'])
+            datatype_line.append(metadata_dictionary[attribute]['DATATYPE'])
+            attribute_type_line.append(metadata_dictionary[attribute]['ATTRIBUTE_TYPE'])
+            priority_line.append(metadata_dictionary[attribute]['PRIORITY'])
+        else:
+            # if attribute not in google worksheet, use defaults
+            name_line.append(attribute.replace("_", " ").title())
+            description_line.append(attribute.replace("_", " ").title())
+            datatype_line.append('STRING')
+            attribute_type_line.append('SAMPLE')
+            priority_line.append('1')
     write_header_line(name_line, output_file)
     write_header_line(description_line, output_file)
     write_header_line(datatype_line, output_file)
+    # if patient and sample attributes are in file, print attribute type metadata header
+    if len(set(attribute_type_line)) > 0 and not is_new_format:
+        write_header_line(attribute_type_line, output_file)
     write_header_line(priority_line, output_file)
 # -----------------------------------------------------------------------------
-# displays program usage (invalid args)
-def usage():
-    print >> OUTPUT_FILE, 'add_clinical_attribute_metadata.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] clinical_file_name [clinical_file_name...]'
-    sys.exit(2)
-# ------------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--secrets-file", help = "secrets file", required = True)
     parser.add_argument("-c", "--creds-file", help = "credentials file", required = True)
     parser.add_argument("-p", "--properties-file", help = "properties file", required = True)
     parser.add_argument("-f", "--files", nargs = "+", help = "file(s) to add metadata headers", required = True)
+    parser.add_argument("-n", "--new-format", help = "flag for whether file is new/old format -- whether patient/sample attributes are seperated", action = "store_true")
     args = parser.parse_args()
 
+    is_new_format = args.new_format
     secrets_filename = args.secrets_file
     creds_filename = args.creds_file
     properties_filename = args.properties_file
@@ -198,12 +215,11 @@ def main():
     # check metadata is defined for all attributes in google spreadsheet
     if len(metadata_dictionary.keys()) != len(all_attributes):
         print >> ERROR_FILE, 'Error, metadata not found for attribute(s): ' + ', '.join(all_attributes.difference(metadata_dictionary.keys()))
-        sys.exit(2)
     for clinical_file in clinical_files:
         # create temp file to write to
         temp_file, temp_file_name = tempfile.mkstemp()
         header = get_header(clinical_file)
-        write_headers(header, metadata_dictionary, temp_file)
+        write_headers(header, metadata_dictionary, temp_file, is_new_format)
         write_data(clinical_file, temp_file)
         os.close(temp_file)
         # replace original file with new file

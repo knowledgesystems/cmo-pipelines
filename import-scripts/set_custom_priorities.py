@@ -23,6 +23,7 @@ def createCBCustomPrioritiesMap():
         "DFS_STATUS" : "0",
         "OS_MONTHS" : "0",
         "OS_STATUS" : "9",
+        "SEX" : "69",
         "SAMPLE_TYPE" : "9"
     }
     return custom_priorities_map
@@ -115,13 +116,10 @@ def insert_custom_properties(file, priority_mapping, output_file, header):
     os.write(output_file, linecache.getline(file, 1))
     os.write(output_file, linecache.getline(file, 2))
     os.write(output_file, linecache.getline(file, 3))
+    if is_old_format(file):
+        os.write(output_file, linecache.getline(file,4))
     write_header_line(priority_line, output_file)
     write_data(file, output_file)
-#-------------------------------------------------------------
-# usage statement
-def usage():
-    print >> OUTPUT_FILE, 'add_custom_properties.py --study-id [study id] clinical_file_name [clinical_file_name...]'
-    sys.exit(2)
 #-------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser()
