@@ -23,8 +23,16 @@ def createCBCustomPrioritiesMap():
         "DFS_STATUS" : "0",
         "OS_MONTHS" : "0",
         "OS_STATUS" : "9",
-        "SEX" : "69",
         "SAMPLE_TYPE" : "9"
+    }
+    return custom_priorities_map
+
+def createDefaultMskimpactPrioritiesMap():
+    custom_priorities_map = {
+        "12_245_PARTC_CONSENTED" : "1",
+        "OS_STATUS" : "1",
+        "SAMPLE_TYPE" : "1",
+        "SEX" : "1",
     }
     return custom_priorities_map
 
@@ -95,11 +103,12 @@ def createMelCell2016CustomPrioritiesMap():
 
 def initialize_custom_priority_maps():
     custom_priorities_map = {
-        'mskimpact' : createCBCustomPrioritiesMap(),
+        'mskimpact' : createDefaultMskimpactPrioritiesMap(),
+        'mel_cell_2016' : createMelCell2016CustomPrioritiesMap(),
         'mixedpact' : createCBCustomPrioritiesMap(),
+        #'mskimpact' : createCBCustomPrioritiesMap(),
         'skcm_mskcc_2014' : createSKCMCustomPrioritiesMap(),
-        'skcm_mskcc_2015' : createSKCMCustomPrioritiesMap(),
-        'mel_cell_2016' : createMelCell2016CustomPrioritiesMap()
+        'skcm_mskcc_2015' : createSKCMCustomPrioritiesMap()
     }
     return custom_priorities_map
 #-------------------------------------------------------------
@@ -152,14 +161,18 @@ def main():
     if len(missing_metadata_header_files) > 0:
         print >> ERROR_FILE, 'File(s) incorrectly formatted (missing metadata headers): ' + ', '.join(missing_metadata_header_files)
         sys.exit(2)
+    missing_column_header_files = [clinical_file for clinical_file in clinical_files if len(get_header(clinical_file)) == 0]
+    if len(missing_column_header_files) > 0:
+        print >> ERROR_FILE, 'File(s) incorrectly formatted (missing column headers): ' + ', '.join(missing_column_header_files)
+        sys.exit(2)
     for clinical_file in clinical_files:
         header = get_header(clinical_file)
         #get existing priority mappings - replace with provided overrides
         priority_mapping = get_priority_mapping(clinical_file)
         if reset:
             reset_priorities(priority_mapping)
-        for attribute, priority in priority_mapping.items():
-            if attribute in custom_map.keys():
+        for attribute in custom_map:
+            if attribute in priority_mapping.keys():
                 priority_mapping[attribute] = custom_map[attribute]
         # create and write to temp file
         temp_file, temp_file_name = tempfile.mkstemp()

@@ -3,12 +3,12 @@ import linecache
 
 # returns header as list of attributes
 def get_header(file):
-    header_source = open(file, "r")
-    for line in header_source:
-        if not line.startswith("#"):
-            header = line.rstrip().split('\t')
-            break
-    header_source.close()
+    header = []
+    with open(file, "r") as header_source:
+        for line in header_source:
+            if not line.startswith("#"):
+                header = line.rstrip().split('\t')
+                break
     return header
 
 # old format is defined as a file containing 5 header lines (PATIENT and SAMPLE attributes in same file)

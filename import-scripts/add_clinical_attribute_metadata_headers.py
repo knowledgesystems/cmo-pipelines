@@ -138,7 +138,7 @@ def get_clinical_attribute_metadata_map(google_spreadsheet, client, header):
                 'PRIORITY' : priority}
     return metadata_mapping
 # ------------------------------------------------------------------------------
-def write_headers(header, metadata_dictionary, output_file, is_new_format):
+def write_headers(header, metadata_dictionary, output_file, is_mixed_attribute_types_format):
     name_line = []
     description_line = []
     datatype_line = []
@@ -162,7 +162,7 @@ def write_headers(header, metadata_dictionary, output_file, is_new_format):
     write_header_line(description_line, output_file)
     write_header_line(datatype_line, output_file)
     # if patient and sample attributes are in file, print attribute type metadata header
-    if len(set(attribute_type_line)) > 0 and not is_new_format:
+    if len(set(attribute_type_line)) > 0 and is_mixed_attribute_types_format:
         write_header_line(attribute_type_line, output_file)
     write_header_line(priority_line, output_file)
 # -----------------------------------------------------------------------------
@@ -172,10 +172,10 @@ def main():
     parser.add_argument("-c", "--creds-file", help = "credentials file", required = True)
     parser.add_argument("-p", "--properties-file", help = "properties file", required = True)
     parser.add_argument("-f", "--files", nargs = "+", help = "file(s) to add metadata headers", required = True)
-    parser.add_argument("-n", "--new-format", help = "flag for whether file is new/old format -- whether patient/sample attributes are seperated", action = "store_true")
+    parser.add_argument("-m", "--mixed-attribute-types", help = "flag for whether file is new/old format -- whether patient/sample attributes are seperated", action = "store_true")
     args = parser.parse_args()
 
-    is_new_format = args.new_format
+    is_mixed_attribute_types_format = args.mixed_attribute_types
     secrets_filename = args.secrets_file
     creds_filename = args.creds_file
     properties_filename = args.properties_file
@@ -219,7 +219,7 @@ def main():
         # create temp file to write to
         temp_file, temp_file_name = tempfile.mkstemp()
         header = get_header(clinical_file)
-        write_headers(header, metadata_dictionary, temp_file, is_new_format)
+        write_headers(header, metadata_dictionary, temp_file, is_mixed_attribute_types_format)
         write_data(clinical_file, temp_file)
         os.close(temp_file)
         # replace original file with new file
