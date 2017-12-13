@@ -1,18 +1,19 @@
 #! /usr/bin/env python
 # ------------------------------------------------------------------------------
-# Utility script which adds metadata headers to specified file
+# Utility script which adds metadata headers to specified file(s)
 # Metadata is pulled from google spreadsheets
 # Four lines added at the top (display name, dscriptions, datatype, priority)
+# Changes only made if all input  files are valid
 # The following properties must be specified in the a properties file:
 # google.id
 # google.pw
 # google.spreadsheet
 # google.clinical_attributes_worksheet
 # ------------------------------------------------------------------------------
+import argparse
 import gdata.docs.client
 import gdata.docs.service
 import gdata.spreadsheet.service
-import getopt
 import httplib2
 import os
 import shutil
@@ -105,7 +106,7 @@ def get_portal_properties(portal_properties_filename):
         GOOGLE_PW not in properties or len(properties[GOOGLE_PW]) == 0 or
         GOOGLE_SPREADSHEET not in properties or len(properties[GOOGLE_SPREADSHEET]) == 0):
         print >> ERROR_FILE, 'Missing one or more required properties, please check property file'
-        return None   
+        return None
     return PortalProperties(properties[GOOGLE_ID],
                             properties[GOOGLE_PW],
                             properties[GOOGLE_SPREADSHEET],
@@ -113,7 +114,7 @@ def get_portal_properties(portal_properties_filename):
 # ------------------------------------------------------------------------------
 # returns dictionary where
 # key: normalized column header (ie SAMPLE_ID)
-# value: dictionary of metadata {'DISPLAY_NAME':display_name, 'DESCRIPTION':description, 'DATATYPE':datatype, 'PRIORITY':priority] 
+# value: dictionary of metadata {'DISPLAY_NAME':display_name, 'DESCRIPTION':description, 'DATATYPE':datatype, 'PRIORITY':priority]
 # (ie {'DISPLAY_NAME':Sample Id, 'DESCRIPTION':Unique sample identifier, 'DATATYPE':String, 'PRIORITY':1})
 def get_clinical_attribute_metadata_map(google_spreadsheet, client, header):
     metadata_mapping = {}
@@ -140,7 +141,6 @@ def write_headers(header, metadata_dictionary, output_file):
         description_line.append(metadata_dictionary[attribute]['DESCRIPTIONS'])
         datatype_line.append(metadata_dictionary[attribute]['DATATYPE'])
         priority_line.append(metadata_dictionary[attribute]['PRIORITY'])
-
     write_header_line(name_line, output_file)
     write_header_line(description_line, output_file)
     write_header_line(datatype_line, output_file)
@@ -152,29 +152,21 @@ def usage():
     sys.exit(2)
 # ------------------------------------------------------------------------------
 def main():
-    # parse command line options
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file='])
-    except getopt.error, msg:
-        print >> ERROR_FILE, msg
-        usage()
-    # process the options
-    secrets_filename = ''
-    creds_filename = ''
-    properties_filename = ''
-    for o, a in opts:
-        if o == '--secrets-file':
-            secrets_filename = a
-        elif o == '--creds-file':
-            creds_filename = a
-        elif o == '--properties-file':
-            properties_filename = a
-    # check for required authorization files
-    if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or len(args) == 0):
-        usage()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--secrets-file", help = "secrets file", required = True)
+    parser.add_argument("-c", "--creds-file", help = "credentials file", required = True)
+    parser.add_argument("-p", "--properties-file", help = "properties file", required = True)
+    parser.add_argument("-f", "--files", nargs = "+", help = "file(s) to add metadata headers", required = True)
+    args = parser.parse_args()
+
+    secrets_filename = args.secrets_file
+    creds_filename = args.creds_file
+    properties_filename = args.properties_file
+    clinical_files = args.files
+
     if not os.path.exists(properties_filename):
         print >> ERROR_FILE, 'properties file cannot be found: ' + properties_filename
-        sys.exit(2) 
+        sys.exit(2)
     if not os.path.exists(creds_filename):
         print >> ERROR_FILE, 'credentials file cannot be found: ' + creds_filename
         sys.exit(2)
@@ -182,11 +174,11 @@ def main():
         print >> ERROR_FILE, 'secrets file cannot be found: ' + creds_filename
         sys.exit(2)
     # check file (args) validity and return error if any file fails check
-    missing_clinical_files = [clinical_file for clinical_file in args if not os.path.exists(clinical_file)]
+    missing_clinical_files = [clinical_file for clinical_file in clinical_files if not os.path.exists(clinical_file)]
     if len(missing_clinical_files) > 0:
         print >> ERROR_FILE, 'File(s) not found: ' + ', '.join(missing_clinical_files)
         sys.exit(2)
-    not_writable_clinical_files = [clinical_file for clinical_file in args if not os.access(clinical_file,os.W_OK)]
+    not_writable_clinical_files = [clinical_file for clinical_file in clinical_files if not os.access(clinical_file,os.W_OK)]
     if len(not_writable_clinical_files) > 0:
         print >> ERROR_FILE, 'File(s) not writable: ' + ', '.join(not_writable_clinical_files)
         sys.exit(2)
@@ -194,19 +186,28 @@ def main():
     print >> OUTPUT_FILE, 'Reading portal properties file: ' + properties_filename
     portal_properties = get_portal_properties(properties_filename)
     if not portal_properties:
-        print >> OUTPUT_FILE, 'Error reading %s, exiting' % properties_filename
+        print >> ERROR_FILE, 'Error reading %s, exiting' % properties_filename
         sys.exit(2)
-    client = google_login(secrets_filename, creds_filename, portal_properties.google_id, portal_properties.google_pw, sys.argv[0]) 
-    for clinical_file in args:
-        header = get_header(clinical_file)
-        metadata_dictionary = get_clinical_attribute_metadata_map(portal_properties.google_spreadsheet, client, header)
-        # create temp file to write to 
+    client = google_login(secrets_filename, creds_filename, portal_properties.google_id, portal_properties.google_pw, sys.argv[0])
+    metadata_dictionary = {}
+    all_attributes = set()
+    # get a set of attributes used across all input files
+    for clinical_file in clinical_files:
+        all_attributes = all_attributes.union(get_header(clinical_file))
+    metadata_dictionary = get_clinical_attribute_metadata_map(portal_properties.google_spreadsheet, client, all_attributes)
+    # check metadata is defined for all attributes in google spreadsheet
+    if len(metadata_dictionary.keys()) != len(all_attributes):
+        print >> ERROR_FILE, 'Error, metadata not found for attribute(s): ' + ', '.join(all_attributes.difference(metadata_dictionary.keys()))
+        sys.exit(2)
+    for clinical_file in clinical_files:
+        # create temp file to write to
         temp_file, temp_file_name = tempfile.mkstemp()
+        header = get_header(clinical_file)
         write_headers(header, metadata_dictionary, temp_file)
         write_data(clinical_file, temp_file)
         os.close(temp_file)
         # replace original file with new file
-        shutil.move(temp_file_name, clinical_file)   
+        shutil.move(temp_file_name, clinical_file)
 # ------------------------------------------------------------------------------
 if __name__ == '__main__':
     main()

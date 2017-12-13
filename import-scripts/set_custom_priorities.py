@@ -1,5 +1,5 @@
 # imports
-import getopt
+import argparse
 import linecache
 import os
 import shutil
@@ -102,6 +102,10 @@ def initialize_custom_priority_maps():
     }
     return custom_priorities_map
 #-------------------------------------------------------------
+def reset_priorities(priority_mapping):
+    for attribute in priority_mapping:
+        priority_mapping[attribute] = "0"
+
 # overwrites priority line with new custom priority line
 def insert_custom_properties(file, priority_mapping, output_file, header):
     priority_line = []
@@ -120,17 +124,16 @@ def usage():
     sys.exit(2)
 #-------------------------------------------------------------
 def main():
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], '', ['study-id='])
-    except getopt.error, msg:
-        print >> ERROR_FILE, msg
-        usage()
-    for o, a in opts:
-        if o == "--study-id":
-            study_id = a
-        else:
-            print >> ERROR_FILE, 'Invalid argument'
-            usage()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", "--reset", help = "reset priorities to 0 before applying overrides", action = "store_true")
+    parser.add_argument("-s", "--study-id", help = "stable id to select custom overrides mapping", required = True)
+    parser.add_argument("-f", "--files", nargs = "+", help = "files to apply custom overrides to", required = True)
+    args = parser.parse_args()
+
+    study_id = args.study_id
+    clinical_files = args.files
+    reset = args.reset
+
     # sets up custom priority map (overrides)
     custom_priority_maps = initialize_custom_priority_maps()
     if study_id not in custom_priority_maps:
@@ -139,22 +142,24 @@ def main():
     else:
         custom_map = custom_priority_maps[study_id]
     # check file (args) validity and return error if any file fails check
-    missing_clinical_files = [clinical_file for clinical_file in args if not os.path.exists(clinical_file)]
+    missing_clinical_files = [clinical_file for clinical_file in clinical_files if not os.path.exists(clinical_file)]
     if len(missing_clinical_files) > 0:
         print >> ERROR_FILE, 'File(s) not found: ' + ', '.join(missing_clinical_files)
         sys.exit(2)
-    not_writable_clinical_files = [clinical_file for clinical_file in args if not os.access(clinical_file,os.W_OK)]
+    not_writable_clinical_files = [clinical_file for clinical_file in clinical_files if not os.access(clinical_file,os.W_OK)]
     if len(not_writable_clinical_files) > 0:
         print >> ERROR_FILE, 'File(s) not writable: ' + ', '.join(not_writable_clinical_files)
         sys.exit(2)
-    missing_metadata_header_files = [clinical_file for clinical_file in args if not all([linecache.getline(clinical_file, x).startswith('#') for x in range(1,5)])]
+    missing_metadata_header_files = [clinical_file for clinical_file in clinical_files if not all([linecache.getline(clinical_file, x).startswith('#') for x in range(1,5)])]
     if len(missing_metadata_header_files) > 0:
         print >> ERROR_FILE, 'File(s) incorrectly formatted (missing metadata headers): ' + ', '.join(missing_metadata_header_files)
         sys.exit(2)
-    for clinical_file in args:
+    for clinical_file in clinical_files:
         header = get_header(clinical_file)
         #get existing priority mappings - replace with provided overrides
         priority_mapping = get_priority_mapping(clinical_file)
+        if reset:
+            reset_priorities(priority_mapping)
         for attribute, priority in priority_mapping.items():
             if attribute in custom_map.keys():
                 priority_mapping[attribute] = custom_map[attribute]
