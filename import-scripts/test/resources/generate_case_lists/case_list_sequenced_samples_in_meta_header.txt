@@ -1,0 +1,8 @@
+# here are some comments to be ignored
+# and some more
+# cases can be delimited by tabs or one or more spaces
+#sequenced_samples: A B	C  D    E
+SAMPLE_ID
+blah
+blah
+blah

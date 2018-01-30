@@ -8,7 +8,6 @@
 
 import unittest
 import tempfile
-import filecmp
 import os.path
 import os
 
@@ -16,15 +15,17 @@ from oncotree_code_converter import *
 
 class TestOncotreeCodeConverter(unittest.TestCase):
 
-    def setUp(cls):
-        cls.oncotree_filename = "test/tumor_types.txt"
+    @classmethod
+    def setUpClass(cls):
+        resource_dir = "test/resources/oncotree_code_converter/"
+        cls.oncotree_filename = os.path.join(resource_dir, "tumor_types.txt")
         cls.set_up_oncotree() # read file and initialize cls.oncotree
-        cls.data_clinical_no_cancer_type_filename = "test/data_clinical_sample_no_cancer_type.txt"
-        cls.data_clinical_processed_filename = "test/data_clinical_sample_processed.txt"
-        cls.data_clinical_with_meta_headers_filename = "test/data_clinical_sample_with_meta_headers.txt"
-        cls.data_clinical_oncotree_last_column_filename = "test/data_clinical_sample_oncotree_last_column.txt"
-        cls.data_clinical_incorrect_cancer_type_filename = "test/data_clinical_sample_incorrect_cancer_type.txt"
-        cls.data_clinical_no_oncotree_code_filename = "test/data_clinical_sample_no_oncotree_code.txt"
+        cls.data_clinical_no_cancer_type_filename = os.path.join(resource_dir, "data_clinical_sample_no_cancer_type.txt")
+        cls.data_clinical_processed_filename = os.path.join(resource_dir, "data_clinical_sample_processed.txt")
+        cls.data_clinical_with_meta_headers_filename = os.path.join(resource_dir, "data_clinical_sample_with_meta_headers.txt")
+        cls.data_clinical_oncotree_last_column_filename = os.path.join(resource_dir, "data_clinical_sample_oncotree_last_column.txt")
+        cls.data_clinical_incorrect_cancer_type_filename = os.path.join(resource_dir, "data_clinical_sample_incorrect_cancer_type.txt")
+        cls.data_clinical_no_oncotree_code_filename = os.path.join(resource_dir, "data_clinical_sample_no_oncotree_code.txt")
         cls.temp_files = []
 
     def test_get_oncotree(self):
@@ -82,11 +83,13 @@ class TestOncotreeCodeConverter(unittest.TestCase):
 
         return original_clinical_data, processed_clinical_data
    
-    def set_up_oncotree(self):
-        with open(self.oncotree_filename, 'r') as oncotree_file:
-            self.oncotree = oncotree_file.read().split('\n')
+    @classmethod
+    def set_up_oncotree(cls):
+        with open(cls.oncotree_filename, 'r') as oncotree_file:
+            cls.oncotree = oncotree_file.read().split('\n')
 
-    def tearDown(cls):
+    @classmethod
+    def tearDownClass(cls):
         for filename in cls.temp_files:
             if os.path.exists(filename):
                 os.remove(filename)        

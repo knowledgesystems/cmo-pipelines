@@ -1,0 +1,6 @@
+cancer_study_identifier: TESTING_STUDY
+stable_id: TESTING_STUDY_all
+case_list_name: All Tumors
+case_list_description: All tumor samples (16 samples)
+case_list_category: all_cases_in_study
+case_list_ids: A	C	B	E	G	I	H	P-0000001-T01-XXX	P-0000006-T02-XXX	P-0000005-T02-ZYZ	P-0000003-T01-YYY	C3	C2	C1	P-0000004-T02-ZZZ	P-0000002-T02-XYZ
