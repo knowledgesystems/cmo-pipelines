@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.*;
 import java.net.*;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -296,6 +297,43 @@ public class RedcapSessionManager {
     }
 
     public void deleteRedcapProjectData(String token) {
+        Set<String> recordsToDelete = new HashSet<String>();
+        recordsToDelete.add("9");
+        recordsToDelete.add("10");
+        deleteRedcapProjectData(token, recordsToDelete);
+    }
+
+    public void deleteRedcapProjectData(String token, Set<String> recordPrimaryKeySetForDeletion) {
+        log.info("deleting out of date records ... (" + recordPrimaryKeySetForDeletion.size() + " records)");
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        //headers.setContentType(new MediaType(MediaType.APPLICATION_FORM_URLENCODED, Charset.forName("UTF-8")));
+        //headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON_UTF8));
+        LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
+        uriVariables.add("token", token);
+        uriVariables.add("content", "record");
+        uriVariables.add("action", "delete");
+        int index = 0;
+        for (String keyToDelete : recordPrimaryKeySetForDeletion) {
+            uriVariables.add("records[" + Integer.toString(index) + "]", keyToDelete);
+            index = index + 1;
+        }
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
+        ResponseEntity<String> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, String.class);
+        //ArrayList<String> recordPrimaryKeyListForDeletion = new ArrayList<String>(recordPrimaryKeySetForDeletion);
+        //DeleteRecordRequest deleteRecordRequestBody = new DeleteRecordRequest(token, recordPrimaryKeyListForDeletion);
+        //HttpEntity<DeleteRecordRequest> deleteRecordRequestEntity = new HttpEntity<DeleteRecordRequest>(deleteRecordRequestBody, headers);
+        //ResponseEntity<String> deleteRecordResponseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, deleteRecordRequestEntity, String.class);
+        HttpStatus responseStatus = responseEntity.getStatusCode();
+        if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
+            log.warn("RedCap delete record API call failed. HTTP status code = " + Integer.toString(responseEntity.getStatusCode().value()));
+            throw new RuntimeException("RedCap delete record API call failed. HTTP status code");
+        }
+        log.info("Return from call to Delete Recap Record API: " + responseEntity.getBody());
+        if (4 == 4) {return;}
+        //everything below here is old
         String cookie = getSessionCookieFromRedcap();
         if (cookie == null) {
             log.warn("RedCap session cookie not available; unable to delete project data");
@@ -331,6 +369,9 @@ public class RedcapSessionManager {
 
     public HttpEntity getRequestEntity(LinkedMultiValueMap<String, String> uriVariables) {
         HttpHeaders headers = new HttpHeaders();
+        //headers.setContentType(new MediaType(MediaType.APPLICATION_FORM_URLENCODED, Charset.forName("UTF-8")));
+        //headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        //headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
         return new HttpEntity<LinkedMultiValueMap<String, String>>(uriVariables, headers);

@@ -51,6 +51,39 @@ public class RedcapRepository {
 
     private final Logger log = Logger.getLogger(RedcapRepository.class);
 
+    public boolean projectExists(String projectTitle) {
+        return redcapSessionManager.getTokenByProjectTitle(projectTitle) != null;
+    }
+
+    public boolean redcapDataTypeIsTimeline(String projectTitle) {
+        return redcapSessionManager.redcapDataTypeIsTimeline(projectTitle);
+    }
+
+    //TODO: eliminate this function and make upper layers unaware of token handling
+    public String getTokenByProjectTitle(String projectTitle) {
+        return redcapSessionManager.getTokenByProjectTitle(projectTitle);
+    }
+
+    //TODO: eliminate this function and make upper layers unaware of token handling
+    public Map<String, String> getClinicalTokenMapByStableId(String stableId) {
+        return redcapSessionManager.getClinicalTokenMapByStableId(stableId);
+    }
+
+    //TODO: eliminate this function and make upper layers unaware of token handling
+    public Map<String, String> getTimelineTokenMapByStableId(String stableId) {
+        return redcapSessionManager.getTimelineTokenMapByStableId(stableId);
+    }
+
+    //TODO: change this to accept the project name instead .. not token
+    public void deleteRedcapProjectData(String projectToken) {
+        redcapSessionManager.deleteRedcapProjectData(projectToken);
+    }
+
+    //TODO: drop this function
+    public void importClinicalData(String projectToken, String dataForImport) {
+        redcapSessionManager.importClinicalData(projectToken, dataForImport);
+    }
+
     public List<RedcapProjectAttribute> getAttributesByToken(String projectToken) {
         RedcapProjectAttribute[] redcapAttributeByToken = redcapSessionManager.getRedcapAttributeByToken(projectToken);
         List<RedcapProjectAttribute> redcapProjectAttributeList = new ArrayList<>(redcapAttributeByToken.length);
@@ -91,6 +124,31 @@ public class RedcapRepository {
             redcapDataForProject.add(redcapDataRecord);
         }
         return redcapDataForProject;
+    }
+
+    /** add record_id column if missing in data file contents and present in redcap project */
+    //TODO make this method private
+    public void adjustDataForRedcapImport(List<String> dataFileContentsTSV, String projectToken) {
+        if (dataFileContentsTSV.get(0).startsWith(RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID)) {
+            return; // RECORD_ID field is already the first field in the file
+        }
+        Integer maximumRecordIdInProject = redcapSessionManager.getMaximumRecordIdInRedcapProjectIfPresent(projectToken);
+        if (maximumRecordIdInProject == null) {
+            return; // record_id field is not present in project
+        }
+        int nextRecordId = maximumRecordIdInProject + 1;
+        boolean headerHandled = false;
+        for (int index = 0; index < dataFileContentsTSV.size(); index++) {
+            if (headerHandled) {
+                String expandedLine = Integer.toString(nextRecordId) + "\t" + dataFileContentsTSV.get(index);
+                dataFileContentsTSV.set(index, expandedLine);
+                nextRecordId = nextRecordId + 1;
+            } else {
+                String expandedLine = RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID + "\t" + dataFileContentsTSV.get(index);
+                dataFileContentsTSV.set(index, expandedLine);
+                headerHandled = true;
+            }
+        }
     }
 
 }
