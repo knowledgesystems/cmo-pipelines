@@ -67,10 +67,30 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
     @Override
     public Map<String, List<String>> getFullHeader(List<String> header) {
         Map<String, RedcapAttributeMetadata> combinedAttributeMap = new LinkedHashMap<>();
-        for (String attribute : header) { 
+        for (String attribute : header) {
             combinedAttributeMap.put(attribute, metadataCache.getMetadataByNormalizedColumnHeader(attribute));
         }
         return makeHeader(combinedAttributeMap);
+    }
+
+    @Override
+    public boolean allHeadersAreValidCDDAttributes(List<String> headers) {
+        ArrayList<String> invalidHeaders = new ArrayList<>();
+        for (String header : headers) {
+            try {
+                metadataCache.getMetadataByNormalizedColumnHeader(header);
+            } catch (RuntimeException e) {
+                invalidHeaders.add(header);
+            }
+        }
+        if (invalidHeaders.size() > 0) {
+            StringBuilder message = new StringBuilder("Invalid headers (not defined in CDD) :");
+            for (String header : invalidHeaders) {
+                message.append(" " + header);
+            }
+            throw new RuntimeException(message);
+        }
+        return true;
     }
 
     private List<RedcapAttributeMetadata> getMetadata() {
@@ -91,7 +111,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         }
         return false;
     }
-    
+
     public void setOverrideStudyId(String studyId) {
         metadataCache.setOverrideStudyId(studyId);
     }

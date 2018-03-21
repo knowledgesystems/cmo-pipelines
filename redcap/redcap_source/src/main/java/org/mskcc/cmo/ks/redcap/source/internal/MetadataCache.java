@@ -83,19 +83,6 @@ public class MetadataCache {
         return overrideStudyId;
     }
 
-    // when we want to get metadata from map, have to uppercase redcapId to match key
-    public RedcapAttributeMetadata getMetadataByRedcapId(String redcapId) {
-        ensureThatCacheIsInitialized();
-        RedcapAttributeMetadata redcapAttributeMetadata = normalizedColumnHeaderToMetadata.get(redcapId.toUpperCase());
-        if (redcapAttributeMetadata != null) {
-            return redcapAttributeMetadata;
-        } else {
-            String errorString = "Error : No RedcapAttributeMetadata found associated with redcap id: " + redcapId;
-            log.warn(errorString);
-            throw new RuntimeException(errorString);
-        }
-    }
-
     public RedcapAttributeMetadata getMetadataByNormalizedColumnHeader(String normalizedColumnHeader) {
         ensureThatCacheIsInitialized();
         RedcapAttributeMetadata redcapAttributeMetadata = normalizedColumnHeaderToMetadata.get(normalizedColumnHeader);

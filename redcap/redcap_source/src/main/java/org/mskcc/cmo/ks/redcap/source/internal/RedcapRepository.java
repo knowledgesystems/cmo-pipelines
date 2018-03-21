@@ -51,6 +51,14 @@ public class RedcapRepository {
 
     private final Logger log = Logger.getLogger(RedcapRepository.class);
 
+    public String redcapIdToColumnHeader(String redcapId) {
+        return redcapId.toUpperCase();
+    }
+
+    public String columnHeaderToRedcapId(String columnHeader) {
+        return columnHeader.toLowerCase();
+    }
+
     public boolean projectExists(String projectTitle) {
         return redcapSessionManager.getTokenByProjectTitle(projectTitle) != null;
     }
