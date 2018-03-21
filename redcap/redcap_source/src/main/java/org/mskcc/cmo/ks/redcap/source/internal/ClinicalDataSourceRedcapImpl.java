@@ -55,7 +55,7 @@ import org.springframework.stereotype.Repository;
 public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
     @Autowired
-    private MetadataCache metadataCache;
+    private MetadataManager metadataManager;
 
     @Autowired
     private MetadataManager metadataManager;
@@ -132,6 +132,8 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     @Override
     public List<String> getTimelineHeader(String stableId) {
         checkTokensByStableId(stableId);
+        String projectToken = clinicalTimelineTokens.get(nextTimelineId)
+        
         getTimelineHeaderData();
         return combinedHeader;
     }
@@ -242,12 +244,18 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     }
 
     private void getTimelineHeaderData() {
+        List<String> headers = new ArrayList<String>();
         List<RedcapProjectAttribute> attributes = getAttributes(true);
-        Map<RedcapProjectAttribute, RedcapAttributeMetadata> combinedAttributeMap = new LinkedHashMap<>();
+        //TODO : make this not aware of the tokens
+        String projectToken = clinicalTimelineTokens.get(nextTimelineId)
+        List<RedcapProjectAttribute> attributes = redcapRepository.getAttributesByToken(projectToken);
         for (RedcapProjectAttribute attribute : attributes) {
             combinedAttributeMap.put(attribute, metadataCache.getMetadataByNormalizedColumnHeader(redcapRepository.convertRedcapIdToColumnHeader(attribute.getFieldName())));
+            headers.add(redcapRepository.redcapIdToColumnHeader(atttribute.getFieldName()));
         }
-        combinedHeader = makeHeader(combinedAttributeMap);
+        if (metadataManager.allHeadersAreValidCDDAttributes(headers)) {
+            combinedHeader = headers;
+        }
     }
 
     private List<RedcapProjectAttribute> getAttributes(boolean timelineData) {
