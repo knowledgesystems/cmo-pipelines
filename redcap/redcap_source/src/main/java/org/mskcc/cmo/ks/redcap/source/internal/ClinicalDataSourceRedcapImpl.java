@@ -54,6 +54,14 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
+    //TODO: The design of this class should migrate so that it becomes unaware of redcap_id fields and the mapping issues. Migrate such lower level logic downwards.
+
+    @Autowired
+    private RedcapSessionManager redcapSessionManager; //TODO: eliminate this dependency
+
+    @Autowired
+    private MetadataCache metadataCache;
+
     @Autowired
     private MetadataManager metadataManager;
 
@@ -63,7 +71,6 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     @Autowired
     private RedcapRepository redcapRepository;
 
-    //TODO: remove awareness of project tokens at this level .. move down to repository
     private Map<String, String> clinicalDataTokens = null;
     private Map<String, String> clinicalTimelineTokens = null;
 
@@ -79,17 +86,17 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
     @Override
     public boolean projectExists(String projectTitle) {
-        return redcapRepository.projectExists(projectTitle);
+        return redcapSessionManager.getTokenByProjectTitle(projectTitle) != null;
     }
 
     @Override
     public boolean redcapDataTypeIsTimeline(String projectTitle) {
-        return redcapRepository.redcapDataTypeIsTimeline(projectTitle);
+        return redcapSessionManager.redcapDataTypeIsTimeline(projectTitle);
     }
 
     @Override
     public List<Map<String, String>> exportRawDataForProjectTitle(String projectTitle) {
-        String projectToken = redcapRepository.getTokenByProjectTitle(projectTitle);
+        String projectToken = redcapSessionManager.getTokenByProjectTitle(projectTitle);
         List<Map<String, String>> data = redcapRepository.getRedcapDataForProject(projectToken);
         if (redcapDataTypeIsTimeline(projectTitle)) {
             if (clinicalTimelineTokens != null) {
@@ -105,13 +112,13 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
     @Override
     public boolean projectsExistForStableId(String stableId) {
-        return !redcapRepository.getClinicalTokenMapByStableId(stableId).isEmpty() ||
-                !redcapRepository.getTimelineTokenMapByStableId(stableId).isEmpty();
+        return !redcapSessionManager.getClinicalTokenMapByStableId(stableId).isEmpty() ||
+                !redcapSessionManager.getTimelineTokenMapByStableId(stableId).isEmpty();
     }
 
     @Override
     public List<String> getProjectHeader(String projectTitle) {
-        String projectToken = redcapRepository.getTokenByProjectTitle(projectTitle);
+        String projectToken = redcapSessionManager.getTokenByProjectTitle(projectTitle);
         return getNormalizedColumnHeaders(projectToken);
     }
 
@@ -132,8 +139,6 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     @Override
     public List<String> getTimelineHeader(String stableId) {
         checkTokensByStableId(stableId);
-        String projectToken = clinicalTimelineTokens.get(nextTimelineId)
-        
         getTimelineHeaderData();
         return combinedHeader;
     }
@@ -182,7 +187,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
     @Override
     public void importClinicalDataFile(String projectTitle, String filename, boolean overwriteProjectData) throws Exception {
-        String projectToken = redcapRepository.getTokenByProjectTitle(projectTitle);
+        String projectToken = redcapSessionManager.getTokenByProjectTitle(projectTitle);
         if (projectToken == null) {
             log.error("Project not found in redcap clinicalDataTokens or clincalTimelineTokens: " + projectTitle);
             return;
@@ -244,11 +249,8 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     }
 
     private void getTimelineHeaderData() {
-        List<String> headers = new ArrayList<String>();
         List<RedcapProjectAttribute> attributes = getAttributes(true);
-        //TODO : make this not aware of the tokens
-        String projectToken = clinicalTimelineTokens.get(nextTimelineId)
-        List<RedcapProjectAttribute> attributes = redcapRepository.getAttributesByToken(projectToken);
+        Map<RedcapProjectAttribute, RedcapAttributeMetadata> combinedAttributeMap = new LinkedHashMap<>();
         for (RedcapProjectAttribute attribute : attributes) {
             combinedAttributeMap.put(attribute, metadataCache.getMetadataByNormalizedColumnHeader(redcapRepository.convertRedcapIdToColumnHeader(attribute.getFieldName())));
             headers.add(redcapRepository.redcapIdToColumnHeader(atttribute.getFieldName()));
@@ -256,6 +258,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         if (metadataManager.allHeadersAreValidCDDAttributes(headers)) {
             combinedHeader = headers;
         }
+        combinedHeader = makeHeader(combinedAttributeMap);
     }
 
     private List<RedcapProjectAttribute> getAttributes(boolean timelineData) {
@@ -282,8 +285,8 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
 
     private void checkTokensByStableId(String stableId) {
         if (!tokensHaveBeenSelected()) {
-            clinicalTimelineTokens = redcapRepository.getTimelineTokenMapByStableId(stableId);
-            clinicalDataTokens = redcapRepository.getClinicalTokenMapByStableId(stableId);
+            clinicalTimelineTokens = redcapSessionManager.getTimelineTokenMapByStableId(stableId);
+            clinicalDataTokens = redcapSessionManager.getClinicalTokenMapByStableId(stableId);
         }
     }
 
