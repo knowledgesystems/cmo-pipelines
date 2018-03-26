@@ -362,6 +362,7 @@ public class RedcapSessionManager {
         HttpStatus responseStatus = importRecordResponseEntity.getStatusCode();
         if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
             log.warn("RedCap import record API call failed. HTTP status code = " + Integer.toString(importRecordResponseEntity.getStatusCode().value()));
+            System.out.println("\n\n\nRedCap import record API call failed. HTTP status code = " + Integer.toString(importRecordResponseEntity.getStatusCode().value()));
             throw new RuntimeException("RedCap import record API call failed. HTTP status code");
         }
         log.info("Return from call to Import Recap Record API: " + importRecordResponseEntity.getBody());

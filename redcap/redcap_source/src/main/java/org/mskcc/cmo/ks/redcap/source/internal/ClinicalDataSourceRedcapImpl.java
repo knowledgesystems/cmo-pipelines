@@ -206,19 +206,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             }
             //TODO: add filtering of metadata headers (above column headers)
             replaceExternalHeadersWithRedcapIds(dataFileContentsTSV);
-            addRecordIdColumnIfMissingInFileAndPresentInProject(dataFileContentsTSV, projectToken);
-            List<String> dataFileContentsCSV = convertTSVtoCSV(dataFileContentsTSV, true);
-            String dataForImport = String.join("\n",dataFileContentsCSV.toArray(new String[0])) + "\n";
-            if (dataFileContentsCSV.size() == 1) {
-                log.error("Error: file "+ filename + " contained a single line (presumed to be the header) ... aborting attempt to import data");
-                throw new Exception("Error: file "+ filename + " contained a single line (presumed to be the header) ... aborting attempt to import data");
-            }
-            if (overwriteProjectData) {
-                redcapSessionManager.deleteRedcapProjectData(projectToken);
-            }
-            redcapSessionManager.importClinicalData(projectToken, dataForImport);
-            log.info("import completed, " + Integer.toString(dataFileContentsCSV.size() - 1) + " records imported");
-
+            redcapRepository.importClinicalData(projectToken, dataFileContentsTSV);
         } catch (IOException e) {
             log.error("IOException thrown while attempting to read file " + filename + " : " + e.getMessage());
             throw new IOException("IOException thrown while attempting to read file " + filename + " : " + e.getMessage());
@@ -246,28 +234,6 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         dataFileContentsTSV.set(0, newHeaderLine);
     }
 
-    private void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> dataFileContentsTSV, String projectToken) {
-        if (dataFileContentsTSV.get(0).startsWith(RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID)) {
-            return; // RECORD_ID field is already the first field in the file
-        }
-        Integer maximumRecordIdInProject = redcapSessionManager.getMaximumRecordIdInRedcapProjectIfPresent(projectToken);
-        if (maximumRecordIdInProject == null) {
-            return; // record_id field is not present in project
-        }
-        int nextRecordId = maximumRecordIdInProject + 1;
-        boolean headerHandled = false;
-        for (int index = 0; index < dataFileContentsTSV.size(); index++) {
-            if (headerHandled) {
-                String expandedLine = Integer.toString(nextRecordId) + "\t" + dataFileContentsTSV.get(index);
-                dataFileContentsTSV.set(index, expandedLine);
-                nextRecordId = nextRecordId + 1;
-            } else {
-                String expandedLine = RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID + "\t" + dataFileContentsTSV.get(index);
-                dataFileContentsTSV.set(index, expandedLine);
-                headerHandled = true;
-            }
-        }
-    }
 
     private List<String> getNormalizedColumnHeaders(String projectToken) {
         List<RedcapProjectAttribute> attributes = redcapRepository.getAttributesByToken(projectToken);
@@ -422,29 +388,6 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         return lineList;
     }
 
-    private List<String> convertTSVtoCSV(List<String> tsvLines, boolean dropDuplicatedKeys) {
-        HashSet<String> seen = new HashSet<String>();
-        LinkedList<String> csvLines = new LinkedList<String>();
-        for (String tsvLine : tsvLines) {
-            String[] tsvFields = tsvLine.split("\t",-1);
-            String key = tsvFields[0].trim();
-            if (dropDuplicatedKeys && seen.contains(key)) {
-                continue;
-            }
-            seen.add(key);
-            String[] csvFields = new String[tsvFields.length];
-            for (int i = 0; i < tsvFields.length; i++) {
-                String tsvField = tsvFields[i];
-                String csvField = tsvField;
-                if (tsvField.indexOf(",") != -1) {
-                    csvField = StringEscapeUtils.escapeCsv(tsvField);
-                }
-                csvFields[i] = csvField;
-            }
-            csvLines.add(String.join(",", csvFields));
-        }
-        return csvLines;
-    }
 
     public static void main(String[] args) {}
 }
