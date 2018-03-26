@@ -73,6 +73,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         return makeHeader(combinedAttributeMap);
     }
 
+/*
     @Override
     public boolean allHeadersAreValidCDDAttributes(List<String> headers) {
         ArrayList<String> invalidHeaders = new ArrayList<>();
@@ -92,7 +93,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         }
         return true;
     }
-
+*/
     private List<RedcapAttributeMetadata> getMetadata() {
         return metadataCache.getMetadata();
     }
