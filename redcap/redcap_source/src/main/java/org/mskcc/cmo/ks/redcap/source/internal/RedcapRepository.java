@@ -92,7 +92,7 @@ public class RedcapRepository {
     */
     public void importClinicalData(String projectToken, List<String> dataForImport) {
         // fetch the redcap project's "identifier"/primary key from the redcap-header/metadata API
-        List<RedcapProjectAttribute> redcapAttributeArray = getAttributesByToken(projectToken); // my_first_instrument_complete is filtered out in this function 
+        List<RedcapProjectAttribute> redcapAttributeArray = getAttributesByToken(projectToken); // my_first_instrument_complete is filtered out in this function
         String primaryKeyField = getPrimaryKeyFieldNameFromRedcapAttributes(redcapAttributeArray);
         boolean primaryKeyIsRecordId = (primaryKeyField.equals(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID));
         List<String> redcapAttributeNameList = createRedcapAttributeNameList(redcapAttributeArray, primaryKeyIsRecordId);
@@ -100,21 +100,20 @@ public class RedcapRepository {
         Map<String, Integer> fileAttributeNameToPositionMap = createAttributeNameToPositionMap(fileAttributeNameList);
         List<Integer> fileFieldSelectionOrder = createFieldSelectionOrder(fileAttributeNameToPositionMap, redcapAttributeNameList);
         Map<String, String> existingRedcapRecordMap = createExistingRedcapRecordMap(projectToken, redcapAttributeNameList, primaryKeyField);
-        
+        int maximumObservedRecordId = Integer.MIN_VALUE;
+        if (primaryKeyIsRecordId) {
+            maximumObservedRecordId = findMaximumRecordIdFromRecordMap(existingRedcapRecordMap);
+        }
+
         // begin comparison
         Set<String> primaryKeysSeenInFile = new HashSet<>();
-        List<String> recordsToUpload = new ArrayList<>();
+        List<String> recordsToImport = new ArrayList<>();
         ListIterator<String> fileRecordIterator = dataForImport.listIterator(1);
         while (fileRecordIterator.hasNext()) {
-            List<String> fileRecordFieldValues = Arrays.asList(fileRecordIterator.next().split("\t"));
+            List<String> fileRecordFieldValues = Arrays.asList(fileRecordIterator.next().split("\t", -1));
             List<String> orderedFileRecordFieldValues = new ArrayList<>();
             for (int index : fileFieldSelectionOrder) {
-                // try-catch block to handle records where last attribute has empty value
-                try {
-                    orderedFileRecordFieldValues.add(fileRecordFieldValues.get(index));
-                } catch (Exception e) {
-                    orderedFileRecordFieldValues.add("");
-                }
+                orderedFileRecordFieldValues.add(fileRecordFieldValues.get(index));
             }
             String orderedFileRecord = String.join("\t", orderedFileRecordFieldValues);
             // remember which primary key values were seen anywhere in the file
@@ -123,44 +122,52 @@ public class RedcapRepository {
             }
             // check for exact matches to record content within redcap
             if (!existingRedcapRecordMap.containsKey(orderedFileRecord)) {
-                recordsToUpload.add(orderedFileRecord);
+                recordsToImport.add(orderedFileRecord);
             } else {
                 existingRedcapRecordMap.put(orderedFileRecord, null);
             }
         }
-       
+
         // get keys that are in redcap but not imported file - delete
         Set<String> primaryKeysToDelete = new HashSet<>();
         for (String value : existingRedcapRecordMap.values()) {
             if (value != null && !primaryKeysSeenInFile.contains(value)) {
-                primaryKeysToDelete.add(value);       
-            } 
+                primaryKeysToDelete.add(value);
+            }
         }
         System.out.println("Deleting: " + primaryKeysToDelete.size());
         if (primaryKeysToDelete.size() > 0) {
             redcapSessionManager.deleteRedcapProjectData(projectToken, primaryKeysToDelete);
         }
-        
+
+        boolean prependRecordIdColumn = primaryKeyIsRecordId && !fileAttributeNameList.contains(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID);
+//TODO : Rob : try testing import to RecordId Primary key where file has RecordId in a later column
+
         // need to add ordered header to string being passed into request
-        String orderedHeaderCSV = RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID + "," + String.join(",", redcapAttributeNameList);
-        
-        if (recordsToUpload.size() > 0) {    
-            addRecordIdColumnIfMissingInFileAndPresentInProject(recordsToUpload, projectToken);
-            List<String> recordsToUploadCSV = convertTSVtoCSV(recordsToUpload, true);
-            String formattedRecordsToUpload = "\n" + orderedHeaderCSV + "\n" +  String.join("\n",recordsToUploadCSV.toArray(new String[0])) + "\n";
-            System.out.println("WOWOWOWOWOWOWOW:" + formattedRecordsToUpload);     
-            redcapSessionManager.importClinicalData(projectToken, formattedRecordsToUpload); 
+        List<String> headerFieldsForImports = new ArrayList<>(redcapAttributeNameList);
+        if (prependRecordIdColumn ) {
+            headerFieldsForImports.add(0, RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID);
         }
-        // add logic to delete the records in primaryKeysToDelete 
-        // add logic to import records from recordsToUpload  using "overwrite behavior" to rewrite changed redcap records
-        
+        String orderedHeaderCSV = String.join(",", headerFieldsForImports);
+        if (recordsToImport.size() > 0) {
+            if (prependRecordIdColumn) {
+                addRecordIdColumnIfMissingInFileAndPresentInProject(recordsToImport, maximumObservedRecordId);
+            }
+            List<String> recordsToImportCSV = convertTSVtoCSV(recordsToImport, true);
+            String formattedRecordsToImport = "\n" + orderedHeaderCSV + "\n" +  String.join("\n",recordsToImportCSV.toArray(new String[0])) + "\n";
+            System.out.println("WOWOWOWOWOWOWOW:" + formattedRecordsToImport);
+            redcapSessionManager.importClinicalData(projectToken, formattedRecordsToImport);
+        }
+        // add logic to delete the records in primaryKeysToDelete
+        // add logic to import records from recordsToImport  using "overwrite behavior" to rewrite changed redcap records
+
 
 
 
         // TODO : consider calling the header compatibility check call here
-        
+
         // fetch current contents of redcap project
-        
+
         // if the primary key is present in the uploaded file, make a map from the whole redcap record contents to the primary field value (per record)
         // else make a map from the whole redcap record record minus the record_id/primary key field to the primary field value (per record) -- NOTE : this must be a multi-map, in case there are duplicate records in redcap
         // maybe capture the redcap field order as exported in the metadata
@@ -168,30 +175,21 @@ public class RedcapRepository {
         // TODO : add conversion of dataForImport into proper import to redap format (CSV?)
         // redcapSessionManager.importClinicalData(projectToken, dataForImport);
     }
-    
-    private void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> dataFileContentsTSV, String projectToken) {
-        if (dataFileContentsTSV.get(0).startsWith(RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID)) {
-            return; // RECORD_ID field is already the first field in the file
-        }
-        Integer maximumRecordIdInProject = redcapSessionManager.getMaximumRecordIdInRedcapProjectIfPresent(projectToken);
-        if (maximumRecordIdInProject == null) {
-            return; // record_id field is not present in project
-        }
-        int nextRecordId = maximumRecordIdInProject + 1;
-        boolean headerHandled = false;
-        for (int index = 0; index < dataFileContentsTSV.size(); index++) {
-            String expandedLine = Integer.toString(nextRecordId) + "\t" + dataFileContentsTSV.get(index);
-            dataFileContentsTSV.set(index, expandedLine);
-            nextRecordId = nextRecordId + 1;
 
+    private void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> recordsToImport, int maximumExistingRecordId) {
+        int nextRecordId = maximumExistingRecordId + 1;
+        for (int index = 0; index < recordsToImport.size(); index++) {
+            String expandedLine = Integer.toString(nextRecordId) + "\t" + recordsToImport.get(index);
+            recordsToImport.set(index, expandedLine);
+            nextRecordId = nextRecordId + 1;
         }
     }
-    
+
     private List<String> convertTSVtoCSV(List<String> tsvLines, boolean dropDuplicatedKeys) {
         HashSet<String> seen = new HashSet<String>();
         LinkedList<String> csvLines = new LinkedList<String>();
         for (String tsvLine : tsvLines) {
-            String[] tsvFields = tsvLine.split("\t",-1);
+            String[] tsvFields = tsvLine.split("\t", -1);
             String key = tsvFields[0].trim();
             if (dropDuplicatedKeys && seen.contains(key)) {
                 continue;
@@ -228,7 +226,7 @@ public class RedcapRepository {
 
     private List<String> createFileAttributeNameList(String fileAttributeHeader) {
         List<String> fileAttributeNameList = new ArrayList<>();
-        for (String attributeName : fileAttributeHeader.split("\t")) {
+        for (String attributeName : fileAttributeHeader.split("\t", -1)) {
             fileAttributeNameList.add(convertColumnHeaderToRedcapId(attributeName));
         }
         return fileAttributeNameList;
@@ -254,11 +252,28 @@ public class RedcapRepository {
         JsonNode[] redcapDataRecords = redcapSessionManager.getRedcapDataForProjectByToken(projectToken);
         Map<String, String> existingRedcapRecordMap = new HashMap<>();
         for (JsonNode redcapResponse : redcapDataRecords) {
-            String existingRedcapRecordString = createExistingRedcapRecordString(redcapAttributeNameList, redcapResponse); 
+            String existingRedcapRecordString = createExistingRedcapRecordString(redcapAttributeNameList, redcapResponse);
             String primaryKeyValue = redcapResponse.get(primaryKeyField).asText();
             existingRedcapRecordMap.put(existingRedcapRecordString, primaryKeyValue);
         }
         return existingRedcapRecordMap;
+    }
+
+    private int findMaximumRecordIdFromRecordMap(Map<String, String> existingRedcapRecordMap) {
+        int maximumRecordIdFound = 0; // so that the next available recordId for import is 1 when the project is empty
+        for (String recordIdString : existingRedcapRecordMap.values()) {
+            try {
+                int recordId = Integer.parseInt(recordIdString);
+                if (recordId > maximumRecordIdFound) {
+                    maximumRecordIdFound = recordId;
+                }
+            } catch (NumberFormatException e) {
+                String errorMessage = "Error : primary key is record_id, and redcap contained a non-integer value : " + recordIdString;
+                log.error(errorMessage);
+                throw new RuntimeException(errorMessage);
+            }
+        }
+        return maximumRecordIdFound;
     }
 
     private String createExistingRedcapRecordString(List<String> redcapAttributeNameList, JsonNode redcapResponse) {
@@ -267,7 +282,7 @@ public class RedcapRepository {
             orderedRedcapRecordValues.add(redcapResponse.get(attributeName).asText());
         }
         return String.join("\t", orderedRedcapRecordValues);
-    }         
+    }
 
     public List<RedcapProjectAttribute> getAttributesByToken(String projectToken) {
         RedcapProjectAttribute[] redcapAttributeByToken = redcapSessionManager.getRedcapAttributeByToken(projectToken);
