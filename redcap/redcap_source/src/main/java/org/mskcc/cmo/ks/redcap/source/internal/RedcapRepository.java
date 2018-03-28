@@ -117,12 +117,7 @@ public class RedcapRepository {
             List<String> fileRecordFieldValues = Arrays.asList(fileRecordIterator.next().split("\t", -1));
             List<String> orderedFileRecordFieldValues = new ArrayList<>();
             for (int index : fileFieldSelectionOrder) {
-                // try-catch block to handle records where last attribute has empty value
-                try {
-                    orderedFileRecordFieldValues.add(fileRecordFieldValues.get(index));
-                } catch (Exception e) {
-                    orderedFileRecordFieldValues.add("");
-                }
+                orderedFileRecordFieldValues.add(fileRecordFieldValues.get(index));
             }
             String orderedFileRecord = String.join("\t", orderedFileRecordFieldValues);
             // remember which primary key values were seen anywhere in the file
@@ -195,30 +190,21 @@ public class RedcapRepository {
         }
         return csvLines;
     }
-    
-    private void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> dataFileContentsTSV, String projectToken) {
-        if (dataFileContentsTSV.get(0).startsWith(RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID)) {
-            return; // RECORD_ID field is already the first field in the file
-        }
-        Integer maximumRecordIdInProject = redcapSessionManager.getMaximumRecordIdInRedcapProjectIfPresent(projectToken);
-        if (maximumRecordIdInProject == null) {
-            return; // record_id field is not present in project
-        }
-        int nextRecordId = maximumRecordIdInProject + 1;
-        boolean headerHandled = false;
-        for (int index = 0; index < dataFileContentsTSV.size(); index++) {
-            String expandedLine = Integer.toString(nextRecordId) + "\t" + dataFileContentsTSV.get(index);
-            dataFileContentsTSV.set(index, expandedLine);
-            nextRecordId = nextRecordId + 1;
 
+    private void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> recordsToImport, int maximumExistingRecordId) {
+        int nextRecordId = maximumExistingRecordId + 1;
+        for (int index = 0; index < recordsToImport.size(); index++) {
+            String expandedLine = Integer.toString(nextRecordId) + "\t" + recordsToImport.get(index);
+            recordsToImport.set(index, expandedLine);
+            nextRecordId = nextRecordId + 1;
         }
     }
-    
+
     private List<String> convertTSVtoCSV(List<String> tsvLines, boolean dropDuplicatedKeys) {
         HashSet<String> seen = new HashSet<String>();
         LinkedList<String> csvLines = new LinkedList<String>();
         for (String tsvLine : tsvLines) {
-            String[] tsvFields = tsvLine.split("\t",-1);
+            String[] tsvFields = tsvLine.split("\t", -1);
             String key = tsvFields[0].trim();
             if (dropDuplicatedKeys && seen.contains(key)) {
                 continue;
