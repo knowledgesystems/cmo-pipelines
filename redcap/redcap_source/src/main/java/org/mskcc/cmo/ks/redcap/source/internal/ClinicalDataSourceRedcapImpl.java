@@ -200,40 +200,19 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
                 log.error("Error: file " + filename + " was empty ... aborting attempt to import data");
                 throw new Exception("Error: file " + filename + " was empty ... aborting attempt to import data");
             }
-            if (!dataFileHeadersEqualRedcapProjectHeaders(dataFileContentsTSV, projectToken)) {
-                log.error("Error: file " + filename + " has differing headers in redcap ... aborting attempt to import data");
-                throw new Exception("Error: file " + filename + " has differing headers in redcap ... aborting attempt to import data");
+            if (!metadataManager.allHeadersAreValidCDDAttributes(Arrays.asList(dataFileContentsTSV.get(0).split("\t",-1)))) {
+                log.error("Error: file " + filename + " has headers that are not defined in CDD ... aborting attempt to import data");
+                throw new Exception("Error: file " + filename + " has headers that are not defined in CDD ... aborting attempt to import data");
             }
-            //TODO: add filtering of metadata headers (above column headers)
-            replaceExternalHeadersWithRedcapIds(dataFileContentsTSV);
             redcapRepository.importClinicalData(projectToken, dataFileContentsTSV);
         } catch (IOException e) {
             log.error("IOException thrown while attempting to read file " + filename + " : " + e.getMessage());
             throw new IOException("IOException thrown while attempting to read file " + filename + " : " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error importing file: " + filename + ", " + e.getMessage());
+            throw new Exception("Error importing file: " + filename + ", " + e.getMessage());
         }
     }
-
-    private boolean dataFileHeadersEqualRedcapProjectHeaders(List<String> dataFileContentsTSV, String projectToken) {
-        List<String> normalizedDataFileHeader = Arrays.asList(externalFieldNamesToRedcapFieldIds(dataFileContentsTSV.get(0).split("\t",-1)));
-        List<RedcapProjectAttribute> redcapAttributes = redcapRepository.getAttributesByToken(projectToken);
-        List<String> redcapProjectHeader = new ArrayList<String>();
-        for (int i = 0; i < redcapAttributes.size(); i++) {
-            if (!redcapAttributes.get(i).getFieldName().equals("record_id")) {
-                redcapProjectHeader.add(redcapAttributes.get(i).getFieldName());
-            }
-        }
-        Collections.sort(normalizedDataFileHeader);
-        Collections.sort(redcapProjectHeader);
-        return normalizedDataFileHeader.equals(redcapProjectHeader);
-    }
-
-    private void replaceExternalHeadersWithRedcapIds(List<String> dataFileContentsTSV) {
-        String[] externalHeaderFields = dataFileContentsTSV.get(0).split("\t",-1);
-        String[] redcapHeaderIds = externalFieldNamesToRedcapFieldIds(externalHeaderFields);
-        String newHeaderLine = String.join("\t", redcapHeaderIds);
-        dataFileContentsTSV.set(0, newHeaderLine);
-    }
-
 
     private List<String> getNormalizedColumnHeaders(String projectToken) {
         List<RedcapProjectAttribute> attributes = redcapRepository.getAttributesByToken(projectToken);
@@ -273,18 +252,6 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             combinedAttributeMap.put(attribute, metadataCache.getMetadataByNormalizedColumnHeader(redcapRepository.convertRedcapIdToColumnHeader(attribute.getFieldName())));
         }
         combinedHeader = makeHeader(combinedAttributeMap);
-    }
-
-    //change so that redcap ids are just lower cased "externalFieldNames"
-    public String[] externalFieldNamesToRedcapFieldIds(String[] externalFieldNames) {
-        if (externalFieldNames == null) {
-            return new String[0];
-        }
-        String[] redcapFieldIds = new String[externalFieldNames.length];
-        for (int i = 0; i < externalFieldNames.length; i++) {
-            redcapFieldIds[i] =  metadataCache.getMetadataByNormalizedColumnHeader(externalFieldNames[i]).getNormalizedColumnHeader().toLowerCase();
-        }
-        return redcapFieldIds;
     }
 
     private List<RedcapProjectAttribute> getAttributes(boolean timelineData) {
@@ -387,7 +354,6 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
         }
         return lineList;
     }
-
 
     public static void main(String[] args) {}
 }

@@ -139,8 +139,6 @@ public class ClinicalDataReaderTestConfiguration {
         //configure redcap data requests
         Mockito.when(mockRedcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(MSKIMPACT_GBM_SAMPLE_CLINICAL_PROJECT_TOKEN))).thenReturn(makeMockGbmSampleAttributesData());
         Mockito.when(mockRedcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(MSKIMPACT_GBM_PATIENT_CLINICAL_PROJECT_TOKEN))).thenReturn(makeMockGbmPatientAttributesData());
-        Mockito.when(mockRedcapSessionManager.getRedcapInstrumentNameByToken(ArgumentMatchers.eq(MSKIMPACT_GBM_SAMPLE_CLINICAL_PROJECT_TOKEN))).thenReturn(MSKIMPACT_GBM_SAMPLE_CLINICAL_PROJECT_INSTRUMENT_NAME);
-        Mockito.when(mockRedcapSessionManager.getRedcapInstrumentNameByToken(ArgumentMatchers.eq(MSKIMPACT_GBM_PATIENT_CLINICAL_PROJECT_TOKEN))).thenReturn(MSKIMPACT_GBM_PATIENT_CLINICAL_PROJECT_INSTRUMENT_NAME);
         Mockito.when(mockRedcapSessionManager.redcapDataTypeIsTimeline(ArgumentMatchers.eq(MSKIMPACT_GBM_SAMPLE_CLINICAL_PROJECT_TITLE))).thenReturn(false);
         Mockito.when(mockRedcapSessionManager.redcapDataTypeIsTimeline(ArgumentMatchers.eq(MSKIMPACT_GBM_PATIENT_CLINICAL_PROJECT_TITLE))).thenReturn(false);
         Mockito.when(mockRedcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(MSKIMPACT_GBM_SAMPLE_CLINICAL_PROJECT_TOKEN))).thenReturn(makeMockGbmSampleData());
