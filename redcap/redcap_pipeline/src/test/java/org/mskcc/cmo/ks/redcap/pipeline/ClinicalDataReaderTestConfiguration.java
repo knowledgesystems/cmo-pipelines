@@ -45,7 +45,6 @@ import org.mskcc.cmo.ks.redcap.pipeline.util.RedcapUtils;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.mskcc.cmo.ks.redcap.source.internal.ClinicalDataSourceRedcapImpl;
 import org.mskcc.cmo.ks.redcap.source.internal.CDDSessionManager;
-import org.mskcc.cmo.ks.redcap.source.internal.GoogleSessionManager;
 import org.mskcc.cmo.ks.redcap.source.internal.MetadataCache;
 import org.mskcc.cmo.ks.redcap.source.internal.MetadataManagerRedcapImpl;
 import org.mskcc.cmo.ks.redcap.source.internal.RedcapRepository;
@@ -92,15 +91,6 @@ public class ClinicalDataReaderTestConfiguration {
         RedcapAttributeMetadata[] mockReturnForGetMetadata = makeMockMetadata();
         Mockito.when(cddSessionManager.getRedcapMetadata()).thenReturn(mockReturnForGetMetadata);
         return cddSessionManager;
-    }
-
-    @Bean
-    public GoogleSessionManager googleSessionManager() {
-        GoogleSessionManager googleSessionManager = Mockito.mock(GoogleSessionManager.class);
-        //configure meta data requests
-        RedcapAttributeMetadata[] mockReturnForGetMetadata = makeMockMetadata();
-        Mockito.when(googleSessionManager.getRedcapMetadata()).thenReturn(mockReturnForGetMetadata);
-        return googleSessionManager;
     }
 
     @Bean

@@ -14,9 +14,7 @@
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <spring-social-google.version>1.0.0.RELEASE</spring-social-google.version>
-    <spring-social.version>1.1.6.RELEASE</spring-social.version> <!-- constrained to 1.x.x by spring-social-google.version -->
-    <spring.version>4.3.14.RELEASE</spring.version> <!-- constrained to 4.x.x by spring.social.version -->
+    <spring.version>4.3.14.RELEASE</spring.version>
   </properties>
   <dependencies>
     <dependency>

@@ -47,7 +47,6 @@ import org.mskcc.cmo.ks.redcap.source.internal.ClinicalDataSourceRedcapImpl;
 import org.mskcc.cmo.ks.redcap.source.MetadataManager;
 import org.mskcc.cmo.ks.redcap.source.internal.MetadataManagerRedcapImpl;
 import org.mskcc.cmo.ks.redcap.source.internal.CDDSessionManager;
-import org.mskcc.cmo.ks.redcap.source.internal.GoogleSessionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
@@ -88,14 +87,6 @@ public class RedcapSourceTestConfiguration {
     @Bean
     public MetadataManager metadataManager() {
         return new MetadataManagerRedcapImpl();
-    }
-
-    @Bean
-    public GoogleSessionManager googleSessionManager() {
-        GoogleSessionManager googleSessionManager = Mockito.mock(GoogleSessionManager.class);
-        RedcapAttributeMetadata[] mockReturnForGetMetadata = makeMockRedcapIdToMetadataList();
-        Mockito.when(googleSessionManager.getRedcapMetadata()).thenReturn(mockReturnForGetMetadata);
-        return googleSessionManager;
     }
 
     @Bean

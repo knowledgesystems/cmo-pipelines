@@ -286,7 +286,7 @@ public class RedcapRepository {
                     metadata = metadataCache.getMetadataByNormalizedColumnHeader(convertRedcapIdToColumnHeader(redcapId));
                 } catch (RuntimeException e) {
                     String errorString = "Error: attempt to export data from redcap failed due to redcap_id " +
-                            redcapId + " not having metadata defined in the Google clinical attributes worksheet";
+                            redcapId + " not having metadata defined in the Clinical Data Dictionary";
                     log.warn(errorString);
                     throw new RuntimeException(errorString);
                 }

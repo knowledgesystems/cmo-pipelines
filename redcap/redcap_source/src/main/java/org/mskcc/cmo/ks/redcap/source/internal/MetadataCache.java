@@ -57,9 +57,6 @@ public class MetadataCache {
     @Autowired
     private CDDSessionManager cddSessionManager;
 
-    @Autowired
-    private GoogleSessionManager googleSessionManager;
-
     private RedcapAttributeMetadata[] metadataArray = null;
     // mapping of normalized column header name to "RedcapProjectAttribute" object
     // where normalized column header is all caps and no spaces (i.e SAMPLE_ID : RedcapProjectAttribute(sample_id))
@@ -129,13 +126,13 @@ public class MetadataCache {
     private void addToNormalizedColumnHeaderMap(RedcapAttributeMetadata metadataElement) {
         String normalizedColumnHeader = metadataElement.getNormalizedColumnHeader();
         if (normalizedColumnHeader == null) {
-            String errorString = "Error : missing value in NORMALIZED_COLUMN_HEADER in google worksheet";
+            String errorString = "Error : no defined clinical attribute in Clinical Data Dictionary";
             log.warn(errorString);
             throw new RuntimeException(errorString);
         }
         if (normalizedColumnHeaderToMetadata.put(normalizedColumnHeader, metadataElement) != null) {
             log.warn("overwrote normalizedColumnHeader '" + normalizedColumnHeader +
-                    "' with new value in normalizedColumnHeaderToMetadata map (normalizedColumnHeader duplicated in google worksheet)");
+                    "' with new value in normalizedColumnHeaderToMetadata map (normalizedColumnHeader duplicated in Clinical Data Dictionary ---- SOMETHING WEIRD HAPPENED ---- should not be possible)");
         }
     }
 }
