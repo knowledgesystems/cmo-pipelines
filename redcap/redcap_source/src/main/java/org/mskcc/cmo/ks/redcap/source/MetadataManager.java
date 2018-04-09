@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -42,6 +42,6 @@ import java.util.Map;
 public interface MetadataManager {
     Map<String, List<String>> getFullHeader(List<String> header);
     boolean checkOverridesExist(String studyId);
-    boolean allHeadersAreValidCDDAttributes(List<String> headers);
+    boolean allHeadersAreValidClinicalAttributes(List<String> headers);
     void setOverrideStudyId(String studyId);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -69,7 +69,6 @@ public class RedcapPipeline {
             .addOption("d", "directory", true, "Output directory (required for export-mode)")
             .addOption("f", "filename", true, "Input filename (required for input-mode)")
             .addOption("r", "raw-data", false, "Export data without manipulation (no merging of data sources or splitting of attribute types)")
-            .addOption("o", "overwrite-project-data", false, "This flag causes redcap projects to be cleared of data before import (import-mode only)")
             .addOption("i", "import-mode", false, "Import from directory to redcap-project (use one of { -i, -e, -c })")
             .addOption("e", "export-mode", false, "Export either redcap-project-title or stable-id to directory (use one of -i, -e, -c)")
             .addOption("c", "check-mode", false, "Check if either redcap-project-title or stable-id is present in RedCap (use one of { -i, -e, -c })");
@@ -154,8 +153,7 @@ public class RedcapPipeline {
         } else if (executionMode == IMPORT_MODE) {
             redcapJob = ctx.getBean(BatchConfiguration.REDCAP_IMPORT_JOB, Job.class);
             builder.addString("filename", commandLine.getOptionValue("filename"))
-                    .addString("redcapProjectTitle", commandLine.getOptionValue("redcap-project-title"))
-                    .addString("overwriteProjectData", String.valueOf(commandLine.hasOption("overwrite-project-data")));
+                    .addString("redcapProjectTitle", commandLine.getOptionValue("redcap-project-title"));
         }
         if (redcapJob != null) {
             JobExecution jobExecution = jobLauncher.run(redcapJob, builder.toJobParameters());

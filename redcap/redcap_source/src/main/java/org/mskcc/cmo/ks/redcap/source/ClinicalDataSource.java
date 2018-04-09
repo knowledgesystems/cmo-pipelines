@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -41,7 +41,7 @@ import java.util.*;
 public interface ClinicalDataSource {
     boolean projectExists(String projectTitle);
     boolean redcapDataTypeIsTimeline(String projectTitle);
-    void importClinicalDataFile(String projectTitle, String filename, boolean overwriteProjectData) throws Exception;
+    void importClinicalDataFile(String projectTitle, String filename) throws Exception;
     List<String> getProjectHeader(String projectTitle);
     List<Map<String, String>> exportRawDataForProjectTitle(String projectTitle);
 

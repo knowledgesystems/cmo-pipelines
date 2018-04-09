@@ -83,11 +83,6 @@ public class RedcapRepository {
         return redcapSessionManager.getTimelineTokenMapByStableId(stableId);
     }
 
-    //TODO: change this to accept the project name instead .. not token
-    public void deleteRedcapProjectData(String projectToken) {
-        redcapSessionManager.deleteRedcapProjectData(projectToken);
-    }
-
     /** dataForImport : first element is a tab delimited string holding the headers from the file, additional elements are tab delimited records
     */
     public void importClinicalData(String projectToken, List<String> dataForImport) throws Exception {
@@ -159,39 +154,6 @@ public class RedcapRepository {
     }
 
     public void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> recordsToImport, int maximumExistingRecordId) {
-        int nextRecordId = maximumExistingRecordId + 1;
-        for (int index = 0; index < recordsToImport.size(); index++) {
-            String expandedLine = Integer.toString(nextRecordId) + "\t" + recordsToImport.get(index);
-            recordsToImport.set(index, expandedLine);
-            nextRecordId = nextRecordId + 1;
-        }
-    }
-
-    private List<String> convertTSVtoCSV(List<String> tsvLines, boolean dropDuplicatedKeys) {
-        HashSet<String> seen = new HashSet<String>();
-        LinkedList<String> csvLines = new LinkedList<String>();
-        for (String tsvLine : tsvLines) {
-            String[] tsvFields = tsvLine.split("\t", -1);
-            String key = tsvFields[0].trim();
-            if (dropDuplicatedKeys && seen.contains(key)) {
-                continue;
-            }
-            seen.add(key);
-            String[] csvFields = new String[tsvFields.length];
-            for (int i = 0; i < tsvFields.length; i++) {
-                String tsvField = tsvFields[i];
-                String csvField = tsvField;
-                if (tsvField.indexOf(",") != -1) {
-                    csvField = StringEscapeUtils.escapeCsv(tsvField);
-                }
-                csvFields[i] = csvField;
-            }
-            csvLines.add(String.join(",", csvFields));
-        }
-        return csvLines;
-    }
-
-    private void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> recordsToImport, int maximumExistingRecordId) {
         int nextRecordId = maximumExistingRecordId + 1;
         for (int index = 0; index < recordsToImport.size(); index++) {
             String expandedLine = Integer.toString(nextRecordId) + "\t" + recordsToImport.get(index);

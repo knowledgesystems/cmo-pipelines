@@ -58,26 +58,11 @@ import org.springframework.web.client.RestTemplate;
 @Repository
 public class RedcapSessionManager {
 
-    private static final String CSFR_TOKEN_REGEX = "var redcap_csrf_token = '([^']+)';";
-
     private static URI redcapBaseURI = null;
     private static URI redcapApiURI = null;
-    private static Boolean cachedUsePostRequestForEraseProjectData = null;
 
     @Value("${redcap_base_url}")
     private String redcapBaseUrl;
-    @Value("${redcap_erase_project_data_url_path}")
-    private String redcapEraseProjectDataUrlPath;
-    @Value("${redcap_project_setup_url_path}")
-    private String redcapProjectSetupUrlPath;
-    @Value("${redcap_erase_project_data_http_method}")
-    private String redcapEraseProjectDataHttpMethod;
-    @Value("${redcap_username}")
-    private String redcapUsername;
-    @Value("${redcap_password}")
-    private String redcapPassword;
-    @Value("${redcap_login_hidden_input_name}")
-    private String redcapLoginHiddenInputName;
     @Value("${mapping_token}")
     private String mappingToken;
 
@@ -115,31 +100,6 @@ public class RedcapSessionManager {
             redcapApiURI = base.resolve("api/");
         }
         return redcapApiURI;
-    }
-
-    private boolean usePostRequestForEraseProjectData() {
-        if (cachedUsePostRequestForEraseProjectData == null) {
-            if (redcapEraseProjectDataHttpMethod != null && redcapEraseProjectDataHttpMethod.trim().equalsIgnoreCase("GET")) {
-                cachedUsePostRequestForEraseProjectData = Boolean.FALSE;
-            } else {
-                cachedUsePostRequestForEraseProjectData = Boolean.TRUE;
-            }
-        }
-        return cachedUsePostRequestForEraseProjectData.booleanValue();
-    }
-
-    private URI getRedcapProjectSetupURI(String projectId) {
-        URI base = getRedcapURI();
-        return base.resolve(redcapProjectSetupUrlPath + "?pid=" + projectId);
-    }
-
-    private URI getRedcapEraseProjectDataURI(String projectId) {
-        URI base = getRedcapURI();
-        if (usePostRequestForEraseProjectData()) {
-            return base.resolve(redcapEraseProjectDataUrlPath + "?pid=" + projectId);
-        } else {
-            return base.resolve(redcapEraseProjectDataUrlPath + "?pid=" + projectId + "&action=erase_data");
-        }
     }
 
     public String getTokenByProjectTitle(String projectTitle) {
@@ -185,7 +145,7 @@ public class RedcapSessionManager {
         uriVariables.add("format", "json");
         uriVariables.add("type", "flat");
 
-        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<RedcapToken[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapToken[].class);
 
         for (RedcapToken token : responseEntity.getBody()) {
@@ -275,7 +235,7 @@ public class RedcapSessionManager {
         uriVariables.add("content", "record");
         uriVariables.add("format", "csv");
         uriVariables.add("fields", REDCAP_FIELD_NAME_FOR_RECORD_ID);
-        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<String> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, String.class);
         String responseString = responseEntity.getBody().replaceAll("\r","");
         String[] records = responseString.split("\n");
@@ -296,19 +256,10 @@ public class RedcapSessionManager {
         return new Integer(maxRecordId);
     }
 
-    public void deleteRedcapProjectData(String token) {
-        Set<String> recordsToDelete = new HashSet<String>();
-        recordsToDelete.add("9");
-        recordsToDelete.add("10");
-        deleteRedcapProjectData(token, recordsToDelete);
-    }
-
     public void deleteRedcapProjectData(String token, Set<String> recordPrimaryKeySetForDeletion) {
         log.info("deleting out of date records ... (" + recordPrimaryKeySetForDeletion.size() + " records)");
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        //headers.setContentType(new MediaType(MediaType.APPLICATION_FORM_URLENCODED, Charset.forName("UTF-8")));
-        //headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON_UTF8));
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
@@ -322,30 +273,12 @@ public class RedcapSessionManager {
         }
         HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<String> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, String.class);
-        //ArrayList<String> recordPrimaryKeyListForDeletion = new ArrayList<String>(recordPrimaryKeySetForDeletion);
-        //DeleteRecordRequest deleteRecordRequestBody = new DeleteRecordRequest(token, recordPrimaryKeyListForDeletion);
-        //HttpEntity<DeleteRecordRequest> deleteRecordRequestEntity = new HttpEntity<DeleteRecordRequest>(deleteRecordRequestBody, headers);
-        //ResponseEntity<String> deleteRecordResponseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, deleteRecordRequestEntity, String.class);
         HttpStatus responseStatus = responseEntity.getStatusCode();
-        if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
+        if (!responseStatus.is2xxSuccessful()) {
             log.warn("RedCap delete record API call failed. HTTP status code = " + Integer.toString(responseEntity.getStatusCode().value()));
             throw new RuntimeException("RedCap delete record API call failed. HTTP status code");
         }
         log.info("Return from call to Delete Recap Record API: " + responseEntity.getBody());
-        if (4 == 4) {return;}
-        //everything below here is old
-        String cookie = getSessionCookieFromRedcap();
-        if (cookie == null) {
-            log.warn("RedCap session cookie not available; unable to delete project data");
-            throw new RuntimeException("RedCap session cookie not available; unable to delete project data");
-        }
-        String projectId = getProjectIdFromRedcap(token, cookie);
-        if (projectId == null) {
-            log.warn("ProjectId not available from RedCap getProjectData API request");
-            throw new RuntimeException("ProjectId not available from RedCap getProjectData API request");
-        }
-        log.info("deleting all records for RedCap projectId: " + projectId);
-        deleteRedcapProjectData(cookie, projectId);
     }
 
     public void importClinicalData(String token, String dataForImport) {
@@ -357,7 +290,7 @@ public class RedcapSessionManager {
         importRecordUriVariables.add("format", "csv");
         importRecordUriVariables.add("overwriteBehavior", "overwrite");
         importRecordUriVariables.add("data", dataForImport);
-        HttpEntity<LinkedMultiValueMap<String, Object>> importRecordRequestEntity = getRequestEntity(importRecordUriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> importRecordRequestEntity = getRequestEntity(importRecordUriVariables);
         ResponseEntity<String> importRecordResponseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, importRecordRequestEntity, String.class);
         HttpStatus responseStatus = importRecordResponseEntity.getStatusCode();
         if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
@@ -368,11 +301,8 @@ public class RedcapSessionManager {
         log.info("Return from call to Import Recap Record API: " + importRecordResponseEntity.getBody());
     }
 
-    public HttpEntity getRequestEntity(LinkedMultiValueMap<String, String> uriVariables) {
+    public HttpEntity<LinkedMultiValueMap<String, String>> getRequestEntity(LinkedMultiValueMap<String, String> uriVariables) {
         HttpHeaders headers = new HttpHeaders();
-        //headers.setContentType(new MediaType(MediaType.APPLICATION_FORM_URLENCODED, Charset.forName("UTF-8")));
-        //headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        //headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
         return new HttpEntity<LinkedMultiValueMap<String, String>>(uriVariables, headers);
@@ -384,7 +314,7 @@ public class RedcapSessionManager {
         uriVariables.add("token", projectToken);
         uriVariables.add("content", "exportFieldNames");
         uriVariables.add("format", "csv");
-        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<String> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, String.class);
         String responseString = responseEntity.getBody().replaceAll("\r","");
         String[] records = responseString.split("\n");
@@ -397,92 +327,6 @@ public class RedcapSessionManager {
         return false;
     }
 
-    private String getSessionCookieFromRedcap() {
-        RestTemplate restTemplate = new RestTemplate();
-        LinkedMultiValueMap<String, String> loginUriVariables = new LinkedMultiValueMap<>();
-        loginUriVariables.add("username", redcapUsername);
-        loginUriVariables.add("password", redcapPassword);
-        loginUriVariables.add(redcapLoginHiddenInputName, "");
-        loginUriVariables.add("submitted", "1");
-        HttpEntity<LinkedMultiValueMap<String, Object>> loginRequestEntity = getRequestEntity(loginUriVariables);
-        ResponseEntity<String> loginResponseEntity = restTemplate.exchange(getRedcapURI(), HttpMethod.POST, loginRequestEntity, String.class);
-        HttpStatus responseStatus = loginResponseEntity.getStatusCode();
-        if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
-            log.warn("RedCap login with username/password/hiddenInput attempt failed. HTTP status code = " + Integer.toString(loginResponseEntity.getStatusCode().value()));
-            return null;
-        }
-        Predicate<String> notDeleted = (String s) -> !s.contains("deleted");
-        List<String> cookies = loginResponseEntity.getHeaders().get("Set-Cookie").stream().filter(notDeleted).collect(Collectors.toList());
-        if (cookies.size() < 1) {
-            log.warn("RedCap login succeeded but no Set-Cookie header field was included.");
-            return null;
-        }
-        return cookies.get(0).split(";")[0];
-    }
-
-    private String getProjectIdFromRedcap(String token, String cookie) {
-        RestTemplate restTemplate = new RestTemplate();
-        LinkedMultiValueMap<String, String> projectInfoUriVariables = new LinkedMultiValueMap<>();
-        projectInfoUriVariables.add("token", token);
-        projectInfoUriVariables.add("content", "project");
-        projectInfoUriVariables.add("format", "json");
-        projectInfoUriVariables.add("returnFormat", "json");
-        HttpEntity<LinkedMultiValueMap<String, Object>> projectInfoRequestEntity = getRequestEntity(projectInfoUriVariables);
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.COOKIE, cookie);
-        HttpEntity<?> rq = new HttpEntity<>(headers);
-        ResponseEntity<ProjectInfoResponse> projectInfoResponseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, projectInfoRequestEntity, ProjectInfoResponse.class);
-        HttpStatus responseStatus = projectInfoResponseEntity.getStatusCode();
-        if (!responseStatus.is2xxSuccessful() && !responseStatus.is3xxRedirection()) {
-            log.warn("RedCap request for project data failed. HTTP status code = " + Integer.toString(projectInfoResponseEntity.getStatusCode().value()));
-            return null;
-        }
-        return projectInfoResponseEntity.getBody().getProjectId();
-    }
-
-    private void deleteRedcapProjectData(String cookie, String projectId) {
-        String csfrToken = null;
-        if (usePostRequestForEraseProjectData()) {
-            csfrToken = getCSFRTokenFromProjectSetupPage(cookie, projectId);
-        }
-        submitEraseAllDataRequest(cookie, projectId, csfrToken);
-    }
-
-    private String getCSFRTokenFromProjectSetupPage(String cookie, String projectId) {
-        String projectSetupPageContent = getProjectSetupPageContent(cookie, projectId);
-        Pattern csfrTokenRegexPattern = Pattern.compile(CSFR_TOKEN_REGEX);
-        Matcher csfrTokenMatcher = csfrTokenRegexPattern.matcher(projectSetupPageContent);
-        if (csfrTokenMatcher.find() && csfrTokenMatcher.groupCount() > 0) {
-            return csfrTokenMatcher.group(1);
-        }
-        return ""; // we expect this to cause failure during the erase_project_data function call .. but ... we can try
-    }
-
-    private String getProjectSetupPageContent(String cookie, String projectId) {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.COOKIE, cookie);
-        HttpEntity<?> rq = new HttpEntity<>(headers);
-        ResponseEntity<String> response = restTemplate.exchange(getRedcapProjectSetupURI(projectId), HttpMethod.GET, rq, String.class);
-        return response.getBody();
-    }
-
-    private void submitEraseAllDataRequest(String cookie, String projectId, String csfrToken) {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.COOKIE, cookie);
-        if (usePostRequestForEraseProjectData()) {
-            MultiValueMap<String, String> args = new LinkedMultiValueMap<String, String>();
-            args.add("action", "erase_data");
-            args.add("redcap_csrf_token", csfrToken);
-            HttpEntity< MultiValueMap<String, String> > rq = new HttpEntity< MultiValueMap<String, String> >(args, headers);
-            ResponseEntity<String> response = restTemplate.exchange(getRedcapEraseProjectDataURI(projectId), HttpMethod.POST, rq, String.class);
-        } else {
-            HttpEntity<?> rq = new HttpEntity<>(headers);
-            ResponseEntity<String> response = restTemplate.exchange(getRedcapEraseProjectDataURI(projectId), HttpMethod.GET, rq, String.class);
-        }
-    }
-
     public JsonNode[] getRedcapDataForProjectByToken(String projectToken) {
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         uriVariables.add("token", projectToken);
@@ -490,7 +334,7 @@ public class RedcapSessionManager {
         uriVariables.add("format", "json");
         uriVariables.add("type", "flat");
         RestTemplate restTemplate = new RestTemplate();
-        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         log.info("Getting data for project...");
         ResponseEntity<JsonNode[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, JsonNode[].class);
         //TODO check status of http request after completed .. throw exception on failure
@@ -504,7 +348,7 @@ public class RedcapSessionManager {
         uriVariables.add("format", "json");
         uriVariables.add("type", "flat");
         RestTemplate restTemplate = new RestTemplate();
-        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         log.info("Getting attributes for project...");
         ResponseEntity<RedcapProjectAttribute[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapProjectAttribute[].class);
         return responseEntity.getBody();

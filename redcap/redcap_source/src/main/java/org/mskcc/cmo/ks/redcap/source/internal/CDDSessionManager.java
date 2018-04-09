@@ -93,7 +93,7 @@ public class CDDSessionManager {
         return cddStudyIdURI;
     }
 
-    public HttpEntity getRequestEntity(LinkedMultiValueMap<String, String> uriVariables) {
+    public HttpEntity<LinkedMultiValueMap<String, String>> getRequestEntity(LinkedMultiValueMap<String, String> uriVariables) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
@@ -103,7 +103,7 @@ public class CDDSessionManager {
     public OverriddenCancerStudy[] getOverriddenStudies(String studyId) {
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         RestTemplate restTemplate = new RestTemplate();
-        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         log.info("Getting list of studies with overrides...");
         ResponseEntity<OverriddenCancerStudy[]> responseEntity = restTemplate.exchange(getCddOverridesURI(), HttpMethod.GET, requestEntity, OverriddenCancerStudy[].class);
         return responseEntity.getBody();
@@ -112,7 +112,7 @@ public class CDDSessionManager {
     public RedcapAttributeMetadata[] getRedcapMetadata() {
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         RestTemplate restTemplate = new RestTemplate();
-        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         log.info("Getting default attribute metadata..");
         ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(getCddURI(), HttpMethod.GET, requestEntity, RedcapAttributeMetadata[].class);
         return responseEntity.getBody();
@@ -121,7 +121,7 @@ public class CDDSessionManager {
     public RedcapAttributeMetadata[] getRedcapMetadataWithOverrides(String studyId) {
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         RestTemplate restTemplate = new RestTemplate();
-        HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity(uriVariables);
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         log.info("Getting " + studyId + "overridden attribute metadata..");
         ResponseEntity<RedcapAttributeMetadata[]> responseEntity = restTemplate.exchange(getCddStudyIdURI(studyId), HttpMethod.GET, requestEntity, RedcapAttributeMetadata[].class);
         return responseEntity.getBody();

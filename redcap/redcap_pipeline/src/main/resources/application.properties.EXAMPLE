@@ -4,11 +4,6 @@ chunk=10
 # Absoulte URL to the redcap web application
 redcap_base_url=
 redcap_api_url_path=
-# Relative URL path to the erase_project_data php module and project setup page.
-redcap_erase_project_data_url_path=
-redcap_project_setup_url_path=
-# If http method is POST (redcap_v7), a token is first obtained from project setup page, when GET (redcap_v6) the request goes only to the erase data module
-redcap_erase_project_data_http_method=POST
 # Superuser login is needed to get a session id to set cookie headers for the request to erase project data to succeed
 redcap_username=
 redcap_password=

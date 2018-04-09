@@ -100,7 +100,7 @@ public class GoogleSessionManager {
 	    HttpTransport httpTransport = new NetHttpTransport();
 	    JacksonFactory jsonFactory = new JacksonFactory();
 	    String [] SCOPESArray= {"https://spreadsheets.google.com/feeds", "https://docs.google.com/feeds"};
-	    final List SCOPES = Arrays.asList(SCOPESArray);
+	    final List<String> SCOPES = Arrays.asList(SCOPESArray);
 	    GoogleCredential credential = new GoogleCredential.Builder()
 		.setTransport(httpTransport)
 	        .setJsonFactory(jsonFactory)
@@ -117,7 +117,7 @@ public class GoogleSessionManager {
 
     /**
      * Gets an array of RedcapAttributeMetadata.
-     * @return RedcapAttributeMetadata[] array 
+     * @return RedcapAttributeMetadata[] array
      */
     public RedcapAttributeMetadata[] getRedcapMetadata() {
         // generate matrix representing each record in metadata worksheet

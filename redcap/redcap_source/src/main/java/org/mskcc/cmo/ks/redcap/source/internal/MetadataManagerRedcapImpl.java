@@ -73,9 +73,8 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         return makeHeader(combinedAttributeMap);
     }
 
-/*
     @Override
-    public boolean allHeadersAreValidCDDAttributes(List<String> headers) {
+    public boolean allHeadersAreValidClinicalAttributes(List<String> headers) {
         ArrayList<String> invalidHeaders = new ArrayList<>();
         for (String header : headers) {
             try {
@@ -85,7 +84,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
             }
         }
         if (invalidHeaders.size() > 0) {
-            StringBuilder message = new StringBuilder("Invalid headers (not defined in CDD) :");
+            StringBuilder message = new StringBuilder("Invalid headers (not defined in Clinical Data Dictionary) :");
             for (String header : invalidHeaders) {
                 message.append(" " + header);
             }
@@ -93,7 +92,7 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         }
         return true;
     }
-*/
+
     private List<RedcapAttributeMetadata> getMetadata() {
         return metadataCache.getMetadata();
     }

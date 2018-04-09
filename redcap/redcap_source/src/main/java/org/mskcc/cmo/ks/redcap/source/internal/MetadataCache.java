@@ -74,7 +74,7 @@ public class MetadataCache {
             String errorString = "Error : Attempting to set override studyId when metadata cache is already initialized.";
             log.warn(errorString);
             throw new RuntimeException(errorString);
-        } else { 
+        } else {
             overrideStudyId = studyId;
         }
     }

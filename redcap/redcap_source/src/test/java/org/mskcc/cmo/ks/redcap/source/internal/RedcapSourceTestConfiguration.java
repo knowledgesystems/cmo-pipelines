@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2017 - 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -36,7 +36,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.util.*;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.mockito.invocation.InvocationOnMock;
@@ -119,8 +119,8 @@ public class RedcapSourceTestConfiguration {
         RedcapSessionManager redcapSessionManager = Mockito.mock(RedcapSessionManager.class);
         Answer<Void> redcapSessionManagerDeleteProjectDataAnswer = new Answer<Void>() {
             public Void answer(InvocationOnMock deleteRedcapProjectDataInvocation) {
-                String projectToken = (String)deleteRedcapProjectDataInvocation.getArguments()[0];
-                Set<String> recordPrimaryKeySetForDeletion = (Set<String>)deleteRedcapProjectDataInvocation.getArguments()[1];
+                String projectToken = deleteRedcapProjectDataInvocation.getArgument(0);
+                Set<String> recordPrimaryKeySetForDeletion = deleteRedcapProjectDataInvocation.getArgument(1);
                 recordsPassedToRedcapSessionManagerForDeletion.clear();
                 recordsPassedToRedcapSessionManagerForDeletion.addAll(recordPrimaryKeySetForDeletion);
                 return null;
@@ -148,24 +148,24 @@ public class RedcapSourceTestConfiguration {
         JsonNode[] mockReturnForGetDataWithRecordIdAsPrimaryKey = makeMockReturnForGetDataWithRecordIdAsPrimaryKey();
         JsonNode[] mockReturnForGetDataWithRecordIdNotPresent = makeMockReturnForGetDataWithRecordIdNotPresent();
         //configure data requests
-        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(Matchers.eq(ONE_DIGIT_PROJECT_TOKEN))).thenReturn(mockReturnForGetData); 
+        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(ONE_DIGIT_PROJECT_TOKEN))).thenReturn(mockReturnForGetData); 
         // mocked projects for testing data import:
-        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(Matchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetDataWithRecordIdAsPrimaryKey);
-        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(Matchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN))).thenReturn(mockReturnForGetDataWithRecordIdNotPresent);
+        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetDataWithRecordIdAsPrimaryKey);
+        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN))).thenReturn(mockReturnForGetDataWithRecordIdNotPresent);
         // mock requests for project metadata (i.e field_names) - possible combinations
         RedcapProjectAttribute[] mockReturnForGetAttributesData = makeMockReturnForGetAttributesData();
         RedcapProjectAttribute[] mockReturnForGetAttributesDataWithRecordIdAsPrimaryKey = makeMockReturnForGetAttributesDataWithRecordIdAsPrimaryKey();
         RedcapProjectAttribute[] mockReturnForGetAttributesDataWithRecordIdNotAsPrimaryKey = makeMockReturnForGetAttributesDataWithRecordIdNotAsPrimaryKey();
         //Mockito.when(redcapSessionManager.getRedcapAttributeByToken(SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_TOKEN)).thenReturn(mockReturnForGetAttributesData);
-        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(Matchers.any(String.class))).thenReturn(mockReturnForGetAttributesData);
-        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(Matchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesDataWithRecordIdAsPrimaryKey);
-        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(Matchers.eq(RECORD_ID_NOT_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesDataWithRecordIdNotAsPrimaryKey);
-        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(Matchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesData);
+        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.any(String.class))).thenReturn(mockReturnForGetAttributesData);
+        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesDataWithRecordIdAsPrimaryKey);
+        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(RECORD_ID_NOT_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesDataWithRecordIdNotAsPrimaryKey);
+        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesData);
         //Mockito.when(redcapSessionManager.getRedcapInstrumentNameByToken(SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_TOKEN)).thenReturn(SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_INSTRUMENT_NAME);
-        Mockito.doAnswer(redcapSessionManagerDeleteProjectDataAnswer).when(redcapSessionManager).deleteRedcapProjectData(Matchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN), Matchers.any(Set.class));
-        Mockito.doAnswer(redcapSessionManagerDeleteProjectDataAnswer).when(redcapSessionManager).deleteRedcapProjectData(Matchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN), Matchers.any(Set.class));
-        Mockito.doAnswer(redcapSessionManagerImportProjectDataAnswer).when(redcapSessionManager).importClinicalData(Matchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN), Matchers.any(String.class));
-        Mockito.doAnswer(redcapSessionManagerImportProjectDataAnswer).when(redcapSessionManager).importClinicalData(Matchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN), Matchers.any(String.class));
+        Mockito.doAnswer(redcapSessionManagerDeleteProjectDataAnswer).when(redcapSessionManager).deleteRedcapProjectData(ArgumentMatchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN), ArgumentMatchers.anySet());
+        Mockito.doAnswer(redcapSessionManagerDeleteProjectDataAnswer).when(redcapSessionManager).deleteRedcapProjectData(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN), ArgumentMatchers.anySet());
+        Mockito.doAnswer(redcapSessionManagerImportProjectDataAnswer).when(redcapSessionManager).importClinicalData(ArgumentMatchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN), ArgumentMatchers.any(String.class));
+        Mockito.doAnswer(redcapSessionManagerImportProjectDataAnswer).when(redcapSessionManager).importClinicalData(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN), ArgumentMatchers.any(String.class));
         return redcapSessionManager;
     }
 

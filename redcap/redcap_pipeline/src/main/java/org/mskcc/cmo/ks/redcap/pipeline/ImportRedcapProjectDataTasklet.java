@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -55,15 +55,12 @@ public class ImportRedcapProjectDataTasklet implements Tasklet {
     @Value("#{jobParameters[redcapProjectTitle]}")
     private String redcapProjectTitle;
 
-    @Value("#{jobParameters[overwriteProjectData]}")
-    private boolean overwriteProjectData;
-
     private final Logger log = Logger.getLogger(ImportRedcapProjectDataTasklet.class);
 
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
         try {
-            clinicalDataSource.importClinicalDataFile(redcapProjectTitle, filename, overwriteProjectData);
+            clinicalDataSource.importClinicalDataFile(redcapProjectTitle, filename);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
