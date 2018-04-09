@@ -108,7 +108,7 @@ function restartSchultzTomcats {
 function import_project_to_redcap {
     filename=$1
     project_title=$2
-    $JAVA_HOME/bin/java $JAVA_SSL_ARGS -jar $PORTAL_HOME/lib/redcap_pipeline.jar -i -o --filename ${filename} --redcap-project-title ${project_title}
+    $JAVA_HOME/bin/java $JAVA_SSL_ARGS -jar $PORTAL_HOME/lib/redcap_pipeline.jar -i --filename ${filename} --redcap-project-title ${project_title}
     if [ $? -ne 0 ] ; then
         #log error
         echo "Failed to import file ${filename} into redcap project ${project_title}"
