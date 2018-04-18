@@ -16,6 +16,7 @@
     <module>redcap</module>
     <module>cvr</module>
     <module>gene</module>
+    <module>ddp</module>
   </modules>
 
   <!-- inherit defaults from spring boot -->
@@ -27,6 +28,7 @@
 
   <properties>
     <spring.version>4.3.14.RELEASE</spring.version>
+    <maven.compiler.version>1.8</maven.compiler.version>
   </properties>
 
   <dependencies>
@@ -81,8 +83,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.6.1</version>
         <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
+          <source>${maven.compiler.version}</source>
+          <target>${maven.compiler.version}</target>
           <compilerArgument>-Xlint:deprecation</compilerArgument>
         </configuration>
       </plugin>
