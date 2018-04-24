@@ -30,12 +30,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.pipeline.ddp;
+package org.mskcc.cmo.ks.ddp.pipeline;
 
 import org.mskcc.cmo.ks.ddp.source.DDPDataSource;
 import org.mskcc.cmo.ks.ddp.source.composite.CompositePatient;
 import org.mskcc.cmo.ks.ddp.source.model.CohortPatient;
 import org.mskcc.cmo.ks.ddp.source.model.PatientIdentifiers;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
 
 import com.google.common.base.Strings;
 import java.util.*;
@@ -43,7 +44,6 @@ import javax.annotation.Resource;
 import org.apache.log4j.Logger;
 import org.springframework.batch.item.*;
 import org.springframework.beans.factory.annotation.*;
-import org.springframework.web.client.HttpClientErrorException;
 
 /**
  *
@@ -59,6 +59,9 @@ public class PediatricReader implements ItemStreamReader<CompositePatient> {
 
     @Autowired
     private DDPDataSource ddpDataSource;
+
+    @Autowired
+    private DDPPatientListUtil ddpPatientListUtil;
 
     private List<CompositePatient> cohortPatients;
 
@@ -77,12 +80,10 @@ public class PediatricReader implements ItemStreamReader<CompositePatient> {
         catch (Exception e) {
             throw new ItemStreamException("Error fetching patients by cohort name: " + cohortName);
         }
-        // TO-D0: number of cohort patients returned != number of active patients reported in Cohort.getACTIVEPATIENTCOUNT() - why?
         LOG.info("Fetched " + patients.size()+  " patients with dmp ids for cohort: " + cohortName);
         this.cohortPatients = patients;
     }
 
-    // TO-DO: STORE FILTERED PIDS (patients w/o dmp ids assigned to them)
     private List<CompositePatient> getDmpPatientsByCohortId(Integer cohortId) throws Exception {
         List<CohortPatient> patients = ddpDataSource.getPatientsByCohort(cohortId);
         LOG.info("Fetched " + patients.size()+  " active patients for cohort: " + cohortName);
@@ -91,14 +92,18 @@ public class PediatricReader implements ItemStreamReader<CompositePatient> {
         for (CohortPatient patient : patients) {
             PatientIdentifiers pids;
             try {
-                pids = ddpDataSource.getPatientIdentifiers(patient.getMRN());
+                pids = ddpDataSource.getPatientIdentifiers(patient.getPID().toString());
             }
-            catch (HttpClientErrorException e) {
-                // TO-DO: LOG/REPORT/STORE patients with unauthorized client error exceptions
+            catch (Exception e) {
+                LOG.error("Failed to get dmp id for patient '" + patient.getPID() + "' -- skipping");
+                ddpPatientListUtil.addPatientsMissingDMPId(patient.getPID());
                 continue;
             }
             if (pids != null && !Strings.isNullOrEmpty(pids.getDmpPatientId())) {
                 compositePatients.add(new CompositePatient(pids.getDmpPatientId(), pids.getDmpSampleIds(), patient));
+            } else {
+                LOG.error("Failed to get dmp id for patient '" + patient.getPID() + "' -- skipping");
+                ddpPatientListUtil.addPatientsMissingDMPId(patient.getPID());
             }
         }
         return compositePatients;

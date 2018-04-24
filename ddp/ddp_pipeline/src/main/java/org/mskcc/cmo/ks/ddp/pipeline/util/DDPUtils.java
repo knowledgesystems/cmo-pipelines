@@ -120,7 +120,7 @@ public class DDPUtils {
      * @return
      */
     public static String resolveOsStatus(CompositePatient compositePatient) {
-        if (compositePatient.getCohortPatientData().getPTVITALSTATUS().equalsIgnoreCase("ALIVE")) {
+        if (compositePatient.getCohortPatient().getPTVITALSTATUS().equalsIgnoreCase("ALIVE")) {
             return "LIVING";
         }
         else {

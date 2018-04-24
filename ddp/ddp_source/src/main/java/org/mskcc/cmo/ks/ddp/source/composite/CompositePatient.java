@@ -44,18 +44,34 @@ import java.util.*;
  * @author ochoaa
  */
 public class CompositePatient {
+    private String ddpDeidentifiedPid;
     private String dmpPatientId;
     private List<String> dmpSampleIds;
-    private CohortPatient cohortPatientData;
+    private CohortPatient cohortPatient;
     private PatientDemographics patientDemographics;
     private List<PatientDiagnosis> patientDiagnosis;
 
     public CompositePatient(){}
 
-    public CompositePatient(String dmpPatientId, List<String> dmpSampleIds, CohortPatient cohortPatientData) {
+    public CompositePatient(String dmpPatientId, List<String> dmpSampleIds, CohortPatient cohortPatient) {
+        this.ddpDeidentifiedPid = String.valueOf(cohortPatient.getPID());
         this.dmpPatientId = dmpPatientId;
         this.dmpSampleIds = (dmpSampleIds != null) ? dmpSampleIds : new ArrayList();
-        this.cohortPatientData = cohortPatientData;
+        this.cohortPatient = cohortPatient;
+    }
+
+    /**
+     * @return the ddpDeidentifiedPid
+     */
+    public String getDdpDeidentifiedPid() {
+        return ddpDeidentifiedPid;
+    }
+
+    /**
+     * @param ddpDeidentifiedPid the ddpDeidentifiedPid to set
+     */
+    public void setDdpDeidentifiedPid(String ddpDeidentifiedPid) {
+        this.ddpDeidentifiedPid = ddpDeidentifiedPid;
     }
 
     /**
@@ -87,17 +103,17 @@ public class CompositePatient {
     }
 
     /**
-     * @return the cohortPatientData
+     * @return the cohortPatient
      */
-    public CohortPatient getCohortPatientData() {
-        return cohortPatientData;
+    public CohortPatient getCohortPatient() {
+        return cohortPatient;
     }
 
     /**
-     * @param cohortPatientData the cohortPatientData to set
+     * @param cohortPatient the cohortPatient to set
      */
-    public void setCohortPatientData(CohortPatient cohortPatientData) {
-        this.cohortPatientData = cohortPatientData;
+    public void setCohortPatient(CohortPatient cohortPatient) {
+        this.cohortPatient = cohortPatient;
     }
 
     /**
@@ -130,11 +146,11 @@ public class CompositePatient {
 
     public Integer getPatientAge() {
         return (patientDemographics.getCurrentAge()!= null) ? patientDemographics.getCurrentAge() :
-                cohortPatientData.getAGE();
+                cohortPatient.getAGE();
     }
 
     public String getPatientSex() {
         return (!Strings.isNullOrEmpty(patientDemographics.getGender())) ? patientDemographics.getGender() :
-                cohortPatientData.getPTSEX();
+                cohortPatient.getPTSEX();
     }
 }

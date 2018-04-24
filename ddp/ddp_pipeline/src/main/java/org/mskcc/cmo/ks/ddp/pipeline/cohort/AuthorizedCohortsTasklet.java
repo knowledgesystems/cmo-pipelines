@@ -30,7 +30,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.pipeline.ddp.cohort;
+package org.mskcc.cmo.ks.ddp.pipeline.cohort;
 
 import org.mskcc.cmo.ks.ddp.source.model.Cohort;
 import org.mskcc.cmo.ks.ddp.source.DDPDataSource;

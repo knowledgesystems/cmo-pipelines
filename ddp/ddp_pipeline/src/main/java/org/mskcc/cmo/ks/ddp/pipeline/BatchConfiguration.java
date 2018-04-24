@@ -30,9 +30,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.pipeline.ddp;
+package org.mskcc.cmo.ks.ddp.pipeline;
 
-import org.mskcc.cmo.ks.pipeline.ddp.cohort.AuthorizedCohortsTasklet;
+import org.mskcc.cmo.ks.ddp.pipeline.cohort.AuthorizedCohortsTasklet;
 import org.mskcc.cmo.ks.ddp.source.composite.CompositePatient;
 
 import org.apache.log4j.Logger;
@@ -90,6 +90,7 @@ public class BatchConfiguration {
     public Job pediatricJob() {
         return jobBuilderFactory.get(PEDIATRIC_COHORT_JOB)
                 .start(pediatricStep())
+                .next(ddpEmailStep())
                 .build();
     }
 
@@ -119,5 +120,18 @@ public class BatchConfiguration {
     @StepScope
     public ItemStreamWriter<String> pediatricWriter() {
         return new PediatricWriter();
+    }
+
+    @Bean
+    public Step ddpEmailStep() {
+        return stepBuilderFactory.get("ddpEmailStep")
+        .tasklet(ddpEmailTasklet())
+        .build();
+    }
+
+    @Bean
+    @StepScope
+    public Tasklet ddpEmailTasklet() {
+        return new DDPEmailTasklet();
     }
 }

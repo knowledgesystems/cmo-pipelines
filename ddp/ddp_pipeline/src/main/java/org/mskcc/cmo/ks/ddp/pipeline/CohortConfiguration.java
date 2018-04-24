@@ -30,7 +30,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.pipeline.ddp;
+package org.mskcc.cmo.ks.ddp.pipeline;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,10 +43,15 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public class CohortConfiguration {
+    // hack so that we can get map before Spring app is loaded
+    private static final Map<String, Integer> cohortMapping;
+    static {
+        cohortMapping = new HashMap<>();
+        cohortMapping.put("mskimpact_ped", 1852);
+    }
+
     @Bean(name = "cohortMapping")
-    public Map<String, Integer> cohortMapping() {
-        Map<String, Integer> map = new HashMap<>();
-        map.put("mskimpact_ped", 1852);
-        return map;
+    public static Map<String, Integer> cohortMapping() {
+        return cohortMapping;
     }
 }

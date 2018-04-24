@@ -30,7 +30,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.pipeline.ddp;
+package org.mskcc.cmo.ks.ddp.pipeline;
 
 import java.io.File;
 import java.io.IOException;

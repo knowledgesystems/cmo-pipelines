@@ -43,6 +43,7 @@ import org.mskcc.cmo.ks.ddp.source.util.AuthenticationUtil;
 import java.util.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Strings;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.*;
@@ -87,15 +88,19 @@ public class DDPRepository {
     public List<Cohort> getAuthorizedCohorts() {
         String url = ddpBaseUrl + ddpCohortsEndpoint;
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getRequestEntity(), String.class);
         List<Cohort> cohortData = new ArrayList();
-        if (response.getBody() !=  null) {
-            try {
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getRequestEntity(), String.class);
+            if (!Strings.isNullOrEmpty(response.getBody())) {
                 cohortData = (List<Cohort>) ddpResponseUtil.parseData(response.getBody(), new TypeReference<List<Cohort>>(){});
+            } else {
+                throw new RuntimeException("Error fetching cohorts, no data in response body");
             }
-            catch (Exception e) {
-                throw new RuntimeException("Error fetching authorized cohorts for user: " + authenticationUtil.getUsername(), e);
-            }
+        } catch (Exception e) {
+            // this can be a RestClientException from restTemplate.exchange, from ddpResponseUtil.parseData, or the exception we throw
+            LOG.error("Failed to get cohorts");
+            LOG.debug(ExceptionUtils.getStackTrace(e));
+            throw new RuntimeException("Error fetching authorized cohorts for user: " + authenticationUtil.getUsername(), e);
         }
         return cohortData;
     }
@@ -103,15 +108,19 @@ public class DDPRepository {
     public List<CohortPatient> getPatientsByCohort(Integer cohortId) {
         String url = ddpBaseUrl + ddpCohortsEndpoint + String.valueOf(cohortId) + "/" + ddpCohortsPatientEndpoint;
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getRequestEntity(), String.class);
         List<CohortPatient> cohortPatients = new ArrayList();
-        if (response.getBody() != null) {
-            try {
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getRequestEntity(), String.class);
+            if (!Strings.isNullOrEmpty(response.getBody())) {
                 cohortPatients = (List<CohortPatient>) ddpResponseUtil.parseData(response.getBody(), new TypeReference<List<CohortPatient>>(){});
+            } else {
+                throw new RuntimeException("Error fetching patients for cohort '" + cohortId + "', no data in response body");
             }
-            catch (Exception e) {
-                throw new RuntimeException("Error fetching patients by cohort id", e);
-            }
+        } catch (Exception e) {
+            // this can be a RestClientException from restTemplate.exchange, from ddpResponseUtil.parseData, or the exception we throw
+            LOG.error("Failed to fetch patients for cohort '" + cohortId + "'");
+            LOG.debug(ExceptionUtils.getStackTrace(e));
+            throw new RuntimeException("Error fetching patients for cohort '" + cohortId + "'");
         }
         return cohortPatients;
     }
@@ -128,17 +137,22 @@ public class DDPRepository {
      */
     public PatientDemographics getPatientDemographics(String patientId) {
         String url = ddpBaseUrl + ddpPtDemographicsEndpoint;
-        HttpEntity<String> requestEntity = getRequestEntityWithId(patientId);
+        HttpEntity<Map<String, String>> requestEntity = getRequestEntityWithId(patientId);
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
-        List<PatientDemographics> patientDemographics = null;
-        if (!Strings.isNullOrEmpty(response.getBody())) {
-            try {
+        List<PatientDemographics> patientDemographics = new ArrayList();
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+            if (!Strings.isNullOrEmpty(response.getBody())) {
                 patientDemographics = (List<PatientDemographics>) ddpResponseUtil.parseData(response.getBody(), new TypeReference<List<PatientDemographics>>(){});
+            } else {
+                throw new RuntimeException("Error fetching patient demographics, no data in response body");
             }
-            catch (Exception e) {
-                throw new RuntimeException("Error fetching patient demographics", e);
-            }
+        } catch (Exception e) {
+            // this can be a RestClientException from restTemplate.exchange, from ddpResponseUtil.parseData, or the exception we throw
+            // do not output patientId in case it is MRN
+            LOG.error("Failed to fetch patient demographics: " + patientId);
+            LOG.debug(ExceptionUtils.getStackTrace(e));
+            throw new RuntimeException("Error fetching patient demographics: " + patientId, e);
         }
         PatientDemographics toReturn = new PatientDemographics();
         if (!patientDemographics.isEmpty()) {
@@ -149,46 +163,56 @@ public class DDPRepository {
 
     public List<PatientDiagnosis> getPatientDiagnoses(String patientId) {
         String url = ddpBaseUrl + ddpPtDiagnosisEndpoint;
-        HttpEntity<String> requestEntity = getRequestEntityWithId(patientId);
+        HttpEntity<Map<String, String>> requestEntity = getRequestEntityWithId(patientId);
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
         List<PatientDiagnosis> patientDiagnosisList = new ArrayList();
-        // TO-DO: Not all patients have diagnosis data! We should store/report these for vetting
-        if (!Strings.isNullOrEmpty(response.getBody())) {
-            try {
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+            if (!Strings.isNullOrEmpty(response.getBody())) {
                 patientDiagnosisList = (List<PatientDiagnosis>) ddpResponseUtil.parseData(response.getBody(), new TypeReference<List<PatientDiagnosis>>(){});
+            } else {
+                throw new RuntimeException("Error fetching patient diagnoses, no data in response body");
             }
-            catch (Exception e) {
-                throw new RuntimeException("Error fetching patient diagnoses", e);
-            }
+        } catch (Exception e) {
+            // this can be a RestClientException from restTemplate.exchange, from ddpResponseUtil.parseData, or the exception we throw
+            // do not output patientId in case it is MRN
+            LOG.error("Failed to fetch patient diagnoses: " + patientId);
+            LOG.debug(ExceptionUtils.getStackTrace(e));
+            throw new RuntimeException("Error fetching patient diagnoses: " + patientId, e);
         }
         return patientDiagnosisList;
     }
 
     public PatientIdentifiers getPatientIdentifiers(String patientId) {
         String url = ddpBaseUrl + ddpPtIdentifiersEndpoint;
-        HttpEntity<String> requestEntity = getRequestEntityWithId(patientId);
+        HttpEntity<Map<String, String>> requestEntity = getRequestEntityWithId(patientId);
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
         PatientIdentifiers patientIdentifiers = null;
-        if (!Strings.isNullOrEmpty(response.getBody())) {
-            try {
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+            if (!Strings.isNullOrEmpty(response.getBody())) {
                 patientIdentifiers = (PatientIdentifiers) ddpResponseUtil.parseData(response.getBody(), new TypeReference<PatientIdentifiers>(){});
+            } else {
+                throw new RuntimeException("Error fetching patient identifier, no data in response body");
             }
-            catch (Exception e) {
-                throw new RuntimeException("Error fetching patient identifiers", e);
-            }
+        } catch (Exception e) {
+            // this can be a RestClientException from restTemplate.exchange, from ddpResponseUtil.parseData, or the exception we throw
+            // do not output patientId in case it is MRN
+            LOG.error("Failed to get dmp id for patient:" + patientId);
+            LOG.debug(ExceptionUtils.getStackTrace(e));
+            throw new RuntimeException("Error fetching patient identifier: " + patientId, e);
         }
         return patientIdentifiers;
     }
 
-    public HttpEntity<String> getRequestEntityWithId(String id) {
+    public HttpEntity<Map<String, String>> getRequestEntityWithId(String id) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
         headers.add("Authorization", BEARER_KEYWORD + authenticationUtil.getAuthenticationToken());
-        String idParamStr = "{\"id\": \"" + id + "\"}";
-        return new HttpEntity<>(idParamStr, headers);
+        Map<String, String> idMap = new HashMap<>();
+        idMap.put("id", id);
+        return new HttpEntity<>(idMap, headers);
     }
 
     public HttpEntity<String> getRequestEntity() {

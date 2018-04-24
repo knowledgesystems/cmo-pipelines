@@ -30,10 +30,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.pipeline;
+package org.mskcc.cmo.ks.ddp;
 
-import org.mskcc.cmo.ks.pipeline.ddp.BatchConfiguration;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang.StringUtils;
+
+import org.mskcc.cmo.ks.ddp.pipeline.BatchConfiguration;
+import org.mskcc.cmo.ks.ddp.pipeline.CohortConfiguration;
 
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
@@ -50,8 +53,9 @@ public class DDPPipeline {
 
     private static Options getOptions(String[] args) {
         Options options = new Options();
-        options.addOption("o", "output_directory", true, "Output directory")
-                .addOption("c", "cohort_name", true, "Cohort name [mskimpact_ped]"); // TO-DO get mapping keys
+        options.addOption("h", "help", false, "Shows this help document and quits.")
+                .addOption("o", "output_directory", true, "Output directory")
+                .addOption("c", "cohort_name", true, "Cohort name [" + StringUtils.join(CohortConfiguration.cohortMapping().keySet(), " | ") + "]");
         return options;
     }
 
@@ -83,7 +87,7 @@ public class DDPPipeline {
     }
 
     public static void main(String[] args) throws Exception {
-//        launchAuthorizedCohortsJob(args);
+        //launchAuthorizedCohortsJob(args);
         Options options = DDPPipeline.getOptions(args);
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = parser.parse(options, args);

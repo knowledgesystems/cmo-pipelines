@@ -30,13 +30,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.pipeline.ddp;
+package org.mskcc.cmo.ks.ddp.pipeline;
 
 import java.util.ArrayList;
 import java.util.List;
 import org.mskcc.cmo.ks.ddp.source.DDPDataSource;
 import org.mskcc.cmo.ks.ddp.source.composite.CompositePatient;
-import org.mskcc.cmo.ks.pipeline.ddp.model.ClinicalPatient;
+import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalPatient;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.commons.lang.StringUtils;
@@ -49,11 +50,23 @@ public class PediatricProcessor implements ItemProcessor<CompositePatient, Strin
     @Autowired
     private DDPDataSource ddpDataSource;
 
+    @Autowired
+    private DDPPatientListUtil ddpPatientListUtil;
+
     @Override
     public String process(CompositePatient compositePatient) throws Exception {
-        compositePatient.setPatientDemographics(ddpDataSource.getPatientDemographics(compositePatient.getCohortPatientData().getMRN()));
-        compositePatient.setPatientDiagnosis(ddpDataSource.getPatientDiagnoses(compositePatient.getCohortPatientData().getMRN()));
-
+        // we don't have to check if ddpDataSource.getPatientDemographics or ddpDataSource.getPatientDiagnoses
+        // are null because an exception will be thrown in that case too (by the repository)
+        try {
+            compositePatient.setPatientDemographics(ddpDataSource.getPatientDemographics(compositePatient.getDdpDeidentifiedPid()));
+        } catch (Exception e) {
+            ddpPatientListUtil.addPatientsMissingDemographics(compositePatient.getDdpDeidentifiedPid());
+        }
+        try {
+            compositePatient.setPatientDiagnosis(ddpDataSource.getPatientDiagnoses(compositePatient.getDdpDeidentifiedPid()));
+        } catch (Exception e) {
+            ddpPatientListUtil.addPatientsMissingDiagnoses(compositePatient.getDdpDeidentifiedPid());
+        }
         ClinicalPatient patient = new ClinicalPatient(compositePatient);
         return constructRecord(patient);
     }

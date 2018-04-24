@@ -89,8 +89,11 @@ public class AuthenticationUtil {
      * Returns formatted string with credential info.
      * @return
      */
-    private String getUserCredentials() {
-        return "{\"password\": \"" + password + "\", \"username\": \"" + username +  "\"}";
+    private Map<String, String> getUserCredentials() {
+        Map<String, String> credentials = new HashMap<>();
+        credentials.put("password", password);
+        credentials.put("username", username);
+        return credentials;
     }
 
     private void fillAuthToken() {
@@ -98,8 +101,8 @@ public class AuthenticationUtil {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-        String credentials = getUserCredentials();
-        HttpEntity<String> requestEntity = new HttpEntity<>(credentials, headers);
+        Map<String, String> credentials = getUserCredentials();
+        HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(credentials, headers);
 
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<AuthenticationToken> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, AuthenticationToken.class);
