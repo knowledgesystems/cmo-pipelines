@@ -15,3 +15,5 @@
 /gene/target/
 /common/target/
 import-scripts/clinicalfile_utils.pyc
+/ddp/ddp_source/target/
+/ddp/ddp_pipeline/target/
