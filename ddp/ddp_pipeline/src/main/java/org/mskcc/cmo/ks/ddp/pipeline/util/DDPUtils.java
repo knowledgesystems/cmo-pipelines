@@ -32,13 +32,14 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline.util;
 
-import org.mskcc.cmo.ks.ddp.source.composite.CompositePatient;
+import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
 
 import com.google.common.base.Strings;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import org.apache.commons.lang.StringUtils;
 
 /**
  *
@@ -49,9 +50,9 @@ public class DDPUtils {
     private static final Double DAYS_TO_MONTHS_CONVERSION = 30.4167;
 
     /**
-     * Resolve and anonymize patient age.
+     * Resolve and anonymize patient current age.
      *
-     * If birth year is null/empty then return anonymized current age.
+     * If birth year is null/empty then return anonymized patient age.
      * Otherwise calculate from difference between reference date and birth date,
      * where reference date is either date of death if pt is deceased or current date.
      *
@@ -59,13 +60,12 @@ public class DDPUtils {
      * @return
      * @throws ParseException
      */
-    public static String resolvePatientAge(CompositePatient compositePatient) throws ParseException {
-        // if patient birth year is null/empty then use current age value
-        if (Strings.isNullOrEmpty(compositePatient.getPatientDemographics().getPTBIRTHDTE())) {
+    public static String resolvePatientCurrentAge(DDPCompositeRecord compositePatient) throws ParseException {
+        // if patient birth date is null/empty then use current age value
+        if (Strings.isNullOrEmpty(compositePatient.getPatientBirthDate())) {
             return anonymizePatientAge(compositePatient.getPatientAge());
         }
-
-        Long birthDateInDays = getDateInDays(compositePatient.getPatientDemographics().getPTBIRTHDTE());
+        Long birthDateInDays = getDateInDays(compositePatient.getPatientBirthDate());
         Long referenceDateInDays;
         // use current date as reference date if patient not deceased, otherwise use date of death
         if (!Strings.isNullOrEmpty(compositePatient.getPatientDemographics().getPTDEATHDTE())) {
@@ -75,6 +75,27 @@ public class DDPUtils {
             referenceDateInDays = getDateInDays(new Date());
         }
         Double age = (referenceDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
+        return anonymizePatientAge(age.intValue());
+    }
+
+    /**
+     * Resolve and anonymize patient age at diagnosis.
+     *
+     * If birth year is null/empty then return anonymized patient age.
+     * Otherwise calculate from difference between current date and birth date.
+     *
+     * @param compositePatient
+     * @return
+     * @throws ParseException
+     */
+    public static String resolvePatientAgeAtDiagnosis(DDPCompositeRecord compositePatient) throws ParseException {
+        // if patient birth date is null/empty then use current age value
+        if (Strings.isNullOrEmpty(compositePatient.getPatientBirthDate())) {
+            return anonymizePatientAge(compositePatient.getPatientAge());
+        }
+        Long birthDateInDays = getDateInDays(compositePatient.getPatientBirthDate());
+        Long currentDateInDays = getDateInDays(new Date());
+        Double age = (currentDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
         return anonymizePatientAge(age.intValue());
     }
 
@@ -99,7 +120,7 @@ public class DDPUtils {
      * @param compositePatient
      * @return
      */
-    public static String resolvePatientSex(CompositePatient compositePatient) {
+    public static String resolvePatientSex(DDPCompositeRecord compositePatient) {
         String sex = "NA";
         if (!Strings.isNullOrEmpty(compositePatient.getPatientSex())) {
             if (compositePatient.getPatientSex().equalsIgnoreCase("M") ||
@@ -115,17 +136,33 @@ public class DDPUtils {
 
     /**
      * Standardize OS_STATUS value.
+     * If CohortPatient is null then resolve from PatientDemographics,
+     * which should never be null
      *
      * @param compositePatient
      * @return
      */
-    public static String resolveOsStatus(CompositePatient compositePatient) {
-        if (compositePatient.getCohortPatient().getPTVITALSTATUS().equalsIgnoreCase("ALIVE")) {
-            return "LIVING";
+    public static String resolveOsStatus(DDPCompositeRecord compositePatient) {
+        String osStatus = "NA";
+        if (compositePatient.getCohortPatient() != null &&
+                !Strings.isNullOrEmpty(compositePatient.getCohortPatient().getPTVITALSTATUS())) {
+            if (compositePatient.getCohortPatient().getPTVITALSTATUS().equalsIgnoreCase("ALIVE")) {
+                osStatus = "LIVING";
+            }
+            else {
+                osStatus = "DECEASED";
+            }
         }
-        else {
-            return "DECEASED";
+        else if (compositePatient.getPatientDemographics() != null) {
+            if (!Strings.isNullOrEmpty(compositePatient.getPatientDemographics().getDeceasedDate()) ||
+                !Strings.isNullOrEmpty(compositePatient.getPatientDemographics().getPTDEATHDTE())) {
+                osStatus = "DECEASED";
+            }
+            else {
+                osStatus = "LIVING";
+            }
         }
+        return osStatus;
     }
 
     /**
@@ -138,7 +175,7 @@ public class DDPUtils {
      * @return
      * @throws ParseException
      */
-    public static String resolveOsMonths(String osStatus, CompositePatient compositePatient) throws ParseException {
+    public static String resolveOsMonths(String osStatus, DDPCompositeRecord compositePatient) throws ParseException {
         String osMonths = "NA";
         Long referenceAgeInDays = (osStatus.equals("LIVING")) ?
                 getDateInDays(compositePatient.getPatientDemographics().getPLALASTACTVDTE()) :
@@ -158,27 +195,54 @@ public class DDPUtils {
      * @throws ParseException
      */
     private static Long getFirstTumorDiagnosisDateInDays(List<PatientDiagnosis> patientDiagnosis) throws ParseException {
-        SimpleDateFormat sfd = new SimpleDateFormat("yyyy-MM-dd");
-        Date firstTumorDiagnosisDate = null;
+        return getDateInDays(getFirstTumorDiagnosisDate(patientDiagnosis));
+    }
+
+    /**
+     * Find and return the earliest patient tumor diagnosis date as a string.
+     *
+     * @param patientDiagnosis
+     * @return
+     * @throws ParseException
+     */
+    public static String getFirstTumorDiagnosisDate(List<PatientDiagnosis> patientDiagnosis) throws ParseException {
         if (patientDiagnosis == null || patientDiagnosis.isEmpty()) {
             return null;
         }
-
+        SimpleDateFormat sfd = new SimpleDateFormat("yyyy-MM-dd");
+        String firstTumorDiagnosisDateValue = null;
+        Date firstTumorDiagnosisDate = null;
         for (PatientDiagnosis diagnosis : patientDiagnosis) {
             if (Strings.isNullOrEmpty(diagnosis.getTumorDiagnosisDate())) {
                 continue;
             }
             if (firstTumorDiagnosisDate == null) {
                 firstTumorDiagnosisDate = sfd.parse(diagnosis.getTumorDiagnosisDate());
+                firstTumorDiagnosisDateValue = diagnosis.getTumorDiagnosisDate();
             }
             else {
                 Date currentTumorDiagnosisDate = sfd.parse(diagnosis.getTumorDiagnosisDate());
                 if (currentTumorDiagnosisDate.before(firstTumorDiagnosisDate)) {
                     firstTumorDiagnosisDate = currentTumorDiagnosisDate;
+                    firstTumorDiagnosisDateValue = diagnosis.getTumorDiagnosisDate();
                 }
             }
         }
-        return getDateInDays(firstTumorDiagnosisDate);
+        return firstTumorDiagnosisDateValue;
+    }
+
+    /**
+     * Resolves the date offset in days between the timeline event and date of birth.
+     * @param birthDate
+     * @param eventDate
+     * @return
+     * @throws ParseException
+     */
+    public static String resolveTimelineEventDateInDays(String birthDate, String eventDate) throws ParseException {
+        Long birthDateInDays = getDateInDays(birthDate);
+        Long eventDateInDays = getDateInDays(eventDate);
+        Long timelineEventInDays = (eventDateInDays - birthDateInDays);
+        return timelineEventInDays.toString();
     }
 
     /**
@@ -209,5 +273,15 @@ public class DDPUtils {
             return date.getTime() / (1000 * 60 * 60 * 24); // milliseconds -> minutes -> hours -> days
         }
         return null;
+    }
+
+    public static String constructRecord(Object object) throws Exception {
+        List<String> fields = (List<String>) object.getClass().getMethod("getFieldNames").invoke(object);
+        List<String> record = new ArrayList();
+        for (String field : fields) {
+            String value = object.getClass().getMethod("get" + field).invoke(object).toString();
+            record.add(value.trim());
+        }
+        return StringUtils.join(record, "\t");
     }
 }

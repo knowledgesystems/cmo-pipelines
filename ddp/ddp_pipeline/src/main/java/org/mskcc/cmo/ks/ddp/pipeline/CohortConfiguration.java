@@ -35,18 +35,20 @@ package org.mskcc.cmo.ks.ddp.pipeline;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
 /**
  *
  * @author ochoaa
  */
-@Repository
+@Component
 public class CohortConfiguration {
+
     // hack so that we can get map before Spring app is loaded
     private static final Map<String, Integer> cohortMapping;
     static {
         cohortMapping = new HashMap<>();
+        cohortMapping.put("mskimpact", 1343);
         cohortMapping.put("mskimpact_ped", 1852);
     }
 

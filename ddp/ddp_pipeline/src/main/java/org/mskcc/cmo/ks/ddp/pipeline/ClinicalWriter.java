@@ -32,10 +32,12 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Writer;
-import java.util.List;
+import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
+import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
+
+import java.io.*;
+import java.util.*;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -46,12 +48,12 @@ import org.springframework.core.io.FileSystemResource;
  *
  * @author ochoaa
  */
-public class PediatricWriter implements ItemStreamWriter<String> {
+public class ClinicalWriter implements ItemStreamWriter<CompositeResult> {
 
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDirectory;
 
-    private final String filename = "data_clinical_ped.txt";
+    private final String filename = "data_clinical_ddp.txt";
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
 
     @Override
@@ -62,7 +64,7 @@ public class PediatricWriter implements ItemStreamWriter<String> {
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {
-                writer.write("PATIENT_ID\tSEX\tAGE\tOS_STATUS\tOS_MONTHS");
+                writer.write(StringUtils.join(ClinicalRecord.getFieldNames(), "\t"));
             }
         });
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
@@ -73,10 +75,16 @@ public class PediatricWriter implements ItemStreamWriter<String> {
     public void update(ExecutionContext ec) throws ItemStreamException {}
 
     @Override
-    public void close() throws ItemStreamException {}
+    public void close() throws ItemStreamException {
+        flatFileItemWriter.close();
+    }
 
     @Override
-    public void write(List<? extends String> list) throws Exception {
-        flatFileItemWriter.write(list);
+    public void write(List<? extends CompositeResult> compositeResults) throws Exception {
+        List<String> records = new ArrayList();
+        for (CompositeResult result : compositeResults) {
+            records.add(result.getClinicalRecord());
+        }
+        flatFileItemWriter.write(records);
     }
 }

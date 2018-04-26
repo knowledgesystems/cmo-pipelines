@@ -32,9 +32,7 @@
 
 package org.mskcc.cmo.ks.ddp.source.composite;
 
-import org.mskcc.cmo.ks.ddp.source.model.CohortPatient;
-import org.mskcc.cmo.ks.ddp.source.model.PatientDemographics;
-import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
+import org.mskcc.cmo.ks.ddp.source.model.*;
 
 import com.google.common.base.Strings;
 import java.util.*;
@@ -43,17 +41,30 @@ import java.util.*;
  *
  * @author ochoaa
  */
-public class CompositePatient {
+public class DDPCompositeRecord {
     private String ddpDeidentifiedPid;
     private String dmpPatientId;
     private List<String> dmpSampleIds;
     private CohortPatient cohortPatient;
     private PatientDemographics patientDemographics;
     private List<PatientDiagnosis> patientDiagnosis;
+    private List<Radiation> radiationProcedures;
+    private List<Chemotherapy> chemoProcedures;
+    private List<Surgery> surgicalProcedures;
 
-    public CompositePatient(){}
+    public DDPCompositeRecord(){}
 
-    public CompositePatient(String dmpPatientId, List<String> dmpSampleIds, CohortPatient cohortPatient) {
+    public DDPCompositeRecord(String dmpPatientId) {
+        this.dmpPatientId = dmpPatientId;
+    }
+
+    public DDPCompositeRecord(String ddpDeidentifiedPid, String dmpPatientId, List<String> dmpSampleIds) {
+        this.ddpDeidentifiedPid = ddpDeidentifiedPid;
+        this.dmpPatientId = dmpPatientId;
+        this.dmpSampleIds = (dmpSampleIds != null) ? dmpSampleIds : new ArrayList();
+    }
+
+    public DDPCompositeRecord(String dmpPatientId, List<String> dmpSampleIds, CohortPatient cohortPatient) {
         this.ddpDeidentifiedPid = String.valueOf(cohortPatient.getPID());
         this.dmpPatientId = dmpPatientId;
         this.dmpSampleIds = (dmpSampleIds != null) ? dmpSampleIds : new ArrayList();
@@ -144,13 +155,105 @@ public class CompositePatient {
         this.patientDiagnosis = patientDiagnosis;
     }
 
+    /**
+     * @return the radiationProcedures
+     */
+    public List<Radiation> getRadiationProcedures() {
+        return radiationProcedures;
+    }
+
+    /**
+     * @param radiationProcedures the radiationProcedures to set
+     */
+    public void setRadiationProcedures(List<Radiation> radiationProcedures) {
+        this.radiationProcedures = radiationProcedures;
+    }
+
+    /**
+     * @return the chemoProcedures
+     */
+    public List<Chemotherapy> getChemoProcedures() {
+        return chemoProcedures;
+    }
+
+    /**
+     * @param chemoProcedures the chemoProcedures to set
+     */
+    public void setChemoProcedures(List<Chemotherapy> chemoProcedures) {
+        this.chemoProcedures = chemoProcedures;
+    }
+
+    /**
+     * @return the surgicalProcedures
+     */
+    public List<Surgery> getSurgicalProcedures() {
+        return surgicalProcedures;
+    }
+
+    /**
+     * @param surgicalProcedures the surgicalProcedures to set
+     */
+    public void setSurgicalProcedures(List<Surgery> surgicalProcedures) {
+        this.surgicalProcedures = surgicalProcedures;
+    }
+
     public Integer getPatientAge() {
-        return (patientDemographics.getCurrentAge()!= null) ? patientDemographics.getCurrentAge() :
+        return (patientDemographics.getCurrentAge() != null) ? patientDemographics.getCurrentAge() :
                 cohortPatient.getAGE();
     }
 
     public String getPatientSex() {
         return (!Strings.isNullOrEmpty(patientDemographics.getGender())) ? patientDemographics.getGender() :
                 cohortPatient.getPTSEX();
+    }
+
+    public String getPatientBirthDate() {
+        return (!Strings.isNullOrEmpty(patientDemographics.getPTBIRTHDTE())) ?
+                patientDemographics.getPTBIRTHDTE() : patientDemographics.getDateOfBirth();
+    }
+
+    public Boolean hasReceivedRadiation() {
+        return (radiationProcedures != null && !radiationProcedures.isEmpty());
+    }
+
+    public Boolean hasReceivedRadiation(String radiationType) {
+        if (radiationProcedures != null && !radiationProcedures.isEmpty()) {
+            for (Radiation procedure : radiationProcedures) {
+                if (procedure.getPlanName().equalsIgnoreCase(radiationType)) {
+                    return Boolean.TRUE;
+                }
+            }
+        }
+        return Boolean.FALSE;
+    }
+
+    public Boolean hasReceivedChemo() {
+        return (chemoProcedures != null && !chemoProcedures.isEmpty());
+    }
+
+    public Boolean hasReceivedChemo(String chemoType) {
+        if (chemoProcedures != null && !chemoProcedures.isEmpty()) {
+            for (Chemotherapy procedure : chemoProcedures) {
+                if (procedure.getORDNAME().equalsIgnoreCase(chemoType)) {
+                    return Boolean.TRUE;
+                }
+            }
+        }
+        return Boolean.FALSE;
+    }
+
+    public Boolean hasReceivedSurgery() {
+        return (surgicalProcedures != null && !surgicalProcedures.isEmpty());
+    }
+
+    public Boolean hasReceivedSurgery(String surgeryType) {
+        if (surgicalProcedures != null && !surgicalProcedures.isEmpty()) {
+            for (Surgery procedure : surgicalProcedures) {
+                if (procedure.getProcedureDescription().equalsIgnoreCase(surgeryType)) {
+                    return Boolean.TRUE;
+                }
+            }
+        }
+        return Boolean.FALSE;
     }
 }

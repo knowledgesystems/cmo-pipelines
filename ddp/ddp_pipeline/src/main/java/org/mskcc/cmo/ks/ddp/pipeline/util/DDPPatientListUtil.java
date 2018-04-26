@@ -33,19 +33,18 @@
 package org.mskcc.cmo.ks.ddp.pipeline.util;
 
 import java.util.*;
-
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 /**
  *
  * @author Manda Wilson
  */
-@Configuration
+@Component
 public class DDPPatientListUtil {
 
-   private Set<String> patientsMissingDMPIds = new HashSet<>();
-   private Set<String> patientsMissingDemographics = new HashSet<>();
-   private Set<String> patientsMissingDiagnoses = new HashSet<>();
+    private Set<String> patientsMissingDMPIds = new HashSet<>();
+    private Set<String> patientsMissingDemographics = new HashSet<>();
+    private Set<String> patientsMissingDiagnoses = new HashSet<>();
 
     /**
      * @return patientsMissingDMPIds

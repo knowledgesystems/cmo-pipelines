@@ -36,6 +36,7 @@ import org.mskcc.cmo.ks.ddp.source.model.AuthenticationToken;
 
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.apache.log4j.Logger;
 import org.springframework.http.*;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.client.RestTemplate;
@@ -60,6 +61,8 @@ public class AuthenticationUtil {
     private String password;
 
     private String authenticationToken;
+
+    private final Logger LOG = Logger.getLogger(AuthenticationUtil.class);
 
     /**
      * @return the username
@@ -108,6 +111,7 @@ public class AuthenticationUtil {
         ResponseEntity<AuthenticationToken> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, AuthenticationToken.class);
         if (response != null) {
             this.authenticationToken = response.getBody().getAuthToken();
+            LOG.debug("Authentication token: " + authenticationToken);
         }
         else {
             throw new RuntimeException("Error getting authentication token!");

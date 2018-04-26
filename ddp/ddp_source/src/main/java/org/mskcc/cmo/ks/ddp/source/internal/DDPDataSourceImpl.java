@@ -33,11 +33,7 @@
 package org.mskcc.cmo.ks.ddp.source.internal;
 
 import org.mskcc.cmo.ks.ddp.source.DDPDataSource;
-import org.mskcc.cmo.ks.ddp.source.model.Cohort;
-import org.mskcc.cmo.ks.ddp.source.model.CohortPatient;
-import org.mskcc.cmo.ks.ddp.source.model.PatientDemographics;
-import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
-import org.mskcc.cmo.ks.ddp.source.model.PatientIdentifiers;
+import org.mskcc.cmo.ks.ddp.source.model.*;
 
 import java.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +55,7 @@ public class DDPDataSourceImpl implements DDPDataSource {
     }
 
     @Override
-    public List<CohortPatient> getPatientsByCohort(Integer cohortId) throws Exception {
+    public List<CohortPatient> getPatientRecordsByCohortId(Integer cohortId) throws Exception {
         return ddpRepository.getPatientsByCohort(cohortId);
     }
 
@@ -80,4 +76,18 @@ public class DDPDataSourceImpl implements DDPDataSource {
         return ddpRepository.getPatientIdentifiers(patientId);
     }
 
+    @Override
+    public List<Radiation> getPatientRadiationProcedures(String patientId) {
+        return ddpRepository.getPatientRadiationProcedures(patientId);
+    }
+
+    @Override
+    public List<Chemotherapy> getPatientChemoProcedures(String patientId) {
+        return ddpRepository.getPatientChemoProcedures(patientId);
+    }
+
+    @Override
+    public List<Surgery> getPatientSurgicalProcedures(String patientId) {
+        return ddpRepository.getPatientSurgicalProcedures(patientId);
+    }
 }

@@ -1,5 +1,5 @@
 spring.batch.job.enabled=false
-chunk=10
+chunk=500
 
 # DDP Credentials
 ddp.username=
@@ -13,6 +13,9 @@ ddp.authtoken.endpoint=/authenticate/token
 ddp.pt.demographics.endpoint=patient/demographics/general/
 ddp.pt.diagnosis.endpoint=patient/diagnosis/code/
 ddp.pt.identifiers.endpoint=patient/id/
+ddp.pt.radiation.endpoint=patient/treatment/procedure/radiation/
+ddp.pt.chemo.endpoint=patient/treatment/medication/chemo/
+ddp.pt.surgery.endpoint=patient/treatment/procedure/surgery/
 
 # email properties
 email.server=localhost
