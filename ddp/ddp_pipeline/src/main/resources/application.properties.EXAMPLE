@@ -1,0 +1,21 @@
+spring.batch.job.enabled=false
+chunk=10
+
+# DDP Credentials
+ddp.username=
+ddp.password=
+
+# DDP Endpoints
+ddp.base_url=https://ddp.mskcc.org/api/v1/
+ddp.cohorts.endpoint=cohorts/
+ddp.cohorts.pt.endpoint=patients/
+ddp.authtoken.endpoint=/authenticate/token
+ddp.pt.demographics.endpoint=patient/demographics/general/
+ddp.pt.diagnosis.endpoint=patient/diagnosis/code/
+ddp.pt.identifiers.endpoint=patient/id/
+
+# email properties
+email.server=localhost
+email.sender=
+email.recipient=
+email.subject=Failure in DDP Pipeline

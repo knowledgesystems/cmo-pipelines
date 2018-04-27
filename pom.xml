@@ -16,6 +16,7 @@
     <module>redcap</module>
     <module>cvr</module>
     <module>gene</module>
+    <module>ddp</module>
   </modules>
 
   <!-- inherit defaults from spring boot -->
