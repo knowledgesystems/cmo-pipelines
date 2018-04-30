@@ -350,9 +350,13 @@ public class MskimpactPatientDemographics {
     public static List<String> getPatientDemographicsFieldNames() {
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add("DMP_ID_DEMO");
+        fieldNames.add("DARWIN_PATIENT_AGE");
         fieldNames.add("RACE");
         fieldNames.add("RELIGION");
+        fieldNames.add("GENDER");
         fieldNames.add("ETHNICITY");
+        fieldNames.add("OS_STATUS");
+        fieldNames.add("OS_MONTHS");
         fieldNames.add("PED_IND");
         return fieldNames;
     }
@@ -360,9 +364,13 @@ public class MskimpactPatientDemographics {
     public static List<String> getPatientDemographicsHeaders() {
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add("PATIENT_ID");
+        fieldNames.add("AGE_CURRENT"); // DARWIN_PATIENT_AGE has been renamed
         fieldNames.add("RACE");
         fieldNames.add("RELIGION");
+        fieldNames.add("SEX");
         fieldNames.add("ETHNICITY");
+        fieldNames.add("OS_STATUS");
+        fieldNames.add("OS_MONTHS");
         fieldNames.add("PED_IND");
         return fieldNames;
     }
