@@ -30,32 +30,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.ddp.pipeline.cohort;
+package org.mskcc.cmo.ks.ddp.pipeline;
 
-import org.mskcc.cmo.ks.ddp.source.model.Cohort;
-import org.mskcc.cmo.ks.ddp.source.DDPDataSource;
+import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
+import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.scope.context.ChunkContext;
-import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.log4j.Logger;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.stereotype.Component;
 
 /**
  *
  * @author ochoaa
  */
-public class AuthorizedCohortsTasklet implements Tasklet {
+@Component
+public class ClinicalProcessor implements ItemProcessor<DDPCompositeRecord, String> {
 
-    @Autowired
-    private DDPDataSource ddpDataSource;
+    private final Logger LOG = Logger.getLogger(ClinicalProcessor.class);
 
     @Override
-    public RepeatStatus execute(StepContribution sc, ChunkContext cc) throws Exception {
-        System.out.println("Authorized cohorts:");
-        for (Cohort data : ddpDataSource.getAuthorizedCohorts()) {
-            System.out.println("\t" + data.getDESC() + ": " + data.getACTIVEPATIENTCOUNT() + " patients");
+    public String process(DDPCompositeRecord compositeRecord) throws Exception {
+        String record = null;
+        ClinicalRecord clinicalRecord = new ClinicalRecord(compositeRecord);
+        try {
+            record = DDPUtils.constructRecord(clinicalRecord);
         }
-        return RepeatStatus.FINISHED;
+        catch (NullPointerException e) {
+            LOG.error("Error converting clinical record to string: " + clinicalRecord.toString());
+        }
+        return record;
     }
 }

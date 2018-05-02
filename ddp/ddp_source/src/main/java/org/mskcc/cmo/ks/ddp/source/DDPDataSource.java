@@ -32,11 +32,7 @@
 
 package org.mskcc.cmo.ks.ddp.source;
 
-import org.mskcc.cmo.ks.ddp.source.model.Cohort;
-import org.mskcc.cmo.ks.ddp.source.model.CohortPatient;
-import org.mskcc.cmo.ks.ddp.source.model.PatientDemographics;
-import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
-import org.mskcc.cmo.ks.ddp.source.model.PatientIdentifiers;
+import org.mskcc.cmo.ks.ddp.source.model.*;
 
 import java.util.*;
 
@@ -46,8 +42,11 @@ import java.util.*;
  */
 public interface DDPDataSource {
     List<Cohort> getAuthorizedCohorts() throws Exception;
-    List<CohortPatient> getPatientsByCohort(Integer cohortId) throws Exception;
+    List<CohortPatient> getPatientRecordsByCohortId(Integer cohortId) throws Exception;
     PatientDemographics getPatientDemographics(String patientId) throws Exception;
     List<PatientDiagnosis> getPatientDiagnoses(String patientId) throws Exception;
     PatientIdentifiers getPatientIdentifiers(String patientId) throws Exception;
+    List<Radiation> getPatientRadiationProcedures(String patientId);
+    List<Chemotherapy> getPatientChemoProcedures(String patientId);
+    List<Surgery> getPatientSurgicalProcedures(String patientId);
 }

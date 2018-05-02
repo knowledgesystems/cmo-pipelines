@@ -32,14 +32,16 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline;
 
-import org.mskcc.cmo.ks.ddp.pipeline.cohort.AuthorizedCohortsTasklet;
-import org.mskcc.cmo.ks.ddp.source.composite.CompositePatient;
+import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 
+import java.util.*;
 import org.apache.log4j.Logger;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.annotation.*;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.*;
+import org.springframework.batch.item.support.CompositeItemWriter;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.*;
@@ -53,8 +55,7 @@ import org.springframework.context.annotation.*;
 @ComponentScan(basePackages = "org.mskcc.cmo.ks.ddp.source")
 public class BatchConfiguration {
 
-    public static final String AUTH_COHORTS_JOB = "authorizedCohortsJob";
-    public static final String PEDIATRIC_COHORT_JOB = "pediatricJob";
+    public static final String DDP_COHORT_JOB = "ddpCohortJob";
     @Autowired
     public JobBuilderFactory jobBuilderFactory;
 
@@ -67,59 +68,70 @@ public class BatchConfiguration {
     private final Logger LOG = Logger.getLogger(BatchConfiguration.class);
 
     @Bean
-    public Job authorizedCohortsJob() {
-        return jobBuilderFactory.get(AUTH_COHORTS_JOB)
-                .start(authorizedCohortsStep())
-                .build();
-    }
-
-    @Bean
-    public Step authorizedCohortsStep() {
-        return stepBuilderFactory.get("authorizedCohortsStep")
-                .tasklet(authorizedCohortsTasklet())
-                .build();
-    }
-
-    @Bean
-    @StepScope
-    public Tasklet authorizedCohortsTasklet() {
-        return new AuthorizedCohortsTasklet();
-    }
-
-    @Bean
-    public Job pediatricJob() {
-        return jobBuilderFactory.get(PEDIATRIC_COHORT_JOB)
-                .start(pediatricStep())
+    public Job ddpCohortJob() {
+        return jobBuilderFactory.get(DDP_COHORT_JOB)
+                .start(ddpStep())
                 .next(ddpEmailStep())
                 .build();
     }
 
     @Bean
-    public Step pediatricStep() {
-        return stepBuilderFactory.get("pediatricStep")
-                .<CompositePatient, String> chunk(chunkInterval)
-                .reader(pediatricReader())
-                .processor(pediatricProcessor())
-                .writer(pediatricWriter())
+    public Step ddpStep() {
+        return stepBuilderFactory.get("ddpStep")
+                .<DDPCompositeRecord, CompositeResult> chunk(chunkInterval)
+                .reader(ddpReader())
+                .processor(ddpCompositeProcessor())
+                .writer(ddpCompositeWriter())
                 .build();
     }
 
     @Bean
     @StepScope
-    public ItemStreamReader<CompositePatient> pediatricReader() {
-        return new PediatricReader();
+    public ItemStreamReader<DDPCompositeRecord> ddpReader() {
+        return new DDPReader();
     }
 
     @Bean
     @StepScope
-    public PediatricProcessor pediatricProcessor() {
-        return new PediatricProcessor();
+    public DDPCompositeProcessor ddpCompositeProcessor() {
+        return new DDPCompositeProcessor();
     }
 
     @Bean
     @StepScope
-    public ItemStreamWriter<String> pediatricWriter() {
-        return new PediatricWriter();
+    public ItemStreamWriter<CompositeResult> clinicalWriter() {
+        return new ClinicalWriter();
+    }
+
+    @Bean
+    @StepScope
+    public ItemStreamWriter<CompositeResult> timelineRadiationWriter() {
+        return new TimelineRadiationWriter();
+    }
+
+    @Bean
+    @StepScope
+    public ItemStreamWriter<CompositeResult> timelineChemoWriter() {
+        return new TimelineChemoWriter();
+    }
+
+    @Bean
+    @StepScope
+    public ItemStreamWriter<CompositeResult> timelineSurgeryWriter() {
+        return new TimelineSurgeryWriter();
+    }
+
+    @Bean
+    @StepScope
+    public CompositeItemWriter<CompositeResult> ddpCompositeWriter() {
+        CompositeItemWriter writer = new CompositeItemWriter();
+        List delegates = new ArrayList();
+        delegates.add(clinicalWriter());
+        delegates.add(timelineRadiationWriter());
+        delegates.add(timelineChemoWriter());
+        delegates.add(timelineSurgeryWriter());
+        writer.setDelegates(delegates);
+        return writer;
     }
 
     @Bean

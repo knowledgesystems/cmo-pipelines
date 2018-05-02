@@ -42,61 +42,74 @@ import java.io.Serializable;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "de_id",
-    "dmp_patient_id",
-    "dmp_sample_ids",
-    "mrn"
+    "COUNT",
+    "ORD_NAME",
+    "SET_NAME",
+    "START_DATE",
+    "STOP_DATE"
 })
-public class PatientIdentifiers implements Serializable {
-    @JsonProperty("de_id")
-    private String deId;
-    @JsonProperty("dmp_patient_id")
-    private String dmpPatientId;
-    @JsonProperty("dmp_sample_ids")
-    private List<String> dmpSampleIds;
-    @JsonProperty("mrn")
-    private String mrn;
+public class Chemotherapy implements Serializable {
+    @JsonProperty("COUNT")
+    private Integer cOUNT;
+    @JsonProperty("ORD_NAME")
+    private String oRDNAME;
+    @JsonProperty("SET_NAME")
+    private String sETNAME;
+    @JsonProperty("START_DATE")
+    private String sTARTDATE;
+    @JsonProperty("STOP_DATE")
+    private String sTOPDATE;
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
-    @JsonProperty("de_id")
-    public String getDeId() {
-        return deId;
+    @JsonProperty("COUNT")
+    public Integer getCOUNT() {
+        return cOUNT;
     }
 
-    @JsonProperty("de_id")
-    public void setDeId(String deId) {
-        this.deId = deId;
+    @JsonProperty("COUNT")
+    public void setCOUNT(Integer cOUNT) {
+        this.cOUNT = cOUNT;
     }
 
-    @JsonProperty("dmp_patient_id")
-    public String getDmpPatientId() {
-        return dmpPatientId;
+    @JsonProperty("ORD_NAME")
+    public String getORDNAME() {
+        return oRDNAME;
     }
 
-    @JsonProperty("dmp_patient_id")
-    public void setDmpPatientId(String dmpPatientId) {
-        this.dmpPatientId = dmpPatientId;
+    @JsonProperty("ORD_NAME")
+    public void setORDNAME(String oRDNAME) {
+        this.oRDNAME = oRDNAME;
     }
 
-    @JsonProperty("dmp_sample_ids")
-    public List<String> getDmpSampleIds() {
-        return dmpSampleIds;
+    @JsonProperty("SET_NAME")
+    public String getSETNAME() {
+        return sETNAME;
     }
 
-    @JsonProperty("dmp_sample_ids")
-    public void setDmpSampleIds(List<String> dmpSampleIds) {
-        this.dmpSampleIds = dmpSampleIds;
+    @JsonProperty("SET_NAME")
+    public void setSETNAME(String sETNAME) {
+        this.sETNAME = sETNAME;
     }
 
-    @JsonProperty("mrn")
-    public String getMrn() {
-        return mrn;
+    @JsonProperty("START_DATE")
+    public String getSTARTDATE() {
+        return sTARTDATE;
     }
 
-    @JsonProperty("mrn")
-    public void setMrn(String mrn) {
-        this.mrn = mrn;
+    @JsonProperty("START_DATE")
+    public void setSTARTDATE(String sTARTDATE) {
+        this.sTARTDATE = sTARTDATE;
+    }
+
+    @JsonProperty("STOP_DATE")
+    public String getSTOPDATE() {
+        return sTOPDATE;
+    }
+
+    @JsonProperty("STOP_DATE")
+    public void setSTOPDATE(String sTOPDATE) {
+        this.sTOPDATE = sTOPDATE;
     }
 
     @JsonAnyGetter

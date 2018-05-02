@@ -32,11 +32,9 @@
 package org.mskcc.cmo.ks.ddp.pipeline;
 
 import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
-
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
 
 import org.apache.log4j.Logger;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;

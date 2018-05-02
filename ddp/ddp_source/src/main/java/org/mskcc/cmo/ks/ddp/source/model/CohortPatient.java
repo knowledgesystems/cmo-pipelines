@@ -42,15 +42,15 @@ import java.io.Serializable;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-"AGE",
-"CHP_ACTIVE_IND",
-"COHORT_ID",
-"DAYS_ON_COHORT",
-"MRN",
-"NOTES",
-"PT_SEX",
-"PT_VITAL_STATUS",
-"P_ID"
+    "AGE",
+    "CHP_ACTIVE_IND",
+    "COHORT_ID",
+    "DAYS_ON_COHORT",
+    "MRN",
+    "NOTES",
+    "PT_SEX",
+    "PT_VITAL_STATUS",
+    "P_ID"
 })
 public class CohortPatient implements Serializable {
     @JsonProperty("AGE")
