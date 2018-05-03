@@ -138,7 +138,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
         List<CohortPatient> records = ddpDataSource.getPatientRecordsByCohortId(cohortId);
         LOG.info("Fetched " + records.size()+  " active patients for cohort: " + cohortName);
 
-        List<DDPCompositeRecord> compositeRecords = new ArrayList();
+        List<DDPCompositeRecord> compositeRecords = new ArrayList<>();
         int count = 0;
         for (CohortPatient record : records) {
             PatientIdentifiers pids;
@@ -192,7 +192,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
      * @return
      */
     private List<DDPCompositeRecord> getDDPCompositeRecordsByPatientIds(Set<String> patientIds) {
-        List<DDPCompositeRecord> compositeRecords = new ArrayList();
+        List<DDPCompositeRecord> compositeRecords = new ArrayList<>();
         int count = 0;
         for (String patientId : patientIds) {
             compositeRecords.add(new DDPCompositeRecord(patientId));
@@ -238,7 +238,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
      */
     private List<DDPCompositeRecord> filterCompositeRecords(List<DDPCompositeRecord> compositeRecords) {
         LOG.info("Removing composite records matching ids in 'excludedPatientIds'...");
-        List<DDPCompositeRecord> filteredCompositeRecords = new ArrayList();
+        List<DDPCompositeRecord> filteredCompositeRecords = new ArrayList<>();
         for (DDPCompositeRecord record : compositeRecords) {
             if (excludedPatientIds.contains(record.getDmpPatientId())) {
                 continue;

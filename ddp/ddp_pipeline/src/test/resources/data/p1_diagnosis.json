@@ -1,0 +1,58 @@
+{  
+  "data": [
+    {
+      "AJCC": "",
+      "CATEGORY1": "Miscellaneous",
+      "CATEGORY2": "Miscellaneous",
+      "CATEGORY3": "Miscellaneous",
+      "CATEGORY4": "Miscellaneous",
+      "Clinical Group": "",
+      "Diagnosis": [
+        "155.2 - LIVER NOS"
+      ],
+      "Diagnosis Date": "2016-01-01",
+      "Diagnosis Description": "METS - LIVER METS",
+      "Diagnosis Type": "METS",
+      "ICD-9/10 Dx Code": "155.2",
+      "ICD-9/10 Dx Desc": "LIVER NOS",
+      "ICD-O Histology Code": "",
+      "ICD-O Histology Desc": "",
+      "ICD-O Site Code": "",
+      "ICD-O Site Desc": "",
+      "MRN": "1300001",
+      "MSK Stage": "",
+      "Min ICD-9/10 Dx Date": "2016-01-01",
+      "P_ID": "1000001",
+      "Path Group": "",
+      "Summary": "",
+      "Tumor Diagnosis Date": "2016-01-01"
+    },
+    {
+      "AJCC": "IIA",
+      "CATEGORY1": "Miscellaneous",
+      "CATEGORY2": "Miscellaneous",
+      "CATEGORY3": "Miscellaneous",
+      "CATEGORY4": "Miscellaneous",
+      "Clinical Group": "1A",
+      "Diagnosis": [
+        "C220 - LIVER"
+      ],
+      "Diagnosis Date": "2012-02-01",
+      "Diagnosis Description": "Bones and Joints",
+      "Diagnosis Type": "METS",
+      "ICD-9/10 Dx Code": "",
+      "ICD-9/10 Dx Desc": "",
+      "ICD-O Histology Code": "M8970/3",
+      "ICD-O Histology Desc": "HEPATOBLASTOMA",
+      "ICD-O Site Code": "C220",
+      "ICD-O Site Desc": "LIVER AND INTRAHEPATIC BILE DUCTS",
+      "MRN": "1300001",
+      "MSK Stage": "Regional by direct extension",
+      "Min ICD-9/10 Dx Date": "",
+      "P_ID": "1000001",
+      "Path Group": "99",
+      "Summary": "Regional, direct extension",
+      "Tumor Diagnosis Date": "2012-02-01"
+    }
+  ]
+}

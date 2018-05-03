@@ -1,0 +1,32 @@
+{  
+  "data": [    
+    {
+      "AJCC": "IIA",
+      "CATEGORY1": "Miscellaneous",
+      "CATEGORY2": "Miscellaneous",
+      "CATEGORY3": "Miscellaneous",
+      "CATEGORY4": "Miscellaneous",
+      "Clinical Group": "1A",
+      "Diagnosis": [
+        "M9382/3 - MIXED GLIOMA",
+        "C728 - BRAIN AND CNS"
+      ],
+      "Diagnosis Date": "2011-04-01",
+      "Diagnosis Description": "Miscellaneous",
+      "Diagnosis Type": "CA",
+      "ICD-9/10 Dx Code": "",
+      "ICD-9/10 Dx Desc": "",
+      "ICD-O Histology Code": "M9382/3",
+      "ICD-O Histology Desc": "MIXED GLIOMA",
+      "ICD-O Site Code": "C413",
+      "ICD-O Site Desc": "BRAIN AND CNS",
+      "MRN": "1300008",
+      "MSK Stage": "Regional by direct extension",
+      "Min ICD-9/10 Dx Date": "",
+      "P_ID": "1000008",
+      "Path Group": "99",
+      "Summary": "Regional, direct extension",
+      "Tumor Diagnosis Date": "2011-04-01"
+    }
+  ]
+}

@@ -212,6 +212,11 @@ public class DDPCompositeRecord {
                 patientDemographics.getPTBIRTHDTE() : patientDemographics.getDateOfBirth();
     }
 
+    public String getPatientDeathDate() {
+        return (!Strings.isNullOrEmpty(patientDemographics.getPTDEATHDTE())) ? 
+                patientDemographics.getPTDEATHDTE() : patientDemographics.getDeceasedDate();
+    }
+
     public Boolean hasReceivedRadiation() {
         return (radiationProcedures != null && !radiationProcedures.isEmpty());
     }

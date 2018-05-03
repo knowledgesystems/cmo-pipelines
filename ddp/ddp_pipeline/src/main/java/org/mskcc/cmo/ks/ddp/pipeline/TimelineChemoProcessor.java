@@ -70,7 +70,7 @@ public class TimelineChemoProcessor implements ItemProcessor<DDPCompositeRecord,
             return null;
         }
         // construct records into strings for writing to output file
-        List<String> records = new ArrayList();
+        List<String> records = new ArrayList<>();
         for (TimelineChemoRecord chemoRecord : timelineChemoRecords) {
             try {
                 records.add(DDPUtils.constructRecord(chemoRecord));
@@ -92,7 +92,7 @@ public class TimelineChemoProcessor implements ItemProcessor<DDPCompositeRecord,
      * @return
      */
     private List<TimelineChemoRecord> convertTimelineChemoRecords(String dmpPatientId, String firstTumorDiagnosisDate, List<Chemotherapy> chemoProcedures) {
-        List<TimelineChemoRecord> timelineChemoRecords = new ArrayList();
+        List<TimelineChemoRecord> timelineChemoRecords = new ArrayList<>();
         for (Chemotherapy procedure : chemoProcedures) {
             TimelineChemoRecord record;
             try {

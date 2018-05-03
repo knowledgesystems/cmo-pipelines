@@ -173,7 +173,7 @@ public class TimelineChemoRecord {
      * @return
      */
     public static List<String> getFieldNames() {
-        List<String> fieldNames = new ArrayList();
+        List<String> fieldNames = new ArrayList<>();
         fieldNames.add("PATIENT_ID");
         fieldNames.add("START_DATE");
         fieldNames.add("STOP_DATE");

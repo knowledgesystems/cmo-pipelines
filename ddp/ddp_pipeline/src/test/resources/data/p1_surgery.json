@@ -1,0 +1,58 @@
+{
+  "data": [
+    {
+      "Age at Proc": 57,
+      "CPT Code": "10000010",
+      "Extended Description": "NO CHARGE - RECORDING PURPOSE ONLY",
+      "MP_FIRST_NM": "",
+      "MP_LAST_NM": "",
+      "MRN": "1300001",
+      "PBD Code": "10000010",
+      "PID": 1000001,
+      "Phy Dept": "",
+      "Phy Service": "NO VALUE ENTERED",
+      "Physician": "ITOR MD,JAN",
+      "Physician Email": "",
+      "Proc IP-OP": "OUTPATIENT",
+      "Proc Year": 2017,
+      "Procedure Date": "2017-09-15",
+      "Procedure Description": ""
+    },
+    {
+      "Age at Proc": 57,
+      "CPT Code": "10000011",
+      "Extended Description": "PESUR HEPATECTOMY, RESEC LIVER; PARTIAL LOBEC",
+      "MP_FIRST_NM": "JAN",
+      "MP_LAST_NM": "ITOR",
+      "MRN": "1300001",
+      "PBD Code": "10000011",
+      "PID": 1000001,
+      "Phy Dept": "SURGERY",
+      "Phy Service": "GENERAL MEDICINE",
+      "Physician": "ITOR MD,JAN",
+      "Physician Email": "janitor@sacredheart.org",
+      "Proc IP-OP": "OUTPATIENT",
+      "Proc Year": 2017,
+      "Procedure Date": "2017-09-16",
+      "Procedure Description": "PARTIAL REMOVAL OF LIVER"
+    },
+    {
+      "Age at Proc": 57,
+      "CPT Code": "10000012",
+      "Extended Description": "PESUR BIOPSY LIVER, WEDGE",
+      "MP_FIRST_NM": "JAN",
+      "MP_LAST_NM": "ITOR",
+      "MRN": "1300001",
+      "PBD Code": "10000012",
+      "PID": 1000001,
+      "Phy Dept": "SURGERY",
+      "Phy Service": "GENERAL MEDICINE",
+      "Physician": "ITOR MD,JAN",
+      "Physician Email": "janitor@sacredheart.org",
+      "Proc IP-OP": "OUTPATIENT",
+      "Proc Year": 2017,
+      "Procedure Date": "2017-06-10",
+      "Procedure Description": "WEDGE BIOPSY OF LIVER"
+    }
+  ]
+}

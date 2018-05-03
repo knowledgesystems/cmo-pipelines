@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "COUNT": 4,
+      "ORD_NAME": "DOXOrubicin INJ",
+      "SET_NAME": "IRB_#1000002_DOXOrubicin+Sorafenib",
+      "START_DATE": "2016-02-10",
+      "STOP_DATE": "2016-04-25"
+    },
+    {
+      "COUNT": 10,
+      "ORD_NAME": "ADI-PEG 20 or Placebo INVEST",
+      "SET_NAME": "IRB_#1000002_ADI-PEG20_or_Placebo",
+      "START_DATE": "2013-10-12",
+      "STOP_DATE": "2013-12-20"
+    },
+    {
+      "COUNT": 1,
+      "ORD_NAME": "diphenhydrAMINE INJ (CHEMO Support Only)",
+      "SET_NAME": "IRB_#1000002_Cycle_1_Day_1,15_ONLY",
+      "START_DATE": "2014-06-02",
+      "STOP_DATE": "2014-06-02"
+    },
+    {
+      "COUNT": 2,
+      "ORD_NAME": "BMS-936558 (Nivolumab) INVEST",
+      "SET_NAME": "IRB_#1000002_Cycle_1_Day_1,15_ONLY",
+      "START_DATE": "2012-09-02",
+      "STOP_DATE": "2012-09-16"
+    }
+  ]
+}

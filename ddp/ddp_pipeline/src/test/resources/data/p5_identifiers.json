@@ -1,0 +1,12 @@
+{
+  "data": {
+    "de_id": "1000005",
+    "dmp_patient_id": "P01-000005",
+    "dmp_sample_ids": [
+      "P01-000005-T01-IM6"
+    ],
+    "mrn": "1300005",
+    "pathology_accession_nos": [],
+    "radiology_accession_nos": []
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "data": [
+    {
+      "Course ID": 10000061,
+      "Delivered Dose": "1500.00",
+      "Delivered Fractions": 10,
+      "MRN": "1300006",
+      "Plan Name": "LUNGS",
+      "Plan Name Anatomy": "",
+      "Planned Dose": "1500.00",
+      "Planned Fractions": 10,
+      "RadOnc Treatment Course Start Date": "2017-08-20",
+      "RadOnc Treatment Course Stop Date": "2017-09-04",
+      "Reference Point/Site": "PTV1200"
+    },
+    {
+      "Course ID": 10000062,
+      "Delivered Dose": "3000.00",
+      "Delivered Fractions": 15,
+      "MRN": "1300006",
+      "Plan Name": "LUNG_9_",
+      "Plan Name Anatomy": "",
+      "Planned Dose": "3000.00",
+      "Planned Fractions": 15,
+      "RadOnc Treatment Course Start Date": "2005-04-10",
+      "RadOnc Treatment Course Stop Date": "2005-04-25",
+      "Reference Point/Site": "LUNG"
+    },
+    {
+      "Course ID": 10000063,
+      "Delivered Dose": "3000.00",
+      "Delivered Fractions": 10,
+      "MRN": "1300006",
+      "Plan Name": "Abd_Chest",
+      "Plan Name Anatomy": "",
+      "Planned Dose": "3000.00",
+      "Planned Fractions": 10,
+      "RadOnc Treatment Course Start Date": "2010-09-30",
+      "RadOnc Treatment Course Stop Date": "2010-10-15",
+      "Reference Point/Site": "Abd_Chest"
+    }
+  ]
+}

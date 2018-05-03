@@ -40,7 +40,7 @@ import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.batch.item.file.transform.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 
@@ -59,7 +59,7 @@ public class TimelineRadiationWriter implements ItemStreamWriter<CompositeResult
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         File stagingFile = new File(outputDirectory, filename);
-        PassThroughLineAggregator aggr = new PassThroughLineAggregator();
+        LineAggregator<String> aggr = new PassThroughLineAggregator<>();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
@@ -81,12 +81,12 @@ public class TimelineRadiationWriter implements ItemStreamWriter<CompositeResult
 
     @Override
     public void write(List<? extends CompositeResult> compositeResults) throws Exception {
-        List<String> records = new ArrayList();
+        List<String> records = new ArrayList<>();
         for (CompositeResult result : compositeResults) {
-            if (result.getTimelineRadiationRecords() == null || result.getTimelineRadiationRecords().isEmpty()) {
+            if (result.getTimelineRadiationResults() == null || result.getTimelineRadiationResults().isEmpty()) {
                 continue;
             }
-            records.addAll(result.getTimelineRadiationRecords());
+            records.addAll(result.getTimelineRadiationResults());
         }
         flatFileItemWriter.write(records);
     }

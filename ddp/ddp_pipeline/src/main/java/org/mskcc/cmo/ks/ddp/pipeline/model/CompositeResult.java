@@ -39,66 +39,66 @@ import java.util.List;
  * @author ochoaa
  */
 public class CompositeResult {
-    private String clinicalRecord;
-    private List<String> timelineRadiationRecords;
-    private List<String> timelineChemoRecords;
-    private List<String> timelineSurgeryRecords;
+    private String clinicalResult;
+    private List<String> timelineRadiationResults;
+    private List<String> timelineChemoResults;
+    private List<String> timelineSurgeryResults;
 
     public CompositeResult(){}
 
     /**
-     * @return the clinicalRecord
+     * @return the clinicalResult
      */
-    public String getClinicalRecord() {
-        return clinicalRecord;
+    public String getClinicalResult() {
+        return clinicalResult;
     }
 
     /**
-     * @param clinicalRecord the clinicalRecord to set
+     * @param clinicalResult the clinicalResult to set
      */
-    public void setClinicalRecord(String clinicalRecord) {
-        this.clinicalRecord = clinicalRecord;
+    public void setClinicalResult(String clinicalResult) {
+        this.clinicalResult = clinicalResult;
     }
 
     /**
-     * @return the timelineRadiationRecords
+     * @return the timelineRadiationResults
      */
-    public List<String> getTimelineRadiationRecords() {
-        return timelineRadiationRecords;
+    public List<String> getTimelineRadiationResults() {
+        return timelineRadiationResults;
     }
 
     /**
-     * @param timelineRadiationRecords the timelineRadiationRecords to set
+     * @param timelineRadiationResults the timelineRadiationResults to set
      */
-    public void setTimelineRadiationRecords(List<String> timelineRadiationRecords) {
-        this.timelineRadiationRecords = timelineRadiationRecords;
+    public void setTimelineRadiationResults(List<String> timelineRadiationResults) {
+        this.timelineRadiationResults = timelineRadiationResults;
     }
 
     /**
-     * @return the timelineChemoRecords
+     * @return the timelineChemoResults
      */
-    public List<String> getTimelineChemoRecords() {
-        return timelineChemoRecords;
+    public List<String> getTimelineChemoResults() {
+        return timelineChemoResults;
     }
 
     /**
-     * @param timelineChemoRecords the timelineChemoRecords to set
+     * @param timelineChemoResults the timelineChemoResults to set
      */
-    public void setTimelineChemoRecords(List<String> timelineChemoRecords) {
-        this.timelineChemoRecords = timelineChemoRecords;
+    public void setTimelineChemoResults(List<String> timelineChemoResults) {
+        this.timelineChemoResults = timelineChemoResults;
     }
 
     /**
-     * @return the timelineSurgeryRecords
+     * @return the timelineSurgeryResults
      */
-    public List<String> getTimelineSurgeryRecords() {
-        return timelineSurgeryRecords;
+    public List<String> getTimelineSurgeryResults() {
+        return timelineSurgeryResults;
     }
 
     /**
-     * @param timelineSurgeryRecords the timelineSurgeryRecords to set
+     * @param timelineSurgeryResults the timelineSurgeryResults to set
      */
-    public void setTimelineSurgeryRecords(List<String> timelineSurgeryRecords) {
-        this.timelineSurgeryRecords = timelineSurgeryRecords;
+    public void setTimelineSurgeryResults(List<String> timelineSurgeryResults) {
+        this.timelineSurgeryResults = timelineSurgeryResults;
     }
 }

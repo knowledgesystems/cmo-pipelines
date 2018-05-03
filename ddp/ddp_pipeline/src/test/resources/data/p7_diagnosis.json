@@ -1,0 +1,59 @@
+{  
+  "data": [
+    {
+      "AJCC": "",
+      "CATEGORY1": "Miscellaneous",
+      "CATEGORY2": "Miscellaneous",
+      "CATEGORY3": "Miscellaneous",
+      "CATEGORY4": "Miscellaneous",
+      "Clinical Group": "",
+      "Diagnosis": [
+        "188.2 - LATERAL WALL URINARY BLADDER"
+      ],
+      "Diagnosis Date": "2015-02-20",
+      "Diagnosis Description": "Miscellaneous",
+      "Diagnosis Type": "CA",
+      "ICD-9/10 Dx Code": "188.2",
+      "ICD-9/10 Dx Desc": "LATERAL WALL URINARY BLADDER",
+      "ICD-O Histology Code": "",
+      "ICD-O Histology Desc": "",
+      "ICD-O Site Code": "",
+      "ICD-O Site Desc": "",
+      "MRN": "1300007",
+      "MSK Stage": "",
+      "Min ICD-9/10 Dx Date": "2015-02-20",
+      "P_ID": "1000007",
+      "Path Group": "",
+      "Summary": "",
+      "Tumor Diagnosis Date": ""
+    },
+    {
+      "AJCC": "IIA",
+      "CATEGORY1": "Miscellaneous",
+      "CATEGORY2": "Miscellaneous",
+      "CATEGORY3": "Miscellaneous",
+      "CATEGORY4": "Miscellaneous",
+      "Clinical Group": "1A",
+      "Diagnosis": [
+        "M8031/3 - GIANT CELL CARCINOMA",
+        "C672 - LATERAL WALL OF BLADDER"
+      ],
+      "Diagnosis Date": "2010-11-20",
+      "Diagnosis Description": "Miscellaneous",
+      "Diagnosis Type": "CA",
+      "ICD-9/10 Dx Code": "",
+      "ICD-9/10 Dx Desc": "",
+      "ICD-O Histology Code": "M8031/3",
+      "ICD-O Histology Desc": "GIANT CELL CARCINOMA",
+      "ICD-O Site Code": "C672",
+      "ICD-O Site Desc": "LATERAL WALL OF BLADDER",
+      "MRN": "1300007",
+      "MSK Stage": "Regional by direct extension",
+      "Min ICD-9/10 Dx Date": "",
+      "P_ID": "1000007",
+      "Path Group": "99",
+      "Summary": "Regional, direct extension",
+      "Tumor Diagnosis Date": "2010-11-20"
+    }
+  ]
+}

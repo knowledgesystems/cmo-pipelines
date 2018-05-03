@@ -30,32 +30,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.ddp.source.util;
+package org.mskcc.cmo.ks.ddp.pipeline;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
-import org.springframework.stereotype.Component;
+import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
+import org.mskcc.cmo.ks.ddp.source.internal.DDPSourceTestConfiguration;
+
+import java.util.*;
+import javax.annotation.Resource;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 /**
- * Generic response parser for DDP service.
  *
  * @author ochoaa
  */
-@Component
-public class DDPResponseUtil extends ObjectMapper {
-    private final ObjectMapper mapper = new ObjectMapper();
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes=DDPSourceTestConfiguration.class)
+public class DDPUtilsTest {
 
-    public DDPResponseUtil(){}
+    @Resource(name="mockCompositePatientRecords")
+    private Map<String, DDPCompositeRecord> mockCompositePatientRecords;
 
-    public Object parseData(String body, TypeReference valueTypeReference) throws Exception {
-        JsonNode responseJson = mapper.readTree(body);
-        return readValue(responseJson.get("data").toString(), valueTypeReference);
-    }
-
-    public Object parseData(File file, TypeReference valueTypeReference) throws Exception {
-        JsonNode responseJson = mapper.readTree(file);
-        return readValue(responseJson.get("data").toString(), valueTypeReference);
+    @Test
+    public void testMockCompositePatientRecordsInitialization() {
+        if (mockCompositePatientRecords.isEmpty()) {
+            Assert.fail("mockCompositePatientRecords not initialized properly!");
+        }
     }
 }
