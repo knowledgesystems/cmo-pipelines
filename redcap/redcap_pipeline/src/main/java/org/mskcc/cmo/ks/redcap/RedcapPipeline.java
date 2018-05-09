@@ -33,7 +33,6 @@
 package org.mskcc.cmo.ks.redcap;
 
 import java.io.PrintWriter;
-import java.util.*;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -58,12 +57,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 @SpringBootApplication
 public class RedcapPipeline {
 
-    private static ClinicalDataSource clinicalDataSource;
-    private static MetadataManager metadataManager;
-
-    private static Set<String> maskProjectArgument = new HashSet<String>();
-    private static Set<String> projectSetForStableId = new HashSet<String>();
-
     private static final char EXPORT_MODE = 'e';
     private static final char IMPORT_MODE = 'i';
     private static final char CHECK_MODE = 'c';
@@ -75,7 +68,6 @@ public class RedcapPipeline {
     private static final String OPTION_FILENAME = "filename";
     private static final String OPTION_RAW_DATA = "raw-data";
     private static final String OPTION_KEEP_EXISTING_PROJECT_DATA = "keep-existing-project-data";
-    private static final String OPTION_MASK_REDCAP_PROJECTS = "mask-redcap-projects";
     private static final String OPTION_IMPORT_MODE = "import-mode";
     private static final String OPTION_EXPORT_MODE = "export-mode";
     private static final String OPTION_CHECK_MODE = "check-mode";
@@ -91,10 +83,9 @@ public class RedcapPipeline {
             .addOption("f", OPTION_FILENAME, true, "Input filename (required for input-mode)")
             .addOption("r", OPTION_RAW_DATA, false, "Export data without manipulation (no merging of data sources or splitting of attribute types)")
             .addOption("k", OPTION_KEEP_EXISTING_PROJECT_DATA, false, "During import, disable the deletion of existing project records which are not present in the imported file (can not be used when the project record name field is an autonumbered record_id)")
-            .addOption("m", OPTION_MASK_REDCAP_PROJECTS, true, "Export (or check) of data will not include the data for these redcap project titles. (can not be used with --" + OPTION_REDCAP_PROJECT_TITLE + ")")
             .addOption("i", OPTION_IMPORT_MODE, false, "Import from file to redcap-project (use one of { -i, -e, -c })")
-            .addOption("e", OPTION_EXPORT_MODE, false, "Export either --" + OPTION_REDCAP_PROJECT_TITLE + " or --" + OPTION_STABLE_ID + " to directory (use one of -i, -e, -c)")
-            .addOption("c", OPTION_CHECK_MODE, false, "Check if either --" + OPTION_REDCAP_PROJECT_TITLE + " or --" + OPTION_STABLE_ID + " is present in RedCap (use one of { -i, -e, -c })");
+            .addOption("e", OPTION_EXPORT_MODE, false, "Export either " + OPTION_REDCAP_PROJECT_TITLE + " or " + OPTION_STABLE_ID + " to directory (use one of -i, -e, -c)")
+            .addOption("c", OPTION_CHECK_MODE, false, "Check if either " + OPTION_REDCAP_PROJECT_TITLE + " or " + OPTION_STABLE_ID + " is present in RedCap (use one of { -i, -e, -c })");
         return options;
     }
 
@@ -104,45 +95,25 @@ public class RedcapPipeline {
         System.exit(exitStatus);
     }
 
-    private static List<Boolean> checkIfProjectsExist(List<String> projectNames) {
-        ArrayList<Boolean> projectExists = new ArrayList<>();
-        for (String projectName : projectNames) {
-            if (projectName == null) {
-                projectExists.add(false);
-            } else {
-                projectExists.add(clinicalDataSource.projectExists(projectName));
-            }
-        }
-        return projectExists;
-    }
-
-    private static Boolean checkIfProjectsExistForStableId() {
-        Set<String> unmaskedProjects = new HashSet<String>();
-        for (String projectName : projectSetForStableId) {
-            if (!maskProjectArgument.contains(projectName)) {
-                unmaskedProjects.add(projectName);
-            }
-        }
-        return unmaskedProjects.size() > 0;
-    }
-
-    private static void checkIfProjectOrStableIdExistsAndExit(CommandLine commandLine) {
+    private static void checkIfProjectOrStableIdExistsAndExit(String[] args, CommandLine commandLine) {
+        SpringApplication app = new SpringApplication(RedcapPipeline.class);
+        app.setWebEnvironment(false);
+        ConfigurableApplicationContext ctx = app.run(args);
         String projectTitle = commandLine.getOptionValue(OPTION_REDCAP_PROJECT_TITLE);
         String stableId = commandLine.getOptionValue(OPTION_STABLE_ID);
+        ClinicalDataSource clinicalDataSource = ctx.getBean(ClinicalDataSource.class);
         String message = "project " + projectTitle + " does not exists in RedCap";
         int exitStatusCode = 1;
         if (projectTitle != null) {
             // checking if projectTitle exists in RedCap
-            List<Boolean> projectExists = checkIfProjectsExist(Collections.singletonList(projectTitle));
-            if (projectExists.get(0)) {
+            if (clinicalDataSource.projectExists(projectTitle)) {
                 message = "project " + projectTitle + " exists in RedCap";
                 exitStatusCode = 0;
             }
         } else {
             // checking if any project for stableId exists in RedCap
             message = "no project for stable-id " + stableId + " exists in RedCap";
-            // Both the passed in argument for masked project names and the actual redcap project list have been stored in static data members
-            if (checkIfProjectsExistForStableId()) {
+            if (clinicalDataSource.projectsExistForStableId(stableId)) {
                 message = "projects for stable-id " + stableId + " exist in RedCap";
                 exitStatusCode = 0;
             }
@@ -151,26 +122,18 @@ public class RedcapPipeline {
         System.exit(exitStatusCode);
     }
 
-    private static Set<String> getProjectTitlesForStableId(String stableId) {
-        Set<String> projectTitleSet = new HashSet<>();
-        ListIterator<String> clinicalProjectIterator = clinicalDataSource.getClinicalProjectTitleIterator(stableId);
-        while (clinicalProjectIterator.hasNext()) {
-            projectTitleSet.add(clinicalProjectIterator.next());
-        }
-        ListIterator<String> timelineProjectIterator = clinicalDataSource.getTimelineProjectTitleIterator(stableId);
-        while (timelineProjectIterator.hasNext()) {
-            projectTitleSet.add(timelineProjectIterator.next());
-        }
-        return projectTitleSet;
-    }
-
-    private static void launchJob(ConfigurableApplicationContext ctx, char executionMode, CommandLine commandLine) throws Exception {
+    private static void launchJob(String[] args, char executionMode, CommandLine commandLine) throws Exception {
+        SpringApplication app = new SpringApplication(RedcapPipeline.class);
+        app.setWebEnvironment(false);
+        ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
         JobParametersBuilder builder = new JobParametersBuilder();
         Job redcapJob = null;
         if (executionMode == EXPORT_MODE) {
             String stableId = commandLine.getOptionValue(OPTION_STABLE_ID);
             String redcapProjectTitle = commandLine.getOptionValue(OPTION_REDCAP_PROJECT_TITLE);
+            ClinicalDataSource clinicalDataSource = ctx.getBean(ClinicalDataSource.class);
+            MetadataManager metadataManager = ctx.getBean(MetadataManager.class);
             if (commandLine.hasOption(OPTION_STABLE_ID)) {
                 if (!clinicalDataSource.projectsExistForStableId(stableId)) {
                     log.error("no project for stable-id " + stableId + " exists in RedCap");
@@ -193,7 +156,6 @@ public class RedcapPipeline {
             }
             builder.addString(OPTION_DIRECTORY, commandLine.getOptionValue(OPTION_DIRECTORY));
             builder.addString("rawData", String.valueOf(commandLine.hasOption(OPTION_RAW_DATA)));
-            builder.addString("maskRedcapProjects", String.join(",", maskProjectArgument));
             if (commandLine.hasOption(OPTION_RAW_DATA)) {
                 redcapJob = ctx.getBean(BatchConfiguration.REDCAP_RAW_EXPORT_JOB, Job.class);
             } else {
@@ -211,7 +173,7 @@ public class RedcapPipeline {
                 log.error("RedcapPipeline job failed with exit status: " + jobExecution.getExitStatus());
                 System.exit(1);
             }
-        }
+        }        
     }
 
     private static char parseModeFromOptions(CommandLine commandLine) {
@@ -265,16 +227,8 @@ public class RedcapPipeline {
             errOut.println("error: only one of -p (--" + OPTION_REDCAP_PROJECT_TITLE + ") or -s (--" + OPTION_STABLE_ID + ") can be provided");
             detectedIllegalUse = true;
         }
-        if (commandLine.hasOption(OPTION_MASK_REDCAP_PROJECTS) && commandLine.hasOption(OPTION_REDCAP_PROJECT_TITLE)) {
-            errOut.println("error: the --" + OPTION_MASK_REDCAP_PROJECTS + " option can not be used with the --" + OPTION_REDCAP_PROJECT_TITLE + " option");
-            detectedIllegalUse = true;
-        }
         if (commandLine.hasOption(OPTION_STABLE_ID) && mode != EXPORT_MODE && mode != CHECK_MODE) {
             errOut.println("error: the --" + OPTION_STABLE_ID + " option can only be used with export-mode or check-mode");
-            detectedIllegalUse = true;
-        }
-        if (commandLine.hasOption(OPTION_MASK_REDCAP_PROJECTS) && mode != EXPORT_MODE && mode != CHECK_MODE) {
-            errOut.println("error: the --" + OPTION_MASK_REDCAP_PROJECTS + " option can only be used with export-mode or check-mode");
             detectedIllegalUse = true;
         }
         if (commandLine.hasOption(OPTION_DIRECTORY) && mode != EXPORT_MODE) {
@@ -333,34 +287,6 @@ public class RedcapPipeline {
         return detectedIllegalUse;
     }
 
-    private static void exitIfMaskProjectsAreNotFound(CommandLine commandLine) {
-        StringBuilder errorMessageBuilder = new StringBuilder();
-        String maskProjectListString = commandLine.getOptionValue(OPTION_MASK_REDCAP_PROJECTS, "");
-        String[] projectNameArgument = maskProjectListString.split(",");
-        for (String projectName : projectNameArgument) {
-            String trimmedProjectName = projectName.trim();
-            if (maskProjectArgument.contains(trimmedProjectName)) {
-                errorMessageBuilder.append("Duplicated project name given in argument to --" + OPTION_MASK_REDCAP_PROJECTS + " : '" + trimmedProjectName + "'\n");
-                continue;
-            }
-            if (trimmedProjectName.length() > 0) {
-                maskProjectArgument.add(trimmedProjectName);
-            }
-        }
-        String stableId = commandLine.getOptionValue(OPTION_STABLE_ID);
-        projectSetForStableId = getProjectTitlesForStableId(stableId);
-        for (String projectName : maskProjectArgument) {
-            if (!projectSetForStableId.contains(projectName)) {
-                errorMessageBuilder.append("Non-existent project name '" + projectName + "' was given for option --" + OPTION_MASK_REDCAP_PROJECTS + "\n");
-                continue;
-            }
-        }
-        if (errorMessageBuilder.length() > 0) {
-            log.error(errorMessageBuilder.toString());
-            System.exit(1);
-        }
-    }
-
     public static void main(String[] args) throws Exception {
         Options options = RedcapPipeline.getOptions(args);
         CommandLineParser parser = new DefaultParser();
@@ -372,16 +298,9 @@ public class RedcapPipeline {
         if (executionMode == UNDETERMINED_MODE) {
             help(options, 1);
         }
-        SpringApplication app = new SpringApplication(RedcapPipeline.class);
-        app.setWebEnvironment(false);
-        ConfigurableApplicationContext ctx = app.run(args);
-        // get necessary beans from context
-        clinicalDataSource = ctx.getBean(ClinicalDataSource.class);
-        metadataManager = ctx.getBean(MetadataManager.class);
-        exitIfMaskProjectsAreNotFound(commandLine);
         if (executionMode == CHECK_MODE) {
-            checkIfProjectOrStableIdExistsAndExit(commandLine);
+            checkIfProjectOrStableIdExistsAndExit(args, commandLine);
         }
-        launchJob(ctx, executionMode, commandLine);
+        launchJob(args, executionMode, commandLine);
     }
 }

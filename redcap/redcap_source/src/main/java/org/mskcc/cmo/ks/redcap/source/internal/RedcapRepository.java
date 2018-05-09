@@ -93,18 +93,6 @@ public class RedcapRepository {
         return redcapSessionManager.getTimelineTokenMapByStableId(stableId);
     }
 
-    public ListIterator<String> getClinicalProjectTitleIterator(String stableId) {
-        Map<String, String> clinicalTokenMap = redcapSessionManager.getClinicalTokenMapByStableId(stableId);
-        List<String> clinicalProjectTitleList = new ArrayList<>(clinicalTokenMap.keySet());
-        return clinicalProjectTitleList.listIterator();
-    }
-
-    public ListIterator<String> getTimelineProjectTitleIterator(String stableId) {
-        Map<String, String> timelineTokenMap = redcapSessionManager.getTimelineTokenMapByStableId(stableId);
-        List<String> timelineProjectTitleList = new ArrayList<>(timelineTokenMap.keySet());
-        return timelineProjectTitleList.listIterator();
-    }
-
     /** dataForImport : first element is a tab delimited string holding the headers from the file, additional elements are tab delimited records
     */
     public void importClinicalData(String projectToken, List<String> dataForImport, boolean keepExistingProjectData) throws Exception {

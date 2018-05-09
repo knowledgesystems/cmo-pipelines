@@ -79,7 +79,6 @@ public class ClinicalDataReaderTestConfiguration {
         Properties properties = new Properties();
         properties.setProperty("rawData", "false");
         properties.setProperty("stableId", REDCAP_STABLE_ID);
-        properties.setProperty("maskRedcapProjects", "");
         return properties;
      }
 

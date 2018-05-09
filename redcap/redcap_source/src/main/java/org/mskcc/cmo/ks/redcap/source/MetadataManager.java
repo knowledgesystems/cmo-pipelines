@@ -41,8 +41,6 @@ import java.util.Map;
 
 public interface MetadataManager {
     Map<String, List<String>> getFullHeader(List<String> header);
-    Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader);
-    Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader);
     boolean checkOverridesExist(String studyId);
     boolean allHeadersAreValidClinicalAttributes(List<String> headers);
     void setOverrideStudyId(String studyId);

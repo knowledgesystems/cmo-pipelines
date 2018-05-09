@@ -29,7 +29,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 package org.mskcc.cmo.ks.redcap.source;
 
 import java.util.*;
@@ -40,7 +39,6 @@ import java.util.*;
  */
 
 public interface ClinicalDataSource {
-
     boolean projectExists(String projectTitle);
     boolean redcapDataTypeIsTimeline(String projectTitle);
     void importClinicalDataFile(String projectTitle, String filename, boolean keepExistingProjectData) throws Exception;
@@ -57,6 +55,6 @@ public interface ClinicalDataSource {
     String getNextTimelineProjectTitle(String stableId);
     boolean hasMoreTimelineData(String stableId);
     boolean hasMoreClinicalData(String stableId);
-    ListIterator<String> getClinicalProjectTitleIterator(String stableId);
-    ListIterator<String> getTimelineProjectTitleIterator(String stableId);
+    Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader);
+    Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader);
 }

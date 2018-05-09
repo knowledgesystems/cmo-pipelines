@@ -86,8 +86,8 @@ public class Skcm_mskcc_2015_chantClinicalReader implements ItemStreamReader<Skc
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         // add the patient and sample headers to the execution context
         Map<String, List<String>> fullHeader = metadataManager.getFullHeader(new Skcm_mskcc_2015_chantNormalizedClinicalRecord().getFieldNames());
-        executionContext.put("sampleHeader", metadataManager.getFullSampleHeader(fullHeader));
-        executionContext.put("patientHeader", metadataManager.getFullPatientHeader(fullHeader));
+        executionContext.put("sampleHeader", clinicalDataSource.getFullSampleHeader(fullHeader));
+        executionContext.put("patientHeader", clinicalDataSource.getFullPatientHeader(fullHeader));
 
         // getting records from db view and merge data by sample id
         this.melanomaClinicalRecords = getMelanomaClinicalRecords();
