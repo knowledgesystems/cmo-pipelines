@@ -325,7 +325,7 @@ public class DDPSourceTestConfiguration {
         record.setRadiationProcedures(mockPatientRadiationProcedures.get(1000001));
         record.setChemoProcedures(mockPatientChemoProcedures.get(1000001));
         record.setSurgicalProcedures(mockPatientSurgicalProcedures.get(1000001));
-        map.put("P01-000001", record);
+        map.put(record.getDmpPatientId(), record);
 
         // patient 2 composite record
         // TO-DO: mock surgery, radiation, chemo data
@@ -336,7 +336,7 @@ public class DDPSourceTestConfiguration {
         record.setRadiationProcedures(mockPatientRadiationProcedures.get(1000002));
         record.setChemoProcedures(mockPatientChemoProcedures.get(1000002));
         record.setSurgicalProcedures(mockPatientSurgicalProcedures.get(1000002));
-        map.put("P01-000002", record);
+        map.put(record.getDmpPatientId(), record);
 
         // patient 3 does not resolve to dmp patient so no data available, nothing to construct
 
@@ -348,7 +348,7 @@ public class DDPSourceTestConfiguration {
         record.setRadiationProcedures(mockPatientRadiationProcedures.get(1000004));
         record.setChemoProcedures(mockPatientChemoProcedures.get(1000004));
         record.setSurgicalProcedures(mockPatientSurgicalProcedures.get(1000004));
-        map.put("P01-000004", record);
+        map.put(record.getDmpPatientId(), record);
 
         // patient 5 composite record - does not have diagnosis data, so cannot calculate start/stop dates for treatment data
         // therefore no treatment data available either
@@ -361,7 +361,7 @@ public class DDPSourceTestConfiguration {
         record.setRadiationProcedures(mockPatientRadiationProcedures.get(1000005));
         record.setChemoProcedures(mockPatientChemoProcedures.get(1000005));
         record.setSurgicalProcedures(mockPatientSurgicalProcedures.get(1000005));
-        map.put("P01-000005", record);
+        map.put(record.getDmpPatientId(), record);
 
         // patient 6 composite record - does not have chemo, surgery data
         // TO-DO: mock radiation
@@ -372,7 +372,7 @@ public class DDPSourceTestConfiguration {
         record.setRadiationProcedures(mockPatientRadiationProcedures.get(1000006));
         record.setChemoProcedures(mockPatientChemoProcedures.get(1000006));
         record.setSurgicalProcedures(mockPatientSurgicalProcedures.get(1000006));
-        map.put("P01-000006", record);
+        map.put(record.getDmpPatientId(), record);
 
         // patient 7 composite record - does not have radiation, surgery data
         // TO-DO: mock chemo
@@ -383,7 +383,7 @@ public class DDPSourceTestConfiguration {
         record.setRadiationProcedures(mockPatientRadiationProcedures.get(1000007));
         record.setChemoProcedures(mockPatientChemoProcedures.get(1000007));
         record.setSurgicalProcedures(mockPatientSurgicalProcedures.get(1000007));
-        map.put("P01-000007", record);
+        map.put(record.getDmpPatientId(), record);
 
         // patient 8 composite record - does not have radiation data
         // TO-DO: mock chemo, surgery
@@ -394,7 +394,7 @@ public class DDPSourceTestConfiguration {
         record.setRadiationProcedures(mockPatientRadiationProcedures.get(1000008));
         record.setChemoProcedures(mockPatientChemoProcedures.get(1000008));
         record.setSurgicalProcedures(mockPatientSurgicalProcedures.get(1000008));
-        map.put("P01-000008", record);
+        map.put(record.getDmpPatientId(), record);
 
         return map;
     }
