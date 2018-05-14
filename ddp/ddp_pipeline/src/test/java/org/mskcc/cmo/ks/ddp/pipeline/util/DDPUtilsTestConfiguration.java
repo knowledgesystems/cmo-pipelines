@@ -30,34 +30,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.mskcc.cmo.ks.ddp.pipeline;
+package org.mskcc.cmo.ks.ddp.pipeline.util;
 
-import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
-import org.mskcc.cmo.ks.ddp.source.internal.DDPSourceTestConfiguration;
-
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Strings;
+import java.io.*;
 import java.util.*;
-import javax.annotation.Resource;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.mockito.*;
+import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
+import org.mskcc.cmo.ks.ddp.source.internal.DDPRepository;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
+import org.mskcc.cmo.ks.ddp.source.internal.DDPSourceTestConfiguration;
+import org.mskcc.cmo.ks.ddp.source.model.*;
+import org.mskcc.cmo.ks.ddp.source.util.AuthenticationUtil;
+import org.mskcc.cmo.ks.ddp.source.util.DDPResponseUtil;
+import org.springframework.context.annotation.*;
 
-/**
- *
- * @author ochoaa
- */
-@RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes=DDPSourceTestConfiguration.class)
-public class DDPUtilsTest {
+@Configuration
+@Import(DDPSourceTestConfiguration.class)
+public class DDPUtilsTestConfiguration {
 
-    @Resource(name="mockCompositePatientRecords")
-    private Map<String, DDPCompositeRecord> mockCompositePatientRecords;
-
-    @Test
-    public void testMockCompositePatientRecordsInitialization() {
-        if (mockCompositePatientRecords.isEmpty()) {
-            Assert.fail("mockCompositePatientRecords not initialized properly!");
-        }
+    @Bean DDPUtils ddpUtils() {
+        return new DDPUtils();
     }
+
 }
