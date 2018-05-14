@@ -46,8 +46,8 @@ import org.apache.commons.lang.StringUtils;
  * @author ochoaa
  */
 public class DDPUtils {
-    private static final Double DAYS_TO_YEARS_CONVERSION = 365.2422;
-    private static final Double DAYS_TO_MONTHS_CONVERSION = 30.4167;
+    public static final Double DAYS_TO_YEARS_CONVERSION = 365.2422;
+    public static final Double DAYS_TO_MONTHS_CONVERSION = 30.4167;
 
     /**
      * Resolve and anonymize patient current age.
