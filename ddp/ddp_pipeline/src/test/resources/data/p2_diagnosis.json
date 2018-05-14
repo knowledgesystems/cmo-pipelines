@@ -1,0 +1,86 @@
+{  
+  "data": [
+    {
+      "AJCC": "",
+      "CATEGORY1": "Bones and Joints",
+      "CATEGORY2": "Bones and Joints",
+      "CATEGORY3": "Bones and Joints",
+      "CATEGORY4": "Bones and Joints",
+      "Clinical Group": "",
+      "Diagnosis": [
+        "170.3 - RIB/STERNUM/CLAVICLE CA"
+      ],
+      "Diagnosis Date": "2005-07-15",
+      "Diagnosis Description": "Bones and Joints",
+      "Diagnosis Type": "CA",
+      "ICD-9/10 Dx Code": "170.3",
+      "ICD-9/10 Dx Desc": "RIB/STERNUM/CLAVICLE CA",
+      "ICD-O Histology Code": "",
+      "ICD-O Histology Desc": "",
+      "ICD-O Site Code": "",
+      "ICD-O Site Desc": "",
+      "MRN": "1300002",
+      "MSK Stage": "",
+      "Min ICD-9/10 Dx Date": "2005-07-15",
+      "P_ID": "1000002",
+      "Path Group": "",
+      "Summary": "",
+      "Tumor Diagnosis Date": ""
+    },
+    {
+      "AJCC": "",
+      "CATEGORY1": "Miscellaneous",
+      "CATEGORY2": "Miscellaneous",
+      "CATEGORY3": "Miscellaneous",
+      "CATEGORY4": "Miscellaneous",
+      "Clinical Group": "",
+      "Diagnosis": [
+        "C78.00 - SECONDARY MALIGNANT NEOPLASM OF UNSPECIFIED LUNG"
+      ],
+      "Diagnosis Date": "2010-06-09",
+      "Diagnosis Description": "Miscellaneous",
+      "Diagnosis Type": "METS",
+      "ICD-9/10 Dx Code": "C78.00",
+      "ICD-9/10 Dx Desc": "SECONDARY MALIGNANT NEOPLASM OF UNSPECIFIED LUNG",
+      "ICD-O Histology Code": "",
+      "ICD-O Histology Desc": "",
+      "ICD-O Site Code": "",
+      "ICD-O Site Desc": "",
+      "MRN": "1300002",
+      "MSK Stage": "",
+      "Min ICD-9/10 Dx Date": "2010-06-09",
+      "P_ID": "1000002",
+      "Path Group": "",
+      "Summary": "",
+      "Tumor Diagnosis Date": ""
+    },
+    {
+      "AJCC": "IIA",
+      "CATEGORY1": "Bones and Joints",
+      "CATEGORY2": "Bones and Joints",
+      "CATEGORY3": "Bones and Joints",
+      "CATEGORY4": "Bones and Joints",
+      "Clinical Group": "1A",
+      "Diagnosis": [
+        "M9260/3 - EWING'S SARCOMA",
+        "C413 - BONE, RIB/STERNUM/CLAVICLE & ASSOCIATED JOINTS"
+      ],
+      "Diagnosis Date": "2006-11-10",
+      "Diagnosis Description": "Bones and Joints",
+      "Diagnosis Type": "CA",
+      "ICD-9/10 Dx Code": "",
+      "ICD-9/10 Dx Desc": "",
+      "ICD-O Histology Code": "M9260/3",
+      "ICD-O Histology Desc": "EWING'S SARCOMA",
+      "ICD-O Site Code": "C413",
+      "ICD-O Site Desc": "BONE, RIB/STERNUM/CLAVICLE & ASSOCIATED JOINTS",
+      "MRN": "1300002",
+      "MSK Stage": "Regional by direct extension",
+      "Min ICD-9/10 Dx Date": "",
+      "P_ID": "1000002",
+      "Path Group": "99",
+      "Summary": "Regional, direct extension",
+      "Tumor Diagnosis Date": "2006-11-10"
+    }
+  ]
+}

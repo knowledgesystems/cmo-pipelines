@@ -1,0 +1,46 @@
+{
+  "data": [
+    {
+      "AGE": 64,
+      "CHP_ACTIVE_IND": "Y",
+      "COHORT_ID": 2030,
+      "DAYS_ON_COHORT": 0,
+      "MRN": "1300006",
+      "NOTES": "PID RESOLVES TO DMP ID P01-000006. PATIENT HAS BOTH DEMOGRAPHICS AND DIAGNOSIS DATA AVAILABLE.",
+      "NOTIFICATION_PREFS": [],
+      "PT_FIRST_NAME": "AMY",
+      "PT_LAST_NAME": "APPLESEED",
+      "PT_SEX": "F",
+      "PT_VITAL_STATUS": "ALIVE",
+      "P_ID": 1000006
+    },
+    {
+      "AGE": 60,
+      "CHP_ACTIVE_IND": "Y",
+      "COHORT_ID": 2030,
+      "DAYS_ON_COHORT": 0,
+      "MRN": "1300007",
+      "NOTES": "PID RESOLVES TO DMP ID P01-000007. PATIENT HAS BOTH DEMOGRAPHICS AND DIAGNOSIS DATA AVAILABLE.",
+      "NOTIFICATION_PREFS": [],
+      "PT_FIRST_NAME": "JOHNNY",
+      "PT_LAST_NAME": "APPLESEED",
+      "PT_SEX": "M",
+      "PT_VITAL_STATUS": "DECEASED",
+      "P_ID": 1000007
+    },
+    {
+      "AGE": 8,
+      "CHP_ACTIVE_IND": "Y",
+      "COHORT_ID": 2030,
+      "DAYS_ON_COHORT": 0,
+      "MRN": "1300008",
+      "NOTES": "PID RESOLVES TO DMP ID P01-000008. PATIENT HAS BOTH DEMOGRAPHICS AND DIAGNOSIS DATA AVAILABLE.",
+      "NOTIFICATION_PREFS": [],
+      "PT_FIRST_NAME": "KID",
+      "PT_LAST_NAME": "A",
+      "PT_SEX": "M",
+      "PT_VITAL_STATUS": "ALIVE",
+      "P_ID": 1000008
+    }
+  ]
+}

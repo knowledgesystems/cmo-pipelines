@@ -1,0 +1,74 @@
+{
+  "data": [
+    {
+      "AGE": 58,
+      "CHP_ACTIVE_IND": "Y",
+      "COHORT_ID": 1002,
+      "DAYS_ON_COHORT": 0,
+      "MRN": "1300001",
+      "NOTES": "PID RESOLVES TO DMP ID P01-000001. PATIENT HAS BOTH DEMOGRAPHICS AND DIAGNOSIS DATA AVAILABLE.",
+      "NOTIFICATION_PREFS": [],
+      "PT_FIRST_NAME": "JANE",
+      "PT_LAST_NAME": "DOE",
+      "PT_SEX": "F",
+      "PT_VITAL_STATUS": "ALIVE",
+      "P_ID": 1000001
+    },
+    {
+      "AGE": 96,
+      "CHP_ACTIVE_IND": "Y",
+      "COHORT_ID": 1002,
+      "DAYS_ON_COHORT": 0,
+      "MRN": "1300002",
+      "NOTES": "PID RESOLVES TO DMP ID P01-000002. PATIENT HAS BOTH DEMOGRAPHICS AND DIAGNOSIS DATA AVAILABLE.",
+      "NOTIFICATION_PREFS": [],
+      "PT_FIRST_NAME": "JOHN",
+      "PT_LAST_NAME": "DOE",
+      "PT_SEX": "M",
+      "PT_VITAL_STATUS": "DECEASED",
+      "P_ID": 1000002
+    },
+    {
+      "AGE": 75,
+      "CHP_ACTIVE_IND": "Y",
+      "COHORT_ID": 1002,
+      "DAYS_ON_COHORT": 0,
+      "MRN": "1300003",
+      "NOTES": "PID DOES NOT RESOLVE TO DMP ID. PATIENT DOES NOT HAVE DEMOGRAPHICS OR DIAGNOSIS DATA.",
+      "NOTIFICATION_PREFS": [],
+      "PT_FIRST_NAME": "JOHN",
+      "PT_LAST_NAME": "SMITH",
+      "PT_SEX": "M",
+      "PT_VITAL_STATUS": "ALIVE",
+      "P_ID": 1000003
+    },
+    {
+      "AGE": 48,
+      "CHP_ACTIVE_IND": "Y",
+      "COHORT_ID": 1002,
+      "DAYS_ON_COHORT": 0,
+      "MRN": "1300004",
+      "NOTES": "PID RESOLVES TO DMP ID P01-000004. PATIENT DOES NOT HAVE DEMOGRAPHICS DATA AVAILABLE.",
+      "NOTIFICATION_PREFS": [],
+      "PT_FIRST_NAME": "FOO",
+      "PT_LAST_NAME": "BAR",
+      "PT_SEX": "M",
+      "PT_VITAL_STATUS": "ALIVE",
+      "P_ID": 1000004
+    },
+    {
+      "AGE": 58,
+      "CHP_ACTIVE_IND": "Y",
+      "COHORT_ID": 1002,
+      "DAYS_ON_COHORT": 0,
+      "MRN": "1300005",
+      "NOTES": "PID RESOLVES TO DMP ID P01-000005. PATIENT DOES NOT HAVE DIAGNOSIS DATA AVAILABLE.",
+      "NOTIFICATION_PREFS": [],
+      "PT_FIRST_NAME": "BAZ",
+      "PT_LAST_NAME": "QUX",
+      "PT_SEX": "F",
+      "PT_VITAL_STATUS": "DECEASED",
+      "P_ID": 1000005
+    }
+  ]
+}

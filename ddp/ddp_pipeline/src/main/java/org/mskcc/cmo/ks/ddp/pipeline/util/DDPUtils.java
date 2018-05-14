@@ -68,8 +68,8 @@ public class DDPUtils {
         Long birthDateInDays = getDateInDays(compositePatient.getPatientBirthDate());
         Long referenceDateInDays;
         // use current date as reference date if patient not deceased, otherwise use date of death
-        if (!Strings.isNullOrEmpty(compositePatient.getPatientDemographics().getPTDEATHDTE())) {
-            referenceDateInDays = getDateInDays(compositePatient.getPatientDemographics().getPTDEATHDTE());
+        if (!Strings.isNullOrEmpty(compositePatient.getPatientDeathDate())) {
+            referenceDateInDays = getDateInDays(compositePatient.getPatientDeathDate());
         }
         else {
             referenceDateInDays = getDateInDays(new Date());
@@ -180,9 +180,9 @@ public class DDPUtils {
         Long referenceAgeInDays = (osStatus.equals("LIVING")) ?
                 getDateInDays(compositePatient.getPatientDemographics().getPLALASTACTVDTE()) :
                 getDateInDays(compositePatient.getPatientDemographics().getDeceasedDate());
-        Long firsTumorDiagnosisDateInDays = getFirstTumorDiagnosisDateInDays(compositePatient.getPatientDiagnosis());
-        if (referenceAgeInDays != null && firsTumorDiagnosisDateInDays != null) {
-            osMonths = String.format("%.3f", (referenceAgeInDays - firsTumorDiagnosisDateInDays) / 30.4167);
+        Long firstTumorDiagnosisDateInDays = getFirstTumorDiagnosisDateInDays(compositePatient.getPatientDiagnosis());
+        if (referenceAgeInDays != null && firstTumorDiagnosisDateInDays != null) {
+            osMonths = String.format("%.3f", (referenceAgeInDays - firstTumorDiagnosisDateInDays) / DAYS_TO_MONTHS_CONVERSION);
         }
         return osMonths;
     }
@@ -275,9 +275,17 @@ public class DDPUtils {
         return null;
     }
 
+    /**
+     * Converts record as tab-delimited string of values.
+     *
+     * @param object
+     * @return
+     * @throws Exception
+     */
+    @SuppressWarnings("unchecked")
     public static String constructRecord(Object object) throws Exception {
-        List<String> fields = (List<String>) object.getClass().getMethod("getFieldNames").invoke(object);
-        List<String> record = new ArrayList();
+        List<String> fields = (List<String>) object.getClass().getMethod("getFieldNames").invoke(object); // unchecked cast
+        List<String> record = new ArrayList<>();
         for (String field : fields) {
             String value = object.getClass().getMethod("get" + field).invoke(object).toString();
             record.add(value.trim());

@@ -55,15 +55,15 @@ public class ClinicalRecord {
 
     public ClinicalRecord(){}
 
-    public ClinicalRecord(DDPCompositeRecord compositePatient) throws ParseException {
-        this.PATIENT_ID = compositePatient.getDmpPatientId();
-        this.AGE_CURRENT = DDPUtils.resolvePatientCurrentAge(compositePatient);
-        this.SEX = DDPUtils.resolvePatientSex(compositePatient);
-        this.OS_STATUS = DDPUtils.resolveOsStatus(compositePatient);
-        this.OS_MONTHS = DDPUtils.resolveOsMonths(OS_STATUS, compositePatient);
-        this.RADIATION_THERAPY = compositePatient.hasReceivedRadiation() ? "Yes" : "No";
-        this.CHEMOTHERAPY = compositePatient.hasReceivedChemo() ? "Yes" : "No";
-        this.SURGERY = compositePatient.hasReceivedSurgery() ? "Yes" : "No";
+    public ClinicalRecord(DDPCompositeRecord compositeRecord) throws ParseException {
+        this.PATIENT_ID = compositeRecord.getDmpPatientId();
+        this.AGE_CURRENT = DDPUtils.resolvePatientCurrentAge(compositeRecord);
+        this.SEX = DDPUtils.resolvePatientSex(compositeRecord);
+        this.OS_STATUS = DDPUtils.resolveOsStatus(compositeRecord);
+        this.OS_MONTHS = DDPUtils.resolveOsMonths(OS_STATUS, compositeRecord);
+        this.RADIATION_THERAPY = compositeRecord.hasReceivedRadiation() ? "Yes" : "No";
+        this.CHEMOTHERAPY = compositeRecord.hasReceivedChemo() ? "Yes" : "No";
+        this.SURGERY = compositeRecord.hasReceivedSurgery() ? "Yes" : "No";
     }
 
     /**
@@ -189,7 +189,7 @@ public class ClinicalRecord {
      * @return
      */
     public static List<String> getFieldNames() {
-        List<String> fieldNames = new ArrayList();
+        List<String> fieldNames = new ArrayList<>();
         fieldNames.add("PATIENT_ID");
         fieldNames.add("AGE_CURRENT");
         fieldNames.add("SEX");

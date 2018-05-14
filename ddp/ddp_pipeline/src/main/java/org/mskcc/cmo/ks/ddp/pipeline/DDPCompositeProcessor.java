@@ -101,10 +101,10 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
         }
         // create composite result and call remaining processors
         CompositeResult compositeResult = new CompositeResult();
-        compositeResult.setClinicalRecord(clinicalResult);
-        compositeResult.setTimelineRadiationRecords(timelineRadiationProcessor.process(compositeRecord));
-        compositeResult.setTimelineChemoRecords(timelineChemoProcessor.process(compositeRecord));
-        compositeResult.setTimelineSurgeryRecords(timelineSurgeryProcessor.process(compositeRecord));
+        compositeResult.setClinicalResult(clinicalResult);
+        compositeResult.setTimelineRadiationResults(timelineRadiationProcessor.process(compositeRecord));
+        compositeResult.setTimelineChemoResults(timelineChemoProcessor.process(compositeRecord));
+        compositeResult.setTimelineSurgeryResults(timelineSurgeryProcessor.process(compositeRecord));
         return compositeResult;
     }
 }

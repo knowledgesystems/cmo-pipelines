@@ -124,8 +124,8 @@ public class BatchConfiguration {
     @Bean
     @StepScope
     public CompositeItemWriter<CompositeResult> ddpCompositeWriter() {
-        CompositeItemWriter writer = new CompositeItemWriter();
-        List delegates = new ArrayList();
+        CompositeItemWriter<CompositeResult> writer = new CompositeItemWriter<>();
+        List<ItemWriter<? super CompositeResult>> delegates = new ArrayList<>();
         delegates.add(clinicalWriter());
         delegates.add(timelineRadiationWriter());
         delegates.add(timelineChemoWriter());

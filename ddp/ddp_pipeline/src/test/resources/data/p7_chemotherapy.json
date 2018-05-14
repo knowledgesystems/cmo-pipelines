@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "COUNT": 1,
+      "ORD_NAME": "BMS-986015 INVEST",
+      "SET_NAME": "IRB_#1000007_Cycle_1_Day_1,15_ONLY",
+      "START_DATE": "2017-08-25",
+      "STOP_DATE": "2017-08-25"
+    },
+    {
+      "COUNT": 1,
+      "ORD_NAME": "Famotidine INJ (CHEMO Support Only)",
+      "SET_NAME": "IRB_#1000007_Cycle_1_Day_1,15_ONLY",
+      "START_DATE": "2015-09-02",
+      "STOP_DATE": "2015-09-02"
+    },
+    {
+      "COUNT": 11,
+      "ORD_NAME": "BMS-936558 (Nivolumab) INVEST",
+      "SET_NAME": "IRB_#1000007_Cycle_1_Day_29_And_Forward",
+      "START_DATE": "2014-08-01",
+      "STOP_DATE": "2015-02-14"
+    }
+  ]
+}

@@ -111,7 +111,7 @@ public class AuthenticationUtil {
         ResponseEntity<AuthenticationToken> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, AuthenticationToken.class);
         if (response != null) {
             this.authenticationToken = response.getBody().getAuthToken();
-            LOG.debug("Authentication token: " + authenticationToken);
+            LOG.info("Authentication token: " + authenticationToken);
         }
         else {
             throw new RuntimeException("Error getting authentication token!");
