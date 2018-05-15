@@ -125,6 +125,9 @@ mskimpact_ped_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskimpact-ped-update-no
 
 # -----------------------------------------------------------------------------------------------------------
 
+# default darwin demographics row count is 2 to allow minimum records written to be 1 in fetched Darwin demographics results (allows 10% drop)
+DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT=2
+
 DB_VERSION_FAIL=0
 
 # Imports assumed to fail until imported successfully
@@ -586,8 +589,19 @@ fi
 echo "Pushing DMP-IMPACT updates back to msk-impact repository..."
 echo $(date)
 cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY push
+if [ $? -gt 0 ] ; then
+    MERCURIAL_PUSH_FAILURE=1
+    sendFailureMessageMskPipelineLogsSlack "HG PUSH :fire: - address ASAP!"
+fi
 
 ### FAILURE EMAIL ###
+
+EMAIL_BODY="Failed to push outgoing changes to Mercurial - address ASAP!"
+# send email if failed to push outgoing changes to mercurial
+if [ $MERCURIAL_PUSH_FAILURE -gt 0 ] ; then
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" | mail -s "[URGENT] HG PUSH FAILURE" $email_list
+fi
 
 EMAIL_BODY="The MSKIMPACT database version is incompatible. Imports will be skipped until database is updated."
 # send email if db version isn't compatible

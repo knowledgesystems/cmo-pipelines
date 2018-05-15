@@ -43,7 +43,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
-import org.mskcc.cmo.ks.redcap.models.ProjectInfoResponse;
+import org.mskcc.cmo.ks.redcap.models.RedcapProjectInfo;
 import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
 import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
 import org.mskcc.cmo.ks.redcap.models.RedcapToken;
@@ -225,39 +225,30 @@ public class RedcapSessionManager {
 
     // SECTION : utility functions for doing RedCap specific requests
 
-    public Integer getMaximumRecordIdInRedcapProjectIfPresent(String projectToken) {
-        if (!projectContainsRecordIdField(projectToken)) {
-            return null;
-        }
+    public Integer getNextRecordNameForAutonumberedProject(String projectToken) {
         RestTemplate restTemplate = new RestTemplate();
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         uriVariables.add("token", projectToken);
-        uriVariables.add("content", "record");
-        uriVariables.add("format", "csv");
-        uriVariables.add("fields", REDCAP_FIELD_NAME_FOR_RECORD_ID);
+        uriVariables.add("content", "generateNextRecordName");
         HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<String> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, String.class);
-        String responseString = responseEntity.getBody().replaceAll("\r","");
-        String[] records = responseString.split("\n");
-        int maxRecordId = 0;
-        for (int index = 1; index < records.length; index++) {
-            String[] fields = records[index].split(",",-1);
-            try {
-                int recordId = Integer.parseInt(fields[0]);
-                if (recordId > maxRecordId) {
-                    maxRecordId = recordId;
-                }
-            } catch (NumberFormatException e) {
-                String errorString = "error: field in record_id column in RedCap project contains a non-integer: " + fields[0];
-                log.error(errorString);
-                throw new RuntimeException(errorString);
-            }
+        String responseString = responseEntity.getBody().trim();
+        try {
+            int recordId = Integer.parseInt(responseString);
+            return new Integer(recordId);
+        } catch (NumberFormatException e) {
+            String errorString = "error: call to REDCap API : generateNextRecordName returned a non-integer : " + responseString;
+            log.error(errorString);
+            throw new RuntimeException(errorString);
         }
-        return new Integer(maxRecordId);
     }
 
-    public void deleteRedcapProjectData(String token, Set<String> recordPrimaryKeySetForDeletion) {
-        log.info("requesting deletion of " + recordPrimaryKeySetForDeletion.size() + " records.");
+    /* Warning : this use of the redcap API for record delete may be limited by the PHP settings in /etc/php.ini
+     * If the php setting max_input_vars is limited to 10000 (for example), then requests to delete more than
+     * this number of records from a redcap project will "succeed" but will only delete the first 10000 records.
+     */
+    public void deleteRedcapProjectData(String token, Set<String> recordNames) {
+        log.info("requesting deletion of " + recordNames.size() + " records.");
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -267,22 +258,25 @@ public class RedcapSessionManager {
         uriVariables.add("content", "record");
         uriVariables.add("action", "delete");
         int index = 0;
-        for (String keyToDelete : recordPrimaryKeySetForDeletion) {
-            uriVariables.add("records[" + Integer.toString(index) + "]", keyToDelete);
+        for (String recordName : recordNames) {
+            uriVariables.add("records[" + Integer.toString(index) + "]", recordName);
             index = index + 1;
         }
         HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<String> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, String.class);
         HttpStatus responseStatus = responseEntity.getStatusCode();
         if (!responseStatus.is2xxSuccessful()) {
-            log.warn("RedCap delete record API call failed. HTTP status code = " + Integer.toString(responseEntity.getStatusCode().value()));
-            throw new RuntimeException("RedCap delete record API call failed. HTTP status code");
+            String errorMessage = "RedCap delete record API call failed. HTTP status code = " + Integer.toString(responseEntity.getStatusCode().value());
+            log.warn(errorMessage);
+            throw new RuntimeException(errorMessage);
         }
         int deletedRecordCount = attemptToParseCountString(responseEntity.getBody());
-        if (deletedRecordCount == recordPrimaryKeySetForDeletion.size()) {
+        if (deletedRecordCount == recordNames.size()) {
             log.info(Integer.toString(deletedRecordCount) + " records were deleted.");
         } else {
-            log.warn("unexpected return from call to REDCap Delete Record API (number of deleted records): " + responseEntity.getBody());
+            String errorMessage = "REDCap API request was made to delete " + Integer.toString(recordNames.size()) + " recoreds, but return value indicates that " + Integer.toString(deletedRecordCount) + " records were deleted. Response Body: " + responseEntity.getBody();
+            log.error(errorMessage);
+            throw new RuntimeException(errorMessage);
         }
     }
 
@@ -323,25 +317,6 @@ public class RedcapSessionManager {
         return new HttpEntity<LinkedMultiValueMap<String, String>>(uriVariables, headers);
     }
 
-    private boolean projectContainsRecordIdField(String projectToken) {
-        RestTemplate restTemplate = new RestTemplate();
-        LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
-        uriVariables.add("token", projectToken);
-        uriVariables.add("content", "exportFieldNames");
-        uriVariables.add("format", "csv");
-        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
-        ResponseEntity<String> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, String.class);
-        String responseString = responseEntity.getBody().replaceAll("\r","");
-        String[] records = responseString.split("\n");
-        for (int index = 1; index < records.length; index++) {
-            String[] fields = records[index].split(",",-1);
-            if (REDCAP_FIELD_NAME_FOR_RECORD_ID.equals(fields[0])) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public JsonNode[] getRedcapDataForProjectByToken(String projectToken) {
         LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
         uriVariables.add("token", projectToken);
@@ -366,6 +341,19 @@ public class RedcapSessionManager {
         HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         log.info("Getting attributes for project...");
         ResponseEntity<RedcapProjectAttribute[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapProjectAttribute[].class);
+        return responseEntity.getBody();
+    }
+
+    public RedcapProjectInfo[] getRedcapProjectInfoByToken(String projectToken) {
+        LinkedMultiValueMap<String, String> uriVariables = new LinkedMultiValueMap<>();
+        uriVariables.add("token", projectToken);
+        uriVariables.add("content", "project");
+        uriVariables.add("format", "json");
+        uriVariables.add("type", "flat");
+        RestTemplate restTemplate = new RestTemplate();
+        HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
+        log.info("Getting info for project...");
+        ResponseEntity<RedcapProjectInfo[]> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, RedcapProjectInfo[].class);
         return responseEntity.getBody();
     }
 }

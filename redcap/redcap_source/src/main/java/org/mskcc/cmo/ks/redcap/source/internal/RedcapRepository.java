@@ -36,19 +36,29 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.*;
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
-import org.apache.commons.text.StringEscapeUtils;
 import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
+import org.mskcc.cmo.ks.redcap.util.ValueNormalizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class RedcapRepository {
 
+    private class ImportDataComparisonResult {
+        public Set<String> recordNamesSeenInFile = new HashSet<>();
+        public Set<String> recordNamesForUnmatchedProjectRecords = new HashSet<>();
+        public List<String> recordsToImport = new ArrayList<>();
+        public ImportDataComparisonResult() {}
+    };
+
     @Autowired
     private MetadataCache metadataCache;
 
     @Autowired
     private RedcapSessionManager redcapSessionManager;
+
+    @Autowired
+    private ValueNormalizer valueNormalizer;
 
     private final Logger log = Logger.getLogger(RedcapRepository.class);
 
@@ -83,117 +93,172 @@ public class RedcapRepository {
         return redcapSessionManager.getTimelineTokenMapByStableId(stableId);
     }
 
+    public ListIterator<String> getClinicalProjectTitleIterator(String stableId) {
+        Map<String, String> clinicalTokenMap = redcapSessionManager.getClinicalTokenMapByStableId(stableId);
+        List<String> clinicalProjectTitleList = new ArrayList<>(clinicalTokenMap.keySet());
+        return clinicalProjectTitleList.listIterator();
+    }
+
+    public ListIterator<String> getTimelineProjectTitleIterator(String stableId) {
+        Map<String, String> timelineTokenMap = redcapSessionManager.getTimelineTokenMapByStableId(stableId);
+        List<String> timelineProjectTitleList = new ArrayList<>(timelineTokenMap.keySet());
+        return timelineProjectTitleList.listIterator();
+    }
+
     /** dataForImport : first element is a tab delimited string holding the headers from the file, additional elements are tab delimited records
     */
-    public void importClinicalData(String projectToken, List<String> dataForImport) throws Exception {
-        if (!dataFileHeadersEqualRedcapProjectHeaders(dataForImport, projectToken)) {
-            log.error("file for import has differing headers in redcap ... aborting attempt to import data");
-            throw new Exception("file for import has differing headers in redcap ... aborting attempt to import data");
-        }
+    public void importClinicalData(String projectToken, List<String> dataForImport, boolean keepExistingProjectData) throws Exception {
+        throwExceptionIfHeaderMismatchDetected(projectToken, dataForImport);
         replaceExternalHeadersWithRedcapIds(dataForImport);
-        // fetch the redcap project's "identifier"/primary key from the redcap-header/metadata API
-        List<RedcapProjectAttribute> redcapAttributeArray = getAttributesByToken(projectToken); // my_first_instrument_complete is filtered out in this function
-        String primaryKeyField = getPrimaryKeyFieldNameFromRedcapAttributes(redcapAttributeArray);
-        boolean primaryKeyIsRecordId = (primaryKeyField.equals(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID));
-        List<String> redcapAttributeNameList = createRedcapAttributeNameList(redcapAttributeArray, primaryKeyIsRecordId);
+        // fetch the redcap project's "identifier"/record name from the redcap-header/metadata API
+        List<RedcapProjectAttribute> redcapAttributeArray = getAttributesByToken(projectToken); // {form_name}_complete fields are filtered out within this function
+        String recordNameField = getRecordNameFieldNameFromRedcapAttributes(redcapAttributeArray);
+        // TODO: replace the next line with a call to redcapSessionManager.getProjectInfoByToken() and see if using_autonumbering is set
+        boolean recordNameFieldIsRecordId = (recordNameField.equals(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID));
+        throwExceptionIfKeepingExistingDataWithAutonumberingProject(recordNameFieldIsRecordId, keepExistingProjectData);
+        List<String> redcapAttributeNameList = createRedcapAttributeNameList(redcapAttributeArray, recordNameFieldIsRecordId);
         List<String> fileAttributeNameList = createFileAttributeNameList(dataForImport.get(0));
         Map<String, Integer> fileAttributeNameToPositionMap = createAttributeNameToPositionMap(fileAttributeNameList);
         List<Integer> fileFieldSelectionOrder = createFieldSelectionOrder(fileAttributeNameToPositionMap, redcapAttributeNameList);
-        Map<String, String> existingRedcapRecordMap = createExistingRedcapRecordMap(projectToken, redcapAttributeNameList, primaryKeyField);
-        int maximumObservedRecordId = Integer.MIN_VALUE;
-        if (primaryKeyIsRecordId) {
-            maximumObservedRecordId = findMaximumRecordIdFromRecordMap(existingRedcapRecordMap);
+        Map<String, String> existingRedcapRecordMap = createExistingRedcapRecordMap(projectToken, redcapAttributeNameList, recordNameField);
+        ImportDataComparisonResult comparisonResult = compareDataForImportToExistingRedcapProjectData(dataForImport, fileFieldSelectionOrder, recordNameFieldIsRecordId, existingRedcapRecordMap);
+        if (!keepExistingProjectData) {
+            deleteProjectRecordsNotMatchingThoseBeingImported(projectToken, comparisonResult);
         }
-        // begin comparison
-        Set<String> primaryKeysSeenInFile = new HashSet<>();
-        List<String> recordsToImport = new ArrayList<>();
+        if (comparisonResult.recordsToImport.size() > 0) {
+            importNewOrModifiedRecordsToProject(projectToken, recordNameFieldIsRecordId, fileAttributeNameList, redcapAttributeNameList, comparisonResult.recordsToImport);
+        }
+    }
+
+    private void throwExceptionIfHeaderMismatchDetected(String projectToken, List<String> dataForImport) throws Exception {
+        //TODO : pass in flag to tell whether this is a autonumbered project and then skip the first field regardless of field name
+        List<String> normalizedDataFileHeader = Arrays.asList(externalFieldNamesToRedcapFieldIds(dataForImport.get(0).split("\t",-1)));
+        List<RedcapProjectAttribute> redcapAttributes = getAttributesByToken(projectToken);
+        List<String> redcapProjectHeader = new ArrayList<String>();
+        for (int i = 0; i < redcapAttributes.size(); i++) {
+            if (redcapAttributes.get(i).getFieldName().equals(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID)) {
+                if (i == 0) {
+                    continue; // skip autonumbered record_id field in first column
+                }
+            }
+            redcapProjectHeader.add(redcapAttributes.get(i).getFieldName());
+        }
+        Collections.sort(normalizedDataFileHeader);
+        Collections.sort(redcapProjectHeader);
+        if (!normalizedDataFileHeader.equals(redcapProjectHeader)) {
+            logMessageAndThrowException("file for import has differing headers in redcap ... aborting attempt to import data");
+        }
+    }
+
+    private void throwExceptionIfKeepingExistingDataWithAutonumberingProject(boolean recordNameFieldIsRecordId, boolean keepExistingProjectData) throws Exception {
+        if (recordNameFieldIsRecordId && keepExistingProjectData) {
+            logMessageAndThrowException("\"--keep-existing-project-data\" cannot be used when importing to projects that use Autonumbering for record ids");
+        }
+    }
+
+    private void logMessageAndThrowException(String message) throws Exception {
+        log.error(message);
+        throw new Exception(message);
+    }
+
+    /* Computes a diff of the data for import to the existing data in redcap project.
+     */
+    private ImportDataComparisonResult compareDataForImportToExistingRedcapProjectData(List<String> dataForImport, List<Integer> fileFieldSelectionOrder, boolean recordNameFieldIsRecordId, Map<String, String> existingRedcapRecordMap) {
+        ImportDataComparisonResult comparisonResult = new ImportDataComparisonResult();
+        comparisonResult.recordNamesForUnmatchedProjectRecords.addAll(existingRedcapRecordMap.values()); // will be removed as records are matched
+        HashMap<String, Integer> dataForImportOccurrenceCount = new HashMap<>();
         ListIterator<String> fileRecordIterator = dataForImport.listIterator(1);
+        boolean duplicateDataForImportDetected = false;
         while (fileRecordIterator.hasNext()) {
             List<String> fileRecordFieldValues = Arrays.asList(fileRecordIterator.next().split("\t", -1));
             List<String> orderedFileRecordFieldValues = new ArrayList<>();
             for (int index : fileFieldSelectionOrder) {
-                orderedFileRecordFieldValues.add(fileRecordFieldValues.get(index));
+                String normalizedFieldValue = valueNormalizer.normalize(fileRecordFieldValues.get(index));
+                orderedFileRecordFieldValues.add(normalizedFieldValue);
             }
             String orderedFileRecord = String.join("\t", orderedFileRecordFieldValues);
-            // remember which primary key values were seen anywhere in the file
-            if (!primaryKeyIsRecordId) {
-                primaryKeysSeenInFile.add(orderedFileRecordFieldValues.get(0));
+            // remember which record names were seen anywhere in the file
+            if (!recordNameFieldIsRecordId) {
+                comparisonResult.recordNamesSeenInFile.add(orderedFileRecordFieldValues.get(0));
             }
             // check for exact matches to record content within redcap
             if (!existingRedcapRecordMap.containsKey(orderedFileRecord)) {
-                recordsToImport.add(orderedFileRecord);
+                if (!dataForImportOccurrenceCount.containsKey(orderedFileRecord)) {
+                    comparisonResult.recordsToImport.add(orderedFileRecord);
+                }
             } else {
-                existingRedcapRecordMap.put(orderedFileRecord, null);
+                String recordNameForMatchedProjectRecord = existingRedcapRecordMap.get(orderedFileRecord);
+                comparisonResult.recordNamesForUnmatchedProjectRecords.remove(recordNameForMatchedProjectRecord);
+            }
+            // maintain running tally of record occurrence counts from dataForImport
+            if (dataForImportOccurrenceCount.containsKey(orderedFileRecord)) {
+                dataForImportOccurrenceCount.put(orderedFileRecord, dataForImportOccurrenceCount.get(orderedFileRecord) + 1);
+                duplicateDataForImportDetected = true;
+            } else {
+                dataForImportOccurrenceCount.put(orderedFileRecord, 1);
             }
         }
-        // get keys that are in redcap but not imported file - delete
-        Set<String> primaryKeysToDelete = new HashSet<>();
-        for (String value : existingRedcapRecordMap.values()) {
-            if (value != null && !primaryKeysSeenInFile.contains(value)) {
-                primaryKeysToDelete.add(value);
+        if (duplicateDataForImportDetected) {
+            logWarningsAboutDuplicatedDataForImport(dataForImportOccurrenceCount);
+        }
+        return comparisonResult;
+    }
+
+    private void logWarningsAboutDuplicatedDataForImport(Map<String, Integer> dataForImportOccurrenceCount) {
+        StringBuilder message = new StringBuilder("Duplications of the following records from the import file were ignored (field order is ordered to match redcap project):\n");
+        for (String record : dataForImportOccurrenceCount.keySet()) {
+            int occurrenceCount = dataForImportOccurrenceCount.get(record);
+            if (occurrenceCount > 1) {
+                message.append("    " + record + " (" + Integer.toString(occurrenceCount) + " occurrences seen)\n");
             }
         }
-        if (primaryKeysToDelete.size() > 0) {
-            redcapSessionManager.deleteRedcapProjectData(projectToken, primaryKeysToDelete);
+        log.warn(message);
+    }
+
+    private void deleteProjectRecordsNotMatchingThoseBeingImported(String projectToken, ImportDataComparisonResult comparisonResult) {
+        // get keys that are in redcap project but not imported file, then delete
+        Set<String> recordNamesToDelete = new HashSet<>();
+        for (String recordName : comparisonResult.recordNamesForUnmatchedProjectRecords) {
+            if (!comparisonResult.recordNamesSeenInFile.contains(recordName)) {
+                recordNamesToDelete.add(recordName);
+            }
         }
-        boolean prependRecordIdColumn = primaryKeyIsRecordId && !fileAttributeNameList.contains(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID);
-        // need to add ordered header to string being passed into request
+        if (recordNamesToDelete.size() > 0) {
+            redcapSessionManager.deleteRedcapProjectData(projectToken, recordNamesToDelete);
+        }
+    }
+
+    private void importNewOrModifiedRecordsToProject(String projectToken, boolean recordNameFieldIsRecordId, List<String> fileAttributeNameList, List<String> redcapAttributeNameList, List<String> recordsToImport) {
+        boolean prependRecordIdColumn = recordNameFieldIsRecordId && !fileAttributeNameList.contains(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID);
+        // add ordered redcap header string to request
         List<String> headerFieldsForImports = new ArrayList<>(redcapAttributeNameList);
-        if (prependRecordIdColumn ) {
+        if (prependRecordIdColumn) {
             headerFieldsForImports.add(0, RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID);
+            Integer nextAvailableAutonumberedRecordName = redcapSessionManager.getNextRecordNameForAutonumberedProject(projectToken);
+            addRecordIdColumnIfMissingInFileAndPresentInProject(recordsToImport, nextAvailableAutonumberedRecordName.intValue());
         }
         String orderedHeaderCSV = String.join(",", headerFieldsForImports);
-        if (recordsToImport.size() > 0) {
-            if (prependRecordIdColumn) {
-                addRecordIdColumnIfMissingInFileAndPresentInProject(recordsToImport, maximumObservedRecordId);
-            }
-            List<String> recordsToImportCSV = convertTSVtoCSV(recordsToImport, true);
-            String formattedRecordsToImport = "\n" + orderedHeaderCSV + "\n" +  String.join("\n",recordsToImportCSV.toArray(new String[0])) + "\n";
-            redcapSessionManager.importClinicalData(projectToken, formattedRecordsToImport);
-        }
+        List<String> recordsToImportCSV = valueNormalizer.convertTSVtoCSV(recordsToImport, true);
+        String formattedRecordsToImport = "\n" + orderedHeaderCSV + "\n" +  String.join("\n",recordsToImportCSV.toArray(new String[0])) + "\n";
+        redcapSessionManager.importClinicalData(projectToken, formattedRecordsToImport);
     }
 
-    public void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> recordsToImport, int maximumExistingRecordId) {
-        int nextRecordId = maximumExistingRecordId + 1;
+    private void addRecordIdColumnIfMissingInFileAndPresentInProject(List<String> recordsToImport, int nextAvailableAutonumberedRecordName) {
         for (int index = 0; index < recordsToImport.size(); index++) {
-            String expandedLine = Integer.toString(nextRecordId) + "\t" + recordsToImport.get(index);
+            String expandedLine = Integer.toString(nextAvailableAutonumberedRecordName) + "\t" + recordsToImport.get(index);
             recordsToImport.set(index, expandedLine);
-            nextRecordId = nextRecordId + 1;
+            nextAvailableAutonumberedRecordName = nextAvailableAutonumberedRecordName + 1;
         }
-    }
-
-    private List<String> convertTSVtoCSV(List<String> tsvLines, boolean dropDuplicatedKeys) {
-        HashSet<String> seen = new HashSet<String>();
-        LinkedList<String> csvLines = new LinkedList<String>();
-        for (String tsvLine : tsvLines) {
-            String[] tsvFields = tsvLine.split("\t", -1);
-            String key = tsvFields[0].trim();
-            if (dropDuplicatedKeys && seen.contains(key)) {
-                continue;
-            }
-            seen.add(key);
-            String[] csvFields = new String[tsvFields.length];
-            for (int i = 0; i < tsvFields.length; i++) {
-                String tsvField = tsvFields[i];
-                String csvField = tsvField;
-                if (tsvField.indexOf(",") != -1) {
-                    csvField = StringEscapeUtils.escapeCsv(tsvField);
-                }
-                csvFields[i] = csvField;
-            }
-            csvLines.add(String.join(",", csvFields));
-        }
-        return csvLines;
     }
 
     /** this function selects just the ordered list of redcap field ids which are expected to be imported
      *  by constucting a string composed of values from these fields (in this order) we can compare / match
      *  records in the imported file to records in the existing redcap project
      */
-    public List<String> createRedcapAttributeNameList(List<RedcapProjectAttribute> attributeList, boolean primaryKeyIsRecordId) {
+    public List<String> createRedcapAttributeNameList(List<RedcapProjectAttribute> attributeList, boolean recordNameFieldIsRecordId) {
         List<String> attributeNameList = new ArrayList<String>();
         for (RedcapProjectAttribute attribute : attributeList) {
-            if (primaryKeyIsRecordId && attribute.getFieldName().equals(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID)) {
+            if (recordNameFieldIsRecordId && attribute.getFieldName().equals(redcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID)) {
                 continue;
             }
             attributeNameList.add(attribute.getFieldName());
@@ -225,32 +290,15 @@ public class RedcapRepository {
         return fieldSelectionOrder;
     }
 
-    private Map<String, String> createExistingRedcapRecordMap(String projectToken, List<String> redcapAttributeNameList, String primaryKeyField) {
+    private Map<String, String> createExistingRedcapRecordMap(String projectToken, List<String> redcapAttributeNameList, String recordNameField) {
         JsonNode[] redcapDataRecords = redcapSessionManager.getRedcapDataForProjectByToken(projectToken);
         Map<String, String> existingRedcapRecordMap = new HashMap<>();
         for (JsonNode redcapResponse : redcapDataRecords) {
             String existingRedcapRecordString = createExistingRedcapRecordString(redcapAttributeNameList, redcapResponse);
-            String primaryKeyValue = redcapResponse.get(primaryKeyField).asText();
-            existingRedcapRecordMap.put(existingRedcapRecordString, primaryKeyValue);
+            String recordName = redcapResponse.get(recordNameField).asText();
+            existingRedcapRecordMap.put(existingRedcapRecordString, recordName);
         }
         return existingRedcapRecordMap;
-    }
-
-    private int findMaximumRecordIdFromRecordMap(Map<String, String> existingRedcapRecordMap) {
-        int maximumRecordIdFound = 0; // so that the next available recordId for import is 1 when the project is empty
-        for (String recordIdString : existingRedcapRecordMap.values()) {
-            try {
-                int recordId = Integer.parseInt(recordIdString);
-                if (recordId > maximumRecordIdFound) {
-                    maximumRecordIdFound = recordId;
-                }
-            } catch (NumberFormatException e) {
-                String errorMessage = "Error : primary key is record_id, and redcap contained a non-integer value : " + recordIdString;
-                log.error(errorMessage);
-                throw new RuntimeException(errorMessage);
-            }
-        }
-        return maximumRecordIdFound;
     }
 
     private String createExistingRedcapRecordString(List<String> redcapAttributeNameList, JsonNode redcapResponse) {
@@ -263,14 +311,14 @@ public class RedcapRepository {
 
     public List<RedcapProjectAttribute> getAttributesByToken(String projectToken) {
         RedcapProjectAttribute[] redcapAttributeByToken = redcapSessionManager.getRedcapAttributeByToken(projectToken);
-        return filterRedcapInstrumentCompleteField(redcapAttributeByToken);
+        return filterRedcapInstrumentCompleteFields(redcapAttributeByToken);
     }
 
     public List<Map<String, String>> getRedcapDataForProject(String projectToken) {
         JsonNode[] redcapDataRecords = redcapSessionManager.getRedcapDataForProjectByToken(projectToken);
-        //TODO : we could eliminate the next line if we store the instrument name at the time the the headers are requested through ClinicalDataSource.get[Project|Sample|Patient]Header()
+        //TODO : we could eliminate the next line if we store the instrument names at the time the the headers are requested through ClinicalDataSource.get[Project|Sample|Patient]Header()
         RedcapProjectAttribute[] attributeArray = redcapSessionManager.getRedcapAttributeByToken(projectToken);
-        String redcapInstrumentCompleteFieldName = getRedcapInstrumentName(attributeArray) + "_complete";
+        Set<String> instrumentCompleteFieldNames = getInstrumentCompleteFieldNames(attributeArray);
         List<Map<String, String>> redcapDataForProject = new ArrayList<>();
         for (JsonNode redcapResponse : redcapDataRecords) {
             Map<String, String> redcapDataRecord = new HashMap<>();
@@ -279,7 +327,7 @@ public class RedcapRepository {
                 Map.Entry<String, JsonNode> entry = (Map.Entry<String, JsonNode>)redcapNodeIterator.next();
                 String redcapId = entry.getKey();
                 RedcapAttributeMetadata metadata = null;
-                if (redcapId.equals(redcapInstrumentCompleteFieldName)) {
+                if (instrumentCompleteFieldNames.contains(redcapId)) {
                     continue;
                 }
                 try {
@@ -297,76 +345,46 @@ public class RedcapRepository {
         return redcapDataForProject;
     }
 
-    public String getPrimaryKeyFieldNameFromRedcapAttributes(List<RedcapProjectAttribute>redcapAttributeArray) {
+    public String getRecordNameFieldNameFromRedcapAttributes(List<RedcapProjectAttribute>redcapAttributeArray) {
         //TODO maybe check for empty list and throw exception
         if (redcapAttributeArray == null || redcapAttributeArray.size() < 1) {
-            String errorMessage = "Error retrieving primary key from project : no attributes available";
+            String errorMessage = "Error retrieving record name field from project : no attributes available";
             log.error(errorMessage);
             throw new RuntimeException(errorMessage);
         }
-        return redcapAttributeArray.get(0).getFieldName(); // we are making the assumption tha the first attribute in the metadata is always the primary key
+        return redcapAttributeArray.get(0).getFieldName(); // we are making the assumption tha the first attribute in the metadata is always the record name field
     }
 
-    public List<RedcapProjectAttribute> filterRedcapInstrumentCompleteField(RedcapProjectAttribute[] redcapAttributeArray) {
+    public List<RedcapProjectAttribute> filterRedcapInstrumentCompleteFields(RedcapProjectAttribute[] redcapAttributeArray) {
         //TODO maybe check for empty list and throw exception
         if (redcapAttributeArray == null || redcapAttributeArray.length < 1) {
             String errorMessage = "Error retrieving instrument name from project : no attributes available";
             log.error(errorMessage);
             throw new RuntimeException(errorMessage);
         }
+        Set<String> instrumentCompleteFieldNames = getInstrumentCompleteFieldNames(redcapAttributeArray);
         List<RedcapProjectAttribute> filteredProjectAttributeList = new ArrayList<>();
-        String redcapInstrumentCompleteFieldName = redcapAttributeArray[0].getFormName() + "_complete";
         for (RedcapProjectAttribute redcapProjectAttribute : redcapAttributeArray) {
-            if (!redcapInstrumentCompleteFieldName.equals(redcapProjectAttribute.getFieldName())) {
+            if (!instrumentCompleteFieldNames.contains(redcapProjectAttribute.getFieldName())) {
                 filteredProjectAttributeList.add(redcapProjectAttribute);
             }
         }
         return filteredProjectAttributeList;
     }
 
-    /** add record_id column if missing in data file contents and present in redcap project */
-    //TODO make this method private
-    public void adjustDataForRedcapImport(List<String> dataFileContentsTSV, String projectToken) {
-        if (dataFileContentsTSV.get(0).startsWith(RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID)) {
-            return; // RECORD_ID field is already the first field in the file
-        }
-        Integer maximumRecordIdInProject = redcapSessionManager.getMaximumRecordIdInRedcapProjectIfPresent(projectToken);
-        if (maximumRecordIdInProject == null) {
-            return; // record_id field is not present in project
-        }
-        int nextRecordId = maximumRecordIdInProject + 1;
-        boolean headerHandled = false;
-        for (int index = 0; index < dataFileContentsTSV.size(); index++) {
-            if (headerHandled) {
-                String expandedLine = Integer.toString(nextRecordId) + "\t" + dataFileContentsTSV.get(index);
-                dataFileContentsTSV.set(index, expandedLine);
-                nextRecordId = nextRecordId + 1;
-            } else {
-                String expandedLine = RedcapSessionManager.REDCAP_FIELD_NAME_FOR_RECORD_ID + "\t" + dataFileContentsTSV.get(index);
-                dataFileContentsTSV.set(index, expandedLine);
-                headerHandled = true;
+    public Set<String> getInstrumentCompleteFieldNames(RedcapProjectAttribute[] redcapAttributeArray) {
+        Set<String> instrumentCompleteFieldNames = new HashSet<String>();
+        for (RedcapProjectAttribute redcapProjectAttribute : redcapAttributeArray) {
+            String instrumentCompleteFieldName = redcapProjectAttribute.getFormName() + "_complete";
+            if (!instrumentCompleteFieldNames.contains(instrumentCompleteFieldName)) {
+                instrumentCompleteFieldNames.add(instrumentCompleteFieldName);
             }
         }
+        return instrumentCompleteFieldNames;
     }
 
     public String getRedcapInstrumentName(RedcapProjectAttribute[] attributeArray) {
         return attributeArray[0].getFormName();
-    }
-
-    // check to ensure that datafile headers match those in redcap project
-    // TO DO: pass in a project title instead of token?
-    public boolean dataFileHeadersEqualRedcapProjectHeaders(List<String> dataForImport, String projectToken) {
-        List<String> normalizedDataFileHeader = Arrays.asList(externalFieldNamesToRedcapFieldIds(dataForImport.get(0).split("\t",-1)));
-        List<RedcapProjectAttribute> redcapAttributes = getAttributesByToken(projectToken);
-        List<String> redcapProjectHeader = new ArrayList<String>();
-        for (int i = 0; i < redcapAttributes.size(); i++) {
-            if (!redcapAttributes.get(i).getFieldName().equals("record_id")) {
-                redcapProjectHeader.add(redcapAttributes.get(i).getFieldName());
-            }
-        }
-        Collections.sort(normalizedDataFileHeader);
-        Collections.sort(redcapProjectHeader);
-        return normalizedDataFileHeader.equals(redcapProjectHeader);
     }
 
     private void replaceExternalHeadersWithRedcapIds(List<String> dataForImport) {

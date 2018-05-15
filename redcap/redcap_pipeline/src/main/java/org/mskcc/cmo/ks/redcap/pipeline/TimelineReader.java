@@ -35,6 +35,7 @@ package org.mskcc.cmo.ks.redcap.pipeline;
 import java.util.*;
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.redcap.source.*;
+import org.mskcc.cmo.ks.redcap.pipeline.util.JobParameterUtils;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
@@ -50,6 +51,9 @@ public class TimelineReader implements ItemStreamReader<Map<String, String>> {
     @Autowired
     public ClinicalDataSource clinicalDataSource;
 
+    @Autowired
+    public JobParameterUtils jobParameterUtils;
+
     @Value("#{jobParameters[rawData]}")
     private Boolean rawData;
 
@@ -59,57 +63,75 @@ public class TimelineReader implements ItemStreamReader<Map<String, String>> {
     @Value("#{jobParameters[stableId]}")
     public String stableId;
 
-    private final Logger log = Logger.getLogger(ClinicalDataReader.class);
+    private final Logger log = Logger.getLogger(TimelineReader.class);
 
     public List<Map<String, String>> timelineRecords = new ArrayList<>();
     private List<String> timelineHeader = new ArrayList<>();
+    private Set<String> maskRedcapProjectSet = new HashSet<>();
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        boolean writeTimelineData = true;
-        if (redcapProjectTitle == null) {
-            writeTimelineData = clinicalDataSource.hasMoreTimelineData(stableId);
-        }
-        if (writeTimelineData) {
-            String projectTitle = (redcapProjectTitle == null) ? clinicalDataSource.getNextTimelineProjectTitle(stableId) : redcapProjectTitle;
-            log.info("Getting timeline header for project: " + projectTitle);
-            timelineHeader = clinicalDataSource.getProjectHeader(projectTitle);
-            timelineRecords = clinicalDataSource.exportRawDataForProjectTitle(projectTitle);
-            if (!rawData) {
-                // merge remaining timeline data sources if in merge mode and more timeline data exists
-                if (clinicalDataSource.hasMoreTimelineData(stableId)) {
-                    mergeTimelineDataSources();
-                }
+        parseMaskRedcapProjectSet();
+        String projectTitle = redcapProjectTitle;
+        while (projectTitle == null && clinicalDataSource.hasMoreTimelineData(stableId)) {
+            String nextProjectTitle = clinicalDataSource.getNextTimelineProjectTitle(stableId);
+            if (maskRedcapProjectSet.contains(nextProjectTitle)) {
+                clinicalDataSource.getTimelineData(stableId); // currently, we must get the data in order to move past this project
+                continue;
             }
-            // update execution context with project title and full timeline header        
+            projectTitle = nextProjectTitle;
+        }
+        boolean writeTimelineData = (projectTitle != null);
+        if (writeTimelineData) {
+            log.info("Getting timeline header for project: " + projectTitle);
+            if (rawData) {
+                timelineHeader = clinicalDataSource.getProjectHeader(projectTitle);
+                timelineRecords = clinicalDataSource.exportRawDataForProjectTitle(projectTitle);
+            } else {
+                timelineHeader.clear();
+                timelineRecords.clear();
+                mergeTimelineDataSources();
+            }
+            // update execution context with project title and full timeline header
             ec.put("projectTitle", projectTitle);
             ec.put("timelineHeader", timelineHeader);
-        }
-        else {
+        } else {
             String message = "No timeline data for ";
             if (stableId != null) {
                 message += "stable id: " + stableId;
-            }
-            else {
+            } else {
                 message += "redcap project title: " + redcapProjectTitle;
             }
             log.warn(message);
         }
         ec.put("writeTimelineData", writeTimelineData);
     }
-    
+
+    private void parseMaskRedcapProjectSet() {
+        maskRedcapProjectSet.clear();
+        for (String projectName : jobParameterUtils.getListOfMaskedProjects()) {
+            String trimmedProjectName = projectName.trim();
+            if (trimmedProjectName.length() > 0) {
+                maskRedcapProjectSet.add(trimmedProjectName);
+            }
+        }
+    }
+
     private void mergeTimelineDataSources() {
         while (clinicalDataSource.hasMoreTimelineData(stableId)) {
             String projectTitle = clinicalDataSource.getNextTimelineProjectTitle(stableId);
-            
+            if (maskRedcapProjectSet.contains(projectTitle)) {
+                clinicalDataSource.getTimelineData(stableId); // currently, we must get the data in order to move past this project
+                continue; // skip masked projects
+            }
+
             // get timeline data header for project and merge with global timeline header
             log.info("Merging timeline data for project: " + projectTitle);
             List<String> header = clinicalDataSource.getTimelineHeader(stableId);
             for (String column : header) {
-                if (timelineHeader.contains(column)) {
-                    continue;
+                if (!timelineHeader.contains(column)) {
+                    timelineHeader.add(column);
                 }
-                timelineHeader.add(column);
             }
             // now add all timeline data records for current project
             timelineRecords.addAll(clinicalDataSource.getTimelineData(stableId));

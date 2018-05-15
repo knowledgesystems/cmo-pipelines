@@ -55,12 +55,15 @@ public class ImportRedcapProjectDataTasklet implements Tasklet {
     @Value("#{jobParameters[redcapProjectTitle]}")
     private String redcapProjectTitle;
 
+    @Value("#{jobParameters[keepExistingProjectData]}")
+    private boolean keepExistingProjectData;
+
     private final Logger log = Logger.getLogger(ImportRedcapProjectDataTasklet.class);
 
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
         try {
-            clinicalDataSource.importClinicalDataFile(redcapProjectTitle, filename);
+            clinicalDataSource.importClinicalDataFile(redcapProjectTitle, filename, keepExistingProjectData);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }

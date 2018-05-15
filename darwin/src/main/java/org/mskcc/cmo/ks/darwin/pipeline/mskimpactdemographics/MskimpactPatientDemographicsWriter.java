@@ -34,6 +34,7 @@ package org.mskcc.cmo.ks.darwin.pipeline.mskimpactdemographics;
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactPatientDemographics;
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactCompositeDemographics;
 
+import com.google.common.base.Strings;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.core.io.*;
@@ -50,14 +51,19 @@ import org.apache.commons.lang.StringUtils;
 public class MskimpactPatientDemographicsWriter implements ItemStreamWriter<MskimpactCompositeDemographics>{
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDirectory;
-    
+
+    @Value("#{jobParameters[currentDemographicsRecCount]}")
+    private Integer currentDemographicsRecCount;
+
     @Value("${darwin.demographics_filename}")
     private String datasetFilename;
-    
+
+    private final double DEMOGRAPHIC_RECORD_DROP_THRESHOLD = 0.9;
+    private int recordsWritten;
     private List<String> writeList = new ArrayList<>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
     private File stagingFile;
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException{
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
@@ -65,29 +71,37 @@ public class MskimpactPatientDemographicsWriter implements ItemStreamWriter<Mski
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback(){
             @Override
             public void writeHeader(Writer writer) throws IOException{
-                writer.write(StringUtils.join(new MskimpactPatientDemographics().getPatientDemographicsHeaders(), "\t"));
+                writer.write(StringUtils.join(MskimpactPatientDemographics.getPatientDemographicsHeaders(), "\t"));
             }
         });
         stagingFile = new File(outputDirectory, datasetFilename);
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }
-    
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException{}
-    
+
     @Override
     public void close() throws ItemStreamException{
+        if (recordsWritten < (DEMOGRAPHIC_RECORD_DROP_THRESHOLD * currentDemographicsRecCount)) {
+            throw new RuntimeException("Number of records in latest demographics fetch (" + recordsWritten +
+                    ") dropped greater than 90% of current record count (" + currentDemographicsRecCount +
+                    ") in backup demographics file - exiting...");
+        }
         flatFileItemWriter.close();
     }
-    
+
     @Override
     public void write(List<? extends MskimpactCompositeDemographics> items) throws Exception{
         writeList.clear();
         for(MskimpactCompositeDemographics record : items){
-            writeList.add(record.getDemographicsResult());
+            if (!Strings.isNullOrEmpty(record.getDemographicsResult())) {
+                writeList.add(record.getDemographicsResult());
+                recordsWritten++;
+            }
         }
         flatFileItemWriter.write(writeList);
     }
-    
+
 }

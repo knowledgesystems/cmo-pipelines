@@ -73,6 +73,26 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
         return makeHeader(combinedAttributeMap);
     }
 
+    /**
+     * Generates list of patient attributes from the passed in fullHeader
+     * @param fullHeader
+     * @return
+     */
+    @Override
+    public Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader) {
+        return filterFullHeader(fullHeader, "attribute_types", "PATIENT");
+    }
+
+    /**
+     * Generates list of sample attributes from the passed in fullHeader
+     * @param fullHeader
+     * @return
+     */
+    @Override
+    public Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader) {
+        return filterFullHeader(fullHeader, "attribute_types", "SAMPLE");
+    }
+
     @Override
     public boolean allHeadersAreValidClinicalAttributes(List<String> headers) {
         ArrayList<String> invalidHeaders = new ArrayList<>();
@@ -91,6 +111,33 @@ public class MetadataManagerRedcapImpl implements MetadataManager {
             throw new RuntimeException(message.toString());
         }
         return true;
+    }
+
+    private Map<String, List<String>> filterFullHeader(Map<String, List<String>> fullHeader, String metadataAttributeKey, String metadataAttributeValue) {
+        List<String> displayNames = new ArrayList<>();
+        List<String> descriptions = new ArrayList<>();
+        List<String> datatypes = new ArrayList<>();
+        List<String> priorities = new ArrayList<>();
+        List<String> header = new ArrayList<>();
+        if (fullHeader != null) {
+            List<String> metadataAttributeValues = fullHeader.get(metadataAttributeKey);
+            for (int i=0; i<fullHeader.get("header").size(); i++) {
+                if (metadataAttributeValues == null || metadataAttributeValues.get(i).equals(metadataAttributeValue)) {
+                    displayNames.add(fullHeader.get("display_names").get(i));
+                    descriptions.add(fullHeader.get("descriptions").get(i));
+                    datatypes.add(fullHeader.get("datatypes").get(i));
+                    priorities.add(fullHeader.get("priorities").get(i));
+                    header.add(fullHeader.get("header").get(i));
+                }
+            }
+        }
+        Map<String, List<String>> filteredFullHeader = new HashMap<>();
+        filteredFullHeader.put("display_names", displayNames);
+        filteredFullHeader.put("descriptions", descriptions);
+        filteredFullHeader.put("datatypes", datatypes);
+        filteredFullHeader.put("priorities", priorities);
+        filteredFullHeader.put("header", header);
+        return filteredFullHeader;
     }
 
     private List<RedcapAttributeMetadata> getMetadata() {

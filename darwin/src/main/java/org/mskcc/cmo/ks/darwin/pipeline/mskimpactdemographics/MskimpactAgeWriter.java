@@ -31,10 +31,12 @@
 */
 package org.mskcc.cmo.ks.darwin.pipeline.mskimpactdemographics;
 
+import org.mskcc.cmo.ks.darwin.pipeline.model.*;
+
+import com.google.common.base.Strings;
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
-import org.mskcc.cmo.ks.darwin.pipeline.model.*;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -52,6 +54,7 @@ public class MskimpactAgeWriter implements ItemStreamWriter<MskimpactCompositeDe
     @Value("${darwin.age_filename}")
     private String datasetFilename;
 
+    private int recordsWritten;
     private List<String> writeList = new ArrayList<>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
     private File stagingFile;
@@ -76,6 +79,9 @@ public class MskimpactAgeWriter implements ItemStreamWriter<MskimpactCompositeDe
 
     @Override
     public void close() throws ItemStreamException {
+        if (recordsWritten == 0) {
+            throw new RuntimeException("No records were written to output file: " + stagingFile.getName() + " - exiting...");
+        }
         flatFileItemWriter.close();
     }
 
@@ -83,8 +89,11 @@ public class MskimpactAgeWriter implements ItemStreamWriter<MskimpactCompositeDe
     public void write(List<? extends MskimpactCompositeDemographics> items) throws Exception {
         writeList.clear();
         for (MskimpactCompositeDemographics record : items) {
-            writeList.add(record.getAgeResult());
+            if (!Strings.isNullOrEmpty(record.getAgeResult())) {
+                writeList.add(record.getAgeResult());
+                recordsWritten++;
+            }
         }
         flatFileItemWriter.write(writeList);
-    }    
+    }
 }

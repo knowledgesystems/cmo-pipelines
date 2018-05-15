@@ -32,6 +32,8 @@
 package org.mskcc.cmo.ks.darwin.pipeline.skcm_mskcc_2015_chantclinical;
 
 import org.mskcc.cmo.ks.darwin.pipeline.model.*;
+
+import com.google.common.base.Strings;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.core.io.*;
@@ -47,22 +49,23 @@ import org.apache.commons.lang.StringUtils;
  * @author heinsz
  */
 public class Skcm_mskcc_2015_chantClinicalSampleWriter implements ItemStreamWriter<Skcm_mskcc_2015_chantClinicalCompositeRecord> {
-    
+
     @Value("#{jobParameters[outputDirectory]}")
-    private String outputDirectory;    
-    
+    private String outputDirectory;
+
     @Value("${darwin.skcm_mskcc_2015_chant_clinical_sample_filename}")
-    private String filename;    
-    
+    private String filename;
+
     @Value("#{stepExecutionContext['sampleHeader']}")
     private Map<String, List<String>> sampleHeader;
-    
+
     @Value("#{stepExecutionContext['patientHeader']}")
     private Map<String, List<String>> patientHeader;
-    
+
+    private int recordsWritten;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
-    private File stagingFile;    
-    
+    private File stagingFile;
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.stagingFile = new File(outputDirectory, filename);
@@ -81,28 +84,34 @@ public class Skcm_mskcc_2015_chantClinicalSampleWriter implements ItemStreamWrit
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }
-    
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {}
-    
+
     @Override
     public void close() throws ItemStreamException {
+        if (recordsWritten == 0) {
+            throw new RuntimeException("No records were written to output file: " + stagingFile.getName() + " - exiting...");
+        }
         flatFileItemWriter.close();
     }
-    
+
     @Override
     public void write(List<? extends Skcm_mskcc_2015_chantClinicalCompositeRecord> items) throws Exception {
         List<String> writeList = new ArrayList<>();
         for (Skcm_mskcc_2015_chantClinicalCompositeRecord result : items) {
-            writeList.add(result.getSampleRecord());
+            if (!Strings.isNullOrEmpty(result.getSampleRecord())) {
+                writeList.add(result.getSampleRecord());
+                recordsWritten++;
+            }
         }
-        
+
         flatFileItemWriter.write(writeList);
     }
-    private String getMetaLine(List<String> sampleMetadata, List<String> patientMetadata) {        
+    private String getMetaLine(List<String> sampleMetadata, List<String> patientMetadata) {
         int sidIndex = sampleHeader.get("header").indexOf("SAMPLE_ID");
         int pidIndex = patientHeader.get("header").indexOf("PATIENT_ID");
-        return sampleMetadata.remove(sidIndex) + "\t" + patientMetadata.get(pidIndex) + "\t" + StringUtils.join(sampleMetadata, "\t");        
+        return sampleMetadata.remove(sidIndex) + "\t" + patientMetadata.get(pidIndex) + "\t" + StringUtils.join(sampleMetadata, "\t");
     }
-    
+
 }

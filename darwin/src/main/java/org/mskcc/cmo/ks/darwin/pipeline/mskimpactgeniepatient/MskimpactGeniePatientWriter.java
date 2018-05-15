@@ -31,10 +31,12 @@
 */
 package org.mskcc.cmo.ks.darwin.pipeline.mskimpactgeniepatient;
 
+import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactNAACCRClinical;
+
+import com.google.common.base.Strings;
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
-import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactNAACCRClinical;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -52,6 +54,7 @@ public class MskimpactGeniePatientWriter implements ItemStreamWriter<String>{
     @Value("${darwin.genie_patient_filename}")
     private String datasetFilename;
 
+    private int recordsWritten;
     private List<String> writeList = new ArrayList<>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
     private File stagingFile;
@@ -76,11 +79,21 @@ public class MskimpactGeniePatientWriter implements ItemStreamWriter<String>{
 
     @Override
     public void close() throws ItemStreamException {
+        if (recordsWritten == 0) {
+            throw new RuntimeException("No records were written to output file: " + stagingFile.getName() + " - exiting...");
+        }
         flatFileItemWriter.close();
     }
 
     @Override
     public void write(List<? extends String> list) throws Exception {
-        flatFileItemWriter.write(list);
+        writeList.clear();
+        for (String record : list) {
+            if (!Strings.isNullOrEmpty(record)) {
+                writeList.add(record);
+                recordsWritten++;
+            }
+        }
+        flatFileItemWriter.write(writeList);
     }
 }

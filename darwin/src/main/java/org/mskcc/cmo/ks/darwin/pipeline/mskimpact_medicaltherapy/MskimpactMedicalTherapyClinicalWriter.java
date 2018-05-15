@@ -33,6 +33,7 @@ package org.mskcc.cmo.ks.darwin.pipeline.mskimpact_medicaltherapy;
 
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactMedicalTherapy;
 
+import com.google.common.base.Strings;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.core.io.*;
@@ -40,7 +41,6 @@ import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Value;
 import java.io.*;
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
 
 /**
  * @author Benjamin Gross
@@ -49,15 +49,16 @@ public class MskimpactMedicalTherapyClinicalWriter implements ItemStreamWriter<M
 {
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDirectory;
-    
+
     @Value("${darwin.medicaltherapy_clinical_filename}")
     private String outputFilename;
 
     private File stagingFile;
 
+    private int recordsWritten;
     private List<String> writeList = new ArrayList<>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
-        
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException{
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
@@ -72,20 +73,26 @@ public class MskimpactMedicalTherapyClinicalWriter implements ItemStreamWriter<M
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }
-    
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException{}
-    
+
     @Override
     public void close() throws ItemStreamException{
+        if (recordsWritten == 0) {
+            throw new RuntimeException("No records were written to output file: " + stagingFile.getName() + " - exiting...");
+        }
         flatFileItemWriter.close();
     }
-    
+
     @Override
     public void write(List<? extends MskimpactMedicalTherapy> items) throws Exception{
         writeList.clear();
         for (MskimpactMedicalTherapy item : items) {
-            writeList.add(item.getDMP_ID_PHARMACY() + "\tYes");
+            if (!Strings.isNullOrEmpty(item.getDMP_ID_PHARMACY())) {
+                writeList.add(item.getDMP_ID_PHARMACY() + "\tYes");
+                recordsWritten++;
+            }
         }
         flatFileItemWriter.write(writeList);
     }

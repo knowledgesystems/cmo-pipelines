@@ -40,7 +40,6 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
-import org.mskcc.cmo.ks.redcap.models.ProjectInfoResponse;
 import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
 import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
 import org.mskcc.cmo.ks.redcap.models.RedcapToken;

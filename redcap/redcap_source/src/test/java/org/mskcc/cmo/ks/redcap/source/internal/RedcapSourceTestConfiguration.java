@@ -47,6 +47,7 @@ import org.mskcc.cmo.ks.redcap.source.internal.ClinicalDataSourceRedcapImpl;
 import org.mskcc.cmo.ks.redcap.source.MetadataManager;
 import org.mskcc.cmo.ks.redcap.source.internal.MetadataManagerRedcapImpl;
 import org.mskcc.cmo.ks.redcap.source.internal.CDDSessionManager;
+import org.mskcc.cmo.ks.redcap.util.ValueNormalizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
@@ -60,18 +61,23 @@ public class RedcapSourceTestConfiguration {
     public static final String SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_TOKEN = "MixedClinicalProjectToken";
     public static final String SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_INSTRUMENT_NAME = "my_first_instrument";
     public static final String SIMPLE_MIXED_TYPE_CLINICAL_STABLE_ID = "MixedClinicalProjectStableId";
-    public static final String RECORD_ID_NOT_AS_PRIMARY_KEY_PROJECT_TOKEN = "RecordIdNotAsPrimaryKeyProjectToken"; 
-    public static final String RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN = "RecordIdAsPrimaryKeyProjectToken";
-    public static final String RECORD_ID_NOT_PRESENT_PROJECT_TOKEN = "RecordIdNotPresentProjectToken"; 
-    public static Set<String> recordsPassedToRedcapSessionManagerForDeletion = new HashSet<>();    
-    public static String recordsPassedToRedcapSessionManagerForImport; 
+    public static final String RECORD_ID_NOT_AS_RECORD_NAME_FIELD_PROJECT_TOKEN = "RecordIdNotAsRecordNameFieldProjectToken";
+    public static final String RECORD_ID_AS_RECORD_NAME_FIELD_PROJECT_TOKEN = "RecordIdAsRecordNameFieldProjectToken";
+    public static final String RECORD_ID_NOT_PRESENT_PROJECT_TOKEN = "RecordIdNotPresentProjectToken";
+    public static Set<String> recordsPassedToRedcapSessionManagerForDeletion = null;
+    public static String recordsPassedToRedcapSessionManagerForImport = null;
 
     public String getRecordsPassedToRedcapSessionManagerForUpload() {
         return recordsPassedToRedcapSessionManagerForImport;
     }
-    
+
     public Set<String> getRecordsPassedToRedcapSessionManagerForDeletion() {
         return recordsPassedToRedcapSessionManagerForDeletion;
+    }
+
+    public void resetRedcapSessionManagerHistory() {
+        recordsPassedToRedcapSessionManagerForImport = null;
+        recordsPassedToRedcapSessionManagerForDeletion = null;
     }
 
     @Bean
@@ -87,6 +93,11 @@ public class RedcapSourceTestConfiguration {
     @Bean
     public MetadataManager metadataManager() {
         return new MetadataManagerRedcapImpl();
+    }
+
+    @Bean
+    public ValueNormalizer valueNormalizer() {
+        return new ValueNormalizer();
     }
 
     @Bean
@@ -111,21 +122,19 @@ public class RedcapSourceTestConfiguration {
         Answer<Void> redcapSessionManagerDeleteProjectDataAnswer = new Answer<Void>() {
             public Void answer(InvocationOnMock deleteRedcapProjectDataInvocation) {
                 String projectToken = deleteRedcapProjectDataInvocation.getArgument(0);
-                Set<String> recordPrimaryKeySetForDeletion = deleteRedcapProjectDataInvocation.getArgument(1);
-                recordsPassedToRedcapSessionManagerForDeletion.clear();
-                recordsPassedToRedcapSessionManagerForDeletion.addAll(recordPrimaryKeySetForDeletion);
+                Set<String> recordNameSetForDeletion = deleteRedcapProjectDataInvocation.getArgument(1);
+                recordsPassedToRedcapSessionManagerForDeletion = new HashSet<String>(recordNameSetForDeletion);
                 return null;
             }
-        };   
+        };
         Answer<Void> redcapSessionManagerImportProjectDataAnswer = new Answer<Void>() {
             public Void answer(InvocationOnMock importRedcapProjectDataInvocation) {
                 String projectToken = (String)importRedcapProjectDataInvocation.getArguments()[0];
                 String formattedRecordsToImport = (String)importRedcapProjectDataInvocation.getArguments()[1];
-                recordsPassedToRedcapSessionManagerForImport = null;
                 recordsPassedToRedcapSessionManagerForImport = formattedRecordsToImport;
                 return null;
             }
-        }; 
+        };
         //configure token requests
         Mockito.when(redcapSessionManager.getTokenByProjectTitle(ONE_DIGIT_PROJECT_TITLE)).thenReturn(ONE_DIGIT_PROJECT_TOKEN);
         Mockito.when(redcapSessionManager.getTokenByProjectTitle(SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_TITLE)).thenReturn(SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_TOKEN);
@@ -136,26 +145,29 @@ public class RedcapSourceTestConfiguration {
         //configure meta data requests
         RedcapAttributeMetadata[] mockReturnForGetMetadata = makeMockRedcapIdToMetadataList();
         JsonNode[] mockReturnForGetData = makeMockReturnForGetData();
-        JsonNode[] mockReturnForGetDataWithRecordIdAsPrimaryKey = makeMockReturnForGetDataWithRecordIdAsPrimaryKey();
+        JsonNode[] mockReturnForGetDataWithRecordIdAsRecordNameField = makeMockReturnForGetDataWithRecordIdAsRecordNameField();
         JsonNode[] mockReturnForGetDataWithRecordIdNotPresent = makeMockReturnForGetDataWithRecordIdNotPresent();
+        Integer mockReturnForGetNextRecordName = makeMockReturnForGetNextRecordName(mockReturnForGetDataWithRecordIdAsRecordNameField);
         //configure data requests
-        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(ONE_DIGIT_PROJECT_TOKEN))).thenReturn(mockReturnForGetData); 
+        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(ONE_DIGIT_PROJECT_TOKEN))).thenReturn(mockReturnForGetData);
         // mocked projects for testing data import:
-        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetDataWithRecordIdAsPrimaryKey);
+        Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(RECORD_ID_AS_RECORD_NAME_FIELD_PROJECT_TOKEN))).thenReturn(mockReturnForGetDataWithRecordIdAsRecordNameField);
         Mockito.when(redcapSessionManager.getRedcapDataForProjectByToken(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN))).thenReturn(mockReturnForGetDataWithRecordIdNotPresent);
+        Mockito.when(redcapSessionManager.getNextRecordNameForAutonumberedProject(ArgumentMatchers.eq(RECORD_ID_AS_RECORD_NAME_FIELD_PROJECT_TOKEN))).thenReturn(mockReturnForGetNextRecordName);
+        Mockito.when(redcapSessionManager.getNextRecordNameForAutonumberedProject(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN))).thenReturn(mockReturnForGetNextRecordName);
         // mock requests for project metadata (i.e field_names) - possible combinations
         RedcapProjectAttribute[] mockReturnForGetAttributesData = makeMockReturnForGetAttributesData();
-        RedcapProjectAttribute[] mockReturnForGetAttributesDataWithRecordIdAsPrimaryKey = makeMockReturnForGetAttributesDataWithRecordIdAsPrimaryKey();
-        RedcapProjectAttribute[] mockReturnForGetAttributesDataWithRecordIdNotAsPrimaryKey = makeMockReturnForGetAttributesDataWithRecordIdNotAsPrimaryKey();
+        RedcapProjectAttribute[] mockReturnForGetAttributesDataWithRecordIdAsRecordNameField = makeMockReturnForGetAttributesDataWithRecordIdAsRecordNameField();
+        RedcapProjectAttribute[] mockReturnForGetAttributesDataWithRecordIdNotAsRecordNameField = makeMockReturnForGetAttributesDataWithRecordIdNotAsRecordNameField();
         //Mockito.when(redcapSessionManager.getRedcapAttributeByToken(SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_TOKEN)).thenReturn(mockReturnForGetAttributesData);
         Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.any(String.class))).thenReturn(mockReturnForGetAttributesData);
-        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesDataWithRecordIdAsPrimaryKey);
-        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(RECORD_ID_NOT_AS_PRIMARY_KEY_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesDataWithRecordIdNotAsPrimaryKey);
+        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(RECORD_ID_AS_RECORD_NAME_FIELD_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesDataWithRecordIdAsRecordNameField);
+        Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(RECORD_ID_NOT_AS_RECORD_NAME_FIELD_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesDataWithRecordIdNotAsRecordNameField);
         Mockito.when(redcapSessionManager.getRedcapAttributeByToken(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN))).thenReturn(mockReturnForGetAttributesData);
         //Mockito.when(redcapSessionManager.getRedcapInstrumentNameByToken(SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_TOKEN)).thenReturn(SIMPLE_MIXED_TYPE_CLINICAL_PROJECT_INSTRUMENT_NAME);
-        Mockito.doAnswer(redcapSessionManagerDeleteProjectDataAnswer).when(redcapSessionManager).deleteRedcapProjectData(ArgumentMatchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN), ArgumentMatchers.anySet());
+        Mockito.doAnswer(redcapSessionManagerDeleteProjectDataAnswer).when(redcapSessionManager).deleteRedcapProjectData(ArgumentMatchers.eq(RECORD_ID_AS_RECORD_NAME_FIELD_PROJECT_TOKEN), ArgumentMatchers.anySet());
         Mockito.doAnswer(redcapSessionManagerDeleteProjectDataAnswer).when(redcapSessionManager).deleteRedcapProjectData(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN), ArgumentMatchers.anySet());
-        Mockito.doAnswer(redcapSessionManagerImportProjectDataAnswer).when(redcapSessionManager).importClinicalData(ArgumentMatchers.eq(RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN), ArgumentMatchers.any(String.class));
+        Mockito.doAnswer(redcapSessionManagerImportProjectDataAnswer).when(redcapSessionManager).importClinicalData(ArgumentMatchers.eq(RECORD_ID_AS_RECORD_NAME_FIELD_PROJECT_TOKEN), ArgumentMatchers.any(String.class));
         Mockito.doAnswer(redcapSessionManagerImportProjectDataAnswer).when(redcapSessionManager).importClinicalData(ArgumentMatchers.eq(RECORD_ID_NOT_PRESENT_PROJECT_TOKEN), ArgumentMatchers.any(String.class));
         return redcapSessionManager;
     }
@@ -171,8 +183,8 @@ public class RedcapSourceTestConfiguration {
     }
 
 
-    private void storeRecordPrimaryKeySetForDeletion(Set<String> recordPrimaryKeySetForDeletion) {
-        recordsPassedToRedcapSessionManagerForDeletion.addAll(recordPrimaryKeySetForDeletion);
+    private void storeRecordNameSetForDeletion(Set<String> recordNameSetForDeletion) {
+        recordsPassedToRedcapSessionManagerForDeletion = new HashSet<String>(recordNameSetForDeletion);
     }
 
     private RedcapAttributeMetadata[] makeMockRedcapIdToMetadataList() {
@@ -243,7 +255,7 @@ public class RedcapSourceTestConfiguration {
             throw new RuntimeException(e);
         }
     }
-        
+
     private JsonNode[] makeMockReturnForGetData() {
         String mockReturnJsonString =
                 "[" +
@@ -255,7 +267,7 @@ public class RedcapSourceTestConfiguration {
     }
 
     private JsonNode[] makeMockReturnForGetDataWithRecordIdNotPresent() {
-        String mockReturnJsonString = 
+        String mockReturnJsonString =
                 "[" +
                     "{\"patient_id\":\"P-0000001\",\"sample_id\":\"P-0000001-T01\",\"necrosis\":\"YES\",\"ethnicity\":\"Asian\"}," +
                     "{\"patient_id\":\"P-0000002\",\"sample_id\":\"P-0000002-T02\",\"necrosis\":\"NO\",\"ethnicity\":\"Caucasian\"}," +
@@ -264,8 +276,8 @@ public class RedcapSourceTestConfiguration {
         return createJsonNodeArrayFromString(mockReturnJsonString);
     }
 
-    private JsonNode[] makeMockReturnForGetDataWithRecordIdAsPrimaryKey() {
-        String mockReturnJsonString = 
+    private JsonNode[] makeMockReturnForGetDataWithRecordIdAsRecordNameField() {
+        String mockReturnJsonString =
                 "[" +
                     "{\"record_id\":\"1\",\"patient_id\":\"P-0000001\",\"sample_id\":\"P-0000001-T01\",\"necrosis\":\"YES\",\"ethnicity\":\"Asian\"}," +
                     "{\"record_id\":\"2\",\"patient_id\":\"P-0000002\",\"sample_id\":\"P-0000002-T02\",\"necrosis\":\"NO\",\"ethnicity\":\"Caucasian\"}," +
@@ -274,6 +286,25 @@ public class RedcapSourceTestConfiguration {
         return createJsonNodeArrayFromString(mockReturnJsonString);
     }
 
+    private Integer makeMockReturnForGetNextRecordName(JsonNode[] mockedProjectDataWithRecordIdField) {
+        int maxRecordId = 0;
+        for (JsonNode node : mockedProjectDataWithRecordIdField) {
+            JsonNode recordIdNode = node.get("record_id");
+            if (recordIdNode == null) {
+                continue;
+            }
+            String recordIdString = recordIdNode.asText();
+            try {
+                int recordId = Integer.parseInt(recordIdString);
+                if (recordId > maxRecordId) {
+                    maxRecordId = recordId;
+                }
+            } catch (NumberFormatException e) {
+                continue;
+            }
+        }
+        return new Integer(maxRecordId + 1);
+    }
 
     private RedcapProjectAttribute[] makeMockReturnForGetAttributesData() {
         RedcapProjectAttribute[] attributeArray = new RedcapProjectAttribute[5];
@@ -300,7 +331,7 @@ public class RedcapSourceTestConfiguration {
         return attributeArray;
     }
 
-    private RedcapProjectAttribute[] makeMockReturnForGetAttributesDataWithRecordIdAsPrimaryKey() {
+    private RedcapProjectAttribute[] makeMockReturnForGetAttributesDataWithRecordIdAsRecordNameField() {
         List<RedcapProjectAttribute> attributeList = new ArrayList<RedcapProjectAttribute>(Arrays.asList(makeMockReturnForGetAttributesData()));
         RedcapProjectAttribute recordIdAttribute = new RedcapProjectAttribute();
         recordIdAttribute.setFieldName("record_id");
@@ -309,7 +340,7 @@ public class RedcapSourceTestConfiguration {
         return attributeList.toArray(new RedcapProjectAttribute[attributeList.size()]);
     }
 
-    private RedcapProjectAttribute[] makeMockReturnForGetAttributesDataWithRecordIdNotAsPrimaryKey() {
+    private RedcapProjectAttribute[] makeMockReturnForGetAttributesDataWithRecordIdNotAsRecordNameField() {
         List<RedcapProjectAttribute> attributeList = new ArrayList<RedcapProjectAttribute>(Arrays.asList(makeMockReturnForGetAttributesData()));
         RedcapProjectAttribute recordIdAttribute = new RedcapProjectAttribute();
         recordIdAttribute.setFieldName("record_id");

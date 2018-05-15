@@ -53,7 +53,7 @@ import org.apache.log4j.Logger;
  * @author heinsz
  */
 public class Skcm_mskcc_2015_chantTimelineReader implements ItemStreamReader<Skcm_mskcc_2015_chantTimelineRecord> {
-    
+
     @Value("${darwin.skcm_mskcc_2015_chant.adjuvant_tx_view}")
     private String adjuvantTxView;
     @Value("${darwin.skcm_mskcc_2015_chant.rad_therapy_view}")
@@ -61,22 +61,25 @@ public class Skcm_mskcc_2015_chantTimelineReader implements ItemStreamReader<Skc
     @Value("${darwin.skcm_mskcc_2015_chant.systemic_tx_view}")
     private String systemicTxView;
     @Autowired
-    SQLQueryFactory darwinQueryFactory;    
-    
+    SQLQueryFactory darwinQueryFactory;
+
     List<Skcm_mskcc_2015_chantTimelineRecord> melanomaTimelineRecords;
     Logger log = Logger.getLogger(MskimpactPatientDemographicsReader.class);
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.melanomaTimelineRecords = getMelanomaTimelineRecords();
+        if (melanomaTimelineRecords == null || melanomaTimelineRecords.isEmpty()) {
+            throw new ItemStreamException("Error fetching records from Darwin Melanoma Timeline Views");
+        }
     }
-    
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {}
-    
+
     @Override
     public void close() throws ItemStreamException {}
-    
+
     @Override
     public Skcm_mskcc_2015_chantTimelineRecord read() throws Exception {
         if (!melanomaTimelineRecords.isEmpty()) {
@@ -84,7 +87,7 @@ public class Skcm_mskcc_2015_chantTimelineReader implements ItemStreamReader<Skc
         }
         return null;
     }
-    
+
     @Transactional
     private List<Skcm_mskcc_2015_chantTimelineRecord> getMelanomaTimelineRecords() {
         log.info("Start of Darwin skcm_mskcc_2015_chant timeline records query..");
@@ -92,7 +95,7 @@ public class Skcm_mskcc_2015_chantTimelineReader implements ItemStreamReader<Skc
         Skcm_mskcc_2015_chantTimelineAdjuvantTx qAdjuvantTxView = alias(Skcm_mskcc_2015_chantTimelineAdjuvantTx.class, adjuvantTxView);
         Skcm_mskcc_2015_chantTimelineRadTherapy qRadTherapyView = alias(Skcm_mskcc_2015_chantTimelineRadTherapy.class, radTherapyView);
         Skcm_mskcc_2015_chantTimelineSystemicTx qSystemicTxView = alias(Skcm_mskcc_2015_chantTimelineSystemicTx.class, systemicTxView);
-        
+
         List<Skcm_mskcc_2015_chantTimelineAdjuvantTx> adjuvantTimelineRecords = darwinQueryFactory.selectDistinct(Projections.constructor(Skcm_mskcc_2015_chantTimelineAdjuvantTx.class,
                 $(qAdjuvantTxView.getMELAT_PTID()),
                 $(qAdjuvantTxView.getMELAT_ADJTX_TYP_CD()),
@@ -103,7 +106,7 @@ public class Skcm_mskcc_2015_chantTimelineReader implements ItemStreamReader<Skc
                 $(qAdjuvantTxView.getMELAT_ADJTX_DAYS_DURATION())))
                 .from($(qAdjuvantTxView))
                 .fetch();
-        List<Skcm_mskcc_2015_chantTimelineRadTherapy> radTimelineRecords = darwinQueryFactory.selectDistinct(Projections.constructor(Skcm_mskcc_2015_chantTimelineRadTherapy.class, 
+        List<Skcm_mskcc_2015_chantTimelineRadTherapy> radTimelineRecords = darwinQueryFactory.selectDistinct(Projections.constructor(Skcm_mskcc_2015_chantTimelineRadTherapy.class,
                 $(qRadTherapyView.getMELRT_PTID()),
                 $(qRadTherapyView.getMELRT_RTTX_TYPE_DESC()),
                 $(qRadTherapyView.getMELRT_RTTX_ADJ_DESC()),
@@ -112,7 +115,7 @@ public class Skcm_mskcc_2015_chantTimelineReader implements ItemStreamReader<Skc
                 $(qRadTherapyView.getMELAT_RTTX_DAYS_DURATION())))
                 .from($(qRadTherapyView))
                 .fetch();
-        List<Skcm_mskcc_2015_chantTimelineSystemicTx> systemicTimelineRecords = darwinQueryFactory.selectDistinct(Projections.constructor(Skcm_mskcc_2015_chantTimelineSystemicTx.class, 
+        List<Skcm_mskcc_2015_chantTimelineSystemicTx> systemicTimelineRecords = darwinQueryFactory.selectDistinct(Projections.constructor(Skcm_mskcc_2015_chantTimelineSystemicTx.class,
                 $(qSystemicTxView.getMELST_PTID()),
                 $(qSystemicTxView.getMELST_SYSTX_TYP_DESC()),
                 $(qSystemicTxView.getMELST_SYSTX_TYPE_OTH()),
@@ -120,12 +123,12 @@ public class Skcm_mskcc_2015_chantTimelineReader implements ItemStreamReader<Skc
                 $(qSystemicTxView.getMELST_SYSTX_END_YEAR()),
                 $(qSystemicTxView.getMELST_SYSTX_DAYS_DURATION())))
                 .from($(qSystemicTxView))
-                .fetch();       
-        
+                .fetch();
+
         darwinRecords.addAll(adjuvantTimelineRecords);
         darwinRecords.addAll(radTimelineRecords);
         darwinRecords.addAll(systemicTimelineRecords);
-        
+
         return darwinRecords;
     }
 }

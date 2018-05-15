@@ -89,6 +89,9 @@ public class MskimpactPatientDemographicsReader implements ItemStreamReader<Mski
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException{
         this.darwinDemographicsResults = getDarwinDemographicsResults();
+        if (darwinDemographicsResults == null || darwinDemographicsResults.isEmpty()) {
+            throw new ItemStreamException("Error fetching records from Darwin Demographics Views");
+        }
     }
 
     @Transactional
@@ -136,7 +139,7 @@ public class MskimpactPatientDemographicsReader implements ItemStreamReader<Mski
         MskimpactPatientIcdoRecord qMskImpactPatientIcdoRecord = alias(MskimpactPatientIcdoRecord.class, patientIcdoView);
         MskimpactLatestActivity qMskImpactLatestActivity = alias(MskimpactLatestActivity.class, latestActivityView);
         MskimpactPathologyDmp qMskimpactPathologyDmp = alias(MskimpactPathologyDmp.class, pathologyDmpView);
-        List<MskimpactPatientDemographics> darwinDemographicsResults = darwinQueryFactory.selectDistinct(Projections.constructor(MskimpactPatientDemographics.class,
+        List<MskimpactPatientDemographics> darwinDemographicsResultsList = darwinQueryFactory.selectDistinct(Projections.constructor(MskimpactPatientDemographics.class,
                 $(qMskImpactPatientDemographics.getDMP_ID_DEMO()),
                 $(qMskImpactPatientDemographics.getPT_NAACCR_SEX_CODE()),
                 $(qMskImpactPatientDemographics.getPT_NAACCR_RACE_CODE_PRIMARY()),
@@ -163,7 +166,7 @@ public class MskimpactPatientDemographicsReader implements ItemStreamReader<Mski
 
         // Translate the NAACCR codes for each result
         List<MskimpactPatientDemographics> filteredDarwinDemographicsResults = new ArrayList<>();
-        for (MskimpactPatientDemographics result : darwinDemographicsResults) {
+        for (MskimpactPatientDemographics result : darwinDemographicsResultsList) {
             Matcher matcher = studyIdRegexMap.get(studyID).matcher(result.getSAMPLE_ID_PATH_DMP());
             if (!matcher.matches()) {
                 continue;

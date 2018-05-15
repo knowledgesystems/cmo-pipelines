@@ -40,29 +40,64 @@ import org.junit.runner.RunWith;
 import org.junit.Test;
 import org.mskcc.cmo.ks.redcap.pipeline.ClinicalDataReader;
 import org.mskcc.cmo.ks.redcap.pipeline.ClinicalDataReaderTestConfiguration;
+import org.mskcc.cmo.ks.redcap.pipeline.util.JobParameterUtils;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.beans.factory.config.BeanExpressionContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.*;
 
 @ContextConfiguration(classes=ClinicalDataReaderTestConfiguration.class)
 @RunWith(SpringJUnit4ClassRunner.class)
+@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 public class ClinicalDataReaderTest {
 
     @Autowired
     private ClinicalDataReader clinicalDataReader;
 
+    @Autowired
+    private JobParameterUtils jobParameterUtils;
+    
     /** This test reads a set of mocked redcap projects.
      * Proper output is expected. In particular, no records should be missing the SAMPLE_ID field.
      */
     @Test
     public void testClinicalDataReaderWithPatientOnlyProject() {
+        compareReturnedToExpectedClinicalRecords(makeAllClinicalProjectsExpectedSampleToRecordMap());
+    }
+
+    @Test
+    public void testClinicalDataReaderWithOneMaskedProject() {
+        List<String> listOfMaskedProjects = new ArrayList<>();
+        listOfMaskedProjects.add(ClinicalDataReaderTestConfiguration.MSKIMPACT_SECOND_MASKED_CLINICAL_PROJECT_TITLE);
+        jobParameterUtils.setListOfMaskedProjects(listOfMaskedProjects);
+        compareReturnedToExpectedClinicalRecords(makeMaskedOneClinicalProjectsExpectedSampleToRecordMap());
+    }
+
+    @Test
+    public void testClinicalDataReaderWithTwoMaskedProjects() {
+        List<String> listOfMaskedProjects = new ArrayList<>();
+        listOfMaskedProjects.add(ClinicalDataReaderTestConfiguration.MSKIMPACT_MASKED_CLINICAL_PROJECT_TITLE);
+        listOfMaskedProjects.add(ClinicalDataReaderTestConfiguration.MSKIMPACT_SECOND_MASKED_CLINICAL_PROJECT_TITLE);
+        jobParameterUtils.setListOfMaskedProjects(listOfMaskedProjects);
+        compareReturnedToExpectedClinicalRecords(makeMaskedTwoClinicalProjectsExpectedSampleToRecordMap());
+    }
+
+    @Test
+    public void testClinicalDataReaderFiltersPatientRecordsWithNoMappedSampleRecords() {
+        List<String> listOfMaskedProjects = new ArrayList<>();
+        listOfMaskedProjects.add(ClinicalDataReaderTestConfiguration.MSKIMPACT_GBM_SAMPLE_CLINICAL_PROJECT_TITLE);
+        jobParameterUtils.setListOfMaskedProjects(listOfMaskedProjects);
+        compareReturnedToExpectedClinicalRecords(makeExpectedSampleToRecordMapForPatientRecordsWithNoMappedSampleRecordsTest());
+    }
+
+    public void compareReturnedToExpectedClinicalRecords(Map<String, Map<String, String>> expectedSampleToRecordMap) {
         ExecutionContext ec = new ExecutionContext();
         clinicalDataReader.open(ec);
         StringBuilder errorMessage = new StringBuilder("\nFailures:\n");
         int failCount = 0;
-        Map<String, Map<String, String>> expectedSampleToRecordMap = makeExpectedSampleToRecordMap();
         // reads data from makeMockGbmSampleData() and makeMockGbmPatientData() in ClinicalDataReaderTestConfiguration
         Map<String, Map<String, String>> returnedSampleToRecordMap = new HashMap<>();
         // compare returned values to expected
@@ -164,7 +199,8 @@ public class ClinicalDataReaderTest {
         returnString.append(key + ":" + record.get(key));
     }
 
-    private Map<String, Map<String, String>> makeExpectedSampleToRecordMap() {
+    // Expected mapping when MSKIMPACT_MASKED_CLINICAL_PROJECT and MSKIMPACT_SECOND_MASKED_CLINICAL_PROJECT are masked
+    private Map<String, Map<String, String>> makeMaskedTwoClinicalProjectsExpectedSampleToRecordMap() {
         Map<String, Map<String, String>> expectedRecordMap = new HashMap<>(3);
         Map<String, String> nextRecord = new HashMap<>();
         nextRecord.put("SAMPLE_ID", "P-0000001-T01-IM6");
@@ -187,4 +223,52 @@ public class ClinicalDataReaderTest {
         return expectedRecordMap;
     }
 
+    // Expected mapping when MSKIMPACT_SECOND_MASKED_CLINICAL_PROJECT are masked
+    private Map<String, Map<String, String>> makeMaskedOneClinicalProjectsExpectedSampleToRecordMap() {
+        Map<String, Map<String, String>> expectedRecordMap = makeMaskedTwoClinicalProjectsExpectedSampleToRecordMap();
+        Map<String, String> nextRecord = new HashMap<>();
+        nextRecord.put("SAMPLE_ID", "P-0000004-T01-IM6");
+        nextRecord.put("PATIENT_ID", "P-0000004");
+        nextRecord.put("CANCER_TYPE", "GBM");
+        expectedRecordMap.put(nextRecord.get("SAMPLE_ID"), nextRecord);
+        nextRecord = new HashMap<>();
+        nextRecord.put("SAMPLE_ID", "P-0000005-T01-IM6");
+        nextRecord.put("PATIENT_ID", "P-0000005");
+        nextRecord.put("CANCER_TYPE", "GBM");
+        expectedRecordMap.put(nextRecord.get("SAMPLE_ID"), nextRecord);
+        nextRecord = new HashMap<>();
+        nextRecord.put("SAMPLE_ID", "P-0000006-T01-IM6");
+        nextRecord.put("PATIENT_ID", "P-0000006");
+        nextRecord.put("CANCER_TYPE", "GBM");
+        expectedRecordMap.put(nextRecord.get("SAMPLE_ID"), nextRecord);
+        return expectedRecordMap;
+    }
+
+    private Map<String, Map<String, String>> makeAllClinicalProjectsExpectedSampleToRecordMap() {
+        Map<String, Map<String, String>> expectedRecordMap = makeMaskedOneClinicalProjectsExpectedSampleToRecordMap();
+        Map<String, String> nextRecord = new HashMap<>();
+        nextRecord.put("SAMPLE_ID", "P-0000007-T01-IM6");
+        nextRecord.put("PATIENT_ID", "P-0000007");
+        nextRecord.put("CANCER_TYPE", "GBM");
+        expectedRecordMap.put(nextRecord.get("SAMPLE_ID"), nextRecord);
+        nextRecord = new HashMap<>();
+        nextRecord.put("SAMPLE_ID", "P-0000008-T01-IM6");
+        nextRecord.put("PATIENT_ID", "P-0000008");
+        nextRecord.put("CANCER_TYPE", "GBM");
+        expectedRecordMap.put(nextRecord.get("SAMPLE_ID"), nextRecord);
+        nextRecord = new HashMap<>();
+        nextRecord.put("SAMPLE_ID", "P-0000009-T01-IM6");
+        nextRecord.put("PATIENT_ID", "P-0000009");
+        nextRecord.put("CANCER_TYPE", "GBM");
+        expectedRecordMap.put(nextRecord.get("SAMPLE_ID"), nextRecord);
+        return expectedRecordMap;
+    }
+    
+    private Map<String, Map<String, String>> makeExpectedSampleToRecordMapForPatientRecordsWithNoMappedSampleRecordsTest() {
+        Map<String, Map<String, String>> expectedRecordMap = makeAllClinicalProjectsExpectedSampleToRecordMap();
+        expectedRecordMap.remove("P-0000001-T01-IM6");
+        expectedRecordMap.remove("P-0000002-T01-IM6");
+        expectedRecordMap.remove("P-0000003-T01-IM6");
+        return expectedRecordMap;
+    }
 }

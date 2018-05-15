@@ -34,7 +34,6 @@ package org.mskcc.cmo.ks.redcap.source.internal;
 
 import java.io.*;
 import java.util.*;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.redcap.models.RedcapAttributeMetadata;
 import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
@@ -182,7 +181,17 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
     }
 
     @Override
-    public void importClinicalDataFile(String projectTitle, String filename) throws Exception {
+    public ListIterator<String> getClinicalProjectTitleIterator(String stableId) {
+        return redcapRepository.getClinicalProjectTitleIterator(stableId);
+    }
+
+    @Override
+    public ListIterator<String> getTimelineProjectTitleIterator(String stableId) {
+        return redcapRepository.getTimelineProjectTitleIterator(stableId);
+    }
+
+    @Override
+    public void importClinicalDataFile(String projectTitle, String filename, boolean keepExistingProjectData) throws Exception {
         String projectToken = redcapRepository.getTokenByProjectTitle(projectTitle);
         if (projectToken == null) {
             log.error("Project not found in redcap clinicalDataTokens or clincalTimelineTokens: " + projectTitle);
@@ -203,7 +212,7 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
                 log.error("Error: file " + filename + " has headers that are not defined in the Clinical Data Dictionary ... aborting attempt to import data");
                 throw new Exception("Error: file " + filename + " has headers that are not defined in Clinical Data Dictionary ... aborting attempt to import data");
             }
-            redcapRepository.importClinicalData(projectToken, dataFileContentsTSV);
+            redcapRepository.importClinicalData(projectToken, dataFileContentsTSV, keepExistingProjectData);
         } catch (IOException e) {
             log.error("IOException thrown while attempting to read file " + filename + " : " + e.getMessage());
             throw new IOException("IOException thrown while attempting to read file " + filename + " : " + e.getMessage());
@@ -280,66 +289,6 @@ public class ClinicalDataSourceRedcapImpl implements ClinicalDataSource {
             clinicalTimelineTokens = redcapRepository.getTimelineTokenMapByStableId(stableId);
             clinicalDataTokens = redcapRepository.getClinicalTokenMapByStableId(stableId);
         }
-    }
-
-    /**
-     * Generates list of patient attributes from full header from redcap.
-     * @param fullHeader
-     * @return
-     */
-    @Override
-    public Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader) {
-        List<String> displayNames = new ArrayList<>();
-        List<String> descriptions = new ArrayList<>();
-        List<String> datatypes = new ArrayList<>();
-        List<String> priorities = new ArrayList<>();
-        List<String> header = new ArrayList<>();
-
-        for (int i=0; i<fullHeader.get("header").size(); i++) {
-            if (fullHeader.get("attribute_types").get(i).equals("PATIENT")) {
-                displayNames.add(fullHeader.get("display_names").get(i));
-                descriptions.add(fullHeader.get("descriptions").get(i));
-                datatypes.add(fullHeader.get("datatypes").get(i));
-                priorities.add(fullHeader.get("priorities").get(i));
-                header.add(fullHeader.get("header").get(i));
-            }
-        }
-        fullPatientHeader.put("display_names", displayNames);
-        fullPatientHeader.put("descriptions", descriptions);
-        fullPatientHeader.put("datatypes", datatypes);
-        fullPatientHeader.put("priorities", priorities);
-        fullPatientHeader.put("header", header);
-        return fullPatientHeader;
-    }
-
-    /**
-     * Generates list of sample attributes from full header from redcap.
-     * @param fullHeader
-     * @return
-     */
-    @Override
-    public Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader) {
-        List<String> displayNames = new ArrayList<>();
-        List<String> descriptions = new ArrayList<>();
-        List<String> datatypes = new ArrayList<>();
-        List<String> priorities = new ArrayList<>();
-        List<String> header = new ArrayList<>();
-
-        for (int i=0; i<fullHeader.get("header").size(); i++) {
-            if (fullHeader.get("attribute_types").get(i).equals("SAMPLE")) {
-                displayNames.add(fullHeader.get("display_names").get(i));
-                descriptions.add(fullHeader.get("descriptions").get(i));
-                datatypes.add(fullHeader.get("datatypes").get(i));
-                priorities.add(fullHeader.get("priorities").get(i));
-                header.add(fullHeader.get("header").get(i));
-            }
-        }
-        fullSampleHeader.put("display_names", displayNames);
-        fullSampleHeader.put("descriptions", descriptions);
-        fullSampleHeader.put("datatypes", datatypes);
-        fullSampleHeader.put("priorities", priorities);
-        fullSampleHeader.put("header", header);
-        return fullSampleHeader;
     }
 
     private List<String> readClinicalFile(File file) throws IOException {

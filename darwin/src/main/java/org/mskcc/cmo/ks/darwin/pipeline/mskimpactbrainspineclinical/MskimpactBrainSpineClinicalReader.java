@@ -72,6 +72,9 @@ public class MskimpactBrainSpineClinicalReader implements ItemStreamReader<Mskim
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException{
         this.clinicalBrainSpineResults = getClinicalBrainSpineResults();
+        if (clinicalBrainSpineResults == null || clinicalBrainSpineResults.isEmpty()) {
+            throw new ItemStreamException("Error fetching records from Darwin Brain Spine Clinical Views");
+        }
     }
 
     @Transactional

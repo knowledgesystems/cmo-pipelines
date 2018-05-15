@@ -32,13 +32,6 @@
 
 package org.mskcc.cmo.ks.darwin.pipeline.model;
 
-import java.util.*;
-import org.apache.commons.lang.StringUtils;
-import org.mskcc.cmo.ks.darwin.pipeline.model.*;
-import org.mskcc.cmo.ks.darwin.pipeline.util.DarwinUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.batch.item.ItemProcessor;
-
 /**
  *
  * @author ochoaa
@@ -47,9 +40,9 @@ public class MskimpactCompositeDemographics {
     private String demographicsResult;
     private String ageResult;
     private String vitalStatusResult;
-    
+
     public MskimpactCompositeDemographics(){}
-    
+
     /**
      * @return the demographicsResult
      */
@@ -90,5 +83,5 @@ public class MskimpactCompositeDemographics {
      */
     public void setVitalStatusResult(String vitalStatusResult) {
         this.vitalStatusResult = vitalStatusResult;
-    }    
+    }
 }

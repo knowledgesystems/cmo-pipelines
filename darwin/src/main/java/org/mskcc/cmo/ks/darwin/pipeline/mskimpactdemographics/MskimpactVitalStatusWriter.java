@@ -35,6 +35,7 @@ package org.mskcc.cmo.ks.darwin.pipeline.mskimpactdemographics;
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactCompositeDemographics;
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactPatientDemographics;
 
+import com.google.common.base.Strings;
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
@@ -53,14 +54,15 @@ import org.springframework.core.io.FileSystemResource;
 public class MskimpactVitalStatusWriter implements ItemStreamWriter<MskimpactCompositeDemographics> {
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDirectory;
-    
+
     @Value("${darwin.vital_status_filename}")
     private String datasetFilename;
-    
+
+    private int recordsWritten;
     private List<String> writeList = new ArrayList<>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
     private File stagingFile;
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
@@ -81,6 +83,9 @@ public class MskimpactVitalStatusWriter implements ItemStreamWriter<MskimpactCom
 
     @Override
     public void close() throws ItemStreamException {
+        if (recordsWritten == 0) {
+            throw new RuntimeException("No records were written to output file: " + stagingFile.getName() + " - exiting...");
+        }
         flatFileItemWriter.close();
     }
 
@@ -88,10 +93,13 @@ public class MskimpactVitalStatusWriter implements ItemStreamWriter<MskimpactCom
     public void write(List<? extends MskimpactCompositeDemographics> items) throws Exception {
         writeList.clear();
         for(MskimpactCompositeDemographics record : items){
-            writeList.add(record.getVitalStatusResult());
+            if (!Strings.isNullOrEmpty(record.getVitalStatusResult())) {
+                writeList.add(record.getVitalStatusResult());
+                recordsWritten++;
+            }
         }
         flatFileItemWriter.write(writeList);
     }
-    
-    
+
+
 }

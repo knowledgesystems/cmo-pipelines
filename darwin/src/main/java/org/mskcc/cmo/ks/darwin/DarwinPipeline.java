@@ -52,8 +52,9 @@ public class DarwinPipeline {
     private static Options getOptions(String[] args){
         Options options = new Options();
         options.addOption("h", "help", false, "shows this help document and quits.")
-        .addOption("d", "directory", true, "Output directory")
-        .addOption("s", "study", true, "Cancer Study ID");
+                .addOption("d", "directory", true, "Output directory")
+                .addOption("s", "study", true, "Cancer Study ID")
+                .addOption("c", "current_demographics_rec_count", true, "Count of records in current demographics file. Used to sanity check num of records in latest demographics data fetch.");
         return options;
     }
 
@@ -63,37 +64,35 @@ public class DarwinPipeline {
         System.exit(exitStatus);
     }
 
-    private static void launchJob(String[] args, String outputDirectory, String studyID) throws Exception{
+    private static void launchJob(String[] args, String outputDirectory, String studyID, String currentDemographicsRecCount) throws Exception{
         SpringApplication app = new SpringApplication(DarwinPipeline.class);
         app.setWebEnvironment(false);
         ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
 
-        Job job;
+        String jobName;
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("outputDirectory", outputDirectory)
                 .addString("studyID", studyID)
+                .addString("currentDemographicsRecCount", currentDemographicsRecCount)
                 .toJobParameters();
         switch (studyID) {
             case "mskimpact":
-                job = ctx.getBean(BatchConfiguration.MSKIMPACT_JOB, Job.class);
+                jobName = BatchConfiguration.MSKIMPACT_JOB;
                 break;
             case "skcm_mskcc_2015_chant":
-                job = ctx.getBean(BatchConfiguration.SKCM_MSKCC_2015_CHANT_JOB, Job.class);
+                jobName = BatchConfiguration.SKCM_MSKCC_2015_CHANT_JOB;
                 break;
             default:
-                job = ctx.getBean(BatchConfiguration.MSK_JOB, Job.class);
+                jobName = BatchConfiguration.MSK_JOB;
                 break;
         }
-        if (job!=null){
-            JobExecution jobExecution = jobLauncher.run(job, jobParameters);
+        Job job = ctx.getBean(jobName, Job.class);
+        JobExecution jobExecution = jobLauncher.run(job, jobParameters);
+        if (!jobExecution.getExitStatus().equals(ExitStatus.COMPLETED)) {
+            log.error("DarwinPipeline Job '" + jobName + "' exited with status: " + jobExecution.getExitStatus());
+            System.exit(2);
         }
-        else{
-            log.fatal("Failed to start DarwinPipeline");
-        }
-
-        log.info("Shutting down DarwinPipeline");
-        ctx.close();
     }
 
     public static void main(String[] args) throws Exception{
@@ -102,10 +101,11 @@ public class DarwinPipeline {
         CommandLine commandLine = parser.parse(options, args);
         if (commandLine.hasOption("h")||
             !commandLine.hasOption("directory")||
-            !commandLine.hasOption("study")){
+            !commandLine.hasOption("study") ||
+            !commandLine.hasOption("current_demographics_rec_count")){
             help(options, 0);
         }
 
-        launchJob(args, commandLine.getOptionValue("directory"), commandLine.getOptionValue("study"));
+        launchJob(args, commandLine.getOptionValue("directory"), commandLine.getOptionValue("study"), commandLine.getOptionValue("current_demographics_rec_count"));
     }
 }

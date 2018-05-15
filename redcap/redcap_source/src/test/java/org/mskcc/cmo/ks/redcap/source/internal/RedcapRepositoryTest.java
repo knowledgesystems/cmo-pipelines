@@ -33,13 +33,14 @@
 package org.mskcc.cmo.ks.redcap.source.internal;
 
 import java.util.*;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.Test;
-import org.mskcc.cmo.ks.redcap.source.internal.RedcapSourceTestConfiguration;
-import org.mskcc.cmo.ks.redcap.source.internal.RedcapRepository;
 import org.mskcc.cmo.ks.redcap.models.RedcapProjectAttribute;
+import org.mskcc.cmo.ks.redcap.source.internal.RedcapRepository;
+import org.mskcc.cmo.ks.redcap.source.internal.RedcapSourceTestConfiguration;
 import org.springframework.beans.factory.annotation.*;
-import org.junit.Assert;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -51,6 +52,19 @@ public class RedcapRepositoryTest {
     private RedcapRepository redcapRepository;
     @Autowired
     private RedcapSourceTestConfiguration redcapSourceTestConfiguration;
+
+    private static final boolean DROP_EXISTING_RECORDS = false;
+    private static final boolean KEEP_EXISTING_RECORDS = true;
+    private static String RECORD_ID_FIRST_TOKEN;
+    private static String RECORD_ID_LATER_TOKEN;
+    private static String RECORD_ID_ABSENT_TOKEN;
+
+    @BeforeClass
+    public static void setupForTests() {
+        RECORD_ID_FIRST_TOKEN = RedcapSourceTestConfiguration.RECORD_ID_AS_RECORD_NAME_FIELD_PROJECT_TOKEN;
+        RECORD_ID_LATER_TOKEN = RedcapSourceTestConfiguration.RECORD_ID_NOT_AS_RECORD_NAME_FIELD_PROJECT_TOKEN;
+        RECORD_ID_ABSENT_TOKEN = RedcapSourceTestConfiguration.RECORD_ID_NOT_PRESENT_PROJECT_TOKEN;
+    }
 
     /* This test mocks the RedcapSessionManager to add a project with fields {"PATIENT_ID", "CRDB_CONSENT_DATE_DAYS", "PARTA_CONSENTED_12_245"}.
      * getRedcapDataForProject() is called to test whether the mocked data is returned for all fields.
@@ -74,21 +88,21 @@ public class RedcapRepositoryTest {
      */
     @Test
     public void testCreateRedcapAttributeNameList() {
-        List<RedcapProjectAttribute> attributeListWithRecordIdAsPrimaryKey = redcapRepository.getAttributesByToken(RedcapSourceTestConfiguration.RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN);
-        List<RedcapProjectAttribute> attributeListWithRecordIdNotAsPrimaryKey = redcapRepository.getAttributesByToken(RedcapSourceTestConfiguration.RECORD_ID_NOT_AS_PRIMARY_KEY_PROJECT_TOKEN);
-        List<RedcapProjectAttribute> attributeListWithoutRecordId = redcapRepository.getAttributesByToken(RedcapSourceTestConfiguration.RECORD_ID_NOT_PRESENT_PROJECT_TOKEN);
+        List<RedcapProjectAttribute> attributeListWithRecordIdAsRecordNameField = redcapRepository.getAttributesByToken(RECORD_ID_FIRST_TOKEN);
+        List<RedcapProjectAttribute> attributeListWithRecordIdNotAsRecordNameField = redcapRepository.getAttributesByToken(RECORD_ID_LATER_TOKEN);
+        List<RedcapProjectAttribute> attributeListWithoutRecordId = redcapRepository.getAttributesByToken(RECORD_ID_ABSENT_TOKEN);
 
-        List<String> attributeNameListWithRecordIdAsPrimaryKey = redcapRepository.createRedcapAttributeNameList(attributeListWithRecordIdAsPrimaryKey, true);
-        List<String> attributeNameListWithRecordIdNotAsPrimaryKey = redcapRepository.createRedcapAttributeNameList(attributeListWithRecordIdNotAsPrimaryKey, false);
+        List<String> attributeNameListWithRecordIdAsRecordNameField = redcapRepository.createRedcapAttributeNameList(attributeListWithRecordIdAsRecordNameField, true);
+        List<String> attributeNameListWithRecordIdNotAsRecordNameField = redcapRepository.createRedcapAttributeNameList(attributeListWithRecordIdNotAsRecordNameField, false);
         List<String> attributeNameListWithoutRecordId = redcapRepository.createRedcapAttributeNameList(attributeListWithoutRecordId, true);
 
         List<String> expectedAttributeNameList = createExpectedAttributeNameList();
         List<String> expectedAttributeNameListWithRecordId = createExpectedAttributeNameListWithRecordId();
-        if (!checkAttributeNameListsAreEqual(attributeNameListWithRecordIdAsPrimaryKey, expectedAttributeNameList)) {
-            Assert.fail("Returned list is different from expected: " + String.join(",", attributeNameListWithRecordIdAsPrimaryKey) + "\t" + String.join(",", expectedAttributeNameList));
+        if (!checkAttributeNameListsAreEqual(attributeNameListWithRecordIdAsRecordNameField, expectedAttributeNameList)) {
+            Assert.fail("Returned list is different from expected: " + String.join(",", attributeNameListWithRecordIdAsRecordNameField) + "\t" + String.join(",", expectedAttributeNameList));
         }
-        if (!checkAttributeNameListsAreEqual(attributeNameListWithRecordIdNotAsPrimaryKey, expectedAttributeNameListWithRecordId)) {
-            Assert.fail("Returned list is different from expected: " + String.join(",", attributeNameListWithRecordIdNotAsPrimaryKey) + "\t" + String.join(",", expectedAttributeNameListWithRecordId));
+        if (!checkAttributeNameListsAreEqual(attributeNameListWithRecordIdNotAsRecordNameField, expectedAttributeNameListWithRecordId)) {
+            Assert.fail("Returned list is different from expected: " + String.join(",", attributeNameListWithRecordIdNotAsRecordNameField) + "\t" + String.join(",", expectedAttributeNameListWithRecordId));
         }
         if (!checkAttributeNameListsAreEqual(attributeNameListWithoutRecordId, expectedAttributeNameList)) {
             Assert.fail("Returned list is different from expected: " + String.join(",", attributeNameListWithoutRecordId) + "\t" + String.join(",", expectedAttributeNameList));
@@ -104,41 +118,72 @@ public class RedcapRepositoryTest {
         List<String> defaultFileForImport = createDefaultFileForImport();
         List<String> newFileForImport = createNewFileForImport();
         List<String> changedFileForImport = createChangedFileForImport();
+        List<String> variedFileForImport = createVariedFileForImport();
+        List<String> newDuplicateFileForImport = createNewDuplicateFileForImport();
+        List<String> existingDuplicateFileForImport = createExistingDuplicateFileForImport();
 
         String expectedRecordsForDefaultImport = null;
         String expectedRecordsForNewImport = createExpectedRecordsForNewImport();
-        String expectedRecordsForNewImportWithRecordIdAsPrimaryKey = createExpectedRecordsForNewImportWithRecordIdAsPrimaryKey();
+        String expectedRecordsForNewImportWithRecordIdAsRecordNameField = createExpectedRecordsForNewImportWithRecordIdAsRecordNameField();
         String expectedRecordsForChangedImport = createExpectedRecordsForChangedImport();
-        String expectedRecordsForChangedImportWithRecordIdAsPrimaryKey = createExpectedRecordsForChangedImportWithRecordIdAsPrimaryKey();
+        String expectedRecordsForChangedImportWithRecordIdAsRecordNameField = createExpectedRecordsForChangedImportWithRecordIdAsRecordNameField();
+        String expectedRecordsForVariedImportWithKeepExisting = createExpectedRecordsForVariedImportWithKeepExisting();
+        String expectedRecordsForNewDuplicateImport = createExpectedRecordsForNewDuplicateImport();
+        String expectedRecordsForExistingDuplicateImport = createExpectedRecordsForExistingDuplicateImport();
 
-        Set<String> expectedSetForDefaultDeletion = new HashSet<>();
+        Set<String> expectedSetForDefaultDeletion = null;
         Set<String> expectedSetForChangedDeletion = createExpectedSetForChangedDeletion();
-        Set<String> expectedSetForChangedDeletionWithRecordIdAsPrimaryKey = createExpectedSetForChangedDeletionWithRecordIdAsPrimaryKey();
+        Set<String> expectedSetForChangedDeletionWithRecordIdAsRecordNameField = createExpectedSetForChangedDeletionWithRecordIdAsRecordNameField();
+        Set<String> expectedSetForChangedDeletionWithKeepExisting = null; // no deletion when keeping existing
 
         StringBuilder errorMessage = new StringBuilder();
-        
-        redcapRepository.importClinicalData(RedcapSourceTestConfiguration.RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN, defaultFileForImport);
+
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_FIRST_TOKEN, defaultFileForImport, DROP_EXISTING_RECORDS);
         errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForDefaultDeletion, expectedRecordsForDefaultImport));
 
-        redcapRepository.importClinicalData(RedcapSourceTestConfiguration.RECORD_ID_NOT_PRESENT_PROJECT_TOKEN, defaultFileForImport);
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_ABSENT_TOKEN, defaultFileForImport, DROP_EXISTING_RECORDS);
         errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForDefaultDeletion, expectedRecordsForDefaultImport));
 
-        redcapRepository.importClinicalData(RedcapSourceTestConfiguration.RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN, newFileForImport);
-        errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForDefaultDeletion, expectedRecordsForNewImportWithRecordIdAsPrimaryKey));
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_FIRST_TOKEN, newFileForImport, DROP_EXISTING_RECORDS);
+        errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForDefaultDeletion, expectedRecordsForNewImportWithRecordIdAsRecordNameField));
 
-        redcapRepository.importClinicalData(RedcapSourceTestConfiguration.RECORD_ID_NOT_PRESENT_PROJECT_TOKEN, newFileForImport);
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_ABSENT_TOKEN, newFileForImport, DROP_EXISTING_RECORDS);
         errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForDefaultDeletion, expectedRecordsForNewImport));
 
-        redcapRepository.importClinicalData(RedcapSourceTestConfiguration.RECORD_ID_AS_PRIMARY_KEY_PROJECT_TOKEN, changedFileForImport);
-        errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForChangedDeletionWithRecordIdAsPrimaryKey, expectedRecordsForChangedImportWithRecordIdAsPrimaryKey));
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_FIRST_TOKEN, changedFileForImport, DROP_EXISTING_RECORDS);
+        errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForChangedDeletionWithRecordIdAsRecordNameField, expectedRecordsForChangedImportWithRecordIdAsRecordNameField));
 
-        redcapRepository.importClinicalData(RedcapSourceTestConfiguration.RECORD_ID_NOT_PRESENT_PROJECT_TOKEN, changedFileForImport);
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_ABSENT_TOKEN, changedFileForImport, DROP_EXISTING_RECORDS);
         errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForChangedDeletion, expectedRecordsForChangedImport));
+
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_ABSENT_TOKEN, variedFileForImport, KEEP_EXISTING_RECORDS);
+        errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForChangedDeletionWithKeepExisting, expectedRecordsForVariedImportWithKeepExisting));
+
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_ABSENT_TOKEN, newDuplicateFileForImport, KEEP_EXISTING_RECORDS);
+        errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForChangedDeletionWithKeepExisting, expectedRecordsForNewDuplicateImport));
+
+        redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
+        redcapRepository.importClinicalData(RECORD_ID_ABSENT_TOKEN, existingDuplicateFileForImport, KEEP_EXISTING_RECORDS);
+        errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForChangedDeletionWithKeepExisting, expectedRecordsForExistingDuplicateImport));
 
         String errorString = errorMessage.toString();
         if (!errorString.isEmpty()) {
             Assert.fail(errorString);
         }
+    }
+
+    @Test(expected = Exception.class)
+    public void testImportClinicalDataToAutonumberedProjectWithKeepExistingRecords() throws Exception {
+        List<String> defaultFileForImport = createDefaultFileForImport();
+        redcapRepository.importClinicalData(RECORD_ID_FIRST_TOKEN, defaultFileForImport, KEEP_EXISTING_RECORDS);
     }
 
     private List<String> createExpectedAttributeNameList() {
@@ -192,7 +237,36 @@ public class RedcapRepositoryTest {
         return returnValue;
     }
 
-    private String createExpectedRecordsForNewImportWithRecordIdAsPrimaryKey() {
+    private List<String> createVariedFileForImport() {
+        //Record P-0000001 is identical, P-0000002 is altered, P-0000003 is missing, P-0000004 is new
+        List<String> returnValue = new ArrayList<String>();
+        returnValue.add("PATIENT_ID	SAMPLE_ID	NECROSIS	ETHNICITY");
+        returnValue.add("P-0000001	P-0000001-T01	YES	Asian");
+        returnValue.add("P-0000002	P-0000002-T02	YES	Caucasian");
+        returnValue.add("P-0000004	P-0000004-T03	NO	Caucasian");
+        return returnValue;
+    }
+
+    private List<String> createNewDuplicateFileForImport() {
+        List<String> returnValue = new ArrayList<String>();
+        returnValue.add("PATIENT_ID	SAMPLE_ID	NECROSIS	ETHNICITY");
+        returnValue.add("P-0000004	P-0000004-T03	NO	Caucasian");
+        returnValue.add("P-0000004	P-0000004-T03	NO	Caucasian");
+        returnValue.add("P-0000004	P-0000004-T03	NO	Caucasian");
+        return returnValue;
+    }
+
+    private List<String> createExistingDuplicateFileForImport() {
+        //modified record
+        List<String> returnValue = new ArrayList<String>();
+        returnValue.add("PATIENT_ID	SAMPLE_ID	NECROSIS	ETHNICITY");
+        returnValue.add("P-0000002	P-0000002-T02	YES	Caucasian");
+        returnValue.add("P-0000002	P-0000002-T02	YES	Caucasian");
+        returnValue.add("P-0000002	P-0000002-T02	YES	Caucasian");
+        return returnValue;
+    }
+
+    private String createExpectedRecordsForNewImportWithRecordIdAsRecordNameField() {
         String returnString = "\nrecord_id,patient_id,sample_id,necrosis,ethnicity"
             + "\n4,P-0000004,P-0000004-T04,NO,Asian\n";
         return returnString;
@@ -204,9 +278,29 @@ public class RedcapRepositoryTest {
         return returnString;
     }
 
-    private String createExpectedRecordsForChangedImportWithRecordIdAsPrimaryKey() {
+    private String createExpectedRecordsForChangedImportWithRecordIdAsRecordNameField() {
         String returnString = "\nrecord_id,patient_id,sample_id,necrosis,ethnicity"
             + "\n4,P-0000002,P-0000002-T02,YES,Caucasian\n";
+        return returnString;
+    }
+
+    private String createExpectedRecordsForVariedImportWithKeepExisting() {
+        //Record P-0000001 is identical, P-0000002 is altered, P-0000003 is missing, P-0000004 is new
+        String returnString = "\npatient_id,sample_id,necrosis,ethnicity"
+            + "\nP-0000002,P-0000002-T02,YES,Caucasian"
+            + "\nP-0000004,P-0000004-T03,NO,Caucasian\n";
+        return returnString;
+    }
+
+    private String createExpectedRecordsForNewDuplicateImport() {
+        String returnString = "\npatient_id,sample_id,necrosis,ethnicity"
+            + "\nP-0000004,P-0000004-T03,NO,Caucasian\n";
+        return returnString;
+    }
+
+    private String createExpectedRecordsForExistingDuplicateImport() {
+        String returnString = "\npatient_id,sample_id,necrosis,ethnicity"
+            + "\nP-0000002,P-0000002-T02,YES,Caucasian\n";
         return returnString;
     }
 
@@ -216,11 +310,11 @@ public class RedcapRepositoryTest {
         return expectedSetForChangedDeletion;
     }
 
-    private Set<String> createExpectedSetForChangedDeletionWithRecordIdAsPrimaryKey() {
-        Set<String> expectedSetForChangedDeletionWithRecordIdAsPrimaryKey = new HashSet<>();
-        expectedSetForChangedDeletionWithRecordIdAsPrimaryKey.add("2");
-        expectedSetForChangedDeletionWithRecordIdAsPrimaryKey.add("3");
-        return expectedSetForChangedDeletionWithRecordIdAsPrimaryKey;
+    private Set<String> createExpectedSetForChangedDeletionWithRecordIdAsRecordNameField() {
+        Set<String> expectedSetForChangedDeletionWithRecordIdAsRecordNameField = new HashSet<>();
+        expectedSetForChangedDeletionWithRecordIdAsRecordNameField.add("2");
+        expectedSetForChangedDeletionWithRecordIdAsRecordNameField.add("3");
+        return expectedSetForChangedDeletionWithRecordIdAsRecordNameField;
     }
 
     private String compareRecordsForDeletionAndImport(Set<String> expectedSetForDeletion, String expectedRecordsForImport) {
@@ -228,15 +322,27 @@ public class RedcapRepositoryTest {
         Set<String> returnedSetForDeletion = redcapSourceTestConfiguration.getRecordsPassedToRedcapSessionManagerForDeletion();
         String returnedRecordsForImport = redcapSourceTestConfiguration.getRecordsPassedToRedcapSessionManagerForUpload();
 
-        if (!returnedSetForDeletion.equals(expectedSetForDeletion)) {
-            results.append("Returned set for deletion differs from expected:\n"
-                    + "Expected: " + expectedSetForDeletion.toString() + "\n"
-                    + "Returned: " + returnedSetForDeletion.toString() + "\n");
+        if (expectedSetForDeletion != null || returnedSetForDeletion != null) {
+            if (returnedSetForDeletion == null || (returnedSetForDeletion != null && !returnedSetForDeletion.equals(expectedSetForDeletion))) {
+                String expectedSetForDeletionString = "null";
+                if (expectedSetForDeletion != null) {
+                    expectedSetForDeletionString = expectedSetForDeletion.toString();
+                }
+                String returnedSetForDeletionString = "null";
+                if (returnedSetForDeletion != null) {
+                    returnedSetForDeletionString = returnedSetForDeletion.toString();
+                }
+                results.append("Returned set for deletion differs from expected:\n"
+                        + "Expected: " + expectedSetForDeletionString + "\n"
+                        + "Returned: " + returnedSetForDeletionString + "\n");
+            }
         }
-        if ((returnedRecordsForImport == null && returnedRecordsForImport != expectedRecordsForImport) || (returnedRecordsForImport != null && !returnedRecordsForImport.equals(expectedRecordsForImport))) {
-            results.append("Returned string for import differs from expected:\n"
-                    + "Expected: " + expectedRecordsForImport + "\n"
-                    + "Returned: " + returnedRecordsForImport + "\n");
+        if (returnedRecordsForImport != null || expectedRecordsForImport != null) {
+            if (returnedRecordsForImport == null || (returnedRecordsForImport != null && !returnedRecordsForImport.equals(expectedRecordsForImport))) {
+                results.append("Returned string for import differs from expected:\n"
+                        + "Expected: " + expectedRecordsForImport + "\n"
+                        + "Returned: " + returnedRecordsForImport + "\n");
+            }
         }
         return results.toString();
     }
@@ -298,4 +404,5 @@ public class RedcapRepositoryTest {
         returnValue.add(returnValue3);
         return returnValue;
     }
+
 }

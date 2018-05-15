@@ -35,8 +35,6 @@ import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactNAACCRClinical;
 import org.springframework.batch.item.*;
 import com.querydsl.core.types.Projections;
 import com.querydsl.sql.SQLQueryFactory;
-import static com.querydsl.core.alias.Alias.$;
-import static com.querydsl.core.alias.Alias.alias;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.log4j.Logger;
@@ -51,17 +49,20 @@ import static com.querydsl.core.alias.Alias.alias;
 public class MskimpactGeniePatientReader implements ItemStreamReader<MskimpactNAACCRClinical> {
     @Value("${darwin.demographics_view}")
     private String patientDemographicsView;
-    
+
     @Autowired
     SQLQueryFactory darwinQueryFactory;
-    
+
     private List<MskimpactNAACCRClinical> darwinDemographicsResults;
-    
+
     Logger log = Logger.getLogger(MskimpactGeniePatientReader.class);
-    
+
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         this.darwinDemographicsResults = getDarwinDemographicsResults();
+        if (darwinDemographicsResults == null || darwinDemographicsResults.isEmpty()) {
+            throw new ItemStreamException("Error fetching records from Darwin Demographics Views");
+        }
     }
 
     @Override
@@ -77,11 +78,11 @@ public class MskimpactGeniePatientReader implements ItemStreamReader<MskimpactNA
         }
         return null;
     }
-    
+
     private List<MskimpactNAACCRClinical> getDarwinDemographicsResults() {
         log.info("Start of Darwin NAACCR View Import...");
         MskimpactNAACCRClinical qMskimpactNAACCRClinical = alias(MskimpactNAACCRClinical.class, patientDemographicsView);
-        List<MskimpactNAACCRClinical> darwinDemographicsResults = darwinQueryFactory.selectDistinct(Projections.constructor(MskimpactNAACCRClinical.class,
+        List<MskimpactNAACCRClinical> darwinDemographicsResultsList = darwinQueryFactory.selectDistinct(Projections.constructor(MskimpactNAACCRClinical.class,
                 $(qMskimpactNAACCRClinical.getDMP_ID_DEMO()),
                 $(qMskimpactNAACCRClinical.getPT_NAACCR_SEX_CODE()),
                 $(qMskimpactNAACCRClinical.getPT_NAACCR_RACE_CODE_PRIMARY()),
@@ -91,7 +92,7 @@ public class MskimpactGeniePatientReader implements ItemStreamReader<MskimpactNA
                 $(qMskimpactNAACCRClinical.getPT_BIRTH_YEAR())))
                 .from($(qMskimpactNAACCRClinical))
                 .fetch();
-       return darwinDemographicsResults;
+       return darwinDemographicsResultsList;
     }
-    
+
 }

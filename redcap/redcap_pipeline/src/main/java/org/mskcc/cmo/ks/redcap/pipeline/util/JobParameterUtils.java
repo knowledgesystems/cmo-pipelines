@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -29,21 +29,26 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package org.mskcc.cmo.ks.redcap.source;
 
+package org.mskcc.cmo.ks.redcap.pipeline.util;
+
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-
+import org.springframework.stereotype.Repository;
 /**
  *
- * @author heinsz
+ * @author Avery Wang
  */
-
-public interface MetadataManager {
-    Map<String, List<String>> getFullHeader(List<String> header);
-    Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader);
-    Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader);
-    boolean checkOverridesExist(String studyId);
-    boolean allHeadersAreValidClinicalAttributes(List<String> headers);
-    void setOverrideStudyId(String studyId);
+@Repository
+public class JobParameterUtils {
+    
+    private List<String> listOfMaskedProjects = new ArrayList<String>();
+   
+    public void setListOfMaskedProjects(List<String> listOfMaskedProjects) {
+        this.listOfMaskedProjects = listOfMaskedProjects;
+    }
+ 
+    public List<String> getListOfMaskedProjects() {
+        return listOfMaskedProjects;
+    }
 }

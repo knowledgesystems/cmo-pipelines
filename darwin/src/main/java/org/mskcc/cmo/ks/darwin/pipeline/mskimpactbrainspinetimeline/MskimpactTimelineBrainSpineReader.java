@@ -52,22 +52,25 @@ import static com.querydsl.core.alias.Alias.*;
 public class MskimpactTimelineBrainSpineReader implements ItemStreamReader<MskimpactBrainSpineTimeline>{
     @Value("${darwin.timeline_view}")
     private String timelineBrainSpineView;
-    
+
     @Autowired
     SQLQueryFactory darwinQueryFactory;
-    
+
     @Autowired
     public DarwinSampleListUtil darwinSampleListUtil;
 
     private List<MskimpactBrainSpineTimeline> darwinTimelineResults;
-    
+
     Logger log = Logger.getLogger(MskimpactTimelineBrainSpineReader.class);
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException{
         this.darwinTimelineResults = getDarwinTimelineResults();
+        if (darwinTimelineResults == null || darwinTimelineResults.isEmpty()) {
+            throw new ItemStreamException("Error fetching records from Darwin Brain Spine Timeline Views");
+        }
     }
-    
+
     @Transactional
     private List<MskimpactBrainSpineTimeline> getDarwinTimelineResults(){
         log.info("Start of Darwin Timeline Brain Spine View import...");
@@ -89,13 +92,13 @@ public class MskimpactTimelineBrainSpineReader implements ItemStreamReader<Mskim
         log.info("Imported " + darwinTimelineResults.size() + " records from Darwin Timeline Brain Spine View.");
         return darwinTimelineResults;
     }
-    
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException{}
-    
+
     @Override
     public void close() throws ItemStreamException{}
-    
+
     @Override
     public MskimpactBrainSpineTimeline read() throws Exception{
         while(!darwinTimelineResults.isEmpty()){

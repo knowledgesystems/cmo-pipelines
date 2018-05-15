@@ -33,6 +33,7 @@ package org.mskcc.cmo.ks.darwin.pipeline.mskimpactbrainspineclinical;
 
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactBrainSpineClinical;
 
+import com.google.common.base.Strings;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.core.io.*;
@@ -48,14 +49,15 @@ import org.apache.commons.lang.StringUtils;
 public class MskimpactBrainSpineClinicalWriter implements ItemStreamWriter<String>{
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDirectory;
-    
+
     @Value("${darwin.brainspine_clinical_filename}")
     private String datasetFilename;
-    
+
+    private int recordsWritten;
     private List<String> writeList = new ArrayList<>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
     private File stagingFile;
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException{
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
@@ -70,21 +72,26 @@ public class MskimpactBrainSpineClinicalWriter implements ItemStreamWriter<Strin
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }
-    
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException{}
-    
+
     @Override
     public void close() throws ItemStreamException{
+        if (recordsWritten == 0) {
+            throw new RuntimeException("No records were written to output file: " + stagingFile.getName() + " - exiting...");
+        }
         flatFileItemWriter.close();
     }
-    
+
     @Override
     public void write(List<? extends String> items) throws Exception{
         writeList.clear();
-        List<String> writeList = new ArrayList<>();
         for(String result : items){
-            writeList.add(result);
+            if (!Strings.isNullOrEmpty(result)) {
+                writeList.add(result);
+                recordsWritten++;
+            }
         }
         flatFileItemWriter.write(writeList);
     }

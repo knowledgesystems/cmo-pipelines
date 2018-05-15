@@ -34,6 +34,7 @@ package org.mskcc.cmo.ks.darwin.pipeline.mskimpactbrainspinetimeline;
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactBrainSpineCompositeTimeline;
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactBrainSpineTimeline;
 
+import com.google.common.base.Strings;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.core.io.*;
@@ -50,19 +51,20 @@ import org.apache.log4j.Logger;
  */
 public class MskimpactTimelineBrainSpineWriter implements ItemStreamWriter<MskimpactBrainSpineCompositeTimeline>{
     private BrainSpineTimelineType type;
-    
+
     public MskimpactTimelineBrainSpineWriter(BrainSpineTimelineType type) {
         this.type = type;
     }
-    
+
     Logger log = Logger.getLogger(MskimpactTimelineBrainSpineWriter.class);
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDirectory;
-    
+
+    private int recordsWritten;
     private List<String> writeList = new ArrayList<>();
     private final FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
     private File stagingFile;
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException{
         stagingFile = new File(outputDirectory, "data_timeline_" + type.toString().toLowerCase() + "_caisis_gbm.txt");
@@ -77,28 +79,33 @@ public class MskimpactTimelineBrainSpineWriter implements ItemStreamWriter<Mskim
                 }
                 catch(Exception e) {
                     throw new ItemStreamException(e);
-                }                
+                }
             }
         });
-        
+
         flatFileItemWriter.setResource(new FileSystemResource(this.stagingFile));
         flatFileItemWriter.open(executionContext);
     }
-    
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException{}
-    
+
     @Override
     public void close() throws ItemStreamException{
+        if (recordsWritten == 0) {
+            throw new RuntimeException("No records were written to output file: " + stagingFile.getName() + " - exiting...");
+        }
         flatFileItemWriter.close();
     }
-    
+
     @Override
     public void write(List<? extends MskimpactBrainSpineCompositeTimeline> items) throws Exception{
         writeList.clear();
         for (MskimpactBrainSpineCompositeTimeline result : items) {
-            if (!result.getClass().getMethod("get" + type.toString() + "Result").invoke(result).equals(MskimpactBrainSpineCompositeTimeline.NO_RESULT)) {
-                writeList.add((String)result.getClass().getMethod("get" + type.toString() + "Result").invoke(result));
+            String record = (String) result.getClass().getMethod("get" + type.toString() + "Result").invoke(result);
+            if (!Strings.isNullOrEmpty(record) && !record.equals(MskimpactBrainSpineCompositeTimeline.NO_RESULT)) {
+                writeList.add(record);
+                recordsWritten++;
             }
         }
         if(!writeList.isEmpty()){

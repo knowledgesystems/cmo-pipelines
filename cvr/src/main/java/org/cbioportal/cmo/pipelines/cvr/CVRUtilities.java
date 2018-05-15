@@ -49,7 +49,6 @@ import org.springframework.context.annotation.*;
  * @author heinsz
  */
 
-@Configuration
 public class CVRUtilities {
 
     public static final String CVR_FILE = "cvr_data.json";
@@ -95,11 +94,6 @@ public class CVRUtilities {
         list.add("TNP");
         list.add("ONP");
         this.variationList = list;
-    }
-
-    @Bean
-    public CVRUtilities CVRUtilities() {
-        return new CVRUtilities();
     }
 
     public CVRUtilities() {

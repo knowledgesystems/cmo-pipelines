@@ -90,6 +90,11 @@ public class BatchConfiguration {
     }
 
     @Bean
+    public CVRUtilities cvrUtilities() {
+        return new CVRUtilities();
+    }
+
+    @Bean
     public Job gmlJob() {
         return jobBuilderFactory.get(GML_JOB)
                 .start(cvrMasterListStep())

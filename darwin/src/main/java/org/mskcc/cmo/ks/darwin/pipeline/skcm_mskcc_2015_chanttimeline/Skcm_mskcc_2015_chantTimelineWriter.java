@@ -31,12 +31,12 @@
 */
 package org.mskcc.cmo.ks.darwin.pipeline.skcm_mskcc_2015_chanttimeline;
 
+import org.mskcc.cmo.ks.darwin.pipeline.model.Skcm_mskcc_2015_chantTimelineAdjuvantTx;
+
+import com.google.common.base.Strings;
 import java.io.*;
-import java.nio.file.Paths;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
-import org.mskcc.cmo.ks.darwin.pipeline.model.Skcm_mskcc_2015_chantClinicalRecord;
-import org.mskcc.cmo.ks.darwin.pipeline.model.Skcm_mskcc_2015_chantTimelineAdjuvantTx;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -48,17 +48,17 @@ import org.springframework.core.io.*;
  * @author heinsz
  */
 public class Skcm_mskcc_2015_chantTimelineWriter implements ItemStreamWriter<String> {
-    
+
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDirectory;
-    
+
     @Value("${darwin.skcm_mskcc_2015_chant_timeline_filename}")
-    private String filename;    
-    
+    private String filename;
+
+    private int recordsWritten;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter();
-    
     private File stagingFile;
-    
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
@@ -71,25 +71,30 @@ public class Skcm_mskcc_2015_chantTimelineWriter implements ItemStreamWriter<Str
         });
         stagingFile = new File(outputDirectory, filename);
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
-        flatFileItemWriter.open(executionContext);        
+        flatFileItemWriter.open(executionContext);
     }
-    
+
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {}
-    
+
     @Override
     public void close() throws ItemStreamException {
+        if (recordsWritten == 0) {
+            throw new RuntimeException("No records were written to output file: " + stagingFile.getName() + " - exiting...");
+        }
         flatFileItemWriter.close();
     }
-    
+
     @Override
     public void write(List<? extends String> items) throws Exception {
         List<String> writeList = new ArrayList<>();
         for (String result : items) {
-            writeList.add(result);
+            if (!Strings.isNullOrEmpty(result)) {
+                writeList.add(result);
+                recordsWritten++;
+            }
         }
-        
         flatFileItemWriter.write(writeList);
     }
-    
+
 }

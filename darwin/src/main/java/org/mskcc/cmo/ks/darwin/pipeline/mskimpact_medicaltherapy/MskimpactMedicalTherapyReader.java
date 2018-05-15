@@ -86,7 +86,11 @@ public class MskimpactMedicalTherapyReader implements ItemStreamReader<List<Mski
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
-        byPharmacyRecordAttributes = groupPharmacyViewResults(getPharmacyViewResults());
+        List<MskimpactMedicalTherapy> pharmacyViewResults = getPharmacyViewResults();
+        if (pharmacyViewResults == null || pharmacyViewResults.isEmpty()) {
+            throw new ItemStreamException("Error fetching records from Darwin Pharmacy Views");
+        }
+        this.byPharmacyRecordAttributes = groupPharmacyViewResults(pharmacyViewResults);
     }
 
     @Transactional
