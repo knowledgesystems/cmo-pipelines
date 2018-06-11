@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
-PERFORM_CRDB_FETCH=1
+PERFORM_CRDB_FETCH=0
 CVR_TEST_MODE_ARGS=""
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
