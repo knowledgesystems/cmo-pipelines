@@ -9,6 +9,7 @@
   <url>https://github.com/cBioPortal/cmo-pipelines/</url>
 
   <modules>
+    <!-- fixed here again -->
     <module>common</module>
     <module>gdd</module>
     <module>crdb</module>
