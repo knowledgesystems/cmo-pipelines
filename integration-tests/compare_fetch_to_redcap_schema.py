@@ -1,6 +1,5 @@
 import argparse
 import sys
-import clinicalfile_utils
 import json
 import requests
 
@@ -58,7 +57,8 @@ def main():
     pull_request_number = str(args.number)
 
     pull_request_labels = get_labels_on_pull_request(username, password, pull_request_number)
-
+    for x in pull_request_labels: 
+        print x
 #    redcap_project_to_file_mappings = get_redcap_project_to_file_mappings("fetcher-file-project-map.txt", redcap_directory, fetch_directory)
 
 main()
