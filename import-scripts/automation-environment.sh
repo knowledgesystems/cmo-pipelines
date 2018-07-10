@@ -20,6 +20,7 @@ export IMPACT_DATA_HOME=$PORTAL_DATA_HOME/impact
 export FOUNDATION_DATA_HOME=$PORTAL_DATA_HOME/foundation
 export FMI_BATLEVI_DATA_HOME=$FOUNDATION_DATA_HOME/mixed/lymphoma/mskcc/foundation/lymph_landscape_fmi_201611
 export LYMPHOMA_SUPER_COHORT_DATA_HOME=$PORTAL_DATA_HOME/dmp/lymphoma_super_cohort_fmi_msk
+export DLBCL_IMPACT_DATA_HOME=$PORTAL_DATA_HOME/dmp/dlbcl_impact_fmi_2018
 export MSK_SCLC_DATA_HOME=$PORTAL_DATA_HOME/dmp/sclc_mskimpact_2017
 export REDCAP_BACKUP_DATA_HOME=$PORTAL_DATA_HOME/redcap-snapshot
 export MSKIMPACT_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskimpact
@@ -52,6 +53,7 @@ export MSK_RALPHLAUREN_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/ralphlauren_import_trigger
 export MSK_SCLC_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/sclc_mskimpact_import_trigger.txt
 export MSKIMPACT_PED_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/mskimpact_ped_import_trigger.txt
 export LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/lymphoma_super_cohort_fmi_msk_import_trigger.txt
+export DLBCL_IMPACT_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/dlbcl_impact_fmi_2018_import_trigger.txt
 
 # CMO_DATA_HOME looks unused
 #export CMO_DATA_HOME=/data/cbio-portal-data/bic-mskcc
