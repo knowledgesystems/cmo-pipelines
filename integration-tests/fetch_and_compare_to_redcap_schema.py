@@ -28,7 +28,7 @@ LABELS_ID_KEY = "id"
 
 LABEL_TO_TEST_MAPPING = {
     '984868388' : "crdb_fetcher",
-    '984867863' : "cvr_fetcher",
+#   '984867863' : "cvr_fetcher",
 #   '984872074' : "darwin_fetcher",
     '984872969' : "ddp_fetcher"
 }
@@ -72,14 +72,14 @@ def get_redcap_file_to_redcap_project_mappings(mapping_file, redcap_directory):
                 mapping_to_return[os.path.join(redcap_directory, exported_filename)] = redcap_project
     return mapping_to_return
 
-# parser for github-credentials file to pull out username and password: 
+# parser for github-credentials file to pull out username and password:
 # expected format https://<username>:<password>@github.com
 def get_github_credentials(credentials_file):
     credentials_line = open(credentials_file,"r").read().rstrip()
-    credentials_line = credentials_line.replace("https://", "") 
+    credentials_line = credentials_line.replace("https://", "")
     credentials_line = credentials_line.replace("@github.com", "")
     credentials = credentials_line.split(":")
-    return (credentials[0], credentials[1]) 
+    return (credentials[0], credentials[1])
 
 # given a pull request number - return the associated tag-names/ids
 def get_labels_on_pull_request(username, password, pull_request_number):
@@ -107,8 +107,8 @@ def crdb_fetch(lib, fetch_directory):
     return "java -jar " + os.path.join(lib, "crdb_fetcher.jar") + " -stage " + fetch_directory
 
 # darwin fetch currently does not work because jenkins machine cannot access darwin
-# def darwin_fetch(lib, fetch_directory):
-#     return "java -jar " + os.path.join(lib, "darwin_fetcher.jar") + " -d " + fetch_directory + " -s mskimpact_heme -c 0"
+def darwin_fetch(lib, fetch_directory):
+    return "java -jar " + os.path.join(lib, "darwin_fetcher.jar") + " -d " + fetch_directory + " -s mskimpact_heme -c 0"
 
 def cvr_fetch(lib, fetch_directory):
     redcap_request = "java -jar " + os.path.join(lib, "redcap_pipeline.jar") + " -e -r -p hemepact_data_clinical -d " + fetch_directory
@@ -125,14 +125,14 @@ def cvr_fetch(lib, fetch_directory):
 def ddp_fetch(lib, fetch_directory):
     with open(os.path.join(fetch_directory, "test_patient_list.txt"), "w") as f:
         f.write("P-0000001")
-    return "java -jar " + os.path.join(lib, "ddp_fetcher.jar") + " -o " + fetch_directory + " -s " + os.path.join(fetch_directory, "test_patient_list.txt") 
+    return "java -jar " + os.path.join(lib, "ddp_fetcher.jar") + " -o " + fetch_directory + " -s " + os.path.join(fetch_directory, "test_patient_list.txt")
 
 # dictionary/switch-like function that calls fetch-function based on which fetchers are included in github tags
 def fetch_data_source_files(fetchers_to_test, fetch_directory, lib):
     datasource_fetches = {
         "crdb_fetcher" : crdb_fetch,
         "cvr_fetcher" : cvr_fetch,
-#       "darwin_fetcher" : darwin_fetch,
+        "darwin_fetcher" : darwin_fetch,
         "ddp_fetcher" : ddp_fetch
     }
     for fetcher in fetchers_to_test:
@@ -142,7 +142,7 @@ def fetch_data_source_files(fetchers_to_test, fetch_directory, lib):
         if fetcher_status > 0:
             print "Fetcher call: '" + fetcher_command + "' returned a non-zero exit status"
             exit(1)
-        
+
 def verify_data_schema(fetchers_to_test, fetched_file_to_redcap_file_mappings):
     for fetcher in fetchers_to_test:
         for fetched_file, matching_redcap_exports in fetched_file_to_redcap_file_mappings[fetcher].items():
@@ -158,7 +158,7 @@ def headers_are_equal(fetched_file, redcap_export):
     fetched_file_header = set(get_header(fetched_file))
     redcap_export_header = set(get_header(redcap_export))
     return fetched_file_header == redcap_export_header
-     
+
 # returns header as list of attributes
 def get_header(file):
     header = []
@@ -169,7 +169,7 @@ def get_header(file):
                 break
     return header
 
-def main(): 
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--fetch-directory", help = "Path to directory where fetches were saved", required = True)
     parser.add_argument("-g", "--credentials-file", help = "File containing git credentials", required = True)
@@ -202,5 +202,3 @@ def main():
     sys.exit(0)
 
 main()
-    
-         

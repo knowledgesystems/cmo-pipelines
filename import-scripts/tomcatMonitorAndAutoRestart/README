@@ -20,7 +20,7 @@ monitor.properties
         This file contains all the important configuration values for the tomcat monitor scripts (see description of settings below). This file must be in a bash executable script format, since it is called at the beginning of each other bash script.
 
 restart--tomcat-when-dying.sh
-        This is the restart script. It compares the consecutive failure count file values to limits set in monitor.properties and restarts tomcat if necessary. After restart, a restart notification email is sent to the list given in monitor.properties, the lockout countdown file is created, and the consecutive failure count file is reset. 
+        This is the restart script. It compares the consecutive failure count file values to limits set in monitor.properties and restarts tomcat if necessary. After restart, a restart notification email is sent to the list given in monitor.properties, the lockout countdown file is created, and the consecutive failure count file is reset.
 
 run-jktest-cbioportal.sh
         This bash script executes the JKTester java application and probes the tomcat AJP port.
