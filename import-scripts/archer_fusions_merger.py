@@ -16,7 +16,7 @@ ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
 
 SMTP_SERVER = "cbio.mskcc.org"
-MESSAGE_RECIPIENTS = ["cbioportal-pipelines@cbio.mskcc.org"]
+MESSAGE_RECIPIENTS = ["cbioportal-importer-dmp-recipients@cbio.mskcc.org", "cbioportal-pipelines@cbio.mskcc.org"]
 MESSAGE_SENDER = "cbioportal@cbio.mskcc.org"
 
 ## remove from mixedpact so as to not double count
@@ -73,6 +73,7 @@ def load_linked_archer_cases(linked_archer_cases_filename, study_id):
 
 			# update LINKED_ARCHER_CASES w/current mapping
 			LINKED_ARCHER_CASES[archer_sid] = linked_sid
+	print >> OUTPUT_FILE, 'Number of linked archer cases for mskimpact: ' + str(len(LINKED_ARCHER_CASES.keys()))
 
 def get_existing_fusions(fusions_filename):
 	"""
@@ -94,7 +95,6 @@ def get_archer_fusions(archer_fusions_filename, header, existing_fusions, study_
 		As we process the ARCHER fusions file, we want to associate the fusions with the corresponding MSKIMPACT/HEMEPACT id.
 		Lookup the sample in the sample map and add a fusion for each sample we need to.
 	"""
-	mapped_archer_samples = set()
 	archer_fusions_added = 0
 	with open(archer_fusions_filename) as archer_fusions_file:
 		reader = csv.DictReader(archer_fusions_file, dialect = 'excel-tab')
@@ -102,7 +102,6 @@ def get_archer_fusions(archer_fusions_filename, header, existing_fusions, study_
 			archer_sid = line['Tumor_Sample_Barcode'].strip()
 			if archer_sid in LINKED_ARCHER_CASES.keys():
 				mapped_case_id = LINKED_ARCHER_CASES[archer_sid].strip()
-				mapped_archer_samples.add(archer_sid)
 
 				# check that mapped case id belongs to current study being processed
 				if is_valid_study_sample_id(mapped_case_id, study_id):
@@ -115,7 +114,7 @@ def get_archer_fusions(archer_fusions_filename, header, existing_fusions, study_
 						SEEN_FUSION_EVENTS.add(get_fusion_event_key(line))
 						existing_fusions.append(line)
 						archer_fusions_added += 1
-	return mapped_archer_samples, archer_fusions_added
+	return archer_fusions_added
 
 def update_fusions_file(fusions_filename, header, existing_fusions):
 	""" Update the fusions file with the new ARCHER fusions. """
@@ -124,6 +123,7 @@ def update_fusions_file(fusions_filename, header, existing_fusions):
 		for fusion_event in existing_fusions:
 			formatted_data = map(lambda x: fusion_event.get(x, '').strip(), header)
 			fusions_file.write('\n' + '\t'.join(formatted_data))
+		fusions_file.write('\n')
 
 def add_clinical_attribute_to_clinical(clinical_filename):
 	""" Update the 'ARCHER' clinical attribute """
@@ -134,9 +134,9 @@ def add_clinical_attribute_to_clinical(clinical_filename):
 			data[clinical_header.index('ARCHER')] = 'YES'
 		print '\t'.join(data)
 
-def update_mapped_archer_samples_file(mapped_archer_samples_filename, mapped_archer_samples):
+def update_mapped_archer_samples_file(mapped_archer_samples_filename):
 	""" Write out the archer sample ids to a filename for them to be excluded from subsequent merges or subsets involving ARCHER data """
-	compiled_archer_samples_set = set(mapped_archer_samples)
+	compiled_archer_samples_set = set(LINKED_ARCHER_CASES.keys())
 
 	# load samples from existing file and update with new archer samples to add
 	with open(mapped_archer_samples_filename) as mapped_archer_samples_file:
@@ -144,7 +144,7 @@ def update_mapped_archer_samples_file(mapped_archer_samples_filename, mapped_arc
 
 	# save updated list of archer samples to file
 	with open(mapped_archer_samples_filename, 'w') as mapped_archer_samples_file:
-		mapped_archer_samples_file.write('\n'.join(compiled_archer_samples_set))
+		mapped_archer_samples_file.write('\n'.join(compiled_archer_samples_set) + '\n')
 
 def send_samples_missing_clinical_data_report(study_id, clinical_filename):
 	""" Send email reporting ARCHER-linked cases that are missing from the clinical data. """
@@ -157,7 +157,7 @@ def send_samples_missing_clinical_data_report(study_id, clinical_filename):
 	message += "the next CVR data fetch. If a sample fails to requeue and/or does not appear in the "
 	message += "CVR JSON from the following CVR fetch then please alert the DMP team to address any issues.\n\n"
 
-	message += "Found " + str(len(SAMPLES_MISSING_CLINICAL_DATA)) + "ARCHER-linked sample(s) missing clinical data in: " + clinical_filename + "\n"
+	message += "Found " + str(len(SAMPLES_MISSING_CLINICAL_DATA)) + " ARCHER-linked sample(s) missing clinical data in: " + clinical_filename + "\n"
 	for sample_id in SAMPLES_MISSING_CLINICAL_DATA:
 		message += "\n\t" + sample_id
 	email_body = MIMEText(message, "plain")
@@ -191,7 +191,7 @@ def merge_fusions(archer_fusions_filename, fusions_filename, linked_cases_filena
 	# get existing fusions and add any new archer fusion events if applicable
 	# if archer_fusions_added is > 0 then update existing fusions file, otherwise nothing to do
 	existing_fusions, header = get_existing_fusions(fusions_filename)
-	mapped_archer_samples, archer_fusions_added = get_archer_fusions(archer_fusions_filename, header, existing_fusions, study_id)
+	archer_fusions_added = get_archer_fusions(archer_fusions_filename, header, existing_fusions, study_id)
 	if archer_fusions_added > 0:
 		print >> OUTPUT_FILE, "Updating " + fusions_filename + " with " + str(archer_fusions_added) + " ARCHER-linked events for study '" + study_id + "'"
 		update_fusions_file(fusions_filename, header, existing_fusions)
@@ -200,8 +200,9 @@ def merge_fusions(archer_fusions_filename, fusions_filename, linked_cases_filena
 
 	# update clinical file and mapped archer samples file in case clin attr or mapped archer sample list udpates got missed somehow
 	add_clinical_attribute_to_clinical(clinical_filename)
-	update_mapped_archer_samples_file(mapped_archer_samples_filename, mapped_archer_samples)
-	# TODO - EMAIL IF ANY ARCHER-LINKED CASES ARE MISSING CLINICAL DATA FOR GIVEN STUDY. SAMPLES MISSING FROM CLINICAL DATA MAY NEED TO BE REQUEUED IF NOT ALREADY IN QUEUE FOR NEXT CVR FETCH
+	update_mapped_archer_samples_file(mapped_archer_samples_filename)
+	# log and email any archer-linked cases that are missing from the corresponding study's clinical data
+	# these samples may need to be requeued if not already in queue for next CVR fetch
 	if len(SAMPLES_MISSING_CLINICAL_DATA) > 0:
 		print >> ERROR_FILE, "Found " + str(len(SAMPLES_MISSING_CLINICAL_DATA)) + " sample(s) missing clinical data from: " + clinical_filename
 		send_samples_missing_clinical_data_report(study_id, clinical_filename)
