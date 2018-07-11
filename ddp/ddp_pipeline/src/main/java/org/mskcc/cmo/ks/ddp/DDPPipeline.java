@@ -68,7 +68,7 @@ public class DDPPipeline {
 
     private static void help(Options options, int exitStatus) {
         HelpFormatter helpFormatter = new HelpFormatter();
-        helpFormatter.printHelp("CVRPipeline", options);
+        helpFormatter.printHelp("DDP Pipeline", options);
         System.exit(exitStatus);
     }
 
