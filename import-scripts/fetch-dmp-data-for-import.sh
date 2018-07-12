@@ -51,6 +51,7 @@ MSK_RALPHLAUREN_SUBSET_FAIL=0
 MSKIMPACT_PED_SUBSET_FAIL=0
 SCLC_MSKIMPACT_SUBSET_FAIL=0
 LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=0
+DLBCL_IMPACT_SUBSET_FAIL=0
 
 GENERATE_MASTERLIST_FAIL=0
 
@@ -1260,6 +1261,24 @@ if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 ] ; then
     rm $LYMPHOMA_SUPER_COHORT_DATA_HOME/seq_date.txt
 fi
 
+#--------------------------------------------------------------
+
+# Subset LYMPHOMA_SUPER_COHORT on ONCOTREE_CODE for DLBCL_IMPACT cohort
+
+# oncotree code DLBCL is not part of the new oncotree, it is replace by oncotree code DLBCLNOS
+bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=dlbcl_impact_fmi_2018 -o=$DLBCL_IMPACT_DATA_HOME -d=$LYMPHOMA_SUPER_COHORT_DATA_HOME -f="ONCOTREE_CODE=DLBCLNOS" -s=$MSK_DMP_TMPDIR/dlbcl_impact_fmi_2018_subset.txt -c=$LYMPHOMA_SUPER_COHORT_DATA_HOME/data_clinical_sample.txt
+if [ $? -gt 0 ] ; then
+    echo "DLBCL IMPACT subset failed! Study will not be updated in the portal."
+    sendFailureMessageMskPipelineLogsSlack "DLBCL_IMPACT subset"
+    DLBCL_IMPACT_SUBSET_FAIL=1
+else
+    echo "DLBCL IMPACT subset successful!"
+    addCancerTypeCaseLists $DLBCL_IMPACT_DATA_HOME "dlbcl_impact_fmi_2018" "data_clinical_sample.txt" "data_clinical_patient.txt"
+    touch $DLBCL_IMPACT_IMPORT_TRIGGER
+fi
+
+#--------------------------------------------------------------
+
 # check that meta_SV.txt is actually an empty file before deleting from IMPACT and HEMEPACT studies
 if [ $(wc -l < $MSK_IMPACT_DATA_HOME/meta_SV.txt) -eq 0 ] ; then
     rm $MSK_IMPACT_DATA_HOME/meta_SV.txt
@@ -1375,4 +1394,10 @@ EMAIL_BODY="Failed to subset LYMPHOMASUPERCOHORT data. Subset study will not be 
 if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
     echo -e "Sending email $EMAIL_BODY"
     echo -e "$EMAIL_BODY" | mail -s "LYMPHOMASUPERCOHORT Subset Failure: Study will not be updated." $email_list
+fi
+
+EMAIL_BODY="Failed to subset DLBCL IMPACT data. Subset study will not be updated."
+if [ $DLBCL_IMPACT_SUBSET_FAIL -gt 0 ] ; then
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" | mail -s "DLBCL_IMPACT Subset Failure: Study will not be updated." $email_list
 fi
