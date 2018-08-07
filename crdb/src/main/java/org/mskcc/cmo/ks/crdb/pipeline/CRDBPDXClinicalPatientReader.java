@@ -65,7 +65,7 @@ public class CRDBPDXClinicalPatientReader implements ItemStreamReader<CRDBPDXCli
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.crdbPDXClinicalPatientDatasetResults = getCrdbPDXClinicalPatientDatasetResults();
         if (crdbPDXClinicalPatientDatasetResults.isEmpty()) {
-            throw new ItemStreamException("Error fetching records from CRDB Dataset View");
+            throw new ItemStreamException("Error fetching records from CRDB PDX Clinical Patient Dataset View");
         }
     }
 
@@ -77,18 +77,18 @@ public class CRDBPDXClinicalPatientReader implements ItemStreamReader<CRDBPDXCli
      */
     @Transactional
     private List<CRDBPDXClinicalPatientDataset> getCrdbPDXClinicalPatientDatasetResults() {
-        System.out.println("Beginning CRDB Dataset View import...");
+        System.out.println("Beginning CRDB PDX Clinical Patient Dataset View import...");
 
         CRDBPDXClinicalPatientDataset qCRDBD = alias(CRDBPDXClinicalPatientDataset.class, crdbPDXClinicalPatientDatasetView);
         List<CRDBPDXClinicalPatientDataset> crdbPDXClinicalPatientDatasetResults = crdbQueryFactory.selectDistinct(
                 Projections.constructor(CRDBPDXClinicalPatientDataset.class, $(qCRDBD.getPATIENT_ID()),
                     $(qCRDBD.getSEX()), $(qCRDBD.getETHNICITY()),
                     $(qCRDBD.getRACE()), $(qCRDBD.getSMOKING_HISTORY()),
-                    $(qCRDBD.getDESTINATION_STUDY())))
+                    $(qCRDBD.getDESTINATION_STUDY_ID())))
                 .from($(qCRDBD))
                 .fetch();
 
-        System.out.println("Imported " + crdbPDXClinicalPatientDatasetResults.size() + " records from CRDB Dataset View.");
+        System.out.println("Imported " + crdbPDXClinicalPatientDatasetResults.size() + " records from CRDB PDX Clinical Patient Dataset View.");
         return crdbPDXClinicalPatientDatasetResults;
     }
 

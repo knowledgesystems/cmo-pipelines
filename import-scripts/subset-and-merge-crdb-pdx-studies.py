@@ -35,6 +35,11 @@ def parse_file(file):
                 print "ERROR: missing value in a column for the following record: " + line
     return records
 
+def rewrite_project_source_with_stable_id(records):
+    for record in records:
+        previous_source_study = record[SOURCE_STUDY_ID_KEY]
+        record[SOURCE_STUDY_ID_KEY] = "mixed_cmo_rudinc_" + previous_source_study[5:]
+
 # create a dictionary representation that can be used for subsetting
 # takes parse_file() output as input (list of dictionaries)
 # output: { DESTINATION_1 : { SOURCE_1 : [ PID_1, PID2, PID3...], 
@@ -152,6 +157,8 @@ def main():
     root_directory = args.root_directory
 
     records = parse_file(destination_to_source_mapping_filename) 
+    #TODO: delete the following rewrite when the crdb supplies stable ids
+    rewrite_project_source_with_stable_id(records)
     destination_to_source_mapping = create_destination_to_source_mapping(records)
     source_id_to_path_mapping = create_source_id_to_path_mapping(destination_to_source_mapping)
     generate_all_subset_sample_lists(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib)

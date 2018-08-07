@@ -52,11 +52,10 @@ public class CRDBPDXTimelineDataset {
     private String EVENT_TYPE;
     private String PASSAGE_ID;
     private String TREATMENT_TYPE;
-    private String SUBTYPE;
+    private String SUB_TYPE;
     private String AGENT;
-    private String TREATMENT_RESPONSE;
-    private String TREATMENT_STATUS;
-    private String RESPONSE_DURATION;
+    private String RESPONSE;
+    private String RESPONSE_DURATION_MONTHS;
     private String REASON_FOR_TX_DISCONTINUATION;
     private String SURGERY_DETAILS;
     private String EVENT_TYPE_DETAILED;
@@ -79,49 +78,47 @@ public class CRDBPDXTimelineDataset {
 
     public CRDBPDXTimelineDataset() {
     }
-
     public CRDBPDXTimelineDataset(String PATIENT_ID, String SAMPLE_ID, String PDX_ID, String DESTINATION_STUDY_ID,
                                   String START_DATE, String STOP_DATE, String EVENT_TYPE, String PASSAGE_ID,
-                                  String TREATMENT_TYPE, String SUBTYPE, String AGENT, String TREATMENT_RESPONSE,
-                                  String TREATMENT_STATUS, String RESPONSE_DURATION, String REASON_FOR_TX_DISCONTINUATION,
+                                  String TREATMENT_TYPE, String SUB_TYPE, String AGENT, String RESPONSE,
+                                  String RESPONSE_DURATION_MONTHS, String REASON_FOR_TX_DISCONTINUATION,
                                   String SURGERY_DETAILS, String EVENT_TYPE_DETAILED, String PROCEDURE_LOCATION,
                                   String PROCEDURE_LOCATION_SPECIFY, String DIAGNOSTIC_TYPE, String DIAGNOSTIC_TYPE_SITE,
                                   String IMAGING, String SPECIMEN_TYPE, String SPECIMEN_SITE, String AGE_AT_PROCEDURE,
                                   String LATERALITY, String DISEASE_STATUS, String METASTATIC_SITE,
                                   String TIME_TO_METASTASIS_MONTHS, String SAMPLE_TYPE, String SITE_OF_RECURRENCE,
                                   String TIME_TO_RECURRENCE) {
-        this.PATIENT_ID = PATIENT_ID;
-        this.SAMPLE_ID = SAMPLE_ID;
-        this.PDX_ID = PDX_ID;
-        this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID;
-        this.START_DATE = START_DATE;
-        this.STOP_DATE = STOP_DATE;
-        this.EVENT_TYPE = EVENT_TYPE;
-        this.PASSAGE_ID = PASSAGE_ID;
-        this.TREATMENT_TYPE = TREATMENT_TYPE;
-        this.SUBTYPE = SUBTYPE;
-        this.AGENT = AGENT;
-        this.TREATMENT_RESPONSE = TREATMENT_RESPONSE;
-        this.TREATMENT_STATUS = TREATMENT_STATUS;
-        this.RESPONSE_DURATION = RESPONSE_DURATION;
-        this.REASON_FOR_TX_DISCONTINUATION = REASON_FOR_TX_DISCONTINUATION;
-        this.SURGERY_DETAILS = SURGERY_DETAILS;
-        this.EVENT_TYPE_DETAILED = EVENT_TYPE_DETAILED;
-        this.PROCEDURE_LOCATION = PROCEDURE_LOCATION;
-        this.PROCEDURE_LOCATION_SPECIFY = PROCEDURE_LOCATION_SPECIFY;
-        this.DIAGNOSTIC_TYPE = DIAGNOSTIC_TYPE;
-        this.DIAGNOSTIC_TYPE_SITE = DIAGNOSTIC_TYPE_SITE;
-        this.IMAGING = IMAGING;
-        this.SPECIMEN_TYPE = SPECIMEN_TYPE;
-        this.SPECIMEN_SITE = SPECIMEN_SITE;
-        this.AGE_AT_PROCEDURE = AGE_AT_PROCEDURE;
-        this.LATERALITY = LATERALITY;
-        this.DISEASE_STATUS = DISEASE_STATUS;
-        this.METASTATIC_SITE = METASTATIC_SITE;
-        this.TIME_TO_METASTASIS_MONTHS = TIME_TO_METASTASIS_MONTHS;
-        this.SAMPLE_TYPE = SAMPLE_TYPE;
-        this.SITE_OF_RECURRENCE = SITE_OF_RECURRENCE;
-        this.TIME_TO_RECURRENCE = TIME_TO_RECURRENCE;
+        this.PATIENT_ID = PATIENT_ID == null ? "NA" : PATIENT_ID;
+        this.SAMPLE_ID = SAMPLE_ID == null ? "NA" : SAMPLE_ID;
+        this.PDX_ID = PDX_ID == null ? "NA" : PDX_ID;
+        this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID == null ? "NA" : DESTINATION_STUDY_ID;
+        this.START_DATE = START_DATE == null ? "NA" : START_DATE;
+        this.STOP_DATE = STOP_DATE == null ? "NA" : STOP_DATE;
+        this.EVENT_TYPE = EVENT_TYPE == null ? "NA" : EVENT_TYPE;
+        this.PASSAGE_ID = PASSAGE_ID == null ? "NA" : PASSAGE_ID;
+        this.TREATMENT_TYPE = TREATMENT_TYPE == null ? "NA" : TREATMENT_TYPE;
+        this.SUB_TYPE = SUB_TYPE == null ? "NA" : SUB_TYPE;
+        this.AGENT = AGENT == null ? "NA" : AGENT;
+        this.RESPONSE = RESPONSE == null ? "NA" : RESPONSE;
+        this.RESPONSE_DURATION_MONTHS = RESPONSE_DURATION_MONTHS == null ? "NA" : RESPONSE_DURATION_MONTHS;
+        this.REASON_FOR_TX_DISCONTINUATION = REASON_FOR_TX_DISCONTINUATION == null ? "NA" : REASON_FOR_TX_DISCONTINUATION;
+        this.SURGERY_DETAILS = SURGERY_DETAILS == null ? "NA" : SURGERY_DETAILS;
+        this.EVENT_TYPE_DETAILED = EVENT_TYPE_DETAILED == null ? "NA" : EVENT_TYPE_DETAILED;
+        this.PROCEDURE_LOCATION = PROCEDURE_LOCATION == null ? "NA" : PROCEDURE_LOCATION;
+        this.PROCEDURE_LOCATION_SPECIFY = PROCEDURE_LOCATION_SPECIFY == null ? "NA" : PROCEDURE_LOCATION_SPECIFY;
+        this.DIAGNOSTIC_TYPE = DIAGNOSTIC_TYPE == null ? "NA" : DIAGNOSTIC_TYPE;
+        this.DIAGNOSTIC_TYPE_SITE = DIAGNOSTIC_TYPE_SITE == null ? "NA" : DIAGNOSTIC_TYPE_SITE;
+        this.IMAGING = IMAGING == null ? "NA" : IMAGING;
+        this.SPECIMEN_TYPE = SPECIMEN_TYPE == null ? "NA" : SPECIMEN_TYPE;
+        this.SPECIMEN_SITE = SPECIMEN_SITE == null ? "NA" : SPECIMEN_SITE;
+        this.AGE_AT_PROCEDURE = AGE_AT_PROCEDURE == null ? "NA" : AGE_AT_PROCEDURE;
+        this.LATERALITY = LATERALITY == null ? "NA" : LATERALITY;
+        this.DISEASE_STATUS = DISEASE_STATUS == null ? "NA" : DISEASE_STATUS;
+        this.METASTATIC_SITE = METASTATIC_SITE == null ? "NA" : METASTATIC_SITE;
+        this.TIME_TO_METASTASIS_MONTHS = TIME_TO_METASTASIS_MONTHS == null ? "NA" : TIME_TO_METASTASIS_MONTHS;
+        this.SAMPLE_TYPE = SAMPLE_TYPE == null ? "NA" : SAMPLE_TYPE;
+        this.SITE_OF_RECURRENCE = SITE_OF_RECURRENCE == null ? "NA" : SITE_OF_RECURRENCE;
+        this.TIME_TO_RECURRENCE = TIME_TO_RECURRENCE == null ? "NA" : TIME_TO_RECURRENCE;
     }
     
     
@@ -183,6 +180,7 @@ public class CRDBPDXTimelineDataset {
 
     /**
      * @return START_DATE
+     */
     public String getSTART_DATE() {
         return START_DATE;
     }
@@ -251,17 +249,17 @@ public class CRDBPDXTimelineDataset {
     }
 
     /**
-     * @return SUBTYPE
+     * @return SUB_TYPE
      */
-    public String getSUBTYPE() {
-        return SUBTYPE;
+    public String getSUB_TYPE() {
+        return SUB_TYPE;
     }
 
     /**
-     * @param SUBTYPE
+     * @param SUB_TYPE
      */
-    public void setSUBTYPE(String SUBTYPE) {
-        this.SUBTYPE = SUBTYPE;
+    public void setSUB_TYPE(String SUB_TYPE) {
+        this.SUB_TYPE = SUB_TYPE;
     }
 
     /**
@@ -279,45 +277,31 @@ public class CRDBPDXTimelineDataset {
     }
 
     /**
-     * @return TREATMENT_RESPONSE
+     * @return RESPONSE
      */
-    public String getTREATMENT_RESPONSE() {
-        return TREATMENT_RESPONSE;
+    public String getRESPONSE() {
+        return RESPONSE;
     }
 
     /**
-     * @param TREATMENT_RESPONSE
+     * @param RESPONSE
      */
-    public void setTREATMENT_RESPONSE(String TREATMENT_RESPONSE) {
-        this.TREATMENT_RESPONSE = TREATMENT_RESPONSE;
+    public void setRESPONSE(String RESPONSE) {
+        this.RESPONSE = RESPONSE;
     }
 
     /**
-     * @return TREATMENT_STATUS
+     * @return RESPONSE_DURATION_MONTHS
      */
-    public String getTREATMENT_STATUS() {
-        return TREATMENT_STATUS;
+    public String getRESPONSE_DURATION_MONTHS() {
+        return RESPONSE_DURATION_MONTHS;
     }
 
     /**
-     * @param TREATMENT_STATUS
+     * @param RESPONSE_DURATION_MONTHS
      */
-    public void setTREATMENT_STATUS(String TREATMENT_STATUS) {
-        this.TREATMENT_STATUS = TREATMENT_STATUS;
-    }
-
-    /**
-     * @return RESPONSE_DURATION
-     */
-    public String getRESPONSE_DURATION() {
-        return RESPONSE_DURATION;
-    }
-
-    /**
-     * @param RESPONSE_DURATION
-     */
-    public void setRESPONSE_DURATION(String RESPONSE_DURATION) {
-        this.RESPONSE_DURATION = RESPONSE_DURATION;
+    public void setRESPONSE_DURATION_MONTHS(String RESPONSE_DURATION_MONTHS) {
+        this.RESPONSE_DURATION_MONTHS = RESPONSE_DURATION_MONTHS;
     }
 
     /**
@@ -585,11 +569,10 @@ public class CRDBPDXTimelineDataset {
         fieldNames.add("EVENT_TYPE");
         fieldNames.add("PASSAGE_ID");
         fieldNames.add("TREATMENT_TYPE");
-        fieldNames.add("SUBTYPE");
+        fieldNames.add("SUB_TYPE");
         fieldNames.add("AGENT");
-        fieldNames.add("TREATMENT_RESPONSE");
-        fieldNames.add("TREATMENT_STATUS");
-        fieldNames.add("RESPONSE_DURATION");
+        fieldNames.add("RESPONSE");
+        fieldNames.add("RESPONSE_DURATION_MONTHS");
         fieldNames.add("REASON_FOR_TX_DISCONTINUATION");
         fieldNames.add("SURGERY_DETAILS");
         fieldNames.add("EVENT_TYPE_DETAILED");

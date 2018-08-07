@@ -51,13 +51,12 @@ import org.apache.commons.lang.StringUtils;
  * @author ochoaa
  */
 
-public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String>
-{
+public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String> {
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
 
-    @Value("${crdb.clinical_sample_filename}")
-    private String clinicalSampleFilename;
+    @Value("${crdb.pdx_clinical_sample_dataset_filename}")
+    private String pdxClinicalSampleDatasetFilename;
 
     private List<String> writeList = new ArrayList<String>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
@@ -73,11 +72,10 @@ public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String>
                 writer.write(normalizeHeaders(new CRDBPDXClinicalSampleDataset().getFieldNames()));
             }
         });
-        if (stagingDirectory.endsWith("/")){
-            stagingFile = stagingDirectory+clinicalSampleFilename;
-        }
-        else{
-            stagingFile = stagingDirectory+"/"+clinicalSampleFilename;
+        if (stagingDirectory.endsWith("/")) {
+            stagingFile = stagingDirectory + pdxClinicalSampleDatasetFilename;
+        } else {
+            stagingFile = stagingDirectory + "/" + pdxClinicalSampleDatasetFilename;
         }
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
@@ -85,17 +83,14 @@ public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String>
 
     private String normalizeHeaders(List<String> columns) {
         List<String> normColumns = new ArrayList<>();
-        for (String col : columns){
-            if (col.equals("DMP_ID")){
+        for (String col : columns) {
+            if (col.equals("DMP_ID")) {
                 normColumns.add("PATIENT_ID");
-            }
-            else if (col.equals("COMMENTS")){
+            } else if (col.equals("COMMENTS")) {
                 normColumns.add("CRDB_BASIC_"+col);
-            }
-            else if (col.equals("PARTA_CONSENTED")) {
+            } else if (col.equals("PARTA_CONSENTED")) {
                 normColumns.add("PARTA_CONSENTED_12_245");
-            }
-            else {
+            } else {
                 normColumns.add("CRDB_"+col);
             }
         }

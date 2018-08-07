@@ -47,7 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
- * Class for querying the CRDB Dataset view.
+ * Class for querying the CRDB PDX Timeline Dataset view.
  *
  * @author ochoaa
  */
@@ -65,28 +65,26 @@ public class CRDBPDXTimelineReader implements ItemStreamReader<CRDBPDXTimelineDa
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.crdbTimelineDatasetResults = getCrdbTimelineDatsetResults();
         if (crdbTimelineDatasetResults.isEmpty()) {
-            throw new ItemStreamException("Error fetching records from CRDB Dataset View");
+            throw new ItemStreamException("Error fetching records from CRDB PDX Timeline Dataset View");
         }
     }
 
     /**
-     * Creates an alias for the CRDB Dataset view query type and projects query as
+     * Creates an alias for the CRDB PDX Timeline Dataset view query type and projects query as
      * a list of CRDBPDXTimelineDataset objects
      *
      * @return List<CRDBPDXTimelineDataset>
      */
     @Transactional
     private List<CRDBPDXTimelineDataset> getCrdbTimelineDatsetResults() {
-        System.out.println("Beginning CRDB Dataset View import...");
+        System.out.println("Beginning CRDB PDX Timeline Dataset View import...");
 
         CRDBPDXTimelineDataset qCRDBD = alias(CRDBPDXTimelineDataset.class, crdbPDXTimelineDatasetView);
         List<CRDBPDXTimelineDataset> crdbTimelineDatasetResults = crdbQueryFactory.selectDistinct(
-                Projections.constructor(CRDBPDXTimelineDataset.class, $(qCRDBD.getPATIENT_ID()),
-                    $(qCRDBD.getSAMPLE_ID())))
+                Projections.constructor(CRDBPDXTimelineDataset.class, $(qCRDBD.getPATIENT_ID()), $(qCRDBD.getSAMPLE_ID()), $(qCRDBD.getPDX_ID()), $(qCRDBD.getDESTINATION_STUDY_ID()), $(qCRDBD.getSTART_DATE()), $(qCRDBD.getSTOP_DATE()), $(qCRDBD.getEVENT_TYPE()), $(qCRDBD.getPASSAGE_ID()), $(qCRDBD.getTREATMENT_TYPE()), $(qCRDBD.getSUB_TYPE()), $(qCRDBD.getAGENT()), $(qCRDBD.getRESPONSE()), $(qCRDBD.getRESPONSE_DURATION_MONTHS()), $(qCRDBD.getREASON_FOR_TX_DISCONTINUATION()), $(qCRDBD.getSURGERY_DETAILS()), $(qCRDBD.getEVENT_TYPE_DETAILED()), $(qCRDBD.getPROCEDURE_LOCATION()), $(qCRDBD.getPROCEDURE_LOCATION_SPECIFY()), $(qCRDBD.getDIAGNOSTIC_TYPE()), $(qCRDBD.getDIAGNOSTIC_TYPE_SITE()), $(qCRDBD.getIMAGING()), $(qCRDBD.getSPECIMEN_TYPE()), $(qCRDBD.getSPECIMEN_SITE()), $(qCRDBD.getAGE_AT_PROCEDURE()), $(qCRDBD.getLATERALITY()), $(qCRDBD.getDISEASE_STATUS()), $(qCRDBD.getMETASTATIC_SITE()), $(qCRDBD.getTIME_TO_METASTASIS_MONTHS()), $(qCRDBD.getSAMPLE_TYPE()), $(qCRDBD.getSITE_OF_RECURRENCE()), $(qCRDBD.getTIME_TO_RECURRENCE())))
                 .from($(qCRDBD))
                 .fetch();
-
-        System.out.println("Imported " + crdbTimelineDatasetResults.size() + " records from CRDB Dataset View.");
+        System.out.println("Imported " + crdbTimelineDatasetResults.size() + " records from CRDB PDX Timeline Dataset View.");
         return crdbTimelineDatasetResults;
     }
 

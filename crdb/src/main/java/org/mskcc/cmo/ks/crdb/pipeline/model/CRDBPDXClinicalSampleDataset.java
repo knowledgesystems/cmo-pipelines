@@ -78,29 +78,28 @@ public class CRDBPDXClinicalSampleDataset {
                                         String KRAS_NEGATIVE, String PASSAGE_ID, String ONCOTREE_CODE, String STAGE_CODE, 
                                         String t_STAGE, String n_STAGE, String m_STAGE, String GRADE, String SAMPLE_TYPE,
                                         String PRIMARY_SITE, String SAMPLE_CLASS, String PROCEDURE_TYPE, String PRETREATED, 
-                                        String TREATED, Map<String, Object> additionalProperties) {
-        this.PATIENT_ID = PATIENT_ID;
-        this.SAMPLE_ID = SAMPLE_ID;
-        this.PDX_ID = PDX_ID;
-        this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID;
-        this.AGE_AT_INITIAL_DIAGNOSIS = AGE_AT_INITIAL_DIAGNOSIS;
-        this.EGFR_POSITIVE = EGFR_POSITIVE;
-        this.ALK_NEGATIVE = ALK_NEGATIVE;
-        this.KRAS_NEGATIVE = KRAS_NEGATIVE;
-        this.PASSAGE_ID = PASSAGE_ID;
-        this.ONCOTREE_CODE = ONCOTREE_CODE;
-        this.STAGE_CODE = STAGE_CODE;
-        this.T_STAGE = t_STAGE;
-        this.N_STAGE = n_STAGE;
-        this.M_STAGE = m_STAGE;
-        this.GRADE = GRADE;
-        this.SAMPLE_TYPE = SAMPLE_TYPE;
-        this.PRIMARY_SITE = PRIMARY_SITE;
-        this.SAMPLE_CLASS = SAMPLE_CLASS;
-        this.PROCEDURE_TYPE = PROCEDURE_TYPE;
-        this.PRETREATED = PRETREATED;
-        this.TREATED = TREATED;
-        this.additionalProperties = additionalProperties;
+                                        String TREATED) {
+        this.PATIENT_ID = PATIENT_ID == null ? "NA" : PATIENT_ID;
+        this.SAMPLE_ID = SAMPLE_ID == null ? "NA" : SAMPLE_ID;
+        this.PDX_ID = PDX_ID == null ? "NA" : PDX_ID;
+        this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID == null ? "NA" : DESTINATION_STUDY_ID;
+        this.AGE_AT_INITIAL_DIAGNOSIS = AGE_AT_INITIAL_DIAGNOSIS == null ? "NA" : AGE_AT_INITIAL_DIAGNOSIS;
+        this.EGFR_POSITIVE = EGFR_POSITIVE == null ? "NA" : EGFR_POSITIVE;
+        this.ALK_NEGATIVE = ALK_NEGATIVE == null ? "NA" : ALK_NEGATIVE;
+        this.KRAS_NEGATIVE = KRAS_NEGATIVE == null ? "NA" : KRAS_NEGATIVE;
+        this.PASSAGE_ID = PASSAGE_ID == null ? "NA" : PASSAGE_ID;
+        this.ONCOTREE_CODE = ONCOTREE_CODE == null ? "NA" : ONCOTREE_CODE;
+        this.STAGE_CODE = STAGE_CODE == null ? "NA" : STAGE_CODE;
+        this.T_STAGE = t_STAGE == null ? "NA" : t_STAGE;
+        this.N_STAGE = n_STAGE == null ? "NA" : n_STAGE;
+        this.M_STAGE = m_STAGE == null ? "NA" : m_STAGE;
+        this.GRADE = GRADE == null ? "NA" : GRADE;
+        this.SAMPLE_TYPE = SAMPLE_TYPE == null ? "NA" : SAMPLE_TYPE;
+        this.PRIMARY_SITE = PRIMARY_SITE == null ? "NA" : PRIMARY_SITE;
+        this.SAMPLE_CLASS = SAMPLE_CLASS == null ? "NA" : SAMPLE_CLASS;
+        this.PROCEDURE_TYPE = PROCEDURE_TYPE == null ? "NA" : PROCEDURE_TYPE;
+        this.PRETREATED = PRETREATED == null ? "NA" : PRETREATED;
+        this.TREATED = TREATED == null ? "NA" : TREATED;
     }
 
     /**

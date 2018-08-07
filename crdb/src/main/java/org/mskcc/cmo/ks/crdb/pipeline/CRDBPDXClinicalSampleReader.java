@@ -47,7 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
- * Class for querying the CRDB Dataset view.
+ * Class for querying the CRDB PDX Clinical Sample Dataset view.
  *
  * @author ochoaa
  */
@@ -65,28 +65,26 @@ public class CRDBPDXClinicalSampleReader implements ItemStreamReader<CRDBPDXClin
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.crdbPDXClinicalSampleDatasetResults = getCrdbPDXClinicalSampleDatasetResults();
         if (crdbPDXClinicalSampleDatasetResults.isEmpty()) {
-            throw new ItemStreamException("Error fetching records from CRDB Dataset View");
+            throw new ItemStreamException("Error fetching records from CRDB PDX Clinical Sample Dataset View");
         }
     }
 
     /**
-     * Creates an alias for the CRDB Dataset view query type and projects query as
+     * Creates an alias for the CRDB PDX Clinical Sample Dataset view query type and projects query as
      * a list of CRDBPDXClinicalSampleDataset objects
      *
      * @return List<CRDBPDXClinicalSampleDataset>
      */
     @Transactional
     private List<CRDBPDXClinicalSampleDataset> getCrdbPDXClinicalSampleDatasetResults() {
-        System.out.println("Beginning CRDB Dataset View import...");
+        System.out.println("Beginning CRDB PDX Clinical Sample Dataset View import...");
 
         CRDBPDXClinicalSampleDataset qCRDBD = alias(CRDBPDXClinicalSampleDataset.class, crdbPDXClinicalSampleDatasetView);
         List<CRDBPDXClinicalSampleDataset> crdbPDXClinicalSampleDatasetResults = crdbQueryFactory.selectDistinct(
-                Projections.constructor(CRDBPDXClinicalSampleDataset.class, $(qCRDBD.getPATIENT_ID()),
-                    $(qCRDBD.getSAMPLE_ID())))
+                Projections.constructor(CRDBPDXClinicalSampleDataset.class, $(qCRDBD.getPATIENT_ID()), $(qCRDBD.getSAMPLE_ID()), $(qCRDBD.getPDX_ID()), $(qCRDBD.getDESTINATION_STUDY_ID()), $(qCRDBD.getAGE_AT_INITIAL_DIAGNOSIS()), $(qCRDBD.getEGFR_POSITIVE()), $(qCRDBD.getALK_NEGATIVE()), $(qCRDBD.getKRAS_NEGATIVE()), $(qCRDBD.getPASSAGE_ID()), $(qCRDBD.getONCOTREE_CODE()), $(qCRDBD.getSTAGE_CODE()), $(qCRDBD.getT_STAGE()), $(qCRDBD.getN_STAGE()), $(qCRDBD.getM_STAGE()), $(qCRDBD.getGRADE()), $(qCRDBD.getSAMPLE_TYPE()), $(qCRDBD.getPRIMARY_SITE()), $(qCRDBD.getSAMPLE_CLASS()), $(qCRDBD.getPROCEDURE_TYPE()), $(qCRDBD.getPRETREATED()), $(qCRDBD.getTREATED())))
                 .from($(qCRDBD))
                 .fetch();
-
-        System.out.println("Imported " + crdbPDXClinicalSampleDatasetResults.size() + " records from CRDB Dataset View.");
+        System.out.println("Imported " + crdbPDXClinicalSampleDatasetResults.size() + " records from CRDB PDX Clinical Sample Dataset View.");
         return crdbPDXClinicalSampleDatasetResults;
     }
 

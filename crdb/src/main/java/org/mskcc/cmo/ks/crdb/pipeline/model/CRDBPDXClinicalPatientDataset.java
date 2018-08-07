@@ -44,7 +44,7 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 public class CRDBPDXClinicalPatientDataset {
 
     private String PATIENT_ID;
-    private String DESTINATION_STUDY;
+    private String DESTINATION_STUDY_ID;
     private String SEX;
     private String ETHNICITY;
     private String RACE;
@@ -57,13 +57,13 @@ public class CRDBPDXClinicalPatientDataset {
     public CRDBPDXClinicalPatientDataset() {
     }
 
-    public CRDBPDXClinicalPatientDataset(String PATIENT_ID, String DESTINATION_STUDY, String SEX, String ETHNICITY, String RACE, String SMOKING_HISTORY) {
-        this.PATIENT_ID = PATIENT_ID;
-        this.DESTINATION_STUDY = DESTINATION_STUDY;
-        this.SEX = SEX;
-        this.ETHNICITY = ETHNICITY;
-        this.RACE = RACE;
-        this.SMOKING_HISTORY = SMOKING_HISTORY;
+    public CRDBPDXClinicalPatientDataset(String PATIENT_ID, String DESTINATION_STUDY_ID, String SEX, String ETHNICITY, String RACE, String SMOKING_HISTORY) {
+        this.PATIENT_ID = PATIENT_ID == null ? "NA" : PATIENT_ID;
+        this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID == null ? "NA" : DESTINATION_STUDY_ID;
+        this.SEX = SEX == null ? "NA" : SEX;
+        this.ETHNICITY = ETHNICITY == null ? "NA" : ETHNICITY;
+        this.RACE = RACE == null ? "NA" : RACE;
+        this.SMOKING_HISTORY = SMOKING_HISTORY == null ? "NA" : SMOKING_HISTORY;
     }
     
     /**
@@ -83,17 +83,17 @@ public class CRDBPDXClinicalPatientDataset {
 
     /**
      *
-     * @return DESTINATION_STUDY
+     * @return DESTINATION_STUDY_ID
      */
-    public String getDESTINATION_STUDY() {
-        return DESTINATION_STUDY;
+    public String getDESTINATION_STUDY_ID() {
+        return DESTINATION_STUDY_ID;
     }
 
     /**
-     * @param DESTINATION_STUDY
+     * @param DESTINATION_STUDY_ID
      */
-    public void setDESTINATION_STUDY(String DESTINATION_STUDY) {
-        this.DESTINATION_STUDY = DESTINATION_STUDY;
+    public void setDESTINATION_STUDY_ID(String DESTINATION_STUDY_ID) {
+        this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID;
     }
 
     /**
@@ -163,7 +163,7 @@ public class CRDBPDXClinicalPatientDataset {
     public List<String> getFieldNames() {
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add("PATIENT_ID");
-        fieldNames.add("DESTINATION_STUDY");
+        fieldNames.add("DESTINATION_STUDY_ID");
         fieldNames.add("SEX");
         fieldNames.add("ETHNICITY");
         fieldNames.add("RACE");

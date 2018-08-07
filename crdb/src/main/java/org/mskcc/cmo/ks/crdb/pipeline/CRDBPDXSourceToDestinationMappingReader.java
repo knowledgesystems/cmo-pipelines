@@ -47,7 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
- * Class for querying the CRDB Dataset view.
+ * Class for querying the CRDB PDX Source To Destination Mapping view.
  *
  * @author ochoaa
  */
@@ -65,19 +65,19 @@ public class CRDBPDXSourceToDestinationMappingReader implements ItemStreamReader
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.crdbPDXSourceToDestinationMappingResults = getCrdbPDXSourceToDestinationMappingResults();
         if (crdbPDXSourceToDestinationMappingResults.isEmpty()) {
-            throw new ItemStreamException("Error fetching records from CRDB Dataset View");
+            throw new ItemStreamException("Error fetching records from CRDB PDX Source To Destination Mapping View");
         }
     }
 
     /**
-     * Creates an alias for the CRDB Dataset view query type and projects query as
+     * Creates an alias for the CRDB PDX Source To Destination Mapping view query type and projects query as
      * a list of CRDBPDXSourceToDestinationMapping objects
      *
      * @return List<CRDBPDXSourceToDestinationMapping>
      */
     @Transactional
     private List<CRDBPDXSourceToDestinationMapping> getCrdbPDXSourceToDestinationMappingResults() {
-        System.out.println("Beginning CRDB Dataset View import...");
+        System.out.println("Beginning CRDB PDX Source To Destination Mapping View import...");
 
         CRDBPDXSourceToDestinationMapping qCRDBD = alias(CRDBPDXSourceToDestinationMapping.class, crdbPDXSourceToDestinationMappingView);
         List<CRDBPDXSourceToDestinationMapping> crdbPDXSourceToDestinationMappingResults = crdbQueryFactory.selectDistinct(
@@ -87,7 +87,7 @@ public class CRDBPDXSourceToDestinationMappingReader implements ItemStreamReader
                 .from($(qCRDBD))
                 .fetch();
 
-        System.out.println("Imported " + crdbPDXSourceToDestinationMappingResults.size() + " records from CRDB Dataset View.");
+        System.out.println("Imported " + crdbPDXSourceToDestinationMappingResults.size() + " records from CRDB PDX Source To Destination Mapping View.");
         return crdbPDXSourceToDestinationMappingResults;
     }
 

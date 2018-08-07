@@ -74,15 +74,15 @@ public class CRDBPipeline {
                 .addString("stagingDirectory", stagingDirectory)
                 .addString("pdxMode", String.valueOf(pdx))
                 .toJobParameters();
+        Job crdbJob = null;
         if (pdx) {
-            // Job crdbJob = ctx.getBean(BatchConfiguration.CRDB_PDX_JOB, Job,class);
             System.out.println("Launching pdx job");
-            Job crdbJob = ctx.getBean(BatchConfiguration.CRDB_PDX_JOB, Job.class);
+            crdbJob = ctx.getBean(BatchConfiguration.CRDB_PDX_JOB, Job.class);
         } else {
-            System.out.println("Launching reg job");
-            Job crdbJob = ctx.getBean(BatchConfiguration.CRDB_IMPACT_JOB, Job.class);
+            System.out.println("Launching impact job");
+            crdbJob = ctx.getBean(BatchConfiguration.CRDB_IMPACT_JOB, Job.class);
         }  
-        // JobExecution jobExecution = jobLauncher.run(crdbJob, jobParameters);
+        JobExecution jobExecution = jobLauncher.run(crdbJob, jobParameters);
         System.out.println("Shutting down CRDBPipeline.");
         ctx.close();
     }

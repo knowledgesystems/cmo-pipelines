@@ -56,10 +56,10 @@ public class CRDBPDXSourceToDestinationMapping {
     }
     
     public CRDBPDXSourceToDestinationMapping(String PATIENT_ID, String SOURCE_STUDY_ID, String DESTINATION_STUDY_ID, String DESTINATION_PATIENT_ID) {
-        this.PATIENT_ID = PATIENT_ID;
-        this.SOURCE_STUDY_ID = SOURCE_STUDY_ID;
-        this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID;
-        this.DESTINATION_PATIENT_ID = DESTINATION_PATIENT_ID;
+        this.PATIENT_ID = PATIENT_ID == null ? "NA" : PATIENT_ID;
+        this.SOURCE_STUDY_ID = SOURCE_STUDY_ID == null ? "NA" : SOURCE_STUDY_ID;
+        this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID == null ? "NA" : DESTINATION_STUDY_ID;
+        this.DESTINATION_PATIENT_ID = DESTINATION_PATIENT_ID == null ? "NA" : DESTINATION_PATIENT_ID;
     }
 
     /**

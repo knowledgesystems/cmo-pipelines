@@ -68,7 +68,6 @@ public class CRDBDataset {
     **/
     public CRDBDataset(String DMP_ID, String CONSENT_DATE_DAYS,
             String SURVIVAL_STATUS, String TREATMENT_END_DAYS, String OFF_STUDY_DAYS, String COMMENTS) {
-
         this.DMP_ID = DMP_ID == null ? "NA" : DMP_ID;
         this.CONSENT_DATE_DAYS = CONSENT_DATE_DAYS == null ? "NA" : CONSENT_DATE_DAYS;
         this.SURVIVAL_STATUS = SURVIVAL_STATUS == null ? "NA" : SURVIVAL_STATUS;

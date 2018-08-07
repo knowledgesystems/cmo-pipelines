@@ -52,35 +52,35 @@ public class CRDBSurvey {
     private String COMMENTS;
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
-/**
-* No args constructor for use in serialization
-*
-*/
-public CRDBSurvey() {
-}
+    /**
+    * No args constructor for use in serialization
+    *
+    */
+    public CRDBSurvey() {
+    }
 
-/**
-*
-* @param DMP_ID
-* @param QS_DATE
-* @param ADJ_TXT
-* @param NOSYSTXT
-* @param PRIOR_RX
-* @param BRAINMET
-* @param ECOG
-* @param COMMENTS
-*/
-public CRDBSurvey(String DMP_ID, Date QS_DATE, String ADJ_TXT, String NOSYSTXT,
-        String PRIOR_RX, String BRAINMET, String ECOG, String COMMENTS) {
-this.DMP_ID = DMP_ID==null?"NA":DMP_ID;
-this.QS_DATE = QS_DATE==null?null:QS_DATE;
-this.ADJ_TXT = ADJ_TXT==null?"NA":ADJ_TXT;
-this.NOSYSTXT = NOSYSTXT==null?"NA":NOSYSTXT;
-this.PRIOR_RX = PRIOR_RX==null?"NA":PRIOR_RX;
-this.BRAINMET = BRAINMET==null?"NA":BRAINMET;
-this.ECOG = ECOG==null?"NA":ECOG;
-this.COMMENTS = COMMENTS==null?"NA":COMMENTS;
-}
+    /**
+    *
+    * @param DMP_ID
+    * @param QS_DATE
+    * @param ADJ_TXT
+    * @param NOSYSTXT
+    * @param PRIOR_RX
+    * @param BRAINMET
+    * @param ECOG
+    * @param COMMENTS
+    */
+    public CRDBSurvey(String DMP_ID, Date QS_DATE, String ADJ_TXT, String NOSYSTXT,
+            String PRIOR_RX, String BRAINMET, String ECOG, String COMMENTS) {
+        this.DMP_ID = DMP_ID == null ? "NA" : DMP_ID;
+        this.QS_DATE = QS_DATE; // cannot initialize a date field when date is not known .. so leave it as null if null
+        this.ADJ_TXT = ADJ_TXT == null ? "NA" : ADJ_TXT;
+        this.NOSYSTXT = NOSYSTXT == null ? "NA" : NOSYSTXT;
+        this.PRIOR_RX = PRIOR_RX == null ? "NA" : PRIOR_RX;
+        this.BRAINMET = BRAINMET == null ? "NA" : BRAINMET;
+        this.ECOG = ECOG == null ? "NA" : ECOG;
+        this.COMMENTS = COMMENTS == null ? "NA" : COMMENTS;
+    }
 
     /**
      *
