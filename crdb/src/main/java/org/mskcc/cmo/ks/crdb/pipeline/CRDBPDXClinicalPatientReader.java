@@ -81,13 +81,15 @@ public class CRDBPDXClinicalPatientReader implements ItemStreamReader<CRDBPDXCli
 
         CRDBPDXClinicalPatientDataset qCRDBD = alias(CRDBPDXClinicalPatientDataset.class, crdbPDXClinicalPatientDatasetView);
         List<CRDBPDXClinicalPatientDataset> crdbPDXClinicalPatientDatasetResults = crdbQueryFactory.selectDistinct(
-                Projections.constructor(CRDBPDXClinicalPatientDataset.class, $(qCRDBD.getPATIENT_ID()),
-                    $(qCRDBD.getSEX()), $(qCRDBD.getETHNICITY()),
-                    $(qCRDBD.getRACE()), $(qCRDBD.getSMOKING_HISTORY()),
-                    $(qCRDBD.getDESTINATION_STUDY_ID())))
+                Projections.constructor(CRDBPDXClinicalPatientDataset.class, $(qCRDBD.getPATIENT_ID()), $(qCRDBD.getDESTINATION_STUDY_ID()),
+                                        $(qCRDBD.getSEX()), $(qCRDBD.getETHNICITY()), $(qCRDBD.getRACE()), $(qCRDBD.getSMOKING_HISTORY()),
+                                        $(qCRDBD.getCROHN_DISEASE()), $(qCRDBD.getULCERATIVE_COLITIS()), $(qCRDBD.getBARETT_ESOPHAGUS()),
+                                        $(qCRDBD.getH_PYLORI()), $(qCRDBD.getMDS()), $(qCRDBD.getMENOPAUSAL_STATUS()), $(qCRDBD.getUV_EXPOSURE()),
+                                        $(qCRDBD.getRADIATION_THERAPY()), $(qCRDBD.getBREAST_IMPLANTS()), $(qCRDBD.getBRCA()),
+                                        $(qCRDBD.getRETINOBLASTOMA()), $(qCRDBD.getGRADE_1()), $(qCRDBD.getGRADE_2()), $(qCRDBD.getGRADE_3()),
+                                        $(qCRDBD.getPLATINUM_SENSITIVE()), $(qCRDBD.getPLATINUM_RESISTANT())))
                 .from($(qCRDBD))
                 .fetch();
-
         System.out.println("Imported " + crdbPDXClinicalPatientDatasetResults.size() + " records from CRDB PDX Clinical Patient Dataset View.");
         return crdbPDXClinicalPatientDatasetResults;
     }

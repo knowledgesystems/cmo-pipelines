@@ -49,6 +49,22 @@ public class CRDBPDXClinicalPatientDataset {
     private String ETHNICITY;
     private String RACE;
     private String SMOKING_HISTORY;
+    private String CROHN_DISEASE;
+    private String ULCERATIVE_COLITIS;
+    private String BARETT_ESOPHAGUS;
+    private String H_PYLORI;
+    private String MDS;
+    private String MENOPAUSAL_STATUS;
+    private String UV_EXPOSURE;
+    private String RADIATION_THERAPY;
+    private String BREAST_IMPLANTS;
+    private String BRCA;
+    private String RETINOBLASTOMA;
+    private String GRADE_1;
+    private String GRADE_2;
+    private String GRADE_3;
+    private String PLATINUM_SENSITIVE;
+    private String PLATINUM_RESISTANT;
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
     /**
@@ -57,13 +73,33 @@ public class CRDBPDXClinicalPatientDataset {
     public CRDBPDXClinicalPatientDataset() {
     }
 
-    public CRDBPDXClinicalPatientDataset(String PATIENT_ID, String DESTINATION_STUDY_ID, String SEX, String ETHNICITY, String RACE, String SMOKING_HISTORY) {
+    public CRDBPDXClinicalPatientDataset(String PATIENT_ID, String DESTINATION_STUDY_ID, String SEX, String ETHNICITY, String RACE, 
+                                         String SMOKING_HISTORY, String CROHN_DISEASE, String ULCERATIVE_COLITIS, String BARETT_ESOPHAGUS,
+                                         String H_PYLORI, String MDS, String MENOPAUSAL_STATUS, String UV_EXPOSURE, String RADIATION_THERAPY,
+                                         String BREAST_IMPLANTS, String BRCA, String RETINOBLASTOMA, String GRADE_1, String GRADE_2, 
+                                         String GRADE_3, String PLATINUM_SENSITIVE, String PLATINUM_RESISTANT) {
         this.PATIENT_ID = PATIENT_ID == null ? "NA" : PATIENT_ID;
         this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID == null ? "NA" : DESTINATION_STUDY_ID;
         this.SEX = SEX == null ? "NA" : SEX;
         this.ETHNICITY = ETHNICITY == null ? "NA" : ETHNICITY;
         this.RACE = RACE == null ? "NA" : RACE;
         this.SMOKING_HISTORY = SMOKING_HISTORY == null ? "NA" : SMOKING_HISTORY;
+        this.CROHN_DISEASE = CROHN_DISEASE == null ? "NA" : CROHN_DISEASE;
+        this.ULCERATIVE_COLITIS = ULCERATIVE_COLITIS == null ? "NA" : ULCERATIVE_COLITIS;
+        this.BARETT_ESOPHAGUS = BARETT_ESOPHAGUS == null ? "NA" : BARETT_ESOPHAGUS;
+        this.H_PYLORI = H_PYLORI == null ? "NA" : H_PYLORI;
+        this.MDS = MDS == null ? "NA" : MDS;
+        this.MENOPAUSAL_STATUS = MENOPAUSAL_STATUS == null ? "NA" : MENOPAUSAL_STATUS;
+        this.UV_EXPOSURE = UV_EXPOSURE == null ? "NA" : UV_EXPOSURE;
+        this.RADIATION_THERAPY = RADIATION_THERAPY == null ? "NA" : RADIATION_THERAPY;
+        this.BREAST_IMPLANTS = BREAST_IMPLANTS == null ? "NA" : BREAST_IMPLANTS;
+        this.BRCA = BRCA == null ? "NA" : BRCA;
+        this.RETINOBLASTOMA = RETINOBLASTOMA == null ? "NA" : RETINOBLASTOMA;
+        this.GRADE_1 = GRADE_1 == null ? "NA" : GRADE_1;
+        this.GRADE_2 = GRADE_2 == null ? "NA" : GRADE_2;
+        this.GRADE_3 = GRADE_3 == null ? "NA" : GRADE_3;
+        this.PLATINUM_SENSITIVE = PLATINUM_SENSITIVE == null ? "NA" : PLATINUM_SENSITIVE;
+        this.PLATINUM_RESISTANT = PLATINUM_RESISTANT == null ? "NA" : PLATINUM_RESISTANT;
     }
     
     /**
@@ -156,6 +192,134 @@ public class CRDBPDXClinicalPatientDataset {
         this.SMOKING_HISTORY = SMOKING_HISTORY;
     }
 
+    public String getCROHN_DISEASE() {
+        return CROHN_DISEASE;
+    }
+
+    public void setCROHN_DISEASE(String CROHN_DISEASE) {
+        this.CROHN_DISEASE = CROHN_DISEASE;
+    }
+
+    public String getULCERATIVE_COLITIS() {
+        return ULCERATIVE_COLITIS;
+    }
+
+    public void setULCERATIVE_COLITIS(String ULCERATIVE_COLITIS) {
+        this.ULCERATIVE_COLITIS = ULCERATIVE_COLITIS;
+    }
+
+    public String getBARETT_ESOPHAGUS() {
+        return BARETT_ESOPHAGUS;
+    }
+
+    public void setBARETT_ESOPHAGUS(String BARETT_ESOPHAGUS) {
+        this.BARETT_ESOPHAGUS = BARETT_ESOPHAGUS;
+    }
+
+    public String getH_PYLORI() {
+        return H_PYLORI;
+    }
+
+    public void setH_PYLORI(String h_PYLORI) {
+        H_PYLORI = h_PYLORI;
+    }
+
+    public String getMDS() {
+        return MDS;
+    }
+
+    public void setMDS(String MDS) {
+        this.MDS = MDS;
+    }
+
+    public String getMENOPAUSAL_STATUS() {
+        return MENOPAUSAL_STATUS;
+    }
+
+    public void setMENOPAUSAL_STATUS(String MENOPAUSAL_STATUS) {
+        this.MENOPAUSAL_STATUS = MENOPAUSAL_STATUS;
+    }
+
+    public String getUV_EXPOSURE() {
+        return UV_EXPOSURE;
+    }
+
+    public void setUV_EXPOSURE(String UV_EXPOSURE) {
+        this.UV_EXPOSURE = UV_EXPOSURE;
+    }
+
+    public String getRADIATION_THERAPY() {
+        return RADIATION_THERAPY;
+    }
+
+    public void setRADIATION_THERAPY(String RADIATION_THERAPY) {
+        this.RADIATION_THERAPY = RADIATION_THERAPY;
+    }
+
+    public String getBREAST_IMPLANTS() {
+        return BREAST_IMPLANTS;
+    }
+
+    public void setBREAST_IMPLANTS(String BREAST_IMPLANTS) {
+        this.BREAST_IMPLANTS = BREAST_IMPLANTS;
+    }
+
+    public String getBRCA() {
+        return BRCA;
+    }
+
+    public void setBRCA(String BRCA) {
+        this.BRCA = BRCA;
+    }
+
+    public String getRETINOBLASTOMA() {
+        return RETINOBLASTOMA;
+    }
+
+    public void setRETINOBLASTOMA(String RETINOBLASTOMA) {
+        this.RETINOBLASTOMA = RETINOBLASTOMA;
+    }
+
+    public String getGRADE_1() {
+        return GRADE_1;
+    }
+
+    public void setGRADE_1(String GRADE_1) {
+        this.GRADE_1 = GRADE_1;
+    }
+
+    public String getGRADE_2() {
+        return GRADE_2;
+    }
+
+    public void setGRADE_2(String GRADE_2) {
+        this.GRADE_2 = GRADE_2;
+    }
+
+    public String getGRADE_3() {
+        return GRADE_3;
+    }
+
+    public void setGRADE_3(String GRADE_3) {
+        this.GRADE_3 = GRADE_3;
+    }
+
+    public String getPLATINUM_SENSITIVE() {
+        return PLATINUM_SENSITIVE;
+    }
+
+    public void setPLATINUM_SENSITIVE(String PLATINUM_SENSITIVE) {
+        this.PLATINUM_SENSITIVE = PLATINUM_SENSITIVE;
+    }
+
+    public String getPLATINUM_RESISTANT() {
+        return PLATINUM_RESISTANT;
+    }
+
+    public void setPLATINUM_RESISTANT(String PLATINUM_RESISTANT) {
+        this.PLATINUM_RESISTANT = PLATINUM_RESISTANT;
+    }
+
     /**
      * Returns the field names in CRDBDataset without additional properties.
      * @return List<String>
@@ -168,6 +332,22 @@ public class CRDBPDXClinicalPatientDataset {
         fieldNames.add("ETHNICITY");
         fieldNames.add("RACE");
         fieldNames.add("SMOKING_HISTORY");
+        fieldNames.add("CROHN_DISEASE");
+        fieldNames.add("ULCERATIVE_COLITIS");
+        fieldNames.add("BARETT_ESOPHAGUS");
+        fieldNames.add("H_PYLORI");
+        fieldNames.add("MDS");
+        fieldNames.add("MENOPAUSAL_STATUS");
+        fieldNames.add("UV_EXPOSURE");
+        fieldNames.add("RADIATION_THERAPY");
+        fieldNames.add("BREAST_IMPLANTS");
+        fieldNames.add("BRCA");
+        fieldNames.add("RETINOBLASTOMA");
+        fieldNames.add("GRADE_1");
+        fieldNames.add("GRADE_2");
+        fieldNames.add("GRADE_3");
+        fieldNames.add("PLATINUM_SENSITIVE");
+        fieldNames.add("PLATINUM_RESISTANT");
         return fieldNames;
     }
 
