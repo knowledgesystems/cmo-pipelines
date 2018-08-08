@@ -32,7 +32,7 @@
 
 package org.mskcc.cmo.ks.crdb;
 
-import org.mskcc.cmo.ks.crdb.model.CRDBDataset;
+import org.mskcc.cmo.ks.crdb.model.CRDBPDXClinicalPatientDataset;
 
 import org.springframework.core.io.*;
 import org.springframework.batch.item.*;
@@ -51,12 +51,12 @@ import org.apache.commons.lang.StringUtils;
  * @author ochoaa
  */
 
-public class CRDBDatasetWriter implements ItemStreamWriter<String> {
+public class CRDBPDXClinicalPatientWriter implements ItemStreamWriter<String> {
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
 
-    @Value("${crdb.dataset_filename}")
-    private String datasetFilename;
+    @Value("${crdb.pdx_clinical_patient_dataset_filename}")
+    private String pdxClinicalPatientDatasetFilename;
 
     private List<String> writeList = new ArrayList<String>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
@@ -69,13 +69,13 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String> {
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {
-                writer.write(normalizeHeaders(new CRDBDataset().getFieldNames()));
+                writer.write(normalizeHeaders(new CRDBPDXClinicalPatientDataset().getFieldNames()));
             }
         });
         if (stagingDirectory.endsWith("/")) {
-            stagingFile = stagingDirectory + datasetFilename;
-        } else{
-            stagingFile = stagingDirectory + "/" + datasetFilename;
+            stagingFile = stagingDirectory + pdxClinicalPatientDatasetFilename;
+        } else {
+            stagingFile = stagingDirectory + "/" + pdxClinicalPatientDatasetFilename;
         }
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
@@ -83,7 +83,7 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String> {
 
     private String normalizeHeaders(List<String> columns) {
         List<String> normColumns = new ArrayList<>();
-        for (String col : columns){
+        for (String col : columns) {
             if (col.equals("DMP_ID")) {
                 normColumns.add("PATIENT_ID");
             } else if (col.equals("COMMENTS")) {

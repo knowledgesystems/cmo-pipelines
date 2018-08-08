@@ -32,7 +32,7 @@
 
 package org.mskcc.cmo.ks.crdb;
 
-import org.mskcc.cmo.ks.crdb.model.CRDBDataset;
+import org.mskcc.cmo.ks.crdb.model.CRDBPDXClinicalSampleDataset;
 
 import org.springframework.core.io.*;
 import org.springframework.batch.item.*;
@@ -51,12 +51,12 @@ import org.apache.commons.lang.StringUtils;
  * @author ochoaa
  */
 
-public class CRDBDatasetWriter implements ItemStreamWriter<String> {
+public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String> {
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
 
-    @Value("${crdb.dataset_filename}")
-    private String datasetFilename;
+    @Value("${crdb.pdx_clinical_sample_dataset_filename}")
+    private String pdxClinicalSampleDatasetFilename;
 
     private List<String> writeList = new ArrayList<String>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
@@ -69,13 +69,13 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String> {
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {
-                writer.write(normalizeHeaders(new CRDBDataset().getFieldNames()));
+                writer.write(normalizeHeaders(new CRDBPDXClinicalSampleDataset().getFieldNames()));
             }
         });
         if (stagingDirectory.endsWith("/")) {
-            stagingFile = stagingDirectory + datasetFilename;
-        } else{
-            stagingFile = stagingDirectory + "/" + datasetFilename;
+            stagingFile = stagingDirectory + pdxClinicalSampleDatasetFilename;
+        } else {
+            stagingFile = stagingDirectory + "/" + pdxClinicalSampleDatasetFilename;
         }
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
@@ -83,15 +83,15 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String> {
 
     private String normalizeHeaders(List<String> columns) {
         List<String> normColumns = new ArrayList<>();
-        for (String col : columns){
+        for (String col : columns) {
             if (col.equals("DMP_ID")) {
                 normColumns.add("PATIENT_ID");
             } else if (col.equals("COMMENTS")) {
-                normColumns.add("CRDB_BASIC_" + col);
+                normColumns.add("CRDB_BASIC_"+col);
             } else if (col.equals("PARTA_CONSENTED")) {
                 normColumns.add("PARTA_CONSENTED_12_245");
             } else {
-                normColumns.add("CRDB_" + col);
+                normColumns.add("CRDB_"+col);
             }
         }
         return StringUtils.join(normColumns, "\t");

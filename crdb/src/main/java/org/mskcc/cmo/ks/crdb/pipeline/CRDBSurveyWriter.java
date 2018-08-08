@@ -74,11 +74,10 @@ public class CRDBSurveyWriter implements ItemStreamWriter<String>
             }
         });
 
-        if (stagingDirectory.endsWith("/")){
-            stagingFile = stagingDirectory+surveyFilename;
-        }
-        else{
-            stagingFile = stagingDirectory+"/"+surveyFilename;
+        if (stagingDirectory.endsWith("/")) {
+            stagingFile = stagingDirectory + surveyFilename;
+        } else{
+            stagingFile = stagingDirectory + "/" + surveyFilename;
         }
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
@@ -86,15 +85,13 @@ public class CRDBSurveyWriter implements ItemStreamWriter<String>
 
     private String normalizeHeaders(List<String> columns) {
         List<String> normColumns = new ArrayList<>();
-        for (String col : columns){
-            if (col.equals("DMP_ID")){
+        for (String col : columns) {
+            if (col.equals("DMP_ID")) {
                 normColumns.add("PATIENT_ID");
-            }
-            else if (col.equals("COMMENTS")) {
-                normColumns.add("CRDB_SURVEY_"+col);
-            }
-            else if (!col.equals("QS_DATE")){
-                normColumns.add("CRDB_"+col);
+            } else if (col.equals("COMMENTS")) {
+                normColumns.add("CRDB_SURVEY_" + col);
+            } else if (!col.equals("QS_DATE")) {
+                normColumns.add("CRDB_" + col);
             }
         }
         return StringUtils.join(normColumns, "\t");

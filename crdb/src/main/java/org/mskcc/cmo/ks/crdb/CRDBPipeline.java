@@ -53,7 +53,8 @@ public class CRDBPipeline {
     private static Options getOptions(String[] args) {
         Options options = new Options();
         options.addOption("h", "help", false, "shows this help document and quits.")
-            .addOption("stage", "staging", true, "Staging directory");
+            .addOption("s", "staging", true, "Staging directory")
+            .addOption("p", "pdx", false, "Run pdx job");
         return options;
     }
 
@@ -63,17 +64,25 @@ public class CRDBPipeline {
         System.exit(exitStatus);
     }
 
-    private static void launchJob(String[] args, String stagingDirectory) throws Exception {
+    private static void launchJob(String[] args, String stagingDirectory, boolean pdx) throws Exception {
         SpringApplication app = new SpringApplication(CRDBPipeline.class);
         ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
-
-        Job crdbJob = ctx.getBean(BatchConfiguration.CRDB_IMPACT_JOB, Job.class);
+        String jobName;
+        
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("stagingDirectory", stagingDirectory)
+                .addString("pdxMode", String.valueOf(pdx))
                 .toJobParameters();
+        Job crdbJob = null;
+        if (pdx) {
+            System.out.println("Launching pdx job");
+            crdbJob = ctx.getBean(BatchConfiguration.CRDB_PDX_JOB, Job.class);
+        } else {
+            System.out.println("Launching impact job");
+            crdbJob = ctx.getBean(BatchConfiguration.CRDB_IMPACT_JOB, Job.class);
+        }  
         JobExecution jobExecution = jobLauncher.run(crdbJob, jobParameters);
-
         System.out.println("Shutting down CRDBPipeline.");
         ctx.close();
     }
@@ -83,9 +92,9 @@ public class CRDBPipeline {
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = parser.parse(options, args);
         if (commandLine.hasOption("h") ||
-            !commandLine.hasOption("stage")) {
+            !commandLine.hasOption("s")) {
             help(options, 0);
         }
-        launchJob(args, commandLine.getOptionValue("stage"));
+        launchJob(args, commandLine.getOptionValue("s"), commandLine.hasOption("p"));
     }
 }
