@@ -84,15 +84,7 @@ public class CRDBPDXTimelineWriter implements ItemStreamWriter<String> {
     private String normalizeHeaders(List<String> columns) {
         List<String> normColumns = new ArrayList<>();
         for (String col : columns) {
-            if (col.equals("DMP_ID")) {
-                normColumns.add("PATIENT_ID");
-            } else if (col.equals("COMMENTS")) {
-                normColumns.add("CRDB_BASIC_" + col);
-            } else if (col.equals("PARTA_CONSENTED")) {
-                normColumns.add("PARTA_CONSENTED_12_245");
-            } else {
-                normColumns.add("CRDB_" + col);
-            }
+            normColumns.add(col);
         }
         return StringUtils.join(normColumns, "\t");
     }

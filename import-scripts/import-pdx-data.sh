@@ -14,6 +14,8 @@ shopt -s nullglob
 declare -a modified_file_list
 declare -a study_list
 
+#TODO delete this testing set
+PDX_DATA_HOME=/data/sheridan/cbio-portal-data/crdb_pdx
 # Functions
 
 # Function for alerting slack channel of any failures
