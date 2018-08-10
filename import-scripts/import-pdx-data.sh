@@ -10,7 +10,12 @@ CRDB_PDX_TMPDIR=/data/sheridan/temp
 CRDB_PDX_FETCH_SUCCESS=0
 CRDB_PDX_SUBSET_AND_MERGE_SUCCESS=0
 hg_rootdir="uninitialized"
+shopt -s nullglob
+declare -a modified_file_list
+declare -a study_list
 
+#TODO delete this testing set
+PDX_DATA_HOME=/data/sheridan/cbio-portal-data/crdb_pdx
 # Functions
 
 # Function for alerting slack channel of any failures
@@ -44,7 +49,7 @@ function commitAllMercurialChanges {
     any_repo_subdirectory=$1
     mercurial_log_message=$2
     setMercurialRootDirForDirectory "$any_repo_subdirectory"
-    $HG_BINARY --repository "$hg_rootdir" commit -m "$mercurial_log_message" )
+    $HG_BINARY --repository "$hg_rootdir" commit -m "$mercurial_log_message"
 }
 
 function purgeAllMercurialChanges {
@@ -56,7 +61,7 @@ function purgeAllMercurialChanges {
 function cleanAllUntrackedFiles {
     any_repo_subdirectory=$1
     setMercurialRootDirForDirectory "$any_repo_subdirectory"
-    $HG_BINARY --repository "$hg_rootdir" purge --files )
+    $HG_BINARY --repository "$hg_rootdir" purge --files
 }
 
 function cleanUpEntireMercurialRepository {
@@ -71,7 +76,6 @@ function revertModifiedFilesUnderDirectory {
     # find all modified files in mercurial repository
     $HG_BINARY --repository "$hg_rootdir" status --modified | cut -f2 -d$" " > $SCRATCH_FILENAME
     unset modified_file_list
-    declare -a modified_file_list
     readarray -t modified_file_list < $SCRATCH_FILENAME
     rm -f $SCRATCH_FILENAME
     # search for all modified files within search directory, and revert
@@ -79,13 +83,40 @@ function revertModifiedFilesUnderDirectory {
     search_dir_prefix_length=${#search_dir_slash}
     index=0
     while [ $index -lt ${#modified_file_list} ] ; do
-        absolute_filename="$hg_rootdir/${modified_file_list[$index]}" 
+        absolute_filename="$hg_rootdir/${modified_file_list[$index]}"
         filename_prefix=${absolute_filename:0:$search_dir_prefix_length}
         if [ $filename_prefix == $search_dir_slash ] ; then
             ( cd $search_dir ; $HG_BINARY revert --no-backup $absolute_filename )
         fi
         index=$(( $index + 1 ))
     done
+}
+
+function find_trigger_files_for_existing_studies {
+    suffix=$1
+    suffix_length=${#suffix}
+    unset study_list
+    study_list_index=0
+    for filepath in $CRDB_PDX_TMPDIR/*${suffix} ; do
+        filename="${filepath##*/}"
+        filename_length=${#filename}
+        study_directory_length=$(( $filename_length - $suffix_length ))
+        study_directory=${filename:0:$study_directory_length}
+        if [ -d $PDX_DATA_HOME/$study_directory ] ; then
+            study_list[$study_list_index]=$study_directory
+            study_list_index=$(( $study_list_index + 1 ))
+        else
+            echo "error : trigger file $filename found for non-existent study : $PDX_HOME/$study_directory"
+        fi
+    done
+}
+
+function find_studies_to_be_committed {
+    find_trigger_files_for_existing_studies "_commit_triggerfile"
+}
+
+function find_studies_to_be_reverted {
+    find_trigger_files_for_existing_studies "_revert_triggerfile"
 }
 
 # set up enivornment variables and temp directory
@@ -105,7 +136,7 @@ if [ -z $BIC_DATA_HOME ] | [ -z $PDX_DATA_HOME ] | [ -z $HG_BINARY ] | [ -z $PYT
 fi
 
 if [ ! -d $CRDB_PDX_TMPDIR ] ; then
-    mkdir $CRDB_PDX_TMPDIR 
+    mkdir $CRDB_PDX_TMPDIR
     if [ $? -ne 0 ] ; then
         echo "error : required temp directory does not exist and could not be created : $CRDB_PDX_TMPDIR"
         exit 2
@@ -113,6 +144,7 @@ if [ ! -d $CRDB_PDX_TMPDIR ] ; then
 fi
 
 IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
+SUBSET_AND_MERGE_WARNINGS_FILENAME="subset_and_merge_pdx_studies_warnings.txt"
 
 # refresh cdd and oncotree cache
 CDD_ONCOTREE_RECACHE_FAIL=0
@@ -160,7 +192,7 @@ if [ $MERCURIAL_FETCH_VIA_IMPORTER_SUCCESS -ne 0 ] ; then
     else
         addRemoveFilesUnderDirectory $CRDB_FETCHER_PDX_HOME
         commitAllMercurialChanges $CRDB_FETCHER_PDX_HOME "CRDB PDX Fetch"
-        CRDB_PDX_FETCH_SUCCESS=1    
+        CRDB_PDX_FETCH_SUCCESS=1
     fi
 fi
 
@@ -169,10 +201,10 @@ fi
 # construct destination studies from source studies
 # call subsetting/constuction python script (add touch a trigger file for successful subset/merge) (add subroutine which creates process command) (touch needed meta files for the generated data files)
 if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
-    mapping_filename="$CRDB_FETCHER_PDX_HOME/source_to_destination_mappings.txt"
+    mapping_filename="source_to_destination_mappings.txt"
     scripts_directory="$PORTAL_HOME/scripts"
     #TODO: add input root dir and remove hardcoded reference in merge script
-    $PYTHON_BINARY $PORTAL_HOME/scripts/subset-and-merge-crdb-pdx-studies.py --file $mapping_filename --lib $scripts_directory --root-directory $CRDB_FETCHER_PDX_HOME
+    $PYTHON_BINARY $PORTAL_HOME/scripts/subset-and-merge-crdb-pdx-studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --cmo-root-directory $BIC_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-filename $SUBSET_AND_MERGE_WARNINGS_FILENAME
     if [ $? -ne 0 ] ; then
         echo "error: subset-and-merge-crdb-pdx-studies.py exited with non zero status"
         sendFailureMessageMskPipelineLogsSlack "CRDB PDX subset-and-merge-crdb-pdx-studies.py script failure"
@@ -183,14 +215,28 @@ if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
 fi
 
 if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
-    # check trigger files (present?) and do appropriate hg commit and hg update -C
+    # check trigger files and do appropriate hg add and hg purge
+    find_studies_to_be_reverted
+    index=0
+    while [ $index -lt ${#study_list} ] ; do
+        revertModifiedFilesUnderDirectory "$PDX_DATA_HOME/${study_list[$index]}"
+        index=$(( $index + 1 ))
+    done
+    find_studies_to_be_committed
+    index=0
+    while [ $index -lt ${#study_list} ] ; do
+        addRemoveFilesUnderDirectory "$PDX_DATA_HOME/${study_list[$index]}"
+        index=$(( $index + 1 ))
+    done
 fi
+
+exit 2
 
 #TODO : make this smarter .. to only import if the destination study has changed (alter the spreadsheet checkmarks)
 #TODO : check if we can reuse the pdx-portal column
 if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
     # import if all went well (only if trigger file is present)
-    
+
     # if the database version is correct and ALL fetches succeed, then import
     if [[ $DB_VERSION_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data into triage portal database..."
@@ -204,7 +250,7 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
             echo -e "$EMAIL_BODY" | mail -s "Import failure: triage" $pipeline_email_list
         fi
         num_studies_updated=`cat $tmp/num_studies_updated.txt`
-    
+
         # redeploy war
         if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
             TOMCAT_SERVER_PRETTY_DISPLAY_NAME="Triage Tomcat"
@@ -220,7 +266,7 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
         else
             echo "No studies have been updated, skipping redeploy of triage-portal war..."
         fi
-    
+
         # import ran and either failed or succeeded
         echo "sending notification email.."
         $JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --send-update-notification --portal triage-portal --notification-file "$triage_notification_file"

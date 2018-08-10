@@ -14,6 +14,9 @@ CMO_ROOT_DIRECTORY = "/data/portal-cron/cbio-portal-data/bic-mskcc/"
 MERGE_GENOMIC_FILES_SUCCESS = "MERGE_GENOMIC_FILES_SUCCESS"
 SUBSET_CLINICAL_FILES_SUCCESS = "SUBSET_CLINICAL_FILES_SUCCESS"
 
+TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
+TRIGGER_FILE_REVERT_SUFFIX = "_revert_triggerfile"
+
 SEG_HG18_FILE_PATTERN = '_data_cna_hg18.seg'
 SEG_HG18_META_PATTERN = '_meta_cna_hg18_seg.txt'
 SEG_HG19_FILE_PATTERN = '_data_cna_hg19.seg'
@@ -270,10 +273,12 @@ def subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_p
 def generate_import_trigger_files(destination_to_source_mapping, temp_directory):
     for destination in destination_to_source_mapping:
         import_valid = all([success_status for success_status in DESTINATION_STUDY_STATUS_FLAGS[destination].values()])
+        triggerfilesuffix=TRIGGER_FILE_REVERT_SUFFIX 
         if import_valid:
-            trigger_filename = os.path.join(temp_directory, destination + "_triggerfile")
-            # creates empty trigger file
-            open(trigger_filename, 'a').close()
+            triggerfilesuffix=TRIGGER_FILE_COMMIT_SUFFIX 
+        trigger_filename = os.path.join(temp_directory, destination + triggerfilesuffix)
+        # creates empty trigger file
+        open(trigger_filename, 'a').close()
 
 def generate_warning_file(temp_directory, warning_file):
     warning_filename = os.path.join(temp_directory, warning_file)
