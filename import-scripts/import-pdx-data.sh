@@ -267,7 +267,7 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
     # if the database version is correct and ALL fetches succeed, then import
     if [[ $DB_VERSION_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data to database using $IMPORTER_JAR_FILENAME ..."
-        $JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -Xmx16g -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --update-study-data --portal crbd-pdx-portal --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+        $JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -Xmx16g -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --update-study-data --portal crdb-pdx-portal --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -gt 0 ]; then
             echo "$IMPORTER_JAR_LABEL import failed!"
             EMAIL_BODY="$IMPORTER_JAR_LABEL import failed"
