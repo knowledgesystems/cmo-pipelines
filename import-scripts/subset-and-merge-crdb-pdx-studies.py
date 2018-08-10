@@ -18,6 +18,9 @@ HAS_ALL_METAFILES = "HAS_ALL_METAFILES"
 TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
 TRIGGER_FILE_REVERT_SUFFIX = "_revert_triggerfile"
 
+TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
+TRIGGER_FILE_REVERT_SUFFIX = "_revert_triggerfile"
+
 SEG_HG18_FILE_PATTERN = '_data_cna_hg18.seg'
 SEG_HG18_META_PATTERN = '_meta_cna_hg18_seg.txt'
 SEG_HG19_FILE_PATTERN = '_data_cna_hg19.seg'
