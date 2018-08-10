@@ -13,6 +13,7 @@ CMO_ROOT_DIRECTORY = "/data/portal-cron/cbio-portal-data/bic-mskcc/"
 
 MERGE_GENOMIC_FILES_SUCCESS = "MERGE_GENOMIC_FILES_SUCCESS"
 SUBSET_CLINICAL_FILES_SUCCESS = "SUBSET_CLINICAL_FILES_SUCCESS"
+HAS_ALL_METAFILES = "HAS_ALL_METAFILES"
 
 TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
 TRIGGER_FILE_REVERT_SUFFIX = "_revert_triggerfile"
@@ -86,6 +87,7 @@ FILE_TO_METAFILE_MAP = { MUTATION_FILE_PATTERN : MUTATION_META_PATTERN,
     FUSIONS_GML_FILE_PATTERN : FUSIONS_GML_META_PATTERN }
 
 DESTINATION_STUDY_STATUS_FLAGS = {}
+DESTINATION_TO_MISSING_METAFILES_MAP = {}
 MISSING_SOURCE_STUDIES = set()
 MISSING_DESTINATION_STUDIES = set()
 
@@ -140,7 +142,7 @@ def create_destination_to_source_mapping(records, root_directory):
             print destination_directory + " cannot be found. This study will not be generated until this study is created in mercurial and marked in google spreadsheets"
             continue
         if destination not in DESTINATION_STUDY_STATUS_FLAGS:
-            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False }  
+            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False }  
         if destination not in destination_to_source_mapping:
             destination_to_source_mapping[destination] = {}
         if source not in destination_to_source_mapping[destination]:
@@ -245,16 +247,24 @@ def remove_file_if_exists(destination_directory, filename):
     if os.path.exists(file_to_remove):
         os.remove(file_to_remove)    
 
+# returns None if there no matching metafile
+def get_matching_metafile_name(filename):
+    metafile_name = None
+    if SEG_HG18_FILE_PATTERN in filename:
+        metafile_name = filename.replace(SEG_HG18_FILE_PATTERN, SEG_HG18_META_PATTERN)
+    elif SEG_HG19_FILE_PATTERN in filename:
+        metafile_name = filename.replace(SEG_HG19_FILE_PATTERN, SEG_HG19_META_PATTERN)
+    else:
+        if filename in FILE_TO_METAFILE_MAP:
+            metafile_name = FILE_TO_METAFILE_MAP[filename]
+    return metafile_name
+ 
+# assumes directory starts off without metafiles
+# does not check whether metafiles already exist 
+# metafiles are touched as long as a matching datafile is found in the directory
 def touch_missing_metafiles(directory):
     for file in os.listdir(directory):
-        metafile_name = None
-        if SEG_HG18_FILE_PATTERN in file:
-            metafile_name = file.replace(SEG_HG18_FILE_PATTERN, SEG_HG18_META_PATTERN)
-        elif SEG_HG19_FILE_PATTERN in file:
-            metafile_name = file.replace(SEG_HG19_FILE_PATTERN, SEG_HG19_META_PATTERN)
-        else:
-            if file in FILE_TO_METAFILE_MAP:
-                metafile_name = FILE_TO_METAFILE_MAP[file]
+        metafile_name = get_matching_metafile_name(file)
         if metafile_name:            
             touch_metafile_call = "touch " + os.path.join(directory, metafile_name)
 	    subprocess.call(touch_metafile_call, shell = True)
@@ -264,11 +274,31 @@ def subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_p
     for destination, source_to_patients_map in destination_to_source_mapping.items():
         patient_list = ','.join([patient.dmp_pid for patients in source_to_patients_map.values() for patient in patients])
         # destination directory is main study directory
-        destination_directory = root_directory + destination
+        destination_directory = os.path.join(root_directory, destination)
         subset_clinical_files_call = generate_bash_subset_call(lib, destination, destination_directory, crdb_fetch_directory, patient_list, "data_clinical_sample.txt")
         subset_clinical_files_status = subprocess.call(subset_clinical_files_call, shell = True)
         if subset_clinical_files_status == 0:
             DESTINATION_STUDY_STATUS_FLAGS[destination][SUBSET_CLINICAL_FILES_SUCCESS] = True
+
+# goes through all destination studies and checks for missing metafiles
+# missing metafiles are added to global map (destination : [ list of missing metafiles ] 
+def get_all_destination_to_missing_metafiles_mapping(destination_to_source_mapping, root_directory):
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        missing_metafiles = get_missing_metafiles_in_directory(destination_directory)
+        # if missing_metafiles is empty, study passed metafile status check
+        # else store missing_metafile names for final error/warning message
+        if not missing_metafiles:
+            DESTINATION_STUDY_STATUS_FLAGS[destination][HAS_ALL_METAFILES] = True
+        else:
+            DESTINATION_TO_MISSING_METAFILES_MAP[destination] = missing_metafiles
+
+# goes through all files in a directory and checks if corresponding metafiles exist
+# files which do not require a metafile are ignored
+def get_missing_metafiles_in_directory(directory):
+    expected_metafiles = [get_matching_metafile_name(file) for file in os.listdir(directory)]
+    missing_metafiles = [metafile for metafile in expected_metafiles if metafile and not os.path.exists(os.path.join(directory, metafile))]
+    return missing_metafiles 
 
 def generate_import_trigger_files(destination_to_source_mapping, temp_directory):
     for destination in destination_to_source_mapping:
@@ -294,10 +324,12 @@ def generate_warning_file(temp_directory, warning_file):
         success_code_message = []
         for destination, success_code_map in DESTINATION_STUDY_STATUS_FLAGS.items():
             if not all(success_code_map.values()):
-                if not success_code_map["MERGE_GENOMIC_FILES_SUCCESS"]:
+                if not success_code_map[MERGE_GENOMIC_FILES_SUCCESS]:
                     success_code_message.append(destination + " study failed because it was unable to merge genomic files from the source studies")
-                elif not success_code_map["SUBSET_CLINICAL_FILES_SUCCESS"]:
+                elif not success_code_map[SUBSET_CLINICAL_FILES_SUCCESS]:
                     success_code_message.append(destination + " study failed because it was unable to subset crdb-pdx clinical/timeline files")
+                elif not success_code_map[HAS_ALL_METAFILES]:
+                    success_code_message.append(destination + "study failed because there are missing the following metafiles" + "\n     " + '\n     '.join(DESTINATION_TO_MISSING_METAFILES_MAP[destination]))
                 else:
                     success_code_message.append(destination + " study failed for an unknown reason")    
         if success_code_message:
@@ -332,6 +364,7 @@ def main():
     merge_genomic_files(destination_to_source_mapping, root_directory, lib)
     remove_merged_clinical_timeline_files(destination_to_source_mapping, root_directory)
     subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib) 
+    get_all_destination_to_missing_metafiles_mapping(destination_to_source_mapping, root_directory)
     generate_import_trigger_files(destination_to_source_mapping, temp_directory)
     generate_warning_file(temp_directory, warning_file)
 
