@@ -40,6 +40,7 @@ import java.util.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Strings;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.http.cookie.Cookie;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.*;
@@ -396,7 +397,8 @@ public class DDPRepository {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-        headers.add("Authorization", BEARER_KEYWORD + authenticationUtil.getAuthenticationToken());
+        Cookie authenticationCookie = authenticationUtil.getAuthenticationCookie();
+        headers.add("Cookie", authenticationCookie.getName() + "=" + authenticationCookie.getValue());
         Map<String, String> idMap = new HashMap<>();
         idMap.put("id", id);
         return new HttpEntity<>(idMap, headers);
@@ -406,7 +408,8 @@ public class DDPRepository {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-        headers.add("Authorization", BEARER_KEYWORD + authenticationUtil.getAuthenticationToken());
+        Cookie authenticationCookie = authenticationUtil.getAuthenticationCookie();
+        headers.add("Cookie", authenticationCookie.getName() + "=" + authenticationCookie.getValue());
         HttpEntity<String> requestEntity = new HttpEntity<>(headers);
         return requestEntity;
     }
