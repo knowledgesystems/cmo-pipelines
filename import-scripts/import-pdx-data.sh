@@ -14,8 +14,6 @@ shopt -s nullglob
 declare -a modified_file_list
 declare -a study_list
 
-#TODO delete this testing set
-PDX_DATA_HOME=/data/sheridan/cbio-portal-data/crdb_pdx
 # Functions
 
 # Function for alerting slack channel of any failures
@@ -161,8 +159,9 @@ fi
 #IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
 IMPORTER_JAR_LABEL=Triage
 IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/triage-cmo-importer.jar
+IMPORTER_DEBUG_PORT=27183
 importer_notification_file=$(mktemp $CRDB_PDX_TMPDIR/importer-update-notification.$now.XXXXXX)
-JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
+JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=$IMPORTER_DEBUG_PORT"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CRDB_PDX_TMPDIR -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
 SUBSET_AND_MERGE_WARNINGS_FILENAME="subset_and_merge_pdx_studies_warnings.txt"
 # status flags (set to 1 when each stage is successfully completed)
@@ -185,7 +184,7 @@ fi
 DB_VERSION_FAIL=0
 # check database version before importing anything
 echo "Checking if database version is compatible"
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --check-db-version
+$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$CRDB_PDX_TMPDIR" -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --check-db-version
 if [ $? -gt 0 ]
 then
     echo "Database version expected by portal does not match version in database!"
@@ -194,7 +193,7 @@ fi
 
 # importer mercurial fetch step
 echo "fetching updates from bic-mskcc repository..."
-$JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --fetch-data --data-source --run-date latest
+$JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --fetch-data --data-source bic-mskcc --run-date latest
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch BIC-MSKCC Studies From Mercurial Failure"
 else
@@ -229,7 +228,7 @@ if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
     mapping_filename="source_to_destination_mappings.txt"
     scripts_directory="$PORTAL_HOME/scripts"
     #TODO: add input root dir and remove hardcoded reference in merge script
-    $PYTHON_BINARY $PORTAL_HOME/scripts/subset-and-merge-crdb-pdx-studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --cmo-root-directory $BIC_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-filename $SUBSET_AND_MERGE_WARNINGS_FILENAME
+    $PYTHON_BINARY $PORTAL_HOME/scripts/subset-and-merge-crdb-pdx-studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --cmo-root-directory $BIC_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME
     if [ $? -ne 0 ] ; then
         echo "error: subset-and-merge-crdb-pdx-studies.py exited with non zero status"
         sendFailureMessageMskPipelineLogsSlack "CRDB PDX Subset-And-Merge Script Failure"
@@ -238,11 +237,6 @@ if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
         CRDB_PDX_SUBSET_AND_MERGE_SUCCESS=1
     fi
 fi
-
-
-exit 7
-
-
 
 if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
     # check trigger files and do appropriate hg add and hg purge
@@ -268,7 +262,7 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
     if [[ $DB_VERSION_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data to database using $IMPORTER_JAR_FILENAME ..."
         $JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -Xmx16g -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --update-study-data --portal crdb-pdx-portal --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
-        if [ $? -gt 0 ]; then
+        if [ $? -ne 0 ]; then
             echo "$IMPORTER_JAR_LABEL import failed!"
             EMAIL_BODY="$IMPORTER_JAR_LABEL import failed"
             echo -e "Sending email $EMAIL_BODY"

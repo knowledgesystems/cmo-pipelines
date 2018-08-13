@@ -99,8 +99,6 @@ MISSING_DESTINATION_STUDIES = set()
 # at the end, evaluate status flags in map for each destination study
 # if all status flags are successful - touch destination study trigger  file
 
-
-
 # TODO: check if destination directory exists, if not thorw an error
 # Potentially automatically create destination directory + create new row in portal config + import into triage
 class Patient():
@@ -120,15 +118,15 @@ def parse_file(file):
             header = data
             header_processed = True
         else:
-            try:           
+            try:
             	records.append({header[index] : data[index] for index in range(len(header))})
-            except: 
+            except:
                 print "ERROR: missing value in a column for the following record: " + line
     return records
 
 # create a dictionary representation that can be used for subsetting
 # takes parse_file() output as input (list of dictionaries)
-# output: { DESTINATION_1 : { SOURCE_1 : [ PID_1, PID2, PID3...], 
+# output: { DESTINATION_1 : { SOURCE_1 : [ PID_1, PID2, PID3...],
 #                             SOURCE_2 : [ PID_4, ...] },
 #           mixed_pdx_aacf : { ke_07_83_b : [ P_000001, ...] }}
 def create_destination_to_source_mapping(records, root_directory):
@@ -138,14 +136,14 @@ def create_destination_to_source_mapping(records, root_directory):
         source = record[SOURCE_STUDY_ID_KEY]
         cmo_pid = record[PATIENT_ID_KEY]
         dmp_pid = record[DESTINATION_PATIENT_ID_KEY]
-    
+
         destination_directory = os.path.join(root_directory, destination)
         if not os.path.isdir(destination_directory):
             MISSING_DESTINATION_STUDIES.add(destination)
             print destination_directory + " cannot be found. This study will not be generated until this study is created in mercurial and marked in google spreadsheets"
             continue
         if destination not in DESTINATION_STUDY_STATUS_FLAGS:
-            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False }  
+            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False }
         if destination not in destination_to_source_mapping:
             destination_to_source_mapping[destination] = {}
         if source not in destination_to_source_mapping[destination]:
@@ -159,7 +157,7 @@ def rewrite_project_source_with_stable_id(records):
         record[SOURCE_STUDY_ID_KEY] = "mixed_cmo_rudinc_" + previous_source_study[5:]
 
 # split cancer study identifer on first three underscores to create path
-# { ke_07_83_b : CMO_ROOT_DIRECTORY/ke/07/83/b } 
+# { ke_07_83_b : CMO_ROOT_DIRECTORY/ke/07/83/b }
 def create_source_id_to_path_mapping(destination_to_source_mapping, cmo_root_directory):
     source_id_to_path_mapping = {}
     source_ids = set()
@@ -188,12 +186,12 @@ def generate_bash_subset_call(lib, cancer_study_id, destination_directory, sourc
 def generate_merge_call(lib, cancer_study_id, destination_directory, subdirectory_list):
     merge_call = 'python ' + lib + '/merge.py -d ' + destination_directory + ' -i ' + cancer_study_id + ' -m "true" ' + subdirectory_list
     return merge_call
- 
+
 # generates files containing sample-ids linked to specified patient-ids (by destination-source)
 # placed in corresponding directories - multiple source per destination
 # i.e (/home/destination_study/source_1/subset_list, home/destination_study/source_2/subset_list)
 # not currently used -- covered by merge script (but might be needed later on)
-def generate_all_subset_sample_lists(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib): 
+def generate_all_subset_sample_lists(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib):
     for destination, source_to_patients_map in destination_to_source_mapping.items():
         for source, patients in source_to_patients_map.items():
             # destination directory is a working subdirectory matching the source
@@ -205,7 +203,7 @@ def generate_all_subset_sample_lists(destination_to_source_mapping, source_id_to
                 patient_list = ','.join([patient.cmo_pid for patient in patient])
                 subset_script_call = generate_python_subset_call(lib, destination, destination_directory, source_directory, patient_list)
                 subprocess.call(subset_script_call, shell = True)
-            else: 
+            else:
                 print "ERROR: source path for " + source + " could not be found, skipping..."
 
 # subsets source genomic files into destination/source sub-directory
@@ -232,13 +230,13 @@ def merge_genomic_files(destination_to_source_mapping, root_directory, lib):
         source_subdirectory_list = ' '.join(source_subdirectories)
         for source_subdirectory in source_subdirectories:
             touch_missing_metafiles(source_subdirectory)
-        merge_source_subdirectories_call = generate_merge_call(lib, destination, destination_directory, source_subdirectory_list) 
+        merge_source_subdirectories_call = generate_merge_call(lib, destination, destination_directory, source_subdirectory_list)
         merge_source_subdirectories_status = subprocess.call(merge_source_subdirectories_call, shell = True)
         if merge_source_subdirectories_status == 0:
-            DESTINATION_STUDY_STATUS_FLAGS[destination][MERGE_GENOMIC_FILES_SUCCESS] = True 
+            DESTINATION_STUDY_STATUS_FLAGS[destination][MERGE_GENOMIC_FILES_SUCCESS] = True
         for source_subdirectory in source_subdirectories:
             shutil.rmtree(source_subdirectory)
-        
+
 def remove_merged_clinical_timeline_files(destination_to_source_mapping, root_directory):
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
@@ -248,7 +246,7 @@ def remove_merged_clinical_timeline_files(destination_to_source_mapping, root_di
 def remove_file_if_exists(destination_directory, filename):
     file_to_remove = os.path.join(destination_directory, filename)
     if os.path.exists(file_to_remove):
-        os.remove(file_to_remove)    
+        os.remove(file_to_remove)
 
 # returns None if there no matching metafile
 def get_matching_metafile_name(filename):
@@ -261,17 +259,65 @@ def get_matching_metafile_name(filename):
         if filename in FILE_TO_METAFILE_MAP:
             metafile_name = FILE_TO_METAFILE_MAP[filename]
     return metafile_name
- 
+
 # assumes directory starts off without metafiles
-# does not check whether metafiles already exist 
+# does not check whether metafiles already exist
 # metafiles are touched as long as a matching datafile is found in the directory
 def touch_missing_metafiles(directory):
     for file in os.listdir(directory):
         metafile_name = get_matching_metafile_name(file)
-        if metafile_name:            
+        if metafile_name:
             touch_metafile_call = "touch " + os.path.join(directory, metafile_name)
 	    subprocess.call(touch_metafile_call, shell = True)
-            
+
+# TODO: delete this function when cdd is updated according to crdb pdx fields
+def filter_undefined_columns_in_clinical_and_timeline_files(crdb_fetch_directory):
+    undefined_attribute_list = ["ALK_POSITIVE","AR_NEGATIVE","AR_POSITIVE","BARETT_ESOPHAGUS","BRCA","BRCA1_NEGATIVE","BRCA1_POSITIVE","BRCA2_NEGATIVE","BRCA2_POSITIVE","BREAST_IMPLANTS","C_MYC_NEGATIVE","C_MYC_POSITIVE","CROHN_DISEASE","DESTINATION_STUDY_ID","EGFR_NEGATIVE","ER_NEGATIVE","ER_POSITIVE","GRADE_1","GRADE_2","GRADE_3","HER2_NEGATIVE","HER2_POSITIVE","HPV_NEGATIVE","HPV_POSITIVE","IDH1_NEGATIVE","IDH1_POSITIVE","IDH2_NEGATIVE","IDH2_POSITIVE","KRAS_POSITIVE","MDS","MENOPAUSAL_STATUS","P16_NEGATIVE","P16_POSITIVE","PDX_ID","PLATINUM_RESISTANT","PLATINUM_SENSITIVE","PR_NEGATIVE","PR_POSITIVE","RESPONSE","RETINOBLASTOMA","SUB_TYPE","TIME_TO_RECURRENCE","ULCERATIVE_COLITIS","UV_EXPOSURE"]
+    undefined_attribute_set = set(undefined_attribute_list)
+    filenames_to_filter=["data_clinical_patient.txt", "data_clinical_sample.txt", "data_timeline.txt"]
+    for input_filename in filenames_to_filter:
+        filepath = os.path.join(crdb_fetch_directory, input_filename)
+        backup_filepath = os.path.join(crdb_fetch_directory, ".prefilter_version_" + input_filename[::-1])
+        #keep a backup for later restoration
+        if os.path.exists(backup_filepath):
+            os.remove(backup_filepath)
+        shutil.copy(filepath, backup_filepath)
+        input_lines = []
+        with open(filepath, 'r') as f:
+            input_lines = [line for line in f] 
+        if not input_lines:
+            sys.stderr.write("error: no input found in file " + filepath + "\n")
+            sys.exit(1)
+        filter_column = []
+        for column in input_lines[0].split("\t"):
+            filter_column.append(column.strip() in undefined_attribute_list)
+        output_lines = []
+        for line in input_lines:
+            input_fields = line.split("\t")
+            output_fields = []
+            for index in range(0,len(filter_column)):
+                if (not filter_column[index]):
+                    output_fields.append(input_fields[index])
+            output_lines.append("\t".join(output_fields))
+        with open(filepath, 'w') as f:
+            f.write("".join(output_lines))
+
+def restore_raw_crdb_fetch_to_original(crdb_fetch_directory):
+# TODO: delete this function when cdd is updated according to crdb pdx fields
+    filenames_to_restore=["data_clinical_patient.txt", "data_clinical_sample.txt", "data_timeline.txt"]
+    for filename in filenames_to_restore:
+        filepath = os.path.join(crdb_fetch_directory, filename)
+        backup_filepath = os.path.join(crdb_fetch_directory, ".prefilter_version_" + filename[::-1])
+        #restore file
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        shutil.move(backup_filepath, filepath)
+
+def filter_temp_subset_files(destination_to_source_mapping, root_directory):
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        remove_file_if_exists(destination_directory, "temp_subset.txt")
+
 # subsets clinical files from crdb-pdx fetch directory into the top level destination directory
 def subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib):
     for destination, source_to_patients_map in destination_to_source_mapping.items():
@@ -284,7 +330,7 @@ def subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_p
             DESTINATION_STUDY_STATUS_FLAGS[destination][SUBSET_CLINICAL_FILES_SUCCESS] = True
 
 # goes through all destination studies and checks for missing metafiles
-# missing metafiles are added to global map (destination : [ list of missing metafiles ] 
+# missing metafiles are added to global map (destination : [ list of missing metafiles ]
 def get_all_destination_to_missing_metafiles_mapping(destination_to_source_mapping, root_directory):
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
@@ -301,14 +347,14 @@ def get_all_destination_to_missing_metafiles_mapping(destination_to_source_mappi
 def get_missing_metafiles_in_directory(directory):
     expected_metafiles = [get_matching_metafile_name(file) for file in os.listdir(directory)]
     missing_metafiles = [metafile for metafile in expected_metafiles if metafile and not os.path.exists(os.path.join(directory, metafile))]
-    return missing_metafiles 
+    return missing_metafiles
 
 def generate_import_trigger_files(destination_to_source_mapping, temp_directory):
     for destination in destination_to_source_mapping:
         import_valid = all([success_status for success_status in DESTINATION_STUDY_STATUS_FLAGS[destination].values()])
-        triggerfilesuffix=TRIGGER_FILE_REVERT_SUFFIX 
+        triggerfilesuffix=TRIGGER_FILE_REVERT_SUFFIX
         if import_valid:
-            triggerfilesuffix=TRIGGER_FILE_COMMIT_SUFFIX 
+            triggerfilesuffix=TRIGGER_FILE_COMMIT_SUFFIX
         trigger_filename = os.path.join(temp_directory, destination + triggerfilesuffix)
         # creates empty trigger file
         open(trigger_filename, 'a').close()
@@ -334,7 +380,7 @@ def generate_warning_file(temp_directory, warning_file):
                 elif not success_code_map[HAS_ALL_METAFILES]:
                     success_code_message.append(destination + "study failed because there are missing the following metafiles" + "\n     " + '\n     '.join(DESTINATION_TO_MISSING_METAFILES_MAP[destination]))
                 else:
-                    success_code_message.append(destination + " study failed for an unknown reason")    
+                    success_code_message.append(destination + " study failed for an unknown reason")
         if success_code_message:
             warning_file.write("The following studies were unable to be created:\n  ")
             warning_file.write("\n  ".join(success_code_message))
@@ -342,13 +388,13 @@ def generate_warning_file(temp_directory, warning_file):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--cmo-root-directory", help = "root directory to search all CMO source studies", required = True)
-    parser.add_argument("-f", "--fetch-directory", help = "directory where crdb-pdx data is stored", required = True) 
-    parser.add_argument("-l", "--lib", help = "directory containing subsetting/merge scripts (i.e cmo-pipelines/import-scripts)", required = True) 
+    parser.add_argument("-f", "--fetch-directory", help = "directory where crdb-pdx data is stored", required = True)
+    parser.add_argument("-l", "--lib", help = "directory containing subsetting/merge scripts (i.e cmo-pipelines/import-scripts)", required = True)
     parser.add_argument("-m", "--mapping-file", help = "CRDB-fetched file containing mappings from souce/id to destination/id", required = True)
-    parser.add_argument("-r", "--root-directory", help = "root directory for all new studies (i.e dmp to mskimpact, hemepact, raindance...", required = True)    
+    parser.add_argument("-r", "--root-directory", help = "root directory for all new studies (i.e dmp to mskimpact, hemepact, raindance...", required = True)
     parser.add_argument("-t", "--temp-directory", help = "temp directory to store trigger files", required = True)
     parser.add_argument("-w", "--warning-file", help = "file to store all warnings/errors for email", required = True)
- 
+
     args = parser.parse_args()
     cmo_root_directory = args.cmo_root_directory
     crdb_fetch_directory = args.fetch_directory
@@ -358,7 +404,7 @@ def main():
     temp_directory = args.temp_directory
     warning_file = args.warning_file
 
-    records = parse_file(destination_to_source_mapping_filename) 
+    records = parse_file(destination_to_source_mapping_filename)
     #TODO: delete the following rewrite when the crdb supplies stable ids
     rewrite_project_source_with_stable_id(records)
     destination_to_source_mapping = create_destination_to_source_mapping(records, root_directory)
@@ -366,7 +412,12 @@ def main():
     subset_genomic_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib)
     merge_genomic_files(destination_to_source_mapping, root_directory, lib)
     remove_merged_clinical_timeline_files(destination_to_source_mapping, root_directory)
-    subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib) 
+    #TODO: delete this filtering step when the cdd is updated to match the clinical headers in crdb pdx
+    filter_undefined_columns_in_clinical_and_timeline_files(crdb_fetch_directory)
+    subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib)
+    #TODO: delete this restore step when the cdd is updated to match the clinical headers in crdb pdx
+    restore_raw_crdb_fetch_to_original(crdb_fetch_directory)
+    filter_temp_subset_files(destination_to_source_mapping, root_directory)
     get_all_destination_to_missing_metafiles_mapping(destination_to_source_mapping, root_directory)
     generate_import_trigger_files(destination_to_source_mapping, temp_directory)
     generate_warning_file(temp_directory, warning_file)
