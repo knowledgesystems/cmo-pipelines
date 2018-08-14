@@ -53,7 +53,7 @@ public class CRDBPipeline {
     private static Options getOptions(String[] args) {
         Options options = new Options();
         options.addOption("h", "help", false, "shows this help document and quits.")
-            .addOption("s", "staging", true, "Staging directory")
+            .addOption("d", "directory", true, "Staging directory")
             .addOption("p", "pdx", false, "Run pdx job");
         return options;
     }
@@ -92,9 +92,9 @@ public class CRDBPipeline {
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = parser.parse(options, args);
         if (commandLine.hasOption("h") ||
-            !commandLine.hasOption("s")) {
+            !commandLine.hasOption("d")) {
             help(options, 0);
         }
-        launchJob(args, commandLine.getOptionValue("s"), commandLine.hasOption("p"));
+        launchJob(args, commandLine.getOptionValue("d"), commandLine.hasOption("p"));
     }
 }

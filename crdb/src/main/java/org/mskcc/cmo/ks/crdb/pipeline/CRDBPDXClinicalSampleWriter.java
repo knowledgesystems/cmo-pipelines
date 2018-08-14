@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -41,6 +41,7 @@ import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
 import org.apache.commons.lang.StringUtils;
@@ -58,7 +59,6 @@ public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String> {
     @Value("${crdb.pdx_clinical_sample_dataset_filename}")
     private String pdxClinicalSampleDatasetFilename;
 
-    private List<String> writeList = new ArrayList<String>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
     private String stagingFile;
 
@@ -69,24 +69,12 @@ public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String> {
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {
-                writer.write(normalizeHeaders(new CRDBPDXClinicalSampleDataset().getFieldNames()));
+                writer.write(StringUtils.join(new CRDBPDXClinicalSampleDataset().getFieldNames(), "\t"));
             }
         });
-        if (stagingDirectory.endsWith("/")) {
-            stagingFile = stagingDirectory + pdxClinicalSampleDatasetFilename;
-        } else {
-            stagingFile = stagingDirectory + "/" + pdxClinicalSampleDatasetFilename;
-        }
+        stagingFile = Paths.get(stagingDirectory, pdxClinicalSampleDatasetFilename).toString();
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
-    }
-
-    private String normalizeHeaders(List<String> columns) {
-        List<String> normColumns = new ArrayList<>();
-        for (String col : columns) {
-            normColumns.add(col);
-        }
-        return StringUtils.join(normColumns, "\t");
     }
 
     @Override
@@ -99,11 +87,6 @@ public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String> {
 
     @Override
     public void write(List<? extends String> items) throws Exception {
-        writeList.clear();
-        List<String> writeList = new ArrayList<>();
-        for (String result : items) {
-            writeList.add(result);
-        }
-        flatFileItemWriter.write(writeList);
+        flatFileItemWriter.write(items);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -57,34 +57,9 @@ public class CRDBPDXClinicalPatientProcessor implements ItemProcessor<CRDBPDXCli
     public String process(final CRDBPDXClinicalPatientDataset crdbPDXClinicalPatientDataset) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : new CRDBPDXClinicalPatientDataset().getFieldNames()) {
-            String value;
-            if (field.equals("PARTA_CONSENTED")) {
-                // resolve part a consented value
-                value = resolvePartAConsented(crdbPDXClinicalPatientDataset.getPATIENT_ID());
-            } else {
-                value = crdbPDXClinicalPatientDataset.getClass().getMethod("get"+field).invoke(crdbPDXClinicalPatientDataset).toString();
-            }
+            String value = crdbPDXClinicalPatientDataset.getClass().getMethod("get"+field).invoke(crdbPDXClinicalPatientDataset).toString();
             record.add(crdbUtils.convertWhitespace(value));
         }
         return String.join("\t", record);
-    }
-
-    /**
-     * Resolves the value for the PARTA_CONSENTED field.
-     * @param consentDays
-     * @return
-     */
-    private String resolvePartAConsented(String consentDays) {
-        String value = "NO"; // default value is NO to minimize NA's in data
-
-        // if consent days is larger than 0 then set value to YES, else set to NO
-        try {
-            if (Integer.valueOf(consentDays) > 0) {
-                value = "YES";
-            }
-        }
-        catch (NumberFormatException ex) {}
-
-        return value;
     }
 }

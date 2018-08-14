@@ -216,7 +216,7 @@ fi
 
 if [ $MERCURIAL_FETCH_VIA_IMPORTER_SUCCESS -ne 0 ] ; then
     echo "fetching pdx data fom crdb"
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/crdb_fetcher.jar --pdx --staging $CRDB_FETCHER_PDX_HOME
+    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/crdb_fetcher.jar --pdx --directory $CRDB_FETCHER_PDX_HOME
     if [ $? -ne 0 ] ; then
         echo "error: crdb_pdx_fetch failed"
         sendFailureMessageMskPipelineLogsSlack "Fetch CRDB PDX Failure"

@@ -518,7 +518,7 @@ if [ $PERFORM_CRDB_FETCH -gt 0 ] ; then
     # fetch CRDB data
     echo "fetching CRDB data"
     echo $(date)
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/crdb_fetcher.jar -stage $MSK_IMPACT_DATA_HOME
+    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/crdb_fetcher.jar --directory $MSK_IMPACT_DATA_HOME
     # no need for hg update/commit ; CRDB generated files are stored in redcap and not mercurial
     if [ $? -gt 0 ] ; then
         sendFailureMessageMskPipelineLogsSlack "MSKIMPACT CRDB Fetch"
