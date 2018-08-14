@@ -81,7 +81,16 @@ public class CRDBPDXTimelineReader implements ItemStreamReader<CRDBPDXTimelineDa
 
         CRDBPDXTimelineDataset qCRDBD = alias(CRDBPDXTimelineDataset.class, crdbPDXTimelineDatasetView);
         List<CRDBPDXTimelineDataset> crdbTimelineDatasetResults = crdbQueryFactory.selectDistinct(
-                Projections.constructor(CRDBPDXTimelineDataset.class, $(qCRDBD.getPATIENT_ID()), $(qCRDBD.getSAMPLE_ID()), $(qCRDBD.getPDX_ID()), $(qCRDBD.getDESTINATION_STUDY_ID()), $(qCRDBD.getSTART_DATE()), $(qCRDBD.getSTOP_DATE()), $(qCRDBD.getEVENT_TYPE()), $(qCRDBD.getPASSAGE_ID()), $(qCRDBD.getTREATMENT_TYPE()), $(qCRDBD.getSUB_TYPE()), $(qCRDBD.getAGENT()), $(qCRDBD.getRESPONSE()), $(qCRDBD.getRESPONSE_DURATION_MONTHS()), $(qCRDBD.getREASON_FOR_TX_DISCONTINUATION()), $(qCRDBD.getSURGERY_DETAILS()), $(qCRDBD.getEVENT_TYPE_DETAILED()), $(qCRDBD.getPROCEDURE_LOCATION()), $(qCRDBD.getPROCEDURE_LOCATION_SPECIFY()), $(qCRDBD.getDIAGNOSTIC_TYPE()), $(qCRDBD.getDIAGNOSTIC_TYPE_SITE()), $(qCRDBD.getIMAGING()), $(qCRDBD.getSPECIMEN_TYPE()), $(qCRDBD.getSPECIMEN_SITE()), $(qCRDBD.getAGE_AT_PROCEDURE()), $(qCRDBD.getLATERALITY()), $(qCRDBD.getDISEASE_STATUS()), $(qCRDBD.getMETASTATIC_SITE()), $(qCRDBD.getTIME_TO_METASTASIS_MONTHS()), $(qCRDBD.getSAMPLE_TYPE()), $(qCRDBD.getSITE_OF_RECURRENCE()), $(qCRDBD.getTIME_TO_RECURRENCE())))
+                Projections.constructor(CRDBPDXTimelineDataset.class, $(qCRDBD.getPATIENT_ID()), $(qCRDBD.getSAMPLE_ID()), $(qCRDBD.getPDX_ID()),
+                                        $(qCRDBD.getDESTINATION_STUDY_ID()), $(qCRDBD.getSTART_DATE()), $(qCRDBD.getSTOP_DATE()), $(qCRDBD.getEVENT_TYPE()),
+                                        $(qCRDBD.getPASSAGE_ID()), $(qCRDBD.getTREATMENT_TYPE()), $(qCRDBD.getSUB_TYPE()), $(qCRDBD.getAGENT()),
+                                        $(qCRDBD.getRESPONSE()), $(qCRDBD.getRESPONSE_DURATION_MONTHS()), $(qCRDBD.getREASON_FOR_TX_DISCONTINUATION()),
+                                        $(qCRDBD.getSURGERY_DETAILS()), $(qCRDBD.getEVENT_TYPE_DETAILED()), $(qCRDBD.getPROCEDURE_LOCATION()),
+                                        $(qCRDBD.getPROCEDURE_LOCATION_SPECIFY()), $(qCRDBD.getDIAGNOSTIC_TYPE()), $(qCRDBD.getDIAGNOSTIC_TYPE_SITE()),
+                                        $(qCRDBD.getIMAGING()), $(qCRDBD.getSPECIMEN_TYPE()), $(qCRDBD.getSPECIMEN_SITE()), $(qCRDBD.getAGE_AT_PROCEDURE()),
+                                        $(qCRDBD.getLATERALITY()), $(qCRDBD.getDISEASE_STATUS()), $(qCRDBD.getMETASTATIC_SITE()),
+                                        $(qCRDBD.getTIME_TO_METASTASIS_MONTHS()), $(qCRDBD.getSAMPLE_TYPE()), $(qCRDBD.getSITE_OF_RECURRENCE()),
+                                        $(qCRDBD.getTIME_TO_RECURRENCE())))
                 .from($(qCRDBD))
                 .fetch();
         System.out.println("Imported " + crdbTimelineDatasetResults.size() + " records from CRDB PDX Timeline Dataset View.");
