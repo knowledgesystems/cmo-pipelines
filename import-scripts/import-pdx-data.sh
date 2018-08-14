@@ -6,7 +6,7 @@ PATH_TO_AUTOMATION_SCRIPT=/data/portal-cron/scripts/automation-environment.sh
 # pipelines_email_list receives low level emails (fail to recache oncotree, fail to restart a tomcat, ...)
 pipelines_email_list="cbioportal-pipelines@cbio.mskcc.org"
 # pdx_email_list receives a daily summary email of import statistics and problems
-pdx_email_list="cbioportal-pipelines@cbio.mskcc.org"
+pdx_email_list="cbioportal-pdx-importer@cbio.mskcc.org"
 CRDB_PDX_TMPDIR=/data/portal-cron/tmp/import-cron-pdx-msk
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 hg_rootdir="uninitialized"
@@ -54,6 +54,12 @@ function commitAllMercurialChanges {
     mercurial_log_message=$2
     setMercurialRootDirForDirectory "$any_repo_subdirectory"
     $HG_BINARY --repository "$hg_rootdir" commit -m "$mercurial_log_message"
+}
+
+function pushAllMercurialChangesets {
+    any_repo_subdirectory=$1
+    setMercurialRootDirForDirectory "$any_repo_subdirectory"
+    $HG_BINARY --repository "$hg_rootdir" push
 }
 
 function purgeAllMercurialChanges {
@@ -156,7 +162,9 @@ if [[ -d "$CRDB_PDX_TMPDIR" && "$CRDB_PDX_TMPDIR" != "/" ]] ; then
     rm -rf "$CRDB_PDX_TMPDIR"/*
 fi
 
+#IMPORTER_JAR_LABEL=Cmo
 #IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
+#IMPORTER_DEBUG_PORT=27182
 IMPORTER_JAR_LABEL=Triage
 IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/triage-cmo-importer.jar
 IMPORTER_DEBUG_PORT=27183
@@ -252,7 +260,11 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
         addRemoveFilesUnderDirectory "$PDX_DATA_HOME/${study_list[$index]}"
         index=$(( $index + 1 ))
     done
+    commitAllMercurialChanges $CRDB_FETCHER_PDX_HOME "CRDB PDX Subset and Merge"
 fi
+
+# push changesets to mercurial - this will commit to them regardless of whether import succeeds, or partially succeeds, or fails
+pushAllMercurialChangesets $CRDB_FETCHER_PDX_HOME
 
 #TODO : make this smarter .. to only import if the destination study has changed (i.e. alter the spreadsheet checkmarks)
 #TODO : check if we can reuse the pdx-portal column
