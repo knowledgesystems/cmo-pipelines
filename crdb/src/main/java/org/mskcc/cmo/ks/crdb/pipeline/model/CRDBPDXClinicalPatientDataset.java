@@ -51,10 +51,10 @@ public class CRDBPDXClinicalPatientDataset {
     private String SMOKING_HISTORY;
     private String CROHN_DISEASE;
     private String ULCERATIVE_COLITIS;
-    private String BARETT_ESOPHAGUS;
+    private String BARRETTS_ESOPHAGUS;
     private String H_PYLORI;
     private String MDS;
-    private String MENOPAUSAL_STATUS;
+    private String MENOPAUSE_STATUS;
     private String UV_EXPOSURE;
     private String RADIATION_THERAPY;
     private String BREAST_IMPLANTS;
@@ -74,8 +74,8 @@ public class CRDBPDXClinicalPatientDataset {
     }
 
     public CRDBPDXClinicalPatientDataset(String PATIENT_ID, String DESTINATION_STUDY_ID, String SEX, String ETHNICITY, String RACE, 
-                                         String SMOKING_HISTORY, String CROHN_DISEASE, String ULCERATIVE_COLITIS, String BARETT_ESOPHAGUS,
-                                         String H_PYLORI, String MDS, String MENOPAUSAL_STATUS, String UV_EXPOSURE, String RADIATION_THERAPY,
+                                         String SMOKING_HISTORY, String CROHN_DISEASE, String ULCERATIVE_COLITIS, String BARRETTS_ESOPHAGUS,
+                                         String H_PYLORI, String MDS, String MENOPAUSE_STATUS, String UV_EXPOSURE, String RADIATION_THERAPY,
                                          String BREAST_IMPLANTS, String BRCA, String RETINOBLASTOMA, String GRADE_1, String GRADE_2, 
                                          String GRADE_3, String PLATINUM_SENSITIVE, String PLATINUM_RESISTANT) {
         this.PATIENT_ID = PATIENT_ID == null ? "NA" : PATIENT_ID;
@@ -86,10 +86,10 @@ public class CRDBPDXClinicalPatientDataset {
         this.SMOKING_HISTORY = SMOKING_HISTORY == null ? "NA" : SMOKING_HISTORY;
         this.CROHN_DISEASE = CROHN_DISEASE == null ? "NA" : CROHN_DISEASE;
         this.ULCERATIVE_COLITIS = ULCERATIVE_COLITIS == null ? "NA" : ULCERATIVE_COLITIS;
-        this.BARETT_ESOPHAGUS = BARETT_ESOPHAGUS == null ? "NA" : BARETT_ESOPHAGUS;
+        this.BARRETTS_ESOPHAGUS = BARRETTS_ESOPHAGUS == null ? "NA" : BARRETTS_ESOPHAGUS;
         this.H_PYLORI = H_PYLORI == null ? "NA" : H_PYLORI;
         this.MDS = MDS == null ? "NA" : MDS;
-        this.MENOPAUSAL_STATUS = MENOPAUSAL_STATUS == null ? "NA" : MENOPAUSAL_STATUS;
+        this.MENOPAUSE_STATUS = MENOPAUSE_STATUS == null ? "NA" : MENOPAUSE_STATUS;
         this.UV_EXPOSURE = UV_EXPOSURE == null ? "NA" : UV_EXPOSURE;
         this.RADIATION_THERAPY = RADIATION_THERAPY == null ? "NA" : RADIATION_THERAPY;
         this.BREAST_IMPLANTS = BREAST_IMPLANTS == null ? "NA" : BREAST_IMPLANTS;
@@ -208,12 +208,12 @@ public class CRDBPDXClinicalPatientDataset {
         this.ULCERATIVE_COLITIS = ULCERATIVE_COLITIS;
     }
 
-    public String getBARETT_ESOPHAGUS() {
-        return BARETT_ESOPHAGUS;
+    public String getBARRETTS_ESOPHAGUS() {
+        return BARRETTS_ESOPHAGUS;
     }
 
-    public void setBARETT_ESOPHAGUS(String BARETT_ESOPHAGUS) {
-        this.BARETT_ESOPHAGUS = BARETT_ESOPHAGUS;
+    public void setBARRETTS_ESOPHAGUS(String BARRETTS_ESOPHAGUS) {
+        this.BARRETTS_ESOPHAGUS = BARRETTS_ESOPHAGUS;
     }
 
     public String getH_PYLORI() {
@@ -232,12 +232,12 @@ public class CRDBPDXClinicalPatientDataset {
         this.MDS = MDS;
     }
 
-    public String getMENOPAUSAL_STATUS() {
-        return MENOPAUSAL_STATUS;
+    public String getMENOPAUSE_STATUS() {
+        return MENOPAUSE_STATUS;
     }
 
-    public void setMENOPAUSAL_STATUS(String MENOPAUSAL_STATUS) {
-        this.MENOPAUSAL_STATUS = MENOPAUSAL_STATUS;
+    public void setMENOPAUSE_STATUS(String MENOPAUSE_STATUS) {
+        this.MENOPAUSE_STATUS = MENOPAUSE_STATUS;
     }
 
     public String getUV_EXPOSURE() {
@@ -334,10 +334,10 @@ public class CRDBPDXClinicalPatientDataset {
         fieldNames.add("SMOKING_HISTORY");
         fieldNames.add("CROHN_DISEASE");
         fieldNames.add("ULCERATIVE_COLITIS");
-        fieldNames.add("BARETT_ESOPHAGUS");
+        fieldNames.add("BARRETTS_ESOPHAGUS");
         fieldNames.add("H_PYLORI");
         fieldNames.add("MDS");
-        fieldNames.add("MENOPAUSAL_STATUS");
+        fieldNames.add("MENOPAUSE_STATUS");
         fieldNames.add("UV_EXPOSURE");
         fieldNames.add("RADIATION_THERAPY");
         fieldNames.add("BREAST_IMPLANTS");

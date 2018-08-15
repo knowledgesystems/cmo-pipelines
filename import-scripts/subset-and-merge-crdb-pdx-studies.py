@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import shutil
+import csv
 
 PATIENT_ID_KEY = "PATIENT_ID"
 SOURCE_STUDY_ID_KEY = "SOURCE_STUDY_ID"
@@ -109,19 +110,12 @@ class Patient():
 # returns list of dictionaries, where each dictionary represents a row (keys are column headers)
 # will skip rows that do not contain same number of columns as header
 def parse_file(file):
-    f = open(file, "r")
-    header_processed = False
     records = []
-    for line in f.readlines():
-        data = line.rstrip().split("\t")
-        if not header_processed:
-            header = data
-            header_processed = True
-        else:
-            try:
-            	records.append({header[index] : data[index] for index in range(len(header))})
-            except:
-                print "ERROR: missing value in a column for the following record: " + line
+    with open(file, 'r') as f:
+        reader = csv.DictReader(f, delimiter = "\t")
+        for record in reader:
+            if all([value for value in record.values()]):
+                records.append(record)
     return records
 
 # create a dictionary representation that can be used for subsetting
@@ -150,11 +144,6 @@ def create_destination_to_source_mapping(records, root_directory):
             destination_to_source_mapping[destination][source] = []
         destination_to_source_mapping[destination][source].append(Patient(cmo_pid, dmp_pid))
     return destination_to_source_mapping
-
-def rewrite_project_source_with_stable_id(records):
-    for record in records:
-        previous_source_study = record[SOURCE_STUDY_ID_KEY]
-        record[SOURCE_STUDY_ID_KEY] = "mixed_cmo_rudinc_" + previous_source_study[5:]
 
 # split cancer study identifer on first three underscores to create path
 # { ke_07_83_b : CMO_ROOT_DIRECTORY/ke/07/83/b }
@@ -270,49 +259,6 @@ def touch_missing_metafiles(directory):
             touch_metafile_call = "touch " + os.path.join(directory, metafile_name)
 	    subprocess.call(touch_metafile_call, shell = True)
 
-# TODO: delete this function when cdd is updated according to crdb pdx fields
-def filter_undefined_columns_in_clinical_and_timeline_files(crdb_fetch_directory):
-    undefined_attribute_list = ["ALK_POSITIVE","AR_NEGATIVE","AR_POSITIVE","BARETT_ESOPHAGUS","BRCA","BRCA1_NEGATIVE","BRCA1_POSITIVE","BRCA2_NEGATIVE","BRCA2_POSITIVE","BREAST_IMPLANTS","C_MYC_NEGATIVE","C_MYC_POSITIVE","CROHN_DISEASE","DESTINATION_STUDY_ID","EGFR_NEGATIVE","ER_NEGATIVE","ER_POSITIVE","GRADE_1","GRADE_2","GRADE_3","HER2_NEGATIVE","HER2_POSITIVE","HPV_NEGATIVE","HPV_POSITIVE","IDH1_NEGATIVE","IDH1_POSITIVE","IDH2_NEGATIVE","IDH2_POSITIVE","KRAS_POSITIVE","MDS","MENOPAUSAL_STATUS","P16_NEGATIVE","P16_POSITIVE","PDX_ID","PLATINUM_RESISTANT","PLATINUM_SENSITIVE","PR_NEGATIVE","PR_POSITIVE","RESPONSE","RETINOBLASTOMA","SUB_TYPE","TIME_TO_RECURRENCE","ULCERATIVE_COLITIS","UV_EXPOSURE"]
-    undefined_attribute_set = set(undefined_attribute_list)
-    filenames_to_filter=["data_clinical_patient.txt", "data_clinical_sample.txt", "data_timeline.txt"]
-    for input_filename in filenames_to_filter:
-        filepath = os.path.join(crdb_fetch_directory, input_filename)
-        backup_filepath = os.path.join(crdb_fetch_directory, ".prefilter_version_" + input_filename[::-1])
-        #keep a backup for later restoration
-        if os.path.exists(backup_filepath):
-            os.remove(backup_filepath)
-        shutil.copy(filepath, backup_filepath)
-        input_lines = []
-        with open(filepath, 'r') as f:
-            input_lines = [line for line in f] 
-        if not input_lines:
-            sys.stderr.write("error: no input found in file " + filepath + "\n")
-            sys.exit(1)
-        filter_column = []
-        for column in input_lines[0].split("\t"):
-            filter_column.append(column.strip() in undefined_attribute_list)
-        output_lines = []
-        for line in input_lines:
-            input_fields = line.split("\t")
-            output_fields = []
-            for index in range(0,len(filter_column)):
-                if (not filter_column[index]):
-                    output_fields.append(input_fields[index])
-            output_lines.append("\t".join(output_fields))
-        with open(filepath, 'w') as f:
-            f.write("".join(output_lines))
-
-def restore_raw_crdb_fetch_to_original(crdb_fetch_directory):
-# TODO: delete this function when cdd is updated according to crdb pdx fields
-    filenames_to_restore=["data_clinical_patient.txt", "data_clinical_sample.txt", "data_timeline.txt"]
-    for filename in filenames_to_restore:
-        filepath = os.path.join(crdb_fetch_directory, filename)
-        backup_filepath = os.path.join(crdb_fetch_directory, ".prefilter_version_" + filename[::-1])
-        #restore file
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        shutil.move(backup_filepath, filepath)
-
 def filter_temp_subset_files(destination_to_source_mapping, root_directory):
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
@@ -405,18 +351,12 @@ def main():
     warning_file = args.warning_file
 
     records = parse_file(destination_to_source_mapping_filename)
-    #TODO: delete the following rewrite when the crdb supplies stable ids
-    rewrite_project_source_with_stable_id(records)
     destination_to_source_mapping = create_destination_to_source_mapping(records, root_directory)
     source_id_to_path_mapping = create_source_id_to_path_mapping(destination_to_source_mapping, cmo_root_directory)
     subset_genomic_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib)
     merge_genomic_files(destination_to_source_mapping, root_directory, lib)
     remove_merged_clinical_timeline_files(destination_to_source_mapping, root_directory)
-    #TODO: delete this filtering step when the cdd is updated to match the clinical headers in crdb pdx
-    filter_undefined_columns_in_clinical_and_timeline_files(crdb_fetch_directory)
     subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib)
-    #TODO: delete this restore step when the cdd is updated to match the clinical headers in crdb pdx
-    restore_raw_crdb_fetch_to_original(crdb_fetch_directory)
     filter_temp_subset_files(destination_to_source_mapping, root_directory)
     get_all_destination_to_missing_metafiles_mapping(destination_to_source_mapping, root_directory)
     generate_import_trigger_files(destination_to_source_mapping, temp_directory)

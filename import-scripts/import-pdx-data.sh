@@ -3,6 +3,14 @@
 echo $(date)
 
 PATH_TO_AUTOMATION_SCRIPT=/data/portal-cron/scripts/automation-environment.sh
+# variables for restarting tomcats
+TOMCAT_HOST_LIST=(dashi.cbio.mskcc.org dashi2.cbio.mskcc.org)
+TOMCAT_HOST_USERNAME=cbioportal_importer
+TOMCAT_HOST_SSH_KEY_FILE=${HOME}/.ssh/id_rsa_msk_tomcat_restarts_key
+TOMCAT_SERVER_RESTART_PATH=/srv/data/portal-cron/msk-tomcat-restart
+TOMCAT_SERVER_PRETTY_DISPLAY_NAME="MSK Tomcat" # e.g. Public Tomcat
+TOMCAT_SERVER_DISPLAY_NAME="msk-tomcat" # e.g. schultz-tomcat
+SSH_OPTIONS="-i ${TOMCAT_HOST_SSH_KEY_FILE} -o BATCHMODE=yes -o ConnectTimeout=3"
 # pipelines_email_list receives low level emails (fail to recache oncotree, fail to restart a tomcat, ...)
 pipelines_email_list="cbioportal-pipelines@cbio.mskcc.org"
 # pdx_email_list receives a daily summary email of import statistics and problems
@@ -162,12 +170,9 @@ if [[ -d "$CRDB_PDX_TMPDIR" && "$CRDB_PDX_TMPDIR" != "/" ]] ; then
     rm -rf "$CRDB_PDX_TMPDIR"/*
 fi
 
-#IMPORTER_JAR_LABEL=Cmo
-#IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
-#IMPORTER_DEBUG_PORT=27182
-IMPORTER_JAR_LABEL=Triage
-IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/triage-cmo-importer.jar
-IMPORTER_DEBUG_PORT=27183
+IMPORTER_JAR_LABEL=CMO
+IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
+IMPORTER_DEBUG_PORT=27182
 importer_notification_file=$(mktemp $CRDB_PDX_TMPDIR/importer-update-notification.$now.XXXXXX)
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=$IMPORTER_DEBUG_PORT"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CRDB_PDX_TMPDIR -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
@@ -235,7 +240,6 @@ fi
 if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
     mapping_filename="source_to_destination_mappings.txt"
     scripts_directory="$PORTAL_HOME/scripts"
-    #TODO: add input root dir and remove hardcoded reference in merge script
     $PYTHON_BINARY $PORTAL_HOME/scripts/subset-and-merge-crdb-pdx-studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --cmo-root-directory $BIC_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME
     if [ $? -ne 0 ] ; then
         echo "error: subset-and-merge-crdb-pdx-studies.py exited with non zero status"
@@ -286,19 +290,24 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
         num_studies_updated=`cat $CRDB_PDX_TMPDIR/num_studies_updated.txt`
         # redeploy war
         if [[ $IMPORT_SUCCESS -ne 0 && $num_studies_updated -gt 0 ]]; then
-            TOMCAT_SERVER_PRETTY_DISPLAY_NAME="Triage Tomcat"
-            TOMCAT_SERVER_DISPLAY_NAME="triage-tomcat"
-            echo "'$num_studies_updated' studies have been updated.  Restarting $TOMCAT_SERVER_DISPLAY_NAME server..."
-            if ! /usr/bin/sudo /etc/init.d/triage-tomcat restart ; then
+            echo "'$num_studies_updated' studies have been updated, requesting redeployment of $TOMCAT_SERVER_DISPLAY_NAME..."
+            declare -a failed_restart_server_list
+            for server in ${TOMCAT_HOST_LIST[@]}; do
+                if ! ssh ${SSH_OPTIONS} ${TOMCAT_HOST_USERNAME}@${server} touch ${TOMCAT_SERVER_RESTART_PATH} ; then
+                    failed_restart_server_list[${#failed_restart_server_list[*]}]=${server}
+                fi
+            done
+            if [ ${#failed_restart_server_list[*]} -ne 0 ] ; then
                 EMAIL_BODY="Attempt to trigger a restart of the $TOMCAT_SERVER_DISPLAY_NAME server failed"
                 echo -e "Sending email $EMAIL_BODY"
                 echo -e "$EMAIL_BODY" | mail -s "$TOMCAT_SERVER_PRETTY_DISPLAY_NAME Restart Error : unable to trigger restart" $pipelines_email_list
                 sendFailureMessageMskPipelineLogsSlack "CRDB PDX Tomcat Restart Failure"
             else
                 TOMCAT_SERVER_RESTART_SUCCESS=1
+                echo "'$num_studies_updated' studies have been updated"
             fi
         else
-            echo "No studies have been updated, skipping restart of $TOMCAT_SERVER_DISPLAY_NAME server..."
+            echo "No studies have been updated, skipping redeploy of $TOMCAT_SERVER_DISPLAY_NAME..."
             TOMCAT_SERVER_RESTART_SUCCESS=1
         fi
     fi
