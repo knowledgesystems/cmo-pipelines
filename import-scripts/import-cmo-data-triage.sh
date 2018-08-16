@@ -10,7 +10,9 @@ fi
 cmo_email_list="cbioportal-cmo-importer@cbio.mskcc.org"
 pipeline_email_list="cbioportal-pipelines@cbio.mskcc.org"
 now=$(date "+%Y-%m-%d-%H-%M-%S")
-JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080"
+IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/triage-cmo-importer.jar"
+JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp"
 triage_notification_file=$(mktemp $tmp/triage-portal-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 
@@ -27,7 +29,7 @@ fi
 # fetch updates in CMO repository
 echo "fetching updates from bic-mskcc..."
 CMO_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source bic-mskcc --run-date latest --update-worksheet
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source bic-mskcc --run-date latest --update-worksheet
 if [ $? -gt 0 ]; then
     echo "CMO (bic-mskcc) fetch failed!"
     CMO_FETCH_FAIL=1
@@ -39,7 +41,7 @@ fi
 # fetch updates in private repository
 echo "fetching updates from private..."
 PRIVATE_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source private --run-date latest --update-worksheet
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source private --run-date latest --update-worksheet
 if [ $? -gt 0 ]; then
     echo "private fetch failed!"
     PRIVATE_FETCH_FAIL=1
@@ -51,7 +53,7 @@ fi
 # fetch updates in genie repository
 echo "fetching updates from genie..."
 GENIE_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source genie --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source genie --run-date latest
 if [ $? -gt 0 ]; then
     echo "genie fetch failed!"
     GENIE_FETCH_FAIL=1
@@ -63,7 +65,7 @@ fi
 # fetch updates in CMO impact
 echo "fetching updates from impact..."
 CMO_IMPACT_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source impact --run-date latest --update-worksheet
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source impact --run-date latest --update-worksheet
 if [ $? -gt 0 ]; then
     echo "impact fetch failed!"
     CMO_IMPACT_FETCH_FAIL=1
@@ -74,7 +76,7 @@ fi
 
 echo "fetching updates from impact-MERGED..."
 IMPACT_MERGED_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183-Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source impact-MERGED --run-date latest --update-worksheet
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source impact-MERGED --run-date latest --update-worksheet
 if [ $? -gt 0 ]; then
     echo "impact-MERGED fetch failed!"
     IMPACT_MERGED_FETCH_FAIL=1
@@ -86,7 +88,7 @@ fi
 # fetch updates in studies repository
 echo "fetching updates from cbio-portal-data..."
 CBIO_PORTAL_DATA_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source knowledge-systems-curated-studies --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source knowledge-systems-curated-studies --run-date latest
 if [ $? -gt 0 ]; then
     echo "cbio-portal-data fetch failed!"
     CBIO_PORTAL_DATA_FETCH_FAIL=1
@@ -98,7 +100,7 @@ fi
 # fetch updates in immunotherapy repository
 echo "fetching updates from immunotherapy..."
 IMMUNOTHERAPY_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source immunotherapy --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source immunotherapy --run-date latest
 if [ $? -gt 0 ]; then
     echo "immunotherapy fetch failed!"
     IMMUNOTHERAPY_FETCH_FAIL=1
@@ -110,7 +112,7 @@ fi
 # fetch updates in datahub repository
 echo "fetching updates from datahub..."
 DATAHUB_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source datahub --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source datahub --run-date latest
 if [ $? -gt 0 ]; then
     echo "datahub fetch failed!"
     DATAHUB_FETCH_FAIL=1
@@ -122,7 +124,7 @@ fi
 # fetch updates from pancan repository
 echo "fetching updates from pancan..."
 PANCAN_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source pancan_tcga --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source pancan_tcga --run-date latest
 if [ $? -gt 0 ]; then
     echo "pancan fetch failed!"
     PANCAN_FETCH_FAIL=1
@@ -133,14 +135,14 @@ fi
 
 # import data that requires QC into triage portal
 echo "importing cancer type updates into triage portal database..."
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+$JAVA_BINARY $JAVA_IMPORTER_ARGS -Xmx16g --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
 
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --apply-overrides --portal triage-portal
+$JAVA_BINARY $JAVA_IMPORTER_ARGS -Xmx16g --apply-overrides --portal triage-portal
 
 DB_VERSION_FAIL=0
 # check database version before importing anything
 echo "Checking if database version is compatible"
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --check-db-version
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ]
 then
     echo "Database version expected by portal does not match version in database!"
@@ -151,7 +153,7 @@ fi
 if [[ $DB_VERSION_FAIL -eq 0 && $CMO_FETCH_FAIL -eq 0 && $PRIVATE_FETCH_FAIL -eq 0 && $GENIE_FETCH_FAIL -eq 0 && $CMO_IMPACT_FETCH_FAIL -eq 0 && $IMPACT_MERGED_FETCH_FAIL -eq 0 && $CBIO_PORTAL_DATA_FETCH_FAIL -eq 0 && $IMMUNOTHERAPY_FETCH_FAIL -eq 0 && $DATAHUB_FETCH_FAIL -eq 0 && $PANCAN_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
     echo "importing study data into triage portal database..."
     IMPORT_FAIL=0
-    $JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx32G -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --update-study-data --portal triage-portal --use-never-import --update-worksheet --notification-file "$triage_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS -Xmx32G --update-study-data --portal triage-portal --use-never-import --update-worksheet --notification-file "$triage_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
     if [ $? -gt 0 ]; then
         echo "Triage import failed!"
         IMPORT_FAIL=1
@@ -179,7 +181,7 @@ if [[ $DB_VERSION_FAIL -eq 0 && $CMO_FETCH_FAIL -eq 0 && $PRIVATE_FETCH_FAIL -eq
 
     # import ran and either failed or succeeded
     echo "sending notification email.."
-    $JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/triage-cmo-importer.jar org.mskcc.cbio.importer.Admin --send-update-notification --portal triage-portal --notification-file "$triage_notification_file"
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal triage-portal --notification-file "$triage_notification_file"
 fi
 
 EMAIL_BODY="The Triage database version is incompatible. Imports will be skipped until database is updated."

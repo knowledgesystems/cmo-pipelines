@@ -1,8 +1,11 @@
 #!/bin/bash
 
-JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 MSK_DMP_TMPDIR="$PORTAL_HOME/tmp/import-cron-dmp-msk"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
+CVR_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/cvr_fetcher.jar"
+IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-dmp-importer.jar"
+JAVA_CVR_FETCHER_ARGS="-jar $CVR_FETCHER_JAR_FILENAME"
+JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR"
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 
 ## FUNCTIONS
@@ -75,12 +78,12 @@ function restartSchultzTomcats {
 function consumeSamplesAfterSolidHemeImport {
     if [ -f $MSK_IMPACT_CONSUME_TRIGGER ] ; then
         echo "Consuming mskimpact samples from cvr"
-        $JAVA_HOME/bin/java $JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -jar $PORTAL_HOME/lib/cvr_fetcher.jar -c $MSK_IMPACT_DATA_HOME/cvr_data.json
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_DATA_HOME/cvr_data.json
         rm -f $MSK_IMPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_HEMEPACT_CONSUME_TRIGGER ] ; then
         echo "Consuming mskimpact_heme samples from cvr"
-        $JAVA_HOME/bin/java $JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -jar $PORTAL_HOME/lib/cvr_fetcher.jar -c $MSK_HEMEPACT_DATA_HOME/cvr_data.json
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_DATA_HOME/cvr_data.json
         rm -f $MSK_HEMEPACT_CONSUME_TRIGGER
     fi
 }
@@ -90,7 +93,7 @@ echo $(date)
 
 email_list="cbioportal-pipelines@cbio.mskcc.org"
 
-if [ -z $JAVA_HOME ] | [ -z $HG_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
+if [ -z $JAVA_BINARY ] | [ -z $HG_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
     message="test could not run import-dmp-impact.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
     echo ${message}
     echo -e "${message}" |  mail -s "import-dmp-impact-data failed to run." $email_list
@@ -169,7 +172,7 @@ MERCURIAL_PUSH_FAIL=0
 # check database version before importing anything
 echo "Checking if database version is compatible"
 echo $(date)
-$JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -cp $PORTAL_HOME/lib/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin --check-db-version
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ] ; then
     echo "Database version expected by portal does not match version in database!"
     sendFailureMessageMskPipelineLogsSlack "MSK DMP Importer DB version check"
@@ -179,7 +182,7 @@ fi
 if [ $DB_VERSION_FAIL -eq 0 ] ; then
     # import into portal database
     echo "importing cancer type updates into msk portal database..."
-    $JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -cp $PORTAL_HOME/lib/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS -Xmx16g --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
     if [ $? -gt 0 ] ; then
         sendFailureMessageMskPipelineLogsSlack "Cancer type updates"
     fi

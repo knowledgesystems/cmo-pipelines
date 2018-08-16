@@ -3,8 +3,19 @@
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 PERFORM_CRDB_FETCH=1
 CVR_TEST_MODE_ARGS=""
+CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
+CVR_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/cvr_fetcher.jar"
+DARWIN_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/darwin_fetcher.jar"
+DDP_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/ddp_fetcher.jar"
+REDCAP_PIPELINE_JAR_FILENAME="$PORTAL_HOME/lib/redcap_pipeline.jar"
+IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-dmp-importer.jar"
+JAVA_CRDB_FETCHER_ARGS="-jar $CRDB_FETCHER_JAR_FILENAME"
+JAVA_CVR_FETCHER_ARGS="-jar $CVR_FETCHER_JAR_FILENAME"
+JAVA_DARWIN_FETCHER_ARGS="-jar $DARWIN_FETCHER_JAR_FILENAME"
+JAVA_DDP_FETCHER_ARGS="-jar $DDP_FETCHER_JAR_FILENAME"
+JAVA_REDCAP_PIPELINE_ARGS="-jar $REDCAP_PIPELINE_JAR_FILENAME"
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR"
 
 #default darwin demographics row count is 2 to allow minimum records written to be 1 in fetched Darwin Demographics result (allow 10% drop)
 DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT=2
@@ -102,7 +113,7 @@ function addDateAddedData {
 function import_project_to_redcap {
     filename=$1
     project_title=$2
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/redcap_pipeline.jar -i --filename $filename --redcap-project-title $project_title
+    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -i --filename $filename --redcap-project-title $project_title
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to import file $filename into redcap project $project_title"
@@ -114,7 +125,7 @@ function import_project_to_redcap {
 function export_project_from_redcap {
     directory=$1
     project_title=$2
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/redcap_pipeline.jar -e -r -d $directory --redcap-project-title $project_title
+    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -d $directory --redcap-project-title $project_title
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to export project $project_title from redcap into directory $directory"
@@ -131,7 +142,7 @@ function export_stable_id_from_redcap {
     if [ ! -z $list_of_ignored_projects ] ; then
         ignored_projects_argument="-m $list_of_ignored_projects"
     fi
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/redcap_pipeline.jar -e -s ${stable_id} -d ${directory} ${ignored_projects_argument}
+    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -s ${stable_id} -d ${directory} ${ignored_projects_argument}
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to export stable_id ${stable_id} from redcap into directory ${directory}"
@@ -310,7 +321,7 @@ if [[ -d "$MSK_DMP_TMPDIR" && "$MSK_DMP_TMPDIR" != "/" ]] ; then
     rm -rf "$MSK_DMP_TMPDIR"/*
 fi
 
-if [ -z $JAVA_HOME ] | [ -z $HG_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
+if [ -z $JAVA_BINARY ] | [ -z $HG_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
     message="test could not run import-dmp-impact.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
     echo ${message}
     echo -e "${message}" |  mail -s "fetch-dmp-data-for-import failed to run." $email_list
@@ -345,7 +356,7 @@ fi
 
 # fetch clinical data mercurial
 echo "fetching updates from dmp repository..."
-$JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -cp $PORTAL_HOME/lib/msk-dmp-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source dmp --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source dmp --run-date latest
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch Msk-impact from Mercurial Failure"
     exit 2
@@ -427,7 +438,7 @@ MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $MSKIMPACT_REDCAP_BACKUP/da
 if [ $MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT ] ; then
     MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT
 fi
-$JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/darwin_fetcher.jar -d $MSK_IMPACT_DATA_HOME -s mskimpact -c $MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT
+$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -s mskimpact -c $MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT
 if [ $? -gt 0 ] ; then
     cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     sendFailureMessageMskPipelineLogsSlack "MSKIMPACT DARWIN Fetch"
@@ -441,7 +452,7 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
     # fetch new/updated IMPACT samples using CVR Web service   (must come after mercurial fetching)
     echo "fetching samples from CVR Web service  ..."
     echo $(date)
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/cvr_fetcher.jar -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR fetch failed!"
         cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
@@ -474,7 +485,7 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
     # fetch new/updated IMPACT germline samples using CVR Web service   (must come after normal cvr fetching)
     echo "fetching CVR GML data ..."
     echo $(date)
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/cvr_fetcher.jar -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR Germline fetch failed!"
         cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
@@ -503,7 +514,7 @@ if [ $FETCH_DARWIN_IMPACT_FAIL -eq 0 ] ; then
     awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PED_IND"] == "Yes") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_supp_darwin_demographics.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
     # For future use: when we want to replace darwin demographics attributes with ddp-fetched attributes instead of just for ped-cohort
     #awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_patient_list.txt
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/ddp_fetcher.jar -o $MSK_IMPACT_DATA_HOME -s $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
+    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -o $MSK_IMPACT_DATA_HOME -s $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
     if [ $? -gt 0 ] ; then
         cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
         sendFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Fetch"
@@ -518,7 +529,7 @@ if [ $PERFORM_CRDB_FETCH -gt 0 ] ; then
     # fetch CRDB data
     echo "fetching CRDB data"
     echo $(date)
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/crdb_fetcher.jar --directory $MSK_IMPACT_DATA_HOME
+    $JAVA_BINARY $JAVA_CRDB_FETCHER_ARGS --directory $MSK_IMPACT_DATA_HOME
     # no need for hg update/commit ; CRDB generated files are stored in redcap and not mercurial
     if [ $? -gt 0 ] ; then
         sendFailureMessageMskPipelineLogsSlack "MSKIMPACT CRDB Fetch"
@@ -538,7 +549,7 @@ HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $HEMEPACT_REDCAP_BACKUP/data
 if [ $HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT ] ; then
     HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT
 fi
-$JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/darwin_fetcher.jar -d $MSK_HEMEPACT_DATA_HOME -s mskimpact_heme -c $HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT
+$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -s mskimpact_heme -c $HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT
 if [ $? -gt 0 ] ; then
     cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     sendFailureMessageMskPipelineLogsSlack "HEMEPACT DARWIN Fetch"
@@ -552,7 +563,7 @@ if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
     # fetch new/updated heme samples using CVR Web service (must come after mercurial fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
     echo "fetching CVR heme data..."
     echo $(date)
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/cvr_fetcher.jar -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR heme fetch failed!"
         echo "This will not affect importing of mskimpact"
@@ -578,7 +589,7 @@ fi
 # For future use: when we want to replace darwin demographics attributes with ddp-fetched attributes
 #if [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
 #    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $MSK_DMP_TMPDIR/hemepact_patient_list.txt
-#    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/ddp_fetcher.jar -o $MSK_HEMEPACT_DATA_HOME -s $MSK_DMP_TMPDIR/hemepact_patient_list.txt
+#    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -o $MSK_HEMEPACT_DATA_HOME -s $MSK_DMP_TMPDIR/hemepact_patient_list.txt
 #    if [ $? -gt 0 ] ; then
 #        cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
 #        sendFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Fetch"
@@ -598,7 +609,7 @@ RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $RAINDANCE_REDCAP_BACKUP/da
 if [ $RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT ] ; then
     RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT
 fi
-$JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/darwin_fetcher.jar -d $MSK_RAINDANCE_DATA_HOME -s mskraindance -c $RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT
+$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -d $MSK_RAINDANCE_DATA_HOME -s mskraindance -c $RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT
 if [ $? -gt 0 ] ; then
     cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     sendFailureMessageMskPipelineLogsSlack "RAINDANCE DARWIN Fetch"
@@ -612,7 +623,7 @@ if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] ; then
     # fetch new/updated raindance samples using CVR Web service (must come after mercurial fetching). The -s flag skips segment data fetching
     echo "fetching CVR raindance data..."
     echo $(date)
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/cvr_fetcher.jar -d $MSK_RAINDANCE_DATA_HOME -n data_clinical_mskraindance_data_clinical.txt -s -i mskraindance $CVR_TEST_MODE_ARGS
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_RAINDANCE_DATA_HOME -n data_clinical_mskraindance_data_clinical.txt -s -i mskraindance $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR raindance fetch failed!"
         echo "This will not affect importing of mskimpact"
@@ -637,7 +648,7 @@ fi
 # For future use: when we want to replace darwin demographics attributes with ddp-fetched attributes
 #if [ $FETCH_CVR_RAINDANCE_FAIL -eq 0 ] ; then
 #    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical.txt | sort | uniq > $MSK_DMP_TMPDIR/mskraindance_patient_list.txt
-#    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/ddp_fetcher.jar -o $MSK_RAINDANCE_DATA_HOME -s $MSK_DMP_TMPDIR/mskraindance_patient_list.txt
+#    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -o $MSK_RAINDANCE_DATA_HOME -s $MSK_DMP_TMPDIR/mskraindance_patient_list.txt
 #    if [ $? -gt 0 ] ; then
 #        cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
 #        sendFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Fetch"
@@ -657,7 +668,7 @@ ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $ARCHER_REDCAP_BACKUP/data_cli
 if [ $ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT ] ; then
     ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT
 fi
-$JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/darwin_fetcher.jar -d $MSK_ARCHER_UNFILTERED_DATA_HOME -s mskarcher -c $ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT
+$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -s mskarcher -c $ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT
 if [ $? -gt 0 ] ; then
     cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     sendFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DARWIN Fetch"
@@ -672,7 +683,7 @@ if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
     echo "fetching CVR archer data..."
     echo $(date)
     # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/cvr_fetcher.jar -d $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b $CVR_TEST_MODE_ARGS
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR Archer fetch failed!"
         echo "This will not affect importing of mskimpact"
@@ -699,7 +710,7 @@ fi
 # For future use: when we want to replace darwin demographics attributes with ddp-fetched attributes
 #if [ $FETCH_CVR_ARCHER_FAIL -eq 0 ] ; then
 #    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt | sort | uniq > $MSK_DMP_TMPDIR/mskarcher_patient_list.txt
-#    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/ddp_fetcher.jar -o $MSK_ARCHER_UNFILTERED_DATA_HOME -s $MSK_DMP_TMPDIR/mskarcher_patient_list.txt
+#    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -o $MSK_ARCHER_UNFILTERED_DATA_HOME -s $MSK_DMP_TMPDIR/mskarcher_patient_list.txt
 #    if [ $? -gt 0 ] ; then
 #        cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
 #        sendFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Fetch"

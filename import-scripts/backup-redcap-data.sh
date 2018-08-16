@@ -53,12 +53,14 @@ function validateRedcapExportForStudy {
 
 # -----------------------------------------------------------------------------------------------------------
 # REDCAP EXPORTS
+REDCAP_JAR_FILENAME="$PORTAL_HOME/lib/redcap_pipeline.jar"
+JAVA_REDCAP_PIPELINE_ARGS="-jar $REDCAP_JAR_FILENAME"
 # update mercurial repo with latest changes
 $HG_BINARY pull -u
 
 # export and commit MSKIMPACT REDCap data
 echo "Exporting MSKIMPACT REDCap data..."
-$JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/redcap_pipeline.jar -e -r -s mskimpact -d $MSKIMPACT_REDCAP_BACKUP
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskimpact -d $MSKIMPACT_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for MSKIMPACT! Aborting any changes made during export..."
     cd $MSKIMPACT_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
@@ -79,7 +81,7 @@ else
 fi
 
 # export and commit RAINDANCE REDCap data
-$JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/redcap_pipeline.jar -e -r -s mskraindance -d $RAINDANCE_REDCAP_BACKUP
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskraindance -d $RAINDANCE_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for RAINDANCE! Aborting any changes made during export..."
     cd $RAINDANCE_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
@@ -100,7 +102,7 @@ else
 fi
 
 # export and commit HEMEPACT REDCap data
-$JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/redcap_pipeline.jar -e -r -s mskimpact_heme -d $HEMEPACT_REDCAP_BACKUP
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskimpact_heme -d $HEMEPACT_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for HEMEPACT! Aborting any changes made during export..."
     cd $HEMEPACT_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
@@ -121,7 +123,7 @@ else
 fi
 
 # export and commit ARCHER REDCap data
-$JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/redcap_pipeline.jar -e -r -s mskarcher -d $ARCHER_REDCAP_BACKUP
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskarcher -d $ARCHER_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for ARCHER! Aborting any changes made during export..."
     cd $ARCHER_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig

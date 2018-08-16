@@ -175,7 +175,7 @@ IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
 IMPORTER_DEBUG_PORT=27182
 importer_notification_file=$(mktemp $CRDB_PDX_TMPDIR/importer-update-notification.$now.XXXXXX)
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=$IMPORTER_DEBUG_PORT"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CRDB_PDX_TMPDIR -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CRDB_PDX_TMPDIR"
 SUBSET_AND_MERGE_WARNINGS_FILENAME="subset_and_merge_pdx_studies_warnings.txt"
 # status flags (set to 1 when each stage is successfully completed)
 CRDB_PDX_FETCH_SUCCESS=0
@@ -197,7 +197,7 @@ fi
 DB_VERSION_FAIL=0
 # check database version before importing anything
 echo "Checking if database version is compatible"
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183 -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$CRDB_PDX_TMPDIR" -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --check-db-version
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ]
 then
     echo "Database version expected by portal does not match version in database!"
@@ -206,12 +206,12 @@ fi
 
 # importer mercurial fetch step
 echo "fetching updates from bic-mskcc repository..."
-$JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --fetch-data --data-source bic-mskcc --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source bic-mskcc --run-date latest
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch BIC-MSKCC Studies From Mercurial Failure"
 else
     echo "fetching updates from pdx repository..."
-    $JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --fetch-data --data-source pdx --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source pdx --run-date latest
     if [ $? -gt 0 ] ; then
         sendFailureMessageMskPipelineLogsSlack "Fetch PDX Studies From Mercurial Failure"
     else
@@ -221,7 +221,7 @@ fi
 
 if [ $MERCURIAL_FETCH_VIA_IMPORTER_SUCCESS -ne 0 ] ; then
     echo "fetching pdx data fom crdb"
-    $JAVA_HOME/bin/java -jar $PORTAL_HOME/lib/crdb_fetcher.jar --pdx --directory $CRDB_FETCHER_PDX_HOME
+    $JAVA_BINARY -jar $PORTAL_HOME/lib/crdb_fetcher.jar --pdx --directory $CRDB_FETCHER_PDX_HOME
     if [ $? -ne 0 ] ; then
         echo "error: crdb_pdx_fetch failed"
         sendFailureMessageMskPipelineLogsSlack "Fetch CRDB PDX Failure"
@@ -277,7 +277,7 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
     # if the database version is correct and ALL fetches succeed, then import
     if [[ $DB_VERSION_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data to database using $IMPORTER_JAR_FILENAME ..."
-        $JAVA_HOME/bin/java $JAVA_IMPORTER_ARGS -Xmx16g -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin --update-study-data --portal crdb-pdx-portal --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+        $JAVA_BINARY $JAVA_IMPORTER_ARGS -Xmx16g --update-study-data --portal crdb-pdx-portal --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -ne 0 ]; then
             echo "$IMPORTER_JAR_LABEL import failed!"
             EMAIL_BODY="$IMPORTER_JAR_LABEL import failed"

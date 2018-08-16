@@ -6,7 +6,8 @@
 # general paths/options for system executables
 #######################
 export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk.x86_64
-export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080"
+export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
+export JAVA_BINARY=$JAVA_HOME/bin/java
 export PYTHON_BINARY=/data/tools/python2.7/bin/python
 export MAVEN_BINARY=/data/portal-cron/bin/mvn
 export HG_BINARY=/usr/bin/hg
@@ -98,5 +99,4 @@ export ARCHER_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskarcher
 #######################
 # environment variables used in the import-pdx-data script
 #######################
-export PDX_DATA_HOME=$PORTAL_DATA_HOME/crdb_pdx
 export CRDB_FETCHER_PDX_HOME=$PDX_DATA_HOME/crdb_pdx_raw_data

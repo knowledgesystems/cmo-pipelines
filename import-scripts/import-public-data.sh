@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # set necessary env variables with automation-environment.sh
-if [[ -z $PORTAL_HOME || -z $JAVA_HOME ]] ; then
-    echo "Error : import-public-data.sh cannot be run without setting PORTAL_HOME and JAVA_HOME environment variables. (Use automation-environment.sh)"
+if [[ -z $PORTAL_HOME || -z $JAVA_BINARY ]] ; then
+    echo "Error : import-public-data.sh cannot be run without setting PORTAL_HOME and JAVA_BINARY environment variables. (Use automation-environment.sh)"
     exit 1
 fi
 
@@ -12,7 +12,9 @@ if [[ -d "$tmp" && "$tmp" != "/" ]]; then
 fi
 email_list="cbioportal-pipelines@cbio.mskcc.org"
 now=$(date "+%Y-%m-%d-%H-%M-%S")
-JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080"
+IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/public-importer.jar"
+JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp"
 public_portal_notification_file=$(mktemp $tmp/public-portal-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_latest_stable
 
@@ -30,7 +32,7 @@ fi
 DB_VERSION_FAIL=0
 # check database version before importing anything
 echo "Checking if database version is compatible"
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185 -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/public-importer.jar org.mskcc.cbio.importer.Admin --check-db-version
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ]; then
     echo "Database version expected by portal does not match version in database!"
     DB_VERSION_FAIL=1
@@ -39,7 +41,7 @@ fi
 # fetch updates in studies repository
 echo "fetching updates from cbio-portal-data..."
 CBIO_PORTAL_DATA_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/public-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source knowledge-systems-curated-studies --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source knowledge-systems-curated-studies --run-date latest
 if [ $? -gt 0 ]; then
     echo "cbio-portal-data fetch failed!"
     CBIO_PORTAL_DATA_FETCH_FAIL=1
@@ -51,7 +53,7 @@ fi
 # fetch updates in CMO impact
 echo "fetching updates from impact..."
 CMO_IMPACT_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/public-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source impact --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source impact --run-date latest
 if [ $? -gt 0 ]; then
     echo "impact fetch failed!"
     CMO_IMPACT_FETCH_FAIL=1
@@ -63,7 +65,7 @@ fi
 # fetch updates in private repository
 echo "fetching updates from private..."
 PRIVATE_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/public-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source private --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source private --run-date latest
 if [ $? -gt 0 ]; then
     echo "private fetch failed!"
     PRIVATE_FETCH_FAIL=1
@@ -74,7 +76,7 @@ fi
 
 echo "fetching updates from datahub..."
 DATAHUB_FETCH_FAIL=0
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/public-importer.jar org.mskcc.cbio.importer.Admin --fetch-data --data-source datahub --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source datahub --run-date latest
 if [ $? -gt 0 ]; then
     echo "datahub fetch failed!"
     DATAHUB_FETCH_FAIL=1
@@ -86,10 +88,10 @@ fi
 if [[ $DB_VERSION_FAIL -eq 0 && $PRIVATE_FETCH_FAIL -eq 0 && $CMO_IMPACT_FETCH_FAIL -eq 0 && $CBIO_PORTAL_DATA_FETCH_FAIL -eq 0 && $DATAHUB_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]]; then
     # import public studies into public portal
     echo "importing cancer type updates into public portal database..."
-    $JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/public-importer.jar org.mskcc.cbio.importer.Admin --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS -Xmx16g --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
     echo "importing study data into public portal database..."
     IMPORT_FAIL=0
-    $JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185 -Xmx64g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/public-importer.jar org.mskcc.cbio.importer.Admin --update-study-data --portal public-portal --update-worksheet --notification-file "$public_portal_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source uniprot
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS -Xmx64g --update-study-data --portal public-portal --update-worksheet --notification-file "$public_portal_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source uniprot
     if [ $? -gt 0 ]; then
         echo "Public import failed!"
         IMPORT_FAIL=1
@@ -126,7 +128,7 @@ if [ $DB_VERSION_FAIL -gt 0 ]; then
     echo -e "$EMAIL_BODY" | mail -s "Public Update Failure: DB version is incompatible" $email_list
 fi
 
-$JAVA_HOME/bin/java $JAVA_PROXY_ARGS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185 -Xmx16g -ea -Dspring.profiles.active=dbcp -Djava.io.tmpdir="$tmp" -cp $PORTAL_HOME/lib/public-importer.jar org.mskcc.cbio.importer.Admin --send-update-notification --portal public-portal --notification-file "$public_portal_notification_file"
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal public-portal --notification-file "$public_portal_notification_file"
 
 if [[ -d "$tmp" && "$tmp" != "/" ]]; then
     rm -rf "$tmp"/*
