@@ -173,8 +173,10 @@ fi
 IMPORTER_JAR_LABEL=CMO
 IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
 IMPORTER_DEBUG_PORT=27182
+CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
 importer_notification_file=$(mktemp $CRDB_PDX_TMPDIR/importer-update-notification.$now.XXXXXX)
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=$IMPORTER_DEBUG_PORT"
+JAVA_CRDB_FETCHER_ARGS="-jar $CRDB_FETCHER_JAR_FILENAME"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CRDB_PDX_TMPDIR"
 SUBSET_AND_MERGE_WARNINGS_FILENAME="subset_and_merge_pdx_studies_warnings.txt"
 # status flags (set to 1 when each stage is successfully completed)
@@ -221,7 +223,7 @@ fi
 
 if [ $MERCURIAL_FETCH_VIA_IMPORTER_SUCCESS -ne 0 ] ; then
     echo "fetching pdx data fom crdb"
-    $JAVA_BINARY -jar $PORTAL_HOME/lib/crdb_fetcher.jar --pdx --directory $CRDB_FETCHER_PDX_HOME
+    $JAVA_BINARY $JAVA_CRDB_FETCHER_ARGS --pdx --directory $CRDB_FETCHER_PDX_HOME
     if [ $? -ne 0 ] ; then
         echo "error: crdb_pdx_fetch failed"
         sendFailureMessageMskPipelineLogsSlack "Fetch CRDB PDX Failure"
