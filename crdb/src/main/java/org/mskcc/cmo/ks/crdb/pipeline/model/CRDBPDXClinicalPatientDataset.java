@@ -53,7 +53,7 @@ public class CRDBPDXClinicalPatientDataset {
     private String ULCERATIVE_COLITIS;
     private String BARRETTS_ESOPHAGUS;
     private String H_PYLORI;
-    private String MDS;
+    private String MDS_RISK_FACTOR;
     private String MENOPAUSE_STATUS;
     private String UV_EXPOSURE;
     private String RADIATION_THERAPY;
@@ -75,7 +75,7 @@ public class CRDBPDXClinicalPatientDataset {
 
     public CRDBPDXClinicalPatientDataset(String PATIENT_ID, String DESTINATION_STUDY_ID, String SEX, String ETHNICITY, String RACE, 
                                          String SMOKING_HISTORY, String CROHN_DISEASE, String ULCERATIVE_COLITIS, String BARRETTS_ESOPHAGUS,
-                                         String H_PYLORI, String MDS, String MENOPAUSE_STATUS, String UV_EXPOSURE, String RADIATION_THERAPY,
+                                         String H_PYLORI, String MDS_RISK_FACTOR, String MENOPAUSE_STATUS, String UV_EXPOSURE, String RADIATION_THERAPY,
                                          String BREAST_IMPLANTS, String BRCA, String RETINOBLASTOMA, String GRADE_1, String GRADE_2, 
                                          String GRADE_3, String PLATINUM_SENSITIVE, String PLATINUM_RESISTANT) {
         this.PATIENT_ID = PATIENT_ID == null ? "NA" : PATIENT_ID;
@@ -88,7 +88,7 @@ public class CRDBPDXClinicalPatientDataset {
         this.ULCERATIVE_COLITIS = ULCERATIVE_COLITIS == null ? "NA" : ULCERATIVE_COLITIS;
         this.BARRETTS_ESOPHAGUS = BARRETTS_ESOPHAGUS == null ? "NA" : BARRETTS_ESOPHAGUS;
         this.H_PYLORI = H_PYLORI == null ? "NA" : H_PYLORI;
-        this.MDS = MDS == null ? "NA" : MDS;
+        this.MDS_RISK_FACTOR = MDS_RISK_FACTOR == null ? "NA" : MDS_RISK_FACTOR;
         this.MENOPAUSE_STATUS = MENOPAUSE_STATUS == null ? "NA" : MENOPAUSE_STATUS;
         this.UV_EXPOSURE = UV_EXPOSURE == null ? "NA" : UV_EXPOSURE;
         this.RADIATION_THERAPY = RADIATION_THERAPY == null ? "NA" : RADIATION_THERAPY;
@@ -224,12 +224,12 @@ public class CRDBPDXClinicalPatientDataset {
         H_PYLORI = h_PYLORI;
     }
 
-    public String getMDS() {
-        return MDS;
+    public String getMDS_RISK_FACTOR() {
+        return MDS_RISK_FACTOR;
     }
 
-    public void setMDS(String MDS) {
-        this.MDS = MDS;
+    public void setMDS_RISK_FACTOR(String MDS_RISK_FACTOR) {
+        this.MDS_RISK_FACTOR = MDS_RISK_FACTOR;
     }
 
     public String getMENOPAUSE_STATUS() {
@@ -327,7 +327,7 @@ public class CRDBPDXClinicalPatientDataset {
     public List<String> getFieldNames() {
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add("PATIENT_ID");
-        fieldNames.add("DESTINATION_STUDY_ID");
+        //fieldNames.add("DESTINATION_STUDY_ID"); // This field is not a true clinical attribute -- do not output
         fieldNames.add("SEX");
         fieldNames.add("ETHNICITY");
         fieldNames.add("RACE");
@@ -336,7 +336,7 @@ public class CRDBPDXClinicalPatientDataset {
         fieldNames.add("ULCERATIVE_COLITIS");
         fieldNames.add("BARRETTS_ESOPHAGUS");
         fieldNames.add("H_PYLORI");
-        fieldNames.add("MDS");
+        //fieldNames.add("MDS_RISK_FACTOR"); // This field is not yet available - update reader also when it is
         fieldNames.add("MENOPAUSE_STATUS");
         fieldNames.add("UV_EXPOSURE");
         fieldNames.add("RADIATION_THERAPY");

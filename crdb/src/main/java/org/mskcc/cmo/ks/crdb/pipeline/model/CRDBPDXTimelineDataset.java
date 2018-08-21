@@ -563,7 +563,7 @@ public class CRDBPDXTimelineDataset {
         fieldNames.add("PATIENT_ID");
         fieldNames.add("SAMPLE_ID");
         fieldNames.add("PDX_ID");
-        fieldNames.add("DESTINATION_STUDY_ID");
+        //fieldNames.add("DESTINATION_STUDY_ID"); // This field is not a true clinical attribute -- do not output
         fieldNames.add("START_DATE");
         fieldNames.add("STOP_DATE");
         fieldNames.add("EVENT_TYPE");

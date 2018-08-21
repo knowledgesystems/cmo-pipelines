@@ -36,6 +36,7 @@ import org.mskcc.cmo.ks.crdb.model.CRDBPDXClinicalSampleDataset;
 
 import static com.querydsl.core.alias.Alias.$;
 import static com.querydsl.core.alias.Alias.alias;
+import com.querydsl.core.types.ConstantImpl; // TODO: delete this when no longer needed
 import com.querydsl.core.types.Projections;
 import com.querydsl.sql.SQLQueryFactory;
 
@@ -82,7 +83,9 @@ public class CRDBPDXClinicalSampleReader implements ItemStreamReader<CRDBPDXClin
         CRDBPDXClinicalSampleDataset qCRDBD = alias(CRDBPDXClinicalSampleDataset.class, crdbPDXClinicalSampleDatasetView);
         List<CRDBPDXClinicalSampleDataset> crdbPDXClinicalSampleDatasetResults = crdbQueryFactory.selectDistinct(
                 Projections.constructor(CRDBPDXClinicalSampleDataset.class, $(qCRDBD.getPATIENT_ID()), $(qCRDBD.getSAMPLE_ID()), $(qCRDBD.getPDX_ID()),
-                                        $(qCRDBD.getDESTINATION_STUDY_ID()), $(qCRDBD.getAGE_AT_INITIAL_DIAGNOSIS()), $(qCRDBD.getPASSAGE_ID()),
+                                        $(qCRDBD.getDESTINATION_STUDY_ID()),
+                                        ConstantImpl.create(""), //$(qCRDBD.getCOLLAB_ID()), // not yet available : when available, update model class too and drop empty string arg
+                                        $(qCRDBD.getAGE_AT_INITIAL_DIAGNOSIS()), $(qCRDBD.getPASSAGE_ID()),
                                         $(qCRDBD.getONCOTREE_CODE()), $(qCRDBD.getSTAGE_CODE()), $(qCRDBD.getT_STAGE()), $(qCRDBD.getN_STAGE()),
                                         $(qCRDBD.getM_STAGE()), $(qCRDBD.getGRADE()), $(qCRDBD.getSAMPLE_TYPE()), $(qCRDBD.getPRIMARY_SITE()),
                                         $(qCRDBD.getSAMPLE_CLASS()), $(qCRDBD.getPROCEDURE_TYPE()), $(qCRDBD.getPRETREATED()), $(qCRDBD.getTREATED()),
