@@ -68,8 +68,8 @@ public class BatchConfiguration
     @Bean
     public Job crdbImpactJob() {
         return jobBuilderFactory.get(CRDB_IMPACT_JOB)
-            .start(step1())
-            .next(step2())
+            .start(crdbSurveyStep())
+            .next(crdbDatasetStep())
             .build();
     }
 
@@ -87,29 +87,29 @@ public class BatchConfiguration
      * Step 1 reads, processes, and writes the CRDB Survey query results
      */
     @Bean
-    public Step step1() {
-        return stepBuilderFactory.get("step1")
+    public Step crdbSurveyStep() {
+        return stepBuilderFactory.get("crdbSurveyStep")
             .<CRDBSurvey, String> chunk(10)
-            .reader(reader1())
-            .processor(processor1())
-            .writer(writer1())
+            .reader(crdbSurveyReader())
+            .processor(crdbSurveyProcessor())
+            .writer(crdbSurveyWriter())
             .build();
     }
 
     @Bean
     @StepScope
-	public ItemStreamReader<CRDBSurvey> reader1() {
+	public ItemStreamReader<CRDBSurvey> crdbSurveyReader() {
 		return new CRDBSurveyReader();
 	}
 
     @Bean
-    public CRDBSurveyProcessor processor1() {
+    public CRDBSurveyProcessor crdbSurveyProcessor() {
         return new CRDBSurveyProcessor();
     }
 
     @Bean
     @StepScope
-    public ItemStreamWriter<String> writer1() {
+    public ItemStreamWriter<String> crdbSurveyWriter() {
         return new CRDBSurveyWriter();
     }
 
@@ -117,29 +117,29 @@ public class BatchConfiguration
      * Step 2 reads, processes, and writes the CRDB Dataset query results
      */
     @Bean
-    public Step step2() {
-        return stepBuilderFactory.get("step2")
+    public Step crdbDatasetStep() {
+        return stepBuilderFactory.get("crdbDatasetStep")
             .<CRDBDataset, String> chunk(10)
-            .reader(reader2())
-            .processor(processor2())
-            .writer(writer2())
+            .reader(crdbDatasetReader())
+            .processor(crdbDatasetProcessor())
+            .writer(crdbDatasetWriter())
             .build();
     }
 
     @Bean
     @StepScope
-    public ItemStreamReader<CRDBDataset> reader2() {
+    public ItemStreamReader<CRDBDataset> crdbDatasetReader() {
 	return new CRDBDatasetReader();
     }
 
     @Bean
-    public CRDBDatasetProcessor processor2() {
+    public CRDBDatasetProcessor crdbDatasetProcessor() {
         return new CRDBDatasetProcessor();
     }
 
     @Bean
     @StepScope
-    public ItemStreamWriter<String> writer2() {
+    public ItemStreamWriter<String> crdbDatasetWriter() {
         return new CRDBDatasetWriter();
     }
 

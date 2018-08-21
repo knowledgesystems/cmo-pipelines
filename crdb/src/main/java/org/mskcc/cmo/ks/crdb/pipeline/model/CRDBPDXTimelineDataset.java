@@ -52,7 +52,7 @@ public class CRDBPDXTimelineDataset {
     private String EVENT_TYPE;
     private String PASSAGE_ID;
     private String TREATMENT_TYPE;
-    private String SUB_TYPE;
+    private String SUBTYPE;
     private String AGENT;
     private String RESPONSE;
     private String RESPONSE_DURATION_MONTHS;
@@ -80,7 +80,7 @@ public class CRDBPDXTimelineDataset {
     }
     public CRDBPDXTimelineDataset(String PATIENT_ID, String SAMPLE_ID, String PDX_ID, String DESTINATION_STUDY_ID,
                                   String START_DATE, String STOP_DATE, String EVENT_TYPE, String PASSAGE_ID,
-                                  String TREATMENT_TYPE, String SUB_TYPE, String AGENT, String RESPONSE,
+                                  String TREATMENT_TYPE, String SUBTYPE, String AGENT, String RESPONSE,
                                   String RESPONSE_DURATION_MONTHS, String REASON_FOR_TX_DISCONTINUATION,
                                   String SURGERY_DETAILS, String EVENT_TYPE_DETAILED, String PROCEDURE_LOCATION,
                                   String PROCEDURE_LOCATION_SPECIFY, String DIAGNOSTIC_TYPE, String DIAGNOSTIC_TYPE_SITE,
@@ -97,7 +97,7 @@ public class CRDBPDXTimelineDataset {
         this.EVENT_TYPE = EVENT_TYPE == null ? "NA" : EVENT_TYPE;
         this.PASSAGE_ID = PASSAGE_ID == null ? "NA" : PASSAGE_ID;
         this.TREATMENT_TYPE = TREATMENT_TYPE == null ? "NA" : TREATMENT_TYPE;
-        this.SUB_TYPE = SUB_TYPE == null ? "NA" : SUB_TYPE;
+        this.SUBTYPE = SUBTYPE == null ? "NA" : SUBTYPE;
         this.AGENT = AGENT == null ? "NA" : AGENT;
         this.RESPONSE = RESPONSE == null ? "NA" : RESPONSE;
         this.RESPONSE_DURATION_MONTHS = RESPONSE_DURATION_MONTHS == null ? "NA" : RESPONSE_DURATION_MONTHS;
@@ -249,17 +249,17 @@ public class CRDBPDXTimelineDataset {
     }
 
     /**
-     * @return SUB_TYPE
+     * @return SUBTYPE
      */
-    public String getSUB_TYPE() {
-        return SUB_TYPE;
+    public String getSUBTYPE() {
+        return SUBTYPE;
     }
 
     /**
-     * @param SUB_TYPE
+     * @param SUBTYPE
      */
-    public void setSUB_TYPE(String SUB_TYPE) {
-        this.SUB_TYPE = SUB_TYPE;
+    public void setSUBTYPE(String SUBTYPE) {
+        this.SUBTYPE = SUBTYPE;
     }
 
     /**
@@ -569,7 +569,7 @@ public class CRDBPDXTimelineDataset {
         fieldNames.add("EVENT_TYPE");
         fieldNames.add("PASSAGE_ID");
         fieldNames.add("TREATMENT_TYPE");
-        fieldNames.add("SUB_TYPE");
+        fieldNames.add("SUBTYPE");
         fieldNames.add("AGENT");
         fieldNames.add("RESPONSE");
         fieldNames.add("RESPONSE_DURATION_MONTHS");

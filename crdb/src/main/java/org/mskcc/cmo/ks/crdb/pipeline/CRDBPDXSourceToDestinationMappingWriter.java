@@ -41,7 +41,7 @@ import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.*;
-import java.nio.file.*;
+import java.nio.file.Paths;
 import java.util.*;
 
 import org.apache.commons.lang.StringUtils;
@@ -60,7 +60,6 @@ public class CRDBPDXSourceToDestinationMappingWriter implements ItemStreamWriter
     private String sourceToDestinationMappingsFilename;
 
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
-    private String stagingFile;
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
@@ -72,7 +71,7 @@ public class CRDBPDXSourceToDestinationMappingWriter implements ItemStreamWriter
                 writer.write(StringUtils.join(new CRDBPDXSourceToDestinationMapping().getFieldNames(), "\t"));
             }
         });
-        stagingFile = Paths.get(stagingDirectory, sourceToDestinationMappingsFilename).toString();
+        String stagingFile = Paths.get(stagingDirectory, sourceToDestinationMappingsFilename).toString();
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }

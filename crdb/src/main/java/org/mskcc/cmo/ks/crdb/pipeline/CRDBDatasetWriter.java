@@ -41,6 +41,7 @@ import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.util.*;
 
 import org.apache.commons.lang.StringUtils;
@@ -60,7 +61,6 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String> {
 
     private List<String> writeList = new ArrayList<String>();
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
-    private String stagingFile;
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
@@ -72,11 +72,7 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String> {
                 writer.write(normalizeHeaders(new CRDBDataset().getFieldNames()));
             }
         });
-        if (stagingDirectory.endsWith("/")) {
-            stagingFile = stagingDirectory + datasetFilename;
-        } else{
-            stagingFile = stagingDirectory + "/" + datasetFilename;
-        }
+        String stagingFile = Paths.get(stagingDirectory, datasetFilename).toString();
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(executionContext);
     }
