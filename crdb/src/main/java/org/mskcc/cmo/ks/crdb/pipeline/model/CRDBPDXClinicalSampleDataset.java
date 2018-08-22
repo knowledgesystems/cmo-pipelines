@@ -46,6 +46,7 @@ public class CRDBPDXClinicalSampleDataset {
     private String SAMPLE_ID;
     private String PDX_ID;
     private String DESTINATION_STUDY_ID;
+    private String COLLAB_ID;
     private String AGE_AT_INITIAL_DIAGNOSIS;
     private String PASSAGE_ID;
     private String ONCOTREE_CODE;
@@ -98,7 +99,7 @@ public class CRDBPDXClinicalSampleDataset {
     }
 
     public CRDBPDXClinicalSampleDataset(String PATIENT_ID, String SAMPLE_ID, String PDX_ID, String DESTINATION_STUDY_ID, 
-                                        String AGE_AT_INITIAL_DIAGNOSIS, String PASSAGE_ID, String ONCOTREE_CODE, 
+                                        String COLLAB_ID, String AGE_AT_INITIAL_DIAGNOSIS, String PASSAGE_ID, String ONCOTREE_CODE, 
                                         String STAGE_CODE, String T_STAGE, String N_STAGE, String M_STAGE, String GRADE, 
                                         String SAMPLE_TYPE, String PRIMARY_SITE, String SAMPLE_CLASS, String PROCEDURE_TYPE, 
                                         String PRETREATED, String TREATED, String ER_POSITIVE, String ER_NEGATIVE, 
@@ -113,6 +114,7 @@ public class CRDBPDXClinicalSampleDataset {
         this.SAMPLE_ID = SAMPLE_ID == null ? "NA" : SAMPLE_ID;
         this.PDX_ID = PDX_ID == null ? "NA" : PDX_ID;
         this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID == null ? "NA" : DESTINATION_STUDY_ID;
+        this.COLLAB_ID = COLLAB_ID == null ? "NA" : COLLAB_ID;
         this.AGE_AT_INITIAL_DIAGNOSIS = AGE_AT_INITIAL_DIAGNOSIS == null ? "NA" : AGE_AT_INITIAL_DIAGNOSIS;
         this.PASSAGE_ID = PASSAGE_ID == null ? "NA" : PASSAGE_ID;
         this.ONCOTREE_CODE = ONCOTREE_CODE == null ? "NA" : ONCOTREE_CODE;
@@ -215,6 +217,21 @@ public class CRDBPDXClinicalSampleDataset {
      */
     public void setDESTINATION_STUDY_ID(String DESTINATION_STUDY_ID) {
         this.DESTINATION_STUDY_ID = DESTINATION_STUDY_ID;
+    }
+
+    /**
+     *
+     * @return COLLAB_ID
+     */
+    public String getCOLLAB_ID() {
+        return COLLAB_ID;
+    }
+
+    /**
+     * @param COLLAB_ID
+     */
+    public void setCOLLAB_ID(String COLLAB_ID) {
+        this.COLLAB_ID = COLLAB_ID;
     }
 
     /**
@@ -853,7 +870,8 @@ public class CRDBPDXClinicalSampleDataset {
         fieldNames.add("PATIENT_ID");
         fieldNames.add("SAMPLE_ID");
         fieldNames.add("PDX_ID");
-        fieldNames.add("DESTINATION_STUDY_ID");
+        //fieldNames.add("DESTINATION_STUDY_ID"); // This field is not a true clinical attribute -- do not output
+        //fieldNames.add("COLLAB_ID");  // This field is not yet available - update reader also when it is
         fieldNames.add("AGE_AT_INITIAL_DIAGNOSIS");
         fieldNames.add("PASSAGE_ID");
         fieldNames.add("ONCOTREE_CODE");
