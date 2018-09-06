@@ -38,6 +38,7 @@ import org.cbioportal.cmo.pipelines.cvr.model.*;
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -50,21 +51,25 @@ import org.springframework.core.io.FileSystemResource;
  */
 
 public class CVRSegDataWriter implements ItemStreamWriter<CompositeSegRecord> {
-    
+
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
-    
+
     @Value("#{jobParameters[studyId]}")
     private String studyId;
 
     @Autowired
     public CVRUtilities cvrUtilities;
 
+    private int segRecordsWritten;
+    private File stagingFile;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+
+    private static Logger log = Logger.getLogger(CVRSegDataWriter.class);
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(stagingDirectory, studyId + cvrUtilities.SEG_FILE);
+        stagingFile = new File(stagingDirectory, studyId + cvrUtilities.SEG_FILE);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
@@ -79,6 +84,8 @@ public class CVRSegDataWriter implements ItemStreamWriter<CompositeSegRecord> {
 
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
+        ec.put("segRecordsWritten", segRecordsWritten);
+        ec.put("segFile", stagingFile);
     }
 
     @Override
@@ -96,6 +103,7 @@ public class CVRSegDataWriter implements ItemStreamWriter<CompositeSegRecord> {
                 writeList.add(item.getOldSegRecord());
             }
         }
+        segRecordsWritten += writeList.size();
         flatFileItemWriter.write(writeList);
     }
 }

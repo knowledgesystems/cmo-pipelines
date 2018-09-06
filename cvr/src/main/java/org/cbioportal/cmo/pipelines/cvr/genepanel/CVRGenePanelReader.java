@@ -37,7 +37,6 @@ import org.cbioportal.cmo.pipelines.cvr.model.*;
 
 import java.io.*;
 import java.util.*;
-import java.util.logging.Level;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.util.CVRUtils;
@@ -71,6 +70,7 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
     private List<CVRGenePanelRecord> genePanelRecords = new ArrayList();
     private Set<String> processedRecords = new HashSet();
     List<String> geneticProfiles;
+    private Set<String> genePanels = new HashSet<>();
 
     Logger log = Logger.getLogger(CVRGenePanelReader.class);
 
@@ -117,6 +117,7 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
                 while ((to_add = reader.read()) != null) {
                     if (!cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSAMPLE_ID()) && to_add.getSAMPLE_ID() != null) {
                         genePanelRecords.add(to_add);
+                        genePanels.addAll(to_add.getPanelMap().values());
                     }
                 }
             }
@@ -130,11 +131,13 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
         for (CVRMergedResult result : cvrData.getResults()) {
             CVRGenePanelRecord record = new CVRGenePanelRecord(result.getMetaData(), geneticProfiles);
             genePanelRecords.add(record);
+            genePanels.addAll(record.getPanelMap().values());
         }
         // only try setting header and genetic profiles if gene panel records list is not empty
         if (!genePanelRecords.isEmpty()) {
             setGenePanelHeader(ec);
             ec.put("geneticProfiles", geneticProfiles);
+            ec.put("genePanels", new ArrayList<>(genePanels));
         }
     }
 

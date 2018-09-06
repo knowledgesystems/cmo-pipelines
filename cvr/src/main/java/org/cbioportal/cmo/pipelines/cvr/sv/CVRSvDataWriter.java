@@ -32,14 +32,15 @@
 
 package org.cbioportal.cmo.pipelines.cvr.sv;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Writer;
-import java.util.*;
-import org.apache.commons.lang.StringUtils;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRSvRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.CompositeSvRecord;
+
+import java.io.*;
+import java.util.*;
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
@@ -62,12 +63,16 @@ public class CVRSvDataWriter implements ItemStreamWriter<CompositeSvRecord> {
     @Autowired
     public CVRUtilities cvrUtilities;
 
+    private int svRecordsWritten;
+    private File stagingFile;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+
+    private static Logger log = Logger.getLogger(CVRSvDataWriter.class);
 
     // Set up the writer and print the json from CVR to a file
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(stagingDirectory, cvrUtilities.SV_FILE);
+        stagingFile = new File(stagingDirectory, cvrUtilities.SV_FILE);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
@@ -82,6 +87,8 @@ public class CVRSvDataWriter implements ItemStreamWriter<CompositeSvRecord> {
 
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
+        ec.put("svRecordsWritten", svRecordsWritten);
+        ec.put("svFile", stagingFile);
     }
 
     @Override
@@ -99,6 +106,7 @@ public class CVRSvDataWriter implements ItemStreamWriter<CompositeSvRecord> {
                 writeList.add(item.getOldSvRecord());
             }
         }
+        svRecordsWritten += writeList.size();
         flatFileItemWriter.write(writeList);
     }
 }

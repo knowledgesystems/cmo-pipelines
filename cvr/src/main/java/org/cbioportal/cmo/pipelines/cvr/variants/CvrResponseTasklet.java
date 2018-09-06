@@ -32,14 +32,24 @@
 
 package org.cbioportal.cmo.pipelines.cvr.variants;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.cbioportal.cmo.pipelines.cvr.model.CvrResponse;
-
-import java.util.Map;
-import javax.annotation.Resource;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
+
+import java.io.*;
+import java.util.*;
+import javax.annotation.Resource;
+import org.apache.log4j.Logger;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRData;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRMergedResult;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRResult;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRSegData;
+import org.cbioportal.cmo.pipelines.util.CVRUtils;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,41 +62,95 @@ import org.springframework.web.client.RestTemplate;
  * @author ochoaa
  */
 public class CvrResponseTasklet implements Tasklet {
-    
+
     @Value("#{jobParameters[sessionId]}")
     private String sessionId;
-    
+
     @Value("#{jobParameters[studyId]}")
     private String studyId;
-    
+
+    @Value("#{jobParameters[extractTransformJsonMode]}")
+    private Boolean extractTransformJsonMode;
+
+    @Value("#{jobParameters[extractTransformJsonFile]}")
+    private String extractTransformJsonFile;
+
     @Value("${dmp.server_name}")
     private String dmpServerName;
-    
+
+    @Autowired
+    private CVRUtils cvrUtils;
+
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
-    
+
     @Resource(name="retrieveVariantTokensMap")
     private Map<String, String> retrieveVariantTokensMap;
-    
+
+    private static Logger log = Logger.getLogger(CvrResponseTasklet.class);
+
     @Override
     public RepeatStatus execute(StepContribution sc, ChunkContext cc) throws Exception {
+
+        // save the CVR response in the sample util and add the sample count to the execution context
+        // for the CVR response job execution decider
+        CvrResponse cvrResponse = null;
+        if (extractTransformJsonMode) {
+            cvrResponse = loadCvrResponseFromFile();
+        }
+        else {
+            cvrResponse = getCvrResponseFromServer();
+        }
+        cvrSampleListUtil.setCvrResponse(cvrResponse);
+        cc.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put("sampleCount", cvrResponse.getSampleCount());
+        return RepeatStatus.FINISHED;
+    }
+
+    private CvrResponse loadCvrResponseFromFile() {
+        CvrResponse cvrResponse = null;
+        File jsonFile = new File(extractTransformJsonFile);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            cvrResponse = mapper.readValue(jsonFile, CvrResponse.class);
+        } catch (IOException ex) {
+            if (jsonFile.exists()) {
+                log.error("Error loading CVR response from: " + jsonFile.getName() + " - check that the schema is correct");
+            }
+            else {
+                log.error("No such file: " + jsonFile.getName());
+            }
+            throw new ItemStreamException(ex);
+        }
+        // fix patient ids for results in CvrResponse (sometimes patient ids for all samples are the same invalid id P-0000000)
+        Map<String, CVRResult> results = cvrResponse.getResults();
+        Iterator it = results.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry)it.next();
+            String sampleId = cvrUtils.convertWhitespace((String)pair.getKey());
+            CVRResult result = (CVRResult)pair.getValue();
+            String patientId = cvrUtils.convertWhitespace(result.getMetaData().getDmpPatientId());
+            if (CVRUtilities.INVALID_PATIENT_IDS.contains(patientId)) {
+                result.getMetaData().setDmpPatientId(sampleId);
+            }
+            results.put(sampleId, result);
+        }
+        cvrResponse.setResults(results);
+        return cvrResponse;
+    }
+
+    private CvrResponse getCvrResponseFromServer() {
         // get retrieve variants token by study id
         String dmpUrl = dmpServerName + retrieveVariantTokensMap.get(studyId) + "/" + sessionId + "/0";
         RestTemplate restTemplate = new RestTemplate();
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity();
         ResponseEntity<CvrResponse> responseEntity = restTemplate.exchange(dmpUrl, HttpMethod.GET, requestEntity, CvrResponse.class);
-        CvrResponse cvrResponse = responseEntity.getBody();
-        // save the CVR response in the sample util and add the sample count to the execution context
-        // for the CVR response job execution decider 
-        cvrSampleListUtil.setCvrResponse(cvrResponse);
-        cc.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put("sampleCount", cvrResponse.getSampleCount());
-        return RepeatStatus.FINISHED;
+        return responseEntity.getBody();
     }
-    
+
     private HttpEntity getRequestEntity() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         return new HttpEntity<Object>(headers);
     }
-    
+
 }

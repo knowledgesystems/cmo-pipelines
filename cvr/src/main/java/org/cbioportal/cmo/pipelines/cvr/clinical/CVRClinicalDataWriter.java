@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -32,17 +32,20 @@
 
 package org.cbioportal.cmo.pipelines.cvr.clinical;
 
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.CompositeClinicalRecord;
+
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
-import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRClinicalRecord;
+import org.apache.log4j.Logger;
+
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.*;
-import org.cbioportal.cmo.pipelines.cvr.model.CompositeClinicalRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -60,12 +63,16 @@ public class CVRClinicalDataWriter implements ItemStreamWriter<CompositeClinical
     @Autowired
     public CVRUtilities cvrUtilities;
 
+    private int clinicalRecordsWritten;
+    private File stagingFile;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+
+    private static Logger log = Logger.getLogger(CVRClinicalDataWriter.class);
 
     // Set up the writer and print the json from CVR to a file
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(stagingDirectory, clinicalFilename);
+        stagingFile = new File(stagingDirectory, clinicalFilename);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
@@ -80,6 +87,8 @@ public class CVRClinicalDataWriter implements ItemStreamWriter<CompositeClinical
 
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
+        ec.put("clinicalRecordsWritten", clinicalRecordsWritten);
+        ec.put("clinicalFile", stagingFile);
     }
 
     @Override
@@ -97,6 +106,7 @@ public class CVRClinicalDataWriter implements ItemStreamWriter<CompositeClinical
                 writeList.add(item.getOldClinicalRecord());
             }
         }
+        clinicalRecordsWritten += writeList.size();
         flatFileItemWriter.write(writeList);
     }
 }

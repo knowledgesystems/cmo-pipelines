@@ -37,6 +37,7 @@ import org.cbioportal.cmo.pipelines.cvr.*;
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -63,16 +64,20 @@ public class CVRMutationDataWriter implements ItemStreamWriter<String> {
 
     @Autowired
     public CVRUtilities cvrUtilities;
-    
+
     @Autowired
     private CvrSampleListUtil cvrSampleListUtil;
 
+    private int mutationRecordsWritten;
+    private File stagingFile;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+
+    private static Logger log = Logger.getLogger(CVRMutationDataWriter.class);
 
     // Set up the writer and print the json from CVR to a file
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(stagingDirectory, mafFilename);
+        stagingFile = new File(stagingDirectory, mafFilename);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
@@ -99,6 +104,8 @@ public class CVRMutationDataWriter implements ItemStreamWriter<String> {
 
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
+        ec.put("mutationRecordsWritten", mutationRecordsWritten);
+        ec.put("mutationFile", stagingFile);
     }
 
     @Override
@@ -109,5 +116,6 @@ public class CVRMutationDataWriter implements ItemStreamWriter<String> {
     @Override
     public void write(List<? extends String> items) throws Exception {
         flatFileItemWriter.write(items);
+        mutationRecordsWritten += items.size();
     }
 }

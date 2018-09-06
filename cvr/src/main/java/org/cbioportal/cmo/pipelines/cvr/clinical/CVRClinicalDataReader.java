@@ -62,6 +62,9 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
     @Value("#{jobParameters[clinicalFilename]}")
     private String clinicalFilename;
 
+    @Value("#{jobParameters[extractTransformJsonMode]}")
+    private Boolean extractTransformJsonMode;
+
     @Autowired
     public CVRUtilities cvrUtilities;
 
@@ -77,13 +80,15 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
     public void open(ExecutionContext ec) throws ItemStreamException {
         processClinicalFile(ec);
         processJsonFile();
-        if (studyId.equals("mskimpact")) {
-            processSeqDateFile(ec);
-            processAgeFile(ec);
+        if (!extractTransformJsonMode) {
+            if (studyId.equals("mskimpact")) {
+                processSeqDateFile(ec);
+                processAgeFile(ec);
+            }
+            // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
+            // portalSamples list is only updated if threshold check for max num samples to remove passes
+            cvrSampleListUtil.updateSampleLists();
         }
-        // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
-        // portalSamples list is only updated if threshold check for max num samples to remove passes
-        cvrSampleListUtil.updateSampleLists();
     }
 
     @Override

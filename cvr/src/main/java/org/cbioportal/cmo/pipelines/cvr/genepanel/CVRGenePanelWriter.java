@@ -32,10 +32,11 @@
 
 package org.cbioportal.cmo.pipelines.cvr.genepanel;
 
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
+
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
-import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -59,11 +60,13 @@ public class CVRGenePanelWriter implements ItemStreamWriter<String>{
     @Autowired
     public CVRUtilities cvrUtilities;
 
+    private int genePanelRecordsWritten;
+    private File stagingFile;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(stagingDirectory, cvrUtilities.GENE_PANEL_FILE);
+        stagingFile = new File(stagingDirectory, cvrUtilities.GENE_PANEL_FILE);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
@@ -78,6 +81,8 @@ public class CVRGenePanelWriter implements ItemStreamWriter<String>{
 
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
+        ec.put("genePanelRecordsWritten", genePanelRecordsWritten);
+        ec.put("genePanelFile", stagingFile);
     }
 
     @Override
@@ -88,5 +93,6 @@ public class CVRGenePanelWriter implements ItemStreamWriter<String>{
     @Override
     public void write(List<? extends String> items) throws Exception {
         flatFileItemWriter.write(items);
+        genePanelRecordsWritten += items.size();
     }
 }

@@ -6,21 +6,18 @@
 package org.cbioportal.cmo.pipelines.cvr.samplelist;
 
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRData;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRMasterList;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRMergedResult;
+import org.cbioportal.cmo.pipelines.cvr.model.GMLData;
+import org.cbioportal.cmo.pipelines.cvr.model.GMLResult;
 
 import org.apache.log4j.Logger;
 import java.io.*;
 import java.util.*;
 import javax.annotation.Resource;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRData;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRMergedResult;
-import org.cbioportal.cmo.pipelines.cvr.model.GMLData;
-import org.cbioportal.cmo.pipelines.cvr.model.GMLResult;
-import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRData;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRMergedResult;
-import org.cbioportal.cmo.pipelines.cvr.model.GMLData;
-import org.cbioportal.cmo.pipelines.cvr.model.GMLResult;
+
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -64,6 +61,9 @@ public class CvrSampleListsTasklet implements Tasklet {
     @Value("#{jobParameters[gmlMode]}")
     private Boolean gmlMode;
 
+    @Value("#{jobParameters[extractTransformJsonMode]}")
+    private Boolean extractTransformJsonMode;
+
     @Autowired
     public CVRUtilities cvrUtilities;
 
@@ -74,44 +74,47 @@ public class CvrSampleListsTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(StepContribution sc, ChunkContext cc) throws Exception {
+        Set<String> dmpMasterList = new HashSet<>();
+        Set<String> whiteListedSamplesWithZeroVariants = new HashSet<>();
+
         // load master list from CVR
         log.info("Loading master list from CVR for study: " + studyId);
-        Set<String> dmpMasterList = new HashSet<>();
-        try {
-            dmpMasterList = generateDmpMasterList();
-            if (dmpMasterList.size() > 0) {
-                log.info("DMP master list for " + studyId + " contains " + String.valueOf(dmpMasterList.size()) + " samples");
+        if (!extractTransformJsonMode) {
+            try {
+                dmpMasterList = generateDmpMasterList();
+                if (dmpMasterList.size() > 0) {
+                    log.info("DMP master list for " + studyId + " contains " + String.valueOf(dmpMasterList.size()) + " samples");
+                }
+                else {
+                    log.warn("No sample IDs were returned using DMP master list endpoint for study " + studyId);
+                }
             }
-            else {
-                log.warn("No sample IDs were returned using DMP master list endpoint for study " + studyId);
+            catch (HttpClientErrorException e) {
+                log.warn("Error occurred while retrieving master list for " + studyId + " - the default master list will be set to samples already in portal.\n"
+                        + e.getLocalizedMessage());
             }
-        }
-        catch (HttpClientErrorException e) {
-            log.warn("Error occurred while retrieving master list for " + studyId + " - the default master list will be set to samples already in portal.\n"
-                    + e.getLocalizedMessage());
-        }
-        // load whited listed samples with zero variants
-        Set<String> whitedListedSamplesWithZeroVariants = new HashSet<>();
-        try {
-            whitedListedSamplesWithZeroVariants = loadWhitelistedSamplesWithZeroVariants();
-        }
-        catch (Exception e) {
-            log.warn("Error loading whitelisted samples with zero variants from: " + CVRUtilities.ZERO_VARIANT_WHITELIST_FILE + "\n" + e.getLocalizedMessage());
-        }
-        // init new dmp samples (or patients) list if running in json/gmlJson mode
-        if (jsonMode) {
-            if (gmlMode) {
-                initNewDmpGmlPatientsForJsonMode();
+            // load whited listed samples with zero variants
+            try {
+                whiteListedSamplesWithZeroVariants = loadWhiteListedSamplesWithZeroVariants();
             }
-            else {
-                initNewDmpSamplesForJsonMode();
+            catch (Exception e) {
+                log.warn("Error loading whitelisted samples with zero variants from: " + CVRUtilities.ZERO_VARIANT_WHITELIST_FILE + "\n" + e.getLocalizedMessage());
+            }
+            // init new dmp samples (or patients) list if running in json/gmlJson mode
+            if (jsonMode) {
+                if (gmlMode) {
+                    initNewDmpGmlPatientsForJsonMode();
+                }
+                else {
+                    initNewDmpSamplesForJsonMode();
+                }
             }
         }
 
         // update cvr sample list util
         cvrSampleListUtil.setDmpMasterList(dmpMasterList);
         cvrSampleListUtil.setMaxNumSamplesToRemove(maxNumSamplesToRemove);
-        cvrSampleListUtil.setWhitelistedSamplesWithZeroVariants(whitedListedSamplesWithZeroVariants);
+        cvrSampleListUtil.setWhitelistedSamplesWithZeroVariants(whiteListedSamplesWithZeroVariants);
         return RepeatStatus.FINISHED;
     }
 
@@ -151,7 +154,7 @@ public class CvrSampleListsTasklet implements Tasklet {
         cvrSampleListUtil.setNewDmpSamples(newDmpSamples);
     }
 
-    private Set<String> loadWhitelistedSamplesWithZeroVariants() throws Exception {
+    private Set<String> loadWhiteListedSamplesWithZeroVariants() throws Exception {
         Set<String> whitedListedSamplesWithZeroVariants = new HashSet<>();
         File whitelistedSamplesFile = new File(stagingDirectory, CVRUtilities.ZERO_VARIANT_WHITELIST_FILE);
         if (!whitelistedSamplesFile.exists()) {

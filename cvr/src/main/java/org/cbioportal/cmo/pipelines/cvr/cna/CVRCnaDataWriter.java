@@ -32,11 +32,13 @@
 
 package org.cbioportal.cmo.pipelines.cvr.cna;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.CompositeCnaRecord;
+
+import java.io.File;
+import java.util.*;
+import org.apache.log4j.Logger;
+
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
@@ -58,12 +60,16 @@ public class CVRCnaDataWriter implements ItemStreamWriter<CompositeCnaRecord> {
     @Autowired
     public CVRUtilities cvrUtilities;
 
+    private int cnaRecordsWritten;
+    private File stagingFile;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
+
+    private static Logger log = Logger.getLogger(CVRCnaDataWriter.class);
 
     // Set up the writer and print the json from CVR to a file
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(stagingDirectory, cvrUtilities.CNA_FILE);
+        stagingFile = new File(stagingDirectory, cvrUtilities.CNA_FILE);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
@@ -72,6 +78,8 @@ public class CVRCnaDataWriter implements ItemStreamWriter<CompositeCnaRecord> {
 
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
+        ec.put("cnaRecordsWritten", cnaRecordsWritten);
+        ec.put("cnaFile", stagingFile);
     }
 
     @Override
@@ -87,6 +95,7 @@ public class CVRCnaDataWriter implements ItemStreamWriter<CompositeCnaRecord> {
                 items.add(record.getAllCnaRecord());
             }
         }
+        cnaRecordsWritten += items.size();
         flatFileItemWriter.write(items);
     }
 }
