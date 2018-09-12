@@ -73,6 +73,7 @@ public class BatchConfiguration {
     public static final String GML_JOB = "gmlJob";
     public static final String GML_JSON_JOB = "gmlJsonJob";
     public static final String CONSUME_SAMPLES_JOB = "consumeSamplesJob";
+    public static final String EXTRACT_TRANSFORM_JSON_JOB = "extractTransformJsonJob";
     public static final String EMAIL_UTIL= "EmailUtil";
 
     @Autowired
@@ -83,9 +84,9 @@ public class BatchConfiguration {
 
     @Value("${chunk}")
     private int chunkInterval;
-    
+
     private final Logger log = Logger.getLogger(BatchConfiguration.class);
-    
+
     @Bean CVRUtils cvrUtils() {
         return new CVRUtils();
     }
@@ -93,6 +94,18 @@ public class BatchConfiguration {
     @Bean
     public CVRUtilities cvrUtilities() {
         return new CVRUtilities();
+    }
+
+    @Bean
+    public Job extractTransformJsonJob() {
+        return jobBuilderFactory.get(EXTRACT_TRANSFORM_JSON_JOB)
+                .start(cvrResponseStep())
+                .next(checkCvrReponse())
+                    .on("RUN")
+                    .to(cvrJobFlow())
+                .from(checkCvrReponse())
+                    .on("STOP").end()
+                .build().build();
     }
 
     @Bean
@@ -155,7 +168,7 @@ public class BatchConfiguration {
                 .build();
     }
 
-    @Bean 
+    @Bean
     public Flow cvrJobFlow() {
         return new FlowBuilder<Flow>("cvrJobFlow")
                 .start(cvrSampleListsStep())
@@ -167,12 +180,12 @@ public class BatchConfiguration {
                 .next(svFusionsStepFlow())
                 .next(segmentStepFlow())
                 .next(genePanelStep())
-                .next(cvrRequeueStep())
+                .next(requeueStepFlow())
                 .next(zeroVariantWhitelistFlow())
                 .build();
     }
-    
-    @Bean 
+
+    @Bean
     public Flow linkedMskimpactCaseFlow() {
         return new FlowBuilder<Flow>("linkedMskimpactCaseFlow")
                 .start(linkedMskimpactCaseDecider()).on("RUN").to(linkedMskimpactCaseStep())
@@ -243,6 +256,18 @@ public class BatchConfiguration {
     }
 
     @Bean
+    public Flow requeueStepFlow() {
+        return new FlowBuilder<Flow>("requeueStepFlow")
+                .start(requeueStepExecutionDecider())
+                    .on("RUN")
+                        .to(cvrRequeueStep())
+                .from(requeueStepExecutionDecider())
+                    .on("SKIP")
+                        .end()
+                .build();
+    }
+
+    @Bean
     public Step gmlJsonStep() {
         return stepBuilderFactory.get("gmlJsonStep")
                 .<GMLVariant, String> chunk(chunkInterval)
@@ -296,13 +321,14 @@ public class BatchConfiguration {
     @Bean
     public Step clinicalStep() {
         return stepBuilderFactory.get("clinicalStep")
+                .listener(clinicalDataListener())
                 .<CVRClinicalRecord, CompositeClinicalRecord> chunk(chunkInterval)
                 .reader(clinicalDataReader())
                 .processor(clinicalDataProcessor())
                 .writer(compositeClinicalDataWriter())
                 .build();
     }
-    
+
     @Bean
     public Step linkedMskimpactCaseStep() {
         return stepBuilderFactory.get("linkedMskimpactCaseStep")
@@ -316,6 +342,7 @@ public class BatchConfiguration {
     @Bean
     public Step mutationStep() {
         return stepBuilderFactory.get("mutationStep")
+                .listener(mutationDataListener())
                 .<AnnotatedRecord, String> chunk(chunkInterval)
                 .reader(mutationDataReader())
                 .processor(mutationDataProcessor())
@@ -326,6 +353,7 @@ public class BatchConfiguration {
     @Bean
     public Step unfilteredMutationStep() {
         return stepBuilderFactory.get("unfilteredMutationStep")
+                .listener(mutationDataListener())
                 .<AnnotatedRecord, String> chunk(chunkInterval)
                 .reader(unfilteredMutationDataReader())
                 .processor(mutationDataProcessor())
@@ -336,6 +364,7 @@ public class BatchConfiguration {
     @Bean
     public Step cnaStep() {
         return stepBuilderFactory.get("cnaStep")
+                .listener(cnaDataListener())
                 .<CompositeCnaRecord, CompositeCnaRecord> chunk(chunkInterval)
                 .reader(cnaDataReader())
                 .writer(compositeCnaDataWriter())
@@ -345,6 +374,7 @@ public class BatchConfiguration {
     @Bean
     public Step svStep() {
         return stepBuilderFactory.get("svStep")
+                .listener(svDataListener())
                 .<CVRSvRecord, CompositeSvRecord> chunk(chunkInterval)
                 .reader(svDataReader())
                 .processor(svDataProcessor())
@@ -365,6 +395,7 @@ public class BatchConfiguration {
     @Bean
     public Step segStep() {
         return stepBuilderFactory.get("segStep")
+                .listener(segDataListener())
                 .<CVRSegRecord, CompositeSegRecord> chunk(chunkInterval)
                 .reader(segDataReader())
                 .processor(segDataProcessor())
@@ -374,7 +405,9 @@ public class BatchConfiguration {
 
     @Bean
     public Step genePanelStep() {
-        return stepBuilderFactory.get("genePanelStep").<CVRGenePanelRecord, String> chunk(chunkInterval)
+        return stepBuilderFactory.get("genePanelStep")
+                .listener(genePanelListener())
+                .<CVRGenePanelRecord, String> chunk(chunkInterval)
                 .reader(genePanelReader())
                 .processor(genePanelProcessor())
                 .writer(genePanelWriter())
@@ -498,12 +531,18 @@ public class BatchConfiguration {
     public ItemStreamWriter<CompositeClinicalRecord> newClinicalDataWriter() {
         return new CVRNewClinicalDataWriter();
     }
-    
+
+    @Bean
+    @StepScope
+    public StepExecutionListener clinicalDataListener() {
+        return new CVRClinicalDataListener();
+    }
+
     @Bean
     @StepScope
     public ItemStreamWriter<CompositeClinicalRecord> seqDateClinicalDataWriter() {
         return new CVRSeqDateClinicalDataWriter();
-    }    
+    }
 
     @Bean
     @StepScope
@@ -544,6 +583,12 @@ public class BatchConfiguration {
         return new CVRUnfilteredMutationDataReader();
     }
 
+    @Bean
+    @StepScope
+    public StepExecutionListener mutationDataListener() {
+        return new CVRMutationDataListener();
+    }
+
     // Reader to read json file generated by step1
     @Bean
     @StepScope
@@ -563,18 +608,18 @@ public class BatchConfiguration {
     public ItemStreamWriter<CompositeCnaRecord> newCnaDataWriter() {
         return new CVRNewCnaDataWriter();
     }
-    
+
     @Bean
     @StepScope
     public ItemStreamReader<LinkedMskimpactCaseRecord> linkedMskimpactCaseReader() {
         return new LinkedMskimpactCaseReader();
     }
-    
+
     @Bean
     public LinkedMskimpactCaseProcessor linkedMskimpactCaseProcessor() {
         return new LinkedMskimpactCaseProcessor();
     }
-    
+
     @Bean
     @StepScope
     public ItemStreamWriter<String> linkedMskimpactCaseWriter() {
@@ -590,6 +635,12 @@ public class BatchConfiguration {
         CompositeItemWriter writer = new CompositeItemWriter<>();
         writer.setDelegates(writerDelegates);
         return writer;
+    }
+
+    @Bean
+    @StepScope
+    public StepExecutionListener cnaDataListener() {
+        return new CVRCnaDataListener();
     }
 
     // Reader to read json file generated by step1
@@ -617,6 +668,12 @@ public class BatchConfiguration {
     @StepScope
     public ItemStreamWriter<CompositeSvRecord> newSvDataWriter() {
         return new CVRNewSvDataWriter();
+    }
+
+    @Bean
+    @StepScope
+    public StepExecutionListener svDataListener() {
+        return new CVRSvDataListener();
     }
 
     @Bean
@@ -652,6 +709,12 @@ public class BatchConfiguration {
     @StepScope
     public ItemStreamWriter<String> fusionDataWriter() {
         return new CVRFusionDataWriter();
+    }
+
+    @Bean
+    @StepScope
+    public StepExecutionListener fusionDataListener() {
+        return new CVRFusionDataListener();
     }
 
     // Reader to read json file generated by step1
@@ -694,6 +757,12 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
+    public StepExecutionListener segDataListener() {
+        return new CVRSegDataListener();
+    }
+
+    @Bean
+    @StepScope
     public ItemStreamReader<CVRGenePanelRecord> genePanelReader() {
         return new CVRGenePanelReader();
     }
@@ -709,13 +778,19 @@ public class BatchConfiguration {
     public ItemStreamWriter<String> genePanelWriter() {
         return new CVRGenePanelWriter();
     }
-    
+
+    @Bean
+    @StepScope
+    public StepExecutionListener genePanelListener() {
+        return new CVRGenePanelListener();
+    }
+
     @Bean
     @StepScope
     public Tasklet cvrSampleListsTasklet() {
         return new CvrSampleListsTasklet();
     }
-    
+
     @Bean
     @StepScope
     public Tasklet cvrRequeueTasklet() {
@@ -726,7 +801,7 @@ public class BatchConfiguration {
     public StepExecutionListener cvrRequeueListener() {
         return new CvrRequeueListener();
     }
-    
+
     @Bean
     public StepExecutionListener cvrResponseListener() {
         return new CvrResponseListener();
@@ -743,7 +818,7 @@ public class BatchConfiguration {
     public ItemStreamWriter<String> consumeSampleWriter() {
         return new ConsumeSampleWriter();
     }
-    
+
     @Bean
     public JobExecutionDecider linkedMskimpactCaseDecider() {
         return new JobExecutionDecider() {
@@ -756,10 +831,10 @@ public class BatchConfiguration {
                 else {
                     return new FlowExecutionStatus("SKIP");
                 }
-            }                    
+            }
         };
     }
-    
+
     @Bean
     @StepScope
     public Tasklet cvrResponseTasklet() {
@@ -785,6 +860,22 @@ public class BatchConfiguration {
                 else {
                     log.warn("No new samples to process for study " + studyId + " - exiting gracefully...");
                     return new FlowExecutionStatus("STOP");
+                }
+            }
+        };
+    }
+
+    @Bean
+    public JobExecutionDecider requeueStepExecutionDecider() {
+        return new JobExecutionDecider() {
+            @Override
+            public FlowExecutionStatus decide(JobExecution je, StepExecution se) {
+                Boolean extractTransformJsonMode = Boolean.valueOf(je.getJobParameters().getString("extractTransformJsonMode"));
+                if (!extractTransformJsonMode) {
+                    return new FlowExecutionStatus("RUN");
+                }
+                else {
+                    return new FlowExecutionStatus("SKIP");
                 }
             }
         };

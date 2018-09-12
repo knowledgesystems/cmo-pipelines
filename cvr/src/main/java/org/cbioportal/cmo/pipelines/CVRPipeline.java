@@ -68,7 +68,8 @@ public class CVRPipeline {
             .addOption("r", "max_samples_to_remove", true, "The max number of samples that can be removed from data")
             .addOption("f", "force_annotation", false, "Flag for forcing reannotation of samples")
             .addOption("b", "block_zero_variant_warnings", false, "Flag to turn off warnings for samples with no variants")
-            .addOption("n", "name_of_clinical_file", true, "Clinical filename.  Default is data_clinical.txt");
+            .addOption("n", "name_of_clinical_file", true, "Clinical filename.  Default is data_clinical.txt")
+            .addOption("e", "extract_transform_json", true, "Extract and transform raw JSON output from CVR (applies to studies outside internal clinical sequencing cohorts)");
         return options;
     }
 
@@ -103,7 +104,8 @@ public class CVRPipeline {
                 .addString("clinicalFilename", clinicalFilename)
                 .addString("stopZeroVariantWarnings", String.valueOf(stopZeroVariantWarnings))
                 .addString("jsonMode", String.valueOf(json))
-                .addString("gmlMode", String.valueOf(gml));
+                .addString("gmlMode", String.valueOf(gml))
+                .addString("extractTransformJsonMode", String.valueOf(Boolean.FALSE));
         if (json) {
             if (gml) {
                 jobName = BatchConfiguration.GML_JSON_JOB;
@@ -161,6 +163,31 @@ public class CVRPipeline {
         log.info("Shutting down Consume Sample Job");
     }
 
+    private static void launchExtractTransformJsonJob(String[] args, String jsonFilename, String studyId, String directory,
+            Boolean forceAnnotation, Boolean stopZeroVariantWarnings, String clinicalFilename) throws Exception {
+        SpringApplication app = new SpringApplication(CVRPipeline.class);
+        ConfigurableApplicationContext ctx = app.run(args);
+        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
+        JobParameters jobParameters = new JobParametersBuilder()
+                .addString("stagingDirectory", directory)
+                .addString("studyId", studyId)
+                .addString("forceAnnotation", String.valueOf(forceAnnotation))
+                .addString("clinicalFilename", clinicalFilename)
+                .addString("stopZeroVariantWarnings", String.valueOf(stopZeroVariantWarnings))
+                .addString("maxNumSamplesToRemove", String.valueOf(CVRUtilities.DEFAULT_MAX_NUM_SAMPLES_TO_REMOVE))
+                .addString("extractTransformJsonMode", String.valueOf(Boolean.TRUE))
+                .addString("extractTransformJsonFile", jsonFilename)
+                .addString("skipSeg", String.valueOf(Boolean.TRUE))
+                .toJobParameters();
+        Job extractTransformJsonJob = ctx.getBean(BatchConfiguration.EXTRACT_TRANSFORM_JSON_JOB, Job.class);
+        JobExecution jobExecution = jobLauncher.run(extractTransformJsonJob, jobParameters);
+        if (jobExecution.getExitStatus() != ExitStatus.COMPLETED) {
+            log.error("CVRPipeline Extract and Transform JSON job exited with status: " + jobExecution.getExitStatus());
+            System.exit(1);
+        }
+        log.info("Shutting down Extract and Transform JSON Job");
+    }
+
     private static void checkExceptions(JobExecution jobExecution, JobParameters jobParameters, EmailUtil emailUtil) {
         List<Throwable> exceptions = jobExecution.getAllFailureExceptions();
         if (exceptions.size() > 0) {
@@ -189,23 +216,48 @@ public class CVRPipeline {
             launchConsumeSamplesJob(args, commandLine.getOptionValue("c"), commandLine.hasOption("t"));
         }
         else {
-            Integer maxNumSamplesToRemove = CVRUtilities.DEFAULT_MAX_NUM_SAMPLES_TO_REMOVE;
-            try {
-                if (commandLine.hasOption("r")) {
-                    maxNumSamplesToRemove = Integer.valueOf(commandLine.getOptionValue("r"));
-                }
-            }
-            catch (NumberFormatException e) {
-                e.printStackTrace();
-                throw new RuntimeException("Cannot parse argument as integer: " + commandLine.getOptionValue("r"));
-            }
             String clinicalFilename = CVRUtilities.DEFAULT_CLINICAL_FILE;
             if (commandLine.hasOption("n")) {
                 clinicalFilename = commandLine.getOptionValue("n");
             }
-            launchCvrPipelineJob(args, commandLine.getOptionValue("d"), commandLine.getOptionValue("i"),
-                commandLine.hasOption("j"), commandLine.hasOption("g"), commandLine.hasOption("s"),
-                commandLine.hasOption("t"), maxNumSamplesToRemove, commandLine.hasOption("f"), clinicalFilename, commandLine.hasOption("b"));
+            if (commandLine.hasOption("e")) {
+                if (!commandLine.hasOption("i") || !commandLine.hasOption("d")) {
+                    log.error("The --extract_transform_json option requires --study_id and --directory to run");
+                    help(options,1);
+                }
+                for (Option option : commandLine.getOptions()) {
+                    if (!option.getOpt().equals("e") && !option.getOpt().equals("i") &&
+                            !option.getOpt().equals("d") && !option.getOpt().equals("f") &&
+                            !option.getOpt().equals("b") && !option.getOpt().equals("n")) {
+                        String incompatibleOptionMessage = "The --extract_transform option is only compatible with the following options:" +
+                                "\n\t--study_id" +
+                                "\n\t--directory" +
+                                "\n\t--force_annotation [optional]" +
+                                "\n\t--block_zero_variant_warnings [optional]" +
+                                "\n\t--name_of_clinical_file" +
+                                "\n\nYou used an incompatible option (--" + option.getLongOpt() + "/-" + option.getOpt() + ")";
+                        log.error(incompatibleOptionMessage);
+                        help(options,1);
+                    }
+                }
+                launchExtractTransformJsonJob(args, commandLine.getOptionValue("e"), commandLine.getOptionValue("i"),
+                    commandLine.getOptionValue("d"), commandLine.hasOption("f"), commandLine.hasOption("b"), clinicalFilename);
+            }
+            else {
+                Integer maxNumSamplesToRemove = CVRUtilities.DEFAULT_MAX_NUM_SAMPLES_TO_REMOVE;
+                try {
+                    if (commandLine.hasOption("r")) {
+                        maxNumSamplesToRemove = Integer.valueOf(commandLine.getOptionValue("r"));
+                    }
+                }
+                catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    throw new RuntimeException("Cannot parse argument as integer: " + commandLine.getOptionValue("r"));
+                }
+                launchCvrPipelineJob(args, commandLine.getOptionValue("d"), commandLine.getOptionValue("i"),
+                    commandLine.hasOption("j"), commandLine.hasOption("g"), commandLine.hasOption("s"),
+                    commandLine.hasOption("t"), maxNumSamplesToRemove, commandLine.hasOption("f"), clinicalFilename, commandLine.hasOption("b"));
+            }
         }
     }
 }

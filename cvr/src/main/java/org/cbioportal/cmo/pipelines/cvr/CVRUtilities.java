@@ -70,6 +70,8 @@ public class CVRUtilities {
     public static final String CNA_HEADER_HUGO_SYMBOL = "Hugo_Symbol";
     public static final Integer DEFAULT_MAX_NUM_SAMPLES_TO_REMOVE = -1;
     public static final SimpleDateFormat CVR_DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy kk:mm:ss zzz");
+    public static final Set<String> INVALID_PATIENT_IDS = new HashSet<String>(Arrays.asList(new String[] {"P-0000000"}));
+    public static final String UNKNOWN_GENE_PANEL = "UNKNOWN";
 
     private static final String CENTER_MSKCC = "MSKCC";
     private static final String DEFAULT_BUILD_NUMBER = "37";

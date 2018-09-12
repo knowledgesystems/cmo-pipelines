@@ -33,11 +33,11 @@
 package org.cbioportal.cmo.pipelines.cvr.fusion;
 
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRFusionRecord;
 
 import java.io.*;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
@@ -63,11 +63,15 @@ public class CVRFusionDataWriter implements ItemStreamWriter<String> {
     @Autowired
     public CVRUtilities cvrUtilities;
 
+    private int fusionRecordsWritten;
+    private File stagingFile;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+
+    private static Logger log = Logger.getLogger(CVRFusionDataWriter.class);
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(stagingDirectory, fusionsFilename);
+        stagingFile = new File(stagingDirectory, fusionsFilename);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
         flatFileItemWriter.setLineAggregator(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
@@ -82,6 +86,8 @@ public class CVRFusionDataWriter implements ItemStreamWriter<String> {
 
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
+        ec.put("fusionRecordsWritten", fusionRecordsWritten);
+        ec.put("fusionFile", stagingFile);
     }
 
     @Override
@@ -95,6 +101,7 @@ public class CVRFusionDataWriter implements ItemStreamWriter<String> {
         for (String item : items) {
             writeList.add(item);
         }
+        fusionRecordsWritten += writeList.size();
         flatFileItemWriter.write(writeList);
     }
 }
