@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+from clinicalfile_utils import *
 
 PATIENT_ID_KEY = "PATIENT_ID"
 SOURCE_STUDY_ID_KEY = "SOURCE_STUDY_ID"
@@ -191,6 +192,11 @@ def generate_merge_call(lib, cancer_study_id, destination_directory, subdirector
     merge_call = 'python ' + lib + '/merge.py -d ' + destination_directory + ' -i ' + cancer_study_id + ' -m "true" ' + subdirectory_list
     return merge_call
 
+# used in sample-mode because data_clinical_sample.txt is being extended - sample id should be used as primary key for each record
+def generate_add_clinical_records_call(lib, destination_directory, impact_source_subdirectory):
+    add_clinical_records_call = 'python ' + lib + '/add_clinical_records.py -c ' + destination_directory + '/data_clinical_sample.txt -s ' + impact_source_subdirectory + '/data_clinical_sample.txt -f "PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE" -l' + lib
+    return add_clinical_records_call
+
 # generates files containing sample-ids linked to specified patient-ids (by destination-source)
 # placed in corresponding directories - multiple source per destination
 # i.e (/home/destination_study/source_1/subset_list, home/destination_study/source_2/subset_list)
@@ -229,6 +235,7 @@ def subset_genomic_files(destination_to_source_mapping, source_id_to_path_mappin
                 # studies which cannot be subsetted are marked to be skipped when mergin
                 if subset_genomic_files_status != 0:
                     SKIPPED_SOURCE_STUDIES[destination].add(source)
+                    shutil.rmtree(destination_directory)
             else:
                 print "Error, source path for " + source + " could not be found, skipping..."
 
@@ -246,9 +253,46 @@ def merge_genomic_files(destination_to_source_mapping, root_directory, lib):
         merge_source_subdirectories_status = subprocess.call(merge_source_subdirectories_call, shell = True)
         if merge_source_subdirectories_status == 0:
             DESTINATION_STUDY_STATUS_FLAGS[destination][MERGE_GENOMIC_FILES_SUCCESS] = True
+
+# needed because IMPACT studdy is being automatically pulled in and need to be added to the existing data_clinical_sample.txt
+# data_clinical_sample.txt per destination study  is originally subsetted from CRDB-PDX fetched file and does not contain IMPACT samples
+# unmapped IMPACT samples are not mapped to their patients/shown as seperate patients in the portal
+def add_patient_sample_records(destination_to_source_mapping, root_directory, lib):
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        impact_source_subdirectory = os.path.join(root_directory, destination, IMPACT_STUDY_ID)
+        add_clinical_records_call = generate_add_clinical_records_call(lib, destination_directory, impact_source_subdirectory)
+        add_clinical_records_status = subprocess.call(add_clinical_records_call, shell = True)
+       
+def remove_source_subdirectories(destination_to_source_mapping, root_directory):
+    for destination, source_to_patients_map in destination_to_source_mapping.items():
+        source_subdirectories = [os.path.join(root_directory, destination, source) for source in source_to_patients_map if source not in SKIPPED_SOURCE_STUDIES[destination]]
         for source_subdirectory in source_subdirectories:
             shutil.rmtree(source_subdirectory)
 
+# needed because CMO studies are unannoted but IMPACT studies are
+# a merge of CMO + IMPACT studies results in a partially annotated MAF
+# (IMPACT study is pulled in whenever patient-ids are DMP ids)
+# annotator assumes MAF is annotated because HGVSp_short column is present - CMO samples never annotated
+def remove_hgvsp_short_column(destination_to_source_mapping, root_directory):
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        maf = os.path.join(destination_directory, "data_mutations_extended.txt")
+        hgvsp_short_index = get_header(maf).index("HGVSp_Short")
+        maf_to_write = []
+        maf_file = open(maf, "rU")
+        for line in maf_file:
+            if line.startswith("#"):
+                maf_to_write.append(line.rstrip("\n"))
+            else:
+                record = line.rstrip("\n").split('\t')
+                maf_to_write.append('\t'.join(record[0:hgvsp_short_index] + record[hgvsp_short_index + 1:]))
+        maf_file.close()
+
+        new_file = open(maf, "w")
+        new_file.write('\n'.join(maf_to_write))
+        new_file.close()
+ 
 def remove_merged_clinical_timeline_files(destination_to_source_mapping, root_directory):
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
@@ -386,6 +430,9 @@ def main():
     merge_genomic_files(destination_to_source_mapping, root_directory, lib)
     remove_merged_clinical_timeline_files(destination_to_source_mapping, root_directory)
     subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib)
+    add_patient_sample_records(destination_to_source_mapping, root_directory, lib)
+    remove_source_subdirectories(destination_to_source_mapping, root_directory)
+    remove_hgvsp_short_column(destination_to_source_mapping, root_directory)
     filter_temp_subset_files(destination_to_source_mapping, root_directory)
     get_all_destination_to_missing_metafiles_mapping(destination_to_source_mapping, root_directory)
     generate_import_trigger_files(destination_to_source_mapping, temp_directory)

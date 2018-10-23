@@ -358,10 +358,16 @@ def data_okay_to_add(is_clinical_or_timeline_file, file_header, reference_set, d
             # want to explicitly check if sample in reference set if SAMPLE_ID in header
             # to avoid filtering out samples with clin attr's that may contain other patient/sample IDs
             # that may be linked to the current sample but we do not want to filter out of the final dataset
-            #
+            # 
+            # default behavior will use sample-id to evaluate timeline records
+            # in the case of a patient-based timeline record (null sample id) --
+            # timeline record will be included as long as patient exists in the output set
+            # 
             # Ex: OTHER_SAMPLE_ID/OTHER_PATIENT_ID, or similar attr's like RNA_ID, METHYLATION_ID
             #     which indicate what other sample IDs are linked to current sample record
             sample_id = data_values[file_header.index('SAMPLE_ID')]
+            if not sample_id:
+                return patient_id in PATIENT_SAMPLE_MAP.keys()
             found = (sample_id in reference_set)
     elif len([True for val in data_values if val in reference_set]) > 0:
         found = True
