@@ -99,9 +99,9 @@ MESSAGE_BCC_GENIE = ["genie-cbioportal-access@cbio.mskcc.org"]
 AACR_GENIE_EMAIL = 'info@aacrgenie.org'
 
 ERROR_EMAIL_SUBJECT_GENIE = "AACR Project GENIE cBioPortal - Failed to register"
-ERROR_EMAIL_BODY_GENIE = "Thank you for your interest in the AACR Project GENIE cBioPortal. There was a problem creating an account for you. Please check that you have a valid Google email account and try to register again. If the problem persists please send an email to" + AACR_GENIE_EMAIL  +"."
+ERROR_EMAIL_BODY_GENIE = "Thank you for your interest in the AACR Project GENIE cBioPortal. There was a problem creating an account for you. Please check that you have a valid Google email account and try to register again. If the problem persists please send an email to " + AACR_GENIE_EMAIL  +"."
 ERROR_EMAIL_SUBJECT_CMO = "cBioPortal User Registration - Failed to register"
-ERROR_EMAIL_BODY_CMO = "Thank you for your interest in the cBioPortal. There was a problem creating an account for you. Please check that you have a valid Google email account and try to register again. If the problem persists please send an email to" + MESSAGE_FROM_CMO +"."
+ERROR_EMAIL_BODY_CMO = "Thank you for your interest in the cBioPortal. There was a problem creating an account for you. Please check that you have a valid email account and try to register again. If the problem persists please send an email to " + MESSAGE_FROM_CMO +"."
 
 # ------------------------------------------------------------------------------
 # class definitions
