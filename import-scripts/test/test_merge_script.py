@@ -7,7 +7,6 @@ import unittest
 import subprocess
 import glob
 import os.path
-import os
 from clinicalfile_utils import *
 
 NON_CASE_IDS = [
@@ -30,50 +29,33 @@ PATIENT_SUBSET_FILENAME = 'patient_subset_list.txt'
 PATIENT_EXCLUDE_FILENAME = 'patient_exclude_list.txt'
 SAMPLE_SUBSET_FILENAME = 'sample_subset_list.txt'
 SAMPLE_EXCLUDE_FILENAME = 'sample_exclude_list.txt'
-SAMPLE_EXCLUDE_HALF_FILENAME = 'sample_exclude_half_list.txt'
 
 STANDARD_MERGE_OUTPUT_DIR = 'temp_standard_merge'
 PATIENT_SUBSET_OUTPUT_DIR = 'temp_patient_subset'
 PATIENT_EXCLUDE_OUTPUT_DIR = 'temp_patient_exclude'
 SAMPLE_SUBSET_OUTPUT_DIR = 'temp_sample_subset'
 SAMPLE_EXCLUDE_OUTPUT_DIR = 'temp_sample_exclude'
-SAMPLE_EXCLUDE_HALF_OUTPUT_DIR = 'temp_sample_exclude_half'
-
-REFERENCE_SET_IS_PATIENTS = 'patient_refs'
-REFERENCE_SET_IS_SAMPLES = 'sample_refs'
-EXCLUDE_MODE = 'exclude_mode' # merge.py is being used to exclude the reference set
-INCLUDE_MODE = 'include_mode' # merge.py is being used to include the reference set (subset)
 
 EXPECTED_ROW_COUNT = {'./test/resources/merge_studies/temp_standard_merge/data_CNA.txt': 576,
                     './test/resources/merge_studies/temp_standard_merge/data_clinical_patient.txt': 10,
                     './test/resources/merge_studies/temp_standard_merge/data_clinical_sample.txt': 11,
-                    './test/resources/merge_studies/temp_standard_merge/data_timeline.txt': 14,
                     './test/resources/merge_studies/temp_standard_merge/data_mutations_extended.txt': 70,
                     './test/resources/merge_studies/temp_patient_subset/data_CNA.txt':576,
                     './test/resources/merge_studies/temp_patient_subset/data_clinical_patient.txt':4,
                     './test/resources/merge_studies/temp_patient_subset/data_clinical_sample.txt':4,
-                    './test/resources/merge_studies/temp_patient_subset/data_timeline.txt':4,
                     './test/resources/merge_studies/temp_patient_subset/data_mutations_extended.txt':38,
                     './test/resources/merge_studies/temp_patient_exclude/data_CNA.txt':576,
                     './test/resources/merge_studies/temp_patient_exclude/data_clinical_patient.txt':7,
                     './test/resources/merge_studies/temp_patient_exclude/data_clinical_sample.txt':8,
-                    './test/resources/merge_studies/temp_patient_exclude/data_timeline.txt':11,
                     './test/resources/merge_studies/temp_patient_exclude/data_mutations_extended.txt':54,
                     './test/resources/merge_studies/temp_sample_subset/data_CNA.txt':576,
                     './test/resources/merge_studies/temp_sample_subset/data_clinical_patient.txt':5,
                     './test/resources/merge_studies/temp_sample_subset/data_clinical_sample.txt':5,
-                    './test/resources/merge_studies/temp_sample_subset/data_timeline.txt':8,
                     './test/resources/merge_studies/temp_sample_subset/data_mutations_extended.txt':15,
                     './test/resources/merge_studies/temp_sample_exclude/data_CNA.txt':576,
                     './test/resources/merge_studies/temp_sample_exclude/data_clinical_patient.txt':6,
                     './test/resources/merge_studies/temp_sample_exclude/data_clinical_sample.txt':6,
-                    './test/resources/merge_studies/temp_sample_exclude/data_timeline.txt':6,
-                    './test/resources/merge_studies/temp_sample_exclude/data_mutations_extended.txt':48,
-                    './test/resources/merge_studies/temp_sample_exclude_half/data_CNA.txt':576,
-                    './test/resources/merge_studies/temp_sample_exclude_half/data_clinical_patient.txt':7,
-                    './test/resources/merge_studies/temp_sample_exclude_half/data_clinical_sample.txt':7,
-                    './test/resources/merge_studies/temp_sample_exclude_half/data_timeline.txt':10,
-                    './test/resources/merge_studies/temp_sample_exclude_half/data_mutations_extended.txt':49}
+                    './test/resources/merge_studies/temp_sample_exclude/data_mutations_extended.txt':48}
 
 class TestMergeScript(unittest.TestCase):
 
@@ -95,8 +77,6 @@ class TestMergeScript(unittest.TestCase):
                 case_id_col = 'PATIENT_ID'
             elif 'data_clinical_sample' in filename:
                 case_id_col = 'SAMPLE_ID'
-            elif 'data_timeline' in filename:
-                case_id_col = 'PATIENT_ID'
             elif 'data_mutations_extended' in filename:
                 case_id_col = 'Tumor_Sample_Barcode'
             else:
@@ -148,13 +128,10 @@ class TestMergeScript(unittest.TestCase):
                 error_message = error_message + "\n\t" + case_id
             self.assertTrue(len(cases_found) == 0, error_message)
 
-    def update_reference_set_with_matching_patient_samples(self, filename, reference_set, reference_set_kind, merge_mode):
+    def update_reference_set_with_matching_patient_samples(self, filename, reference_set):
         """
             Expands reference_set with matching samples if reference set is patient-based.
         """
-        #compute patient/sample mappings
-        sample_to_patient_map = {}
-        patient_to_sampleset_map = {}
         header = get_header(filename)
         with open(filename, 'rU') as data_file:
             data_reader = [line for line in data_file.readlines() if not line.startswith('#')][1:]
@@ -162,29 +139,10 @@ class TestMergeScript(unittest.TestCase):
                 data = map(str.strip, line.split('\t'))
                 pid = data[header.index('PATIENT_ID')]
                 sid = data[header.index('SAMPLE_ID')]
-                sample_to_patient_map[sid] = pid
-                if pid not in patient_to_sampleset_map:
-                    patient_to_sampleset_map[pid] = set()
-                patient_to_sampleset_map[pid].add(sid)
-        #find set of additional items to be added
-        reference_set_additions = set()
-        if reference_set_kind == REFERENCE_SET_IS_PATIENTS: # add all samples for each included or excluded patient
-            for pid in patient_to_sampleset_map:
                 if pid in reference_set:
-                    for sid in patient_to_sampleset_map[pid]:
-                        reference_set_additions.add(sid)
-        elif reference_set_kind == REFERENCE_SET_IS_SAMPLES and merge_mode == INCLUDE_MODE: # add all patients for included samples
-            for sid in sample_to_patient_map:
-                if sid in reference_set:
-                    reference_set_additions.add(sample_to_patient_map[sid])
-        elif reference_set_kind == REFERENCE_SET_IS_SAMPLES and merge_mode == EXCLUDE_MODE: # add patient when excluding all samples for that patient
-            for pid in patient_to_sampleset_map:
-                remaining_samples_for_patient = patient_to_sampleset_map[pid].difference(reference_set)
-                if len(remaining_samples_for_patient) == 0:
-                    reference_set_additions.add(pid)
-        else:
-            self.assertTrue(False, "Internal error during test")
-        reference_set.update(reference_set_additions)
+                    reference_set.add(sid)
+                elif sid in reference_set:
+                    reference_set.add(pid)
         return reference_set
 
     def build_merge_command(self, input_study_paths, output_directory, reference_set_filename, keep_match):
@@ -217,13 +175,8 @@ class TestMergeScript(unittest.TestCase):
             row_count = row_count.split()[0] # TO-DO: MAKE REGEX INSTEAD
             self.assertTrue(EXPECTED_ROW_COUNT[full_file_path] == int(row_count), "Output file row count does not match expected row count: " + row_count + " != " + str(EXPECTED_ROW_COUNT[full_file_path]) + ": " + full_file_path)
             data_files_found += 1
-        self.assertTrue(data_files_found == 5, "Output directory should contain 5 data files - found " + str(data_files_found) + " instead: " + output_directory)
+        self.assertTrue(data_files_found == 4, "Output directory should contain 4 data files - found " + str(data_files_found) + " instead: " + output_directory)
 
-    def attempt_purge_of_directory(self, directory):
-        try:
-            subprocess.check_output(["rm", "-rf", directory], stderr = subprocess.STDOUT)
-        except:
-            self.fail("Failed to clean up directory: " + directory)
 
     def test_standard_merge(self):
         """
@@ -237,25 +190,30 @@ class TestMergeScript(unittest.TestCase):
             self.validate_expected_row_counts(output_directory)
         except subprocess.CalledProcessError as cpe:
             self.fail(cpe.output)
-        self.attempt_purge_of_directory(output_directory)
 
-    def run_reference_set_test(self, output_directoryname, reference_set_filename, reference_set_kind, merge_mode):
+        # attempt to clean up temp output directory
+        try:
+            subprocess.check_output(["rm", "-rf", output_directory], stderr = subprocess.STDOUT)
+        except:
+            self.fail("Failed to clean up temp directory: " + output_directory)
+
+    def test_subset_patient_merge(self):
         """
-            Test a merge using a reference list. Validate against expected row counts and content.
+            Test a merge using a subset patient list. Validate against expected row counts.
         """
         try:
-            reference_set_filepath = os.path.join(self.mock_studies_dir, reference_set_filename)
-            keep_match = merge_mode == INCLUDE_MODE
-            output_directory = os.path.join(self.mock_studies_dir, output_directoryname)
-            merge_command = self.build_merge_command(MOCK_STUDY_PATHS, output_directory, reference_set_filepath, keep_match)
+            patient_subset_filepath = os.path.join(self.mock_studies_dir, PATIENT_SUBSET_FILENAME)
+            keep_match = True
+            output_directory = os.path.join(self.mock_studies_dir, PATIENT_SUBSET_OUTPUT_DIR)
+            merge_command = self.build_merge_command(MOCK_STUDY_PATHS, output_directory, patient_subset_filepath, keep_match)
             subprocess.check_output(merge_command.split(), stderr = subprocess.STDOUT)
             self.validate_expected_row_counts(output_directory)
 
             # expand reference set with patient-linked samples
-            reference_set = self.load_reference_set_from_file(reference_set_filepath)
+            reference_set = self.load_reference_set_from_file(patient_subset_filepath)
             for study_path in MOCK_STUDY_PATHS:
                 clinical_sample_file = os.path.join(study_path, 'data_clinical_sample.txt')
-                reference_set = self.update_reference_set_with_matching_patient_samples(clinical_sample_file, reference_set, reference_set_kind, merge_mode)
+                reference_set = self.update_reference_set_with_matching_patient_samples(clinical_sample_file, reference_set)
 
             # verify that the cases in the output data files are expected case ids
             for filename in os.listdir(output_directory):
@@ -265,22 +223,112 @@ class TestMergeScript(unittest.TestCase):
                 self.validate_cases_in_file(full_file_path, reference_set, keep_match)
         except subprocess.CalledProcessError as cpe:
             self.fail(cpe.output)
-        self.attempt_purge_of_directory(output_directory)
 
-    def test_subset_patient_merge(self):
-        self.run_reference_set_test(PATIENT_SUBSET_OUTPUT_DIR, PATIENT_SUBSET_FILENAME, REFERENCE_SET_IS_PATIENTS, INCLUDE_MODE)
+        # attempt to clean up temp output directory
+        try:
+            subprocess.check_output(["rm", "-rf", output_directory], stderr = subprocess.STDOUT)
+        except:
+            self.fail("Failed to clean up temp directory: " + output_directory)
 
     def test_subset_patient_exclude(self):
-        self.run_reference_set_test(PATIENT_EXCLUDE_OUTPUT_DIR, PATIENT_EXCLUDE_FILENAME, REFERENCE_SET_IS_PATIENTS, EXCLUDE_MODE)
+        """
+            Test a merge using an excluded patient list. Validate against expected row counts.
+        """
+        try:
+            patient_exclude_filepath = os.path.join(self.mock_studies_dir, PATIENT_EXCLUDE_FILENAME)
+            keep_match = False
+            output_directory = os.path.join(self.mock_studies_dir, PATIENT_EXCLUDE_OUTPUT_DIR)
+            merge_command = self.build_merge_command(MOCK_STUDY_PATHS, output_directory, patient_exclude_filepath, keep_match)
+            subprocess.check_output(merge_command.split(), stderr = subprocess.STDOUT)
+            self.validate_expected_row_counts(output_directory)
+
+            # expand reference set with patient-linked samples
+            reference_set = self.load_reference_set_from_file(patient_exclude_filepath)
+            for study_path in MOCK_STUDY_PATHS:
+                clinical_sample_file = os.path.join(study_path, 'data_clinical_sample.txt')
+                reference_set = self.update_reference_set_with_matching_patient_samples(clinical_sample_file, reference_set)
+
+            # verify that the cases in the output data files are expected case ids
+            for filename in os.listdir(output_directory):
+                if not 'data' in filename:
+                    continue
+                full_file_path = os.path.join(output_directory, filename)
+                self.validate_cases_in_file(full_file_path, reference_set, keep_match)
+        except subprocess.CalledProcessError as cpe:
+            self.fail(cpe.output)
+
+        # attempt to clean up temp output directory
+        try:
+            subprocess.check_output(["rm", "-rf", output_directory], stderr = subprocess.STDOUT)
+        except:
+            self.fail("Failed to clean up temp directory: " + output_directory)
 
     def test_subset_sample_merge(self):
-        self.run_reference_set_test(SAMPLE_SUBSET_OUTPUT_DIR, SAMPLE_SUBSET_FILENAME, REFERENCE_SET_IS_SAMPLES, INCLUDE_MODE)
+        """
+            Test a merge using a subset sample list. Validate against expected row counts.
+        """
+        try:
+            sample_subset_filepath = os.path.join(self.mock_studies_dir, SAMPLE_SUBSET_FILENAME)
+            keep_match = True
+            output_directory = os.path.join(self.mock_studies_dir, SAMPLE_SUBSET_OUTPUT_DIR)
+            merge_command = self.build_merge_command(MOCK_STUDY_PATHS, output_directory, sample_subset_filepath, keep_match)
+            subprocess.check_output(merge_command.split(), stderr = subprocess.STDOUT)
+            self.validate_expected_row_counts(output_directory)
+
+            # expand reference set with sample-linked patients
+            reference_set = self.load_reference_set_from_file(sample_subset_filepath)
+            for study_path in MOCK_STUDY_PATHS:
+                clinical_sample_file = os.path.join(study_path, 'data_clinical_sample.txt')
+                reference_set = self.update_reference_set_with_matching_patient_samples(clinical_sample_file, reference_set)
+
+            # verify that the cases in the output data files are expected case ids
+            for filename in os.listdir(output_directory):
+                if not 'data' in filename:
+                    continue
+                full_file_path = os.path.join(output_directory, filename)
+                self.validate_cases_in_file(full_file_path, reference_set, keep_match)
+        except subprocess.CalledProcessError as cpe:
+            self.fail(cpe.output)
+
+
+        # attempt to clean up temp output directory
+        try:
+            subprocess.check_output(["rm", "-rf", output_directory], stderr = subprocess.STDOUT)
+        except:
+            self.fail("Failed to clean up temp directory: " + output_directory)
 
     def test_subset_sample_exclude(self):
-        self.run_reference_set_test(SAMPLE_EXCLUDE_OUTPUT_DIR, SAMPLE_EXCLUDE_FILENAME, REFERENCE_SET_IS_SAMPLES, EXCLUDE_MODE)
+        """
+            Test a merge using an excluded sample list. Validate against expected row counts.
+        """
+        try:
+            sample_exclude_filepath = os.path.join(self.mock_studies_dir, SAMPLE_EXCLUDE_FILENAME)
+            keep_match = False
+            output_directory = os.path.join(self.mock_studies_dir, SAMPLE_EXCLUDE_OUTPUT_DIR)
+            merge_command = self.build_merge_command(MOCK_STUDY_PATHS, output_directory, sample_exclude_filepath, keep_match)
+            subprocess.check_output(merge_command.split(), stderr = subprocess.STDOUT)
+            self.validate_expected_row_counts(output_directory)
 
-    def test_subset_sample_exclude_one_of_two_samples_for_a_patient(self):
-        self.run_reference_set_test(SAMPLE_EXCLUDE_HALF_OUTPUT_DIR, SAMPLE_EXCLUDE_HALF_FILENAME, REFERENCE_SET_IS_SAMPLES, EXCLUDE_MODE)
+            # expand reference set with sample-linked patients
+            reference_set = self.load_reference_set_from_file(sample_exclude_filepath)
+            for study_path in MOCK_STUDY_PATHS:
+                clinical_sample_file = os.path.join(study_path, 'data_clinical_sample.txt')
+                reference_set = self.update_reference_set_with_matching_patient_samples(clinical_sample_file, reference_set)
+
+            # verify that the cases in the output data files are expected case ids
+            for filename in os.listdir(output_directory):
+                if not 'data' in filename:
+                    continue
+                full_file_path = os.path.join(output_directory, filename)
+                self.validate_cases_in_file(full_file_path, reference_set, keep_match)
+        except subprocess.CalledProcessError as cpe:
+            self.fail(cpe.output)
+
+        # attempt to clean up temp output directory
+        try:
+            subprocess.check_output(["rm", "-rf", output_directory], stderr = subprocess.STDOUT)
+        except:
+            self.fail("Failed to clean up temp directory: " + output_directory)
 
 if __name__ == '__main__':
     unittest.main()
