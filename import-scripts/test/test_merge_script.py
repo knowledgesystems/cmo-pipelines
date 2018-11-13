@@ -219,6 +219,12 @@ class TestMergeScript(unittest.TestCase):
             data_files_found += 1
         self.assertTrue(data_files_found == 5, "Output directory should contain 5 data files - found " + str(data_files_found) + " instead: " + output_directory)
 
+    def attempt_purge_of_directory(self, directory):
+        try:
+            subprocess.check_output(["rm", "-rf", directory], stderr = subprocess.STDOUT)
+        except:
+            self.fail("Failed to clean up directory: " + directory)
+
     def test_standard_merge(self):
         """
             Test a standard merge of 2 studies and validate against expected row counts.
@@ -231,18 +237,7 @@ class TestMergeScript(unittest.TestCase):
             self.validate_expected_row_counts(output_directory)
         except subprocess.CalledProcessError as cpe:
             self.fail(cpe.output)
-
-        # attempt to clean up temp output directory
-        try:
-            subprocess.check_output(["rm", "-rf", output_directory], stderr = subprocess.STDOUT)
-        except:
-            self.fail("Failed to clean up temp directory: " + output_directory)
-
-    def attempt_purge_of_directory(self, directory):
-        try:
-            subprocess.check_output(["rm", "-rf", directory], stderr = subprocess.STDOUT)
-        except:
-            self.fail("Failed to clean up directory: " + directory)
+        self.attempt_purge_of_directory(output_directory)
 
     def run_reference_set_test(self, output_directoryname, reference_set_filename, reference_set_kind, merge_mode):
         """
