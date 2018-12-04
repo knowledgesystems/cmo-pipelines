@@ -4,6 +4,7 @@
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
 ## STATUS FLAGS
+PERFORM_CRDB_FETCH=1
 
 # Flags indicating whether a study can be updated
 IMPORT_STATUS_IMPACT=0
@@ -1415,3 +1416,9 @@ if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
     echo -e "Sending email $EMAIL_BODY"
     echo -e "$EMAIL_BODY" | mail -s "LYMPHOMASUPERCOHORT Subset Failure: Study will not be updated." $email_list
 fi
+
+# TODO: remove when CVR fixes issue with problematic sample
+# additional step to manually consume problematic samples
+# problematic samples can be added to samplesfile
+CONSUME_SAMPLES_SCRIPT=$PORTAL_HOME/scripts/consume_sample_stopgap
+$PYTHON_BINARY $CONSUME_SAMPLES_SCRIPT/consume_cvr_samples.py --properties-file $CONSUME_SAMPLES_SCRIPT/portal.properties --samples-file $CONSUME_SAMPLES_SCRIPT/samplesfile
