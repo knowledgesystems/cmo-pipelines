@@ -46,7 +46,7 @@ export PRIVATE_DATA_HOME=$PORTAL_DATA_HOME/private
 export DMP_DATA_HOME=$PORTAL_DATA_HOME/dmp
 export FOUNDATION_DATA_HOME=$PORTAL_DATA_HOME/foundation
 export IMPACT_DATA_HOME=$PORTAL_DATA_HOME/impact
-
+export DATAHUB_DATA_HOME=$PORTAL_DATA_HOME/datahub/public
 #######################
 # environment variables used in the fetch-and-import-dmp-impact-data script
 #######################
