@@ -446,8 +446,6 @@ if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
             IMPORT_STATUS_ARCHER=1
         else
             FETCH_CVR_ARCHER_FAIL=0
-            # renaming gene matrix file until we get the mskarcher gene panel imported
-            cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; mv data_gene_matrix.txt ignore_data_gene_matrix.txt
             cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED dataset"
         fi
     fi
