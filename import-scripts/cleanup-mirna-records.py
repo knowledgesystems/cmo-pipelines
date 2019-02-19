@@ -1258,7 +1258,6 @@ def find_mirna_gene_refs_in_gene_panels(db_connection, mirna_gene_map, enable_db
 
             genetic_profile_set.add(record.genetic_profile_id)
             cancer_study_set.add(record.cancer_study_id)
-        gene_panel_set.add(gene_panel_id)
         mirna_db_gene_panel_records['GENETIC_PROFILES'] = genetic_profile_set
         mirna_db_gene_panel_records['CANCER_STUDIES'] = cancer_study_set
         mirna_db_references['gene_panel'] = mirna_db_gene_panel_records
