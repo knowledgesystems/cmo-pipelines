@@ -73,7 +73,7 @@ MIRNA_GENE_DB_REFERENCE_TYPES = [
     'SANGER_CANCER_CENSUSES'
 ]
 
-MIRNA_GENE_FILE_HEADER = ['HUGO_GENE_SYMBOL', 'ENTREZ_GENE_ID', 'IS_ALIAS']
+MIRNA_GENE_FILE_HEADER = ['HUGO_GENE_SYMBOL', 'ENTREZ_GENE_ID', 'IS_ALIAS', 'ROOT_HUGO_SYMBOL']
 
 # ------------------------------------------------------------------------------
 # class defintions
@@ -1020,10 +1020,10 @@ def save_mirna_gene_records_removed(mirna_gene_filename):
     with open(mirna_gene_filename, 'w') as mirna_gene_file:
         mirna_gene_file.write('\t'.join(MIRNA_GENE_FILE_HEADER) + '\n')
         for gene in MIRNA_GENES_OKAY_TO_REMOVE:
-            record = [gene.hugo_gene_symbol, str(gene.entrez_gene_id), 'NO']
+            record = [gene.hugo_gene_symbol, str(gene.entrez_gene_id), 'NO', GENES[gene.entrez_gene_id]]
             mirna_gene_file.write('\t'.join(record) + '\n')
         for gene in MIRNA_GENE_ALIASES_OKAY_TO_REMOVE:
-            record = [gene.hugo_gene_symbol, str(gene.entrez_gene_id), 'YES']
+            record = [gene.hugo_gene_symbol, str(gene.entrez_gene_id), 'YES', GENES[gene.entrez_gene_id]]
             mirna_gene_file.write('\t'.join(record) + '\n')
     print >> OUTPUT_FILE, 'All miRNA-linked records removed (or candidates from removal) from `gene` and `gene_alias` were saved to: ' + mirna_gene_filename
 
