@@ -998,7 +998,7 @@ def format_mirna_db_references_report(db_connection, compiled_mirna_db_reference
             ref_set_stable_ids = map(lambda x: get_gene_panel_stable_id(cursor, x), ref_set)
         elif ref_type == 'REFERENCE_GENOMES':
             ref_set_stable_ids = map(lambda x: get_reference_genome_stable_id(cursor, x), ref_set)
-        elif ref_type in ['COSMIC_MUTATIONS', 'UNIPROT_ID_MAPPING', 'SANGER_CANCER_CENSUSES']:
+        elif ref_type in ['COSMIC_MUTATIONS', 'UNIPROT_ID_MAPPING', 'SANGER_CANCER_CENSUSES', 'GENESETS']:
             # uniprot id values are already unique - fetching of another stable id is not necessary
             # `cosmic_mutation` and `sanger_cancer_census` do not have stable ids so just return the
             # ref_set value as list of strings
