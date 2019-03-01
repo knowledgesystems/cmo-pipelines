@@ -52,10 +52,18 @@ public class CVRMutationDataProcessor implements ItemProcessor<AnnotatedRecord, 
     @Autowired
     private CVRUtils cvrUtils;
 
+    private final String REFERENCE_ALLELE_COLUMN = "REFERENCE_ALLELE";
+    private final String TUMOR_SEQ_ALLELE1_COLUMN = "TUMOR_SEQ_ALLELE1";
+
     @Override
     public String process(AnnotatedRecord i) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : header) {
+            // always override 'Tumor_Seq_Allele1' with value of 'Reference_Allele'
+            // these fields should always match for our internal datasets
+            if (field.equalsIgnoreCase(TUMOR_SEQ_ALLELE1_COLUMN)) {
+                field = REFERENCE_ALLELE_COLUMN;
+            }
             try {
                 record.add(cvrUtils.convertWhitespace(i.getClass().getMethod("get" + field.toUpperCase()).invoke(i).toString()));
             } catch (Exception e) {
