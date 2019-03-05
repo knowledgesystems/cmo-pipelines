@@ -112,9 +112,8 @@ def add_codes_and_report_diff(oncotree_codes, cvr_oncotree_codes):
 
     # find new codes
     new_codes = oncotree_code_set - cvr_oncotree_code_set
-    #for new_code in new_codes:
-        # TODO add back
-        #add_code_to_cvr(oncotree_codes, new_code)
+    for new_code in new_codes:
+        add_code_to_cvr(oncotree_codes, new_code)
 
     if new_codes:
         print "Added to CVR:"
