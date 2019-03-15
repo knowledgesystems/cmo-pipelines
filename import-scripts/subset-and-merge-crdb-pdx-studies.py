@@ -181,7 +181,7 @@ def resolve_source_study_path(source_id, data_source_directories):
     # multiple paths found, source id is non-unique. Report error for warning file
     if len(source_paths) == 2 and any([True for source_path in source_paths if DATAHUB_NAME in source_path]):
         print "Datahub and one other source directory resolved for source id: " + source_id + ", using datahub source directory."
-        return [source_path for source_path in source_paths if DATAHUB_NAME in path][0]
+        return [source_path for source_path in source_paths if DATAHUB_NAME in source_path][0]
     elif len(source_paths) >= 2:
         print "Multiple directories resolved for source id: " + source_id
         MULTIPLE_RESOLVED_STUDY_PATHS[source_id] = source_paths
