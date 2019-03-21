@@ -267,7 +267,7 @@ fi
 if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
     mapping_filename="source_to_destination_mappings.txt"
     scripts_directory="$PORTAL_HOME/scripts"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/subset-and-merge-crdb-pdx-studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --data-source-directories $DATAHUB_DATA_HOME,$BIC_DATA_HOME,$PRIVATE_DATA_HOME --impact-root-directory $DMP_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME
+    $PYTHON_BINARY $PORTAL_HOME/scripts/subset-and-merge-crdb-pdx-studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --data-source-directories $DATAHUB_DATA_HOME,$BIC_DATA_HOME,$PRIVATE_DATA_HOME,$DMP_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME
     if [ $? -ne 0 ] ; then
         echo "error: subset-and-merge-crdb-pdx-studies.py exited with non zero status"
         sendFailureMessageMskPipelineLogsSlack "CRDB PDX Subset-And-Merge Script Failure"

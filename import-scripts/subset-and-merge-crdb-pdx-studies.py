@@ -100,7 +100,6 @@ MISSING_DESTINATION_STUDIES = set()
 SKIPPED_SOURCE_STUDIES = {}
 MULTIPLE_RESOLVED_STUDY_PATHS = {}
 
-IMPACT_STUDY_ID = 'msk_solid_heme'
 # TO TRACK WHETHER OR NOT TO IMPORT (TRIGGER FILES)
 # for each step (i.e subset sources/genomic data, merging, subset crdb-pdx clinical) - set a status flag in a map
 # at the end, evaluate status flags in map for each destination study
@@ -151,11 +150,6 @@ def create_destination_to_source_mapping(records, root_directory):
         if source not in destination_to_source_mapping[destination]:
             destination_to_source_mapping[destination][source] = []
         destination_to_source_mapping[destination][source].append(Patient(cmo_pid, dmp_pid))
-        # special case code that adds impact study as a source if destination pid is dmp_pid (P-\d{7})
-        if re.match(r'P-\d{7}\Z', dmp_pid):
-            if IMPACT_STUDY_ID not in destination_to_source_mapping[destination]:
-                destination_to_source_mapping[destination][IMPACT_STUDY_ID] = []
-            destination_to_source_mapping[destination][IMPACT_STUDY_ID].append(Patient(dmp_pid, dmp_pid))
     return destination_to_source_mapping
 
 def resolve_source_study_path(source_id, data_source_directories):
@@ -193,21 +187,17 @@ def resolve_source_study_path(source_id, data_source_directories):
 
 # split cancer study identifer on first three underscores to create path
 # { ke_07_83_b : CMO_ROOT_DIRECTORY/ke/07/83/b }
-def create_source_id_to_path_mapping(destination_to_source_mapping, data_source_directories, impact_root_directory):
+def create_source_id_to_path_mapping(destination_to_source_mapping, data_source_directories):
     source_id_to_path_mapping = {}
     source_ids = set()
     for source_to_patients_map in destination_to_source_mapping.values():
         source_ids.update(source_to_patients_map.keys())
     for source_id in source_ids:
-        # special case handling for establishing impact directory (not in cmo)
-        if source_id == IMPACT_STUDY_ID:
-            source_path = os.path.join(impact_root_directory, source_id)
-            source_id_to_path_mapping[source_id] = source_path
-            continue;
         # resolved source path 'None' handled by resolve_source_study_path(...)
         source_id_to_path_mapping[source_id] = resolve_source_study_path(source_id, data_source_directories)
     return source_id_to_path_mapping
 
+# not currently used
 def generate_python_subset_call(lib, cancer_study_id, destination_directory, source_directory, patient_list):
     python_subset_call = 'python ' + lib + '/generate-clinical-subset.py --study-id=' + cancer_study_id + ' --clinical-file=' + source_directory + '/data_clinical.txt --filter-criteria="PATIENT_ID=' + patient_list + '" --subset-filename=' + destination_directory + "/subset_file.txt"
     return python_subset_call
@@ -221,6 +211,7 @@ def generate_merge_call(lib, cancer_study_id, destination_directory, subdirector
     return merge_call
 
 # used in sample-mode because data_clinical_sample.txt is being extended - sample id should be used as primary key for each record
+# not currently used
 def generate_add_clinical_records_call(lib, destination_directory, impact_source_subdirectory):
     add_clinical_records_call = 'python ' + lib + '/add_clinical_records.py -c ' + destination_directory + '/data_clinical_sample.txt -s ' + impact_source_subdirectory + '/data_clinical_sample.txt -f "PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE" -l' + lib
     return add_clinical_records_call
@@ -285,12 +276,11 @@ def merge_genomic_files(destination_to_source_mapping, root_directory, lib):
 # needed because IMPACT study is being automatically pulled in and need to be added to the existing data_clinical_sample.txt
 # data_clinical_sample.txt per destination study  is originally subsetted from CRDB-PDX fetched file and does not contain IMPACT samples
 # unmapped IMPACT samples are not mapped to their patients/shown as seperate patients in the portal
+# not currently used - might be needed later on (IMPACT samples now provided in CRDB clinical file)
 def add_patient_sample_records(destination_to_source_mapping, root_directory, lib):
-    for destination in destination_to_source_mapping:
-        destination_directory = os.path.join(root_directory, destination)
-        impact_source_subdirectory = os.path.join(root_directory, destination, IMPACT_STUDY_ID)
-        add_clinical_records_call = generate_add_clinical_records_call(lib, destination_directory, impact_source_subdirectory)
-        add_clinical_records_status = subprocess.call(add_clinical_records_call, shell = True)
+    # TODO: if this functionality is needed, change arguments/add loop for choosing source/destination
+    add_clinical_records_call = generate_add_clinical_records_call(lib, destination_directory, impact_source_subdirectory)
+    add_clinical_records_status = subprocess.call(add_clinical_records_call, shell = True)
        
 def remove_source_subdirectories(destination_to_source_mapping, root_directory):
     for destination, source_to_patients_map in destination_to_source_mapping.items():
@@ -441,7 +431,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--data-source-directories", help = "comma-delimited root directories to search all data source directories", required = True)
     parser.add_argument("-f", "--fetch-directory", help = "directory where crdb-pdx data is stored", required = True)
-    parser.add_argument("-i", "--impact-root-directory", help = "msk_solid_heme (combined IMPACT merge) directory", required = True)
     parser.add_argument("-l", "--lib", help = "directory containing subsetting/merge scripts (i.e cmo-pipelines/import-scripts)", required = True)
     parser.add_argument("-m", "--mapping-file", help = "CRDB-fetched file containing mappings from souce/id to destination/id", required = True)
     parser.add_argument("-r", "--root-directory", help = "root directory for all new studies (i.e dmp to mskimpact, hemepact, raindance...", required = True)
@@ -451,7 +440,6 @@ def main():
     args = parser.parse_args()
     data_source_directories = map(str.strip, args.data_source_directories.split(','))
     crdb_fetch_directory = args.fetch_directory
-    impact_root_directory = args.impact_root_directory
     destination_to_source_mapping_filename = os.path.join(crdb_fetch_directory, args.mapping_file)
     lib = args.lib
     root_directory = args.root_directory
@@ -460,12 +448,11 @@ def main():
 
     records = parse_file(destination_to_source_mapping_filename)
     destination_to_source_mapping = create_destination_to_source_mapping(records, root_directory)
-    source_id_to_path_mapping = create_source_id_to_path_mapping(destination_to_source_mapping, data_source_directories, impact_root_directory)
+    source_id_to_path_mapping = create_source_id_to_path_mapping(destination_to_source_mapping, data_source_directories)
     subset_genomic_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib)
     merge_genomic_files(destination_to_source_mapping, root_directory, lib)
     remove_merged_clinical_timeline_files(destination_to_source_mapping, root_directory)
     subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib)
-    add_patient_sample_records(destination_to_source_mapping, root_directory, lib)
     remove_source_subdirectories(destination_to_source_mapping, root_directory)
     remove_hgvsp_short_column(destination_to_source_mapping, root_directory)
     filter_temp_subset_files(destination_to_source_mapping, root_directory)
