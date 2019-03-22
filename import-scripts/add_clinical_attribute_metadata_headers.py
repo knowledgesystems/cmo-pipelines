@@ -37,6 +37,9 @@ PRIORITY_KEY = 'priority'
 OVERRIDDEN_STUDY_NAME_KEY = 'name'
 DEFAULT_URL = "http://oncotree.mskcc.org/cdd/api/"
 
+PATIENT_CLINICAL_FILE_PATTERN = "data_clinical_patient.txt"
+SAMPLE_CLINICAL_FILE_PATTERN = "data_clinical_sample.txt"
+
 def check_valid_studyid(study_id, base_cdd_url):
     query = base_cdd_url + "cancerStudies"
     response = requests.get(query)
@@ -101,16 +104,21 @@ def write_headers(header, metadata_dictionary, output_file, is_mixed_attribute_t
         write_header_line(attribute_type_line, output_file)
     write_header_line(priority_line, output_file)
 # -----------------------------------------------------------------------------
+# determined by filename
+def check_if_mixed_attribute_types_format(filename):
+    base_filename = os.path.basename(filename)
+    if base_filename in [PATIENT_CLINICAL_FILE_PATTERN, SAMPLE_CLINICAL_FILE_PATTERN]:
+        return False
+    return True   
+# -----------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--files", nargs = "+", help = "file(s) to add metadata headers", required = True)
-    parser.add_argument("-m", "--mixed-attribute-types", help = "flag for whether file is new/old format -- whether patient/sample attributes are seperated", action = "store_true")
     parser.add_argument("-s", "--study-id", help = "study id for specific overrides", required = False)
     parser.add_argument("-c", "--cdd-url", help = "the url for the cdd web application, default is http://oncotree.mskcc.org/cdd/api/", required = False)
     args = parser.parse_args()
 
     clinical_files = args.files
-    is_mixed_attribute_types_format = args.mixed_attribute_types
     study_id = args.study_id
     cdd_url = args.cdd_url
 
@@ -150,6 +158,7 @@ def main():
         # create temp file to write to
         temp_file, temp_file_name = tempfile.mkstemp()
         header = get_header(clinical_file)
+        is_mixed_attribute_types_format = check_if_mixed_attribute_types_format(clinical_file)
         write_headers(header, metadata_dictionary, temp_file, is_mixed_attribute_types_format)
         write_data(clinical_file, temp_file)
         os.close(temp_file)
