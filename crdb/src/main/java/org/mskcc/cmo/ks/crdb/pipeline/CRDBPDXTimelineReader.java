@@ -96,7 +96,8 @@ public class CRDBPDXTimelineReader implements ItemStreamReader<CRDBPDXTimelineDa
                                         $(qCRDBD.getLATERALITY()), $(qCRDBD.getDISEASE_STATUS()), $(qCRDBD.getMETASTATIC_SITE()),
                                         $(qCRDBD.getSAMPLE_TYPE()), $(qCRDBD.getSITE_OF_RECURRENCE()), $(qCRDBD.getTREATMENT_NOTES())))
                 .from($(qCRDBD))
-                .where($(qCRDBD.getPATIENT_ID()).ne("NA"))
+                .where($(qCRDBD.getPATIENT_ID()).ne("NA")
+                .and($(qCRDBD.getSTART_DATE()).isNotNull()))
                 .fetch();
         LOG.info("Imported " + crdbTimelineDatasetResults.size() + " records from CRDB PDX Timeline Dataset View.");
         return crdbTimelineDatasetResults;

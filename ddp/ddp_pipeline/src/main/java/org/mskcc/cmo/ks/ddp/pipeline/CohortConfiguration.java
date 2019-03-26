@@ -48,7 +48,7 @@ public class CohortConfiguration {
     private static final Map<String, Integer> cohortMapping;
     static {
         cohortMapping = new HashMap<>();
-        cohortMapping.put("mskimpact", 1343);
+        cohortMapping.put("mskimpact", 2033);
         cohortMapping.put("mskimpact_ped", 1852);
     }
 
