@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -33,6 +33,7 @@
 package org.mskcc.cmo.ks.crdb.pipeline;
 
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBDataset;
+import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXClinicalAnnotationMapping;
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXClinicalPatientDataset;
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXClinicalSampleDataset;
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXSourceToDestinationMapping;
@@ -84,6 +85,7 @@ public class BatchConfiguration {
             .next(crdbPDXClinicalPatientStep())
             .next(crdbPDXTimelineStep())
             .next(crdbPDXSourceToDestinationMappingStep())
+            .next(crdbPDXClinicalAnnotationMappingStep())
             .build();
     }
 
@@ -145,6 +147,34 @@ public class BatchConfiguration {
     @StepScope
     public ItemStreamWriter<String> crdbDatasetWriter() {
         return new CRDBDatasetWriter();
+    }
+
+    @Bean
+    public Step crdbPDXClinicalAnnotationMappingStep() {
+        return stepBuilderFactory.get("crdbPDXClinicalAnnotationMappingStep")
+            .<CRDBPDXClinicalAnnotationMapping, String> chunk(10)
+            .reader(crdbPDXClinicalAnnotationMappingReader())
+            .processor(crdbPDXClinicalAnnotationMappingProcessor())
+            .writer(crdbPDXClinicalAnnotationMappingWriter())
+            .build();
+    }
+
+    @Bean
+    @StepScope
+    public ItemStreamReader<CRDBPDXClinicalAnnotationMapping> crdbPDXClinicalAnnotationMappingReader() {
+        return new CRDBPDXClinicalAnnotationMappingReader();
+    }
+
+    @Bean
+    @StepScope
+    public CRDBPDXClinicalAnnotationMappingProcessor crdbPDXClinicalAnnotationMappingProcessor() {
+        return new CRDBPDXClinicalAnnotationMappingProcessor();
+    }
+ 
+    @Bean
+    @StepScope
+    public CRDBPDXClinicalAnnotationMappingWriter crdbPDXClinicalAnnotationMappingWriter() {
+        return new CRDBPDXClinicalAnnotationMappingWriter();
     }
 
     @Bean

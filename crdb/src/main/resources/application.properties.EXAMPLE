@@ -10,6 +10,16 @@ crdb.survey_view=
 crdb.survey_filename=
 crdb.dataset_view=
 crdb.dataset_filename=
+crdb.source_to_destination_mappings_view=
+crdb.source_to_destination_mappings_filename=
+crdb.pdx_clinical_patient_dataset_view=
+crdb.pdx_clinical_patient_dataset_filename=
+crdb.pdx_clinical_sample_dataset_view=
+crdb.pdx_clinical_sample_dataset_filename=
+crdb.pdx_timeline_dataset_view=
+crdb.pdx_timeline_dataset_filename=
+crdb.pdx_clinical_annotation_mappings_view=
+crdb.pdx_clinical_annotation_mappings_filename=
 
 #Oracle connection
 crdb.username=
