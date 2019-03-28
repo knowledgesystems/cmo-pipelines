@@ -56,8 +56,8 @@ public class Skcm_mskcc_2015_chantClinicalSampleProcessor implements ItemProcess
     public Skcm_mskcc_2015_chantClinicalCompositeRecord process(final Skcm_mskcc_2015_chantNormalizedClinicalRecord melanomaClinicalRecord) throws Exception {
         List<String> record = new ArrayList<>();
         // first add sample and patient id to record then iterate through rest of sample header
-        record.add(darwinUtils.convertWhitespace(melanomaClinicalRecord.getSAMPLE_ID()).split("\\|")[0]);
-        record.add(darwinUtils.convertWhitespace(melanomaClinicalRecord.getPATIENT_ID()).split("\\|")[0]);
+        record.add(darwinUtils.convertWhitespace(melanomaClinicalRecord.getSAMPLE_ID().split("\\|")[0]));
+        record.add(darwinUtils.convertWhitespace(melanomaClinicalRecord.getPATIENT_ID().split("\\|")[0]));
         for (int i=0; i<sampleHeader.get("header").size(); i++) {
             String normColumn = sampleHeader.get("header").get(i);
             if (normColumn.equals("PATIENT_ID") || normColumn.equals("SAMPLE_ID")) {

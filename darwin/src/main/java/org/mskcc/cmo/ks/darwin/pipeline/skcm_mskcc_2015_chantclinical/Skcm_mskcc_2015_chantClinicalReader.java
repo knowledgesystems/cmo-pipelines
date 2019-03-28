@@ -233,7 +233,7 @@ public class Skcm_mskcc_2015_chantClinicalReader implements ItemStreamReader<Skc
         try {
             for (String field : combined.getAllVariables()) {
                     Method fieldGetter = combined.getClass().getMethod("get" + field);
-                    List<String> values = new ArrayList();
+                    Set<String> values = new HashSet<>();
                     values.add((String) fieldGetter.invoke(record1));
                     values.add((String) fieldGetter.invoke(record2));
                     combined.getClass().getMethod("set" + field, String.class).invoke(combined, StringUtils.join(values, "|"));
