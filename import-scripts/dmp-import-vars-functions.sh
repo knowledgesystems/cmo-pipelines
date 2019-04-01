@@ -340,6 +340,7 @@ function consumeSamplesAfterSolidHemeImport {
     if [ -f $MSK_IMPACT_CONSUME_TRIGGER ] ; then
         echo "Consuming mskimpact samples from cvr"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_DATA_HOME/cvr_data.json
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_DATA_HOME/cvr_gml_data.json
         rm -f $MSK_IMPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_HEMEPACT_CONSUME_TRIGGER ] ; then

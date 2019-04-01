@@ -40,6 +40,8 @@ import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRData;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRMergedResult;
+import org.cbioportal.cmo.pipelines.cvr.model.GMLData;
+import org.cbioportal.cmo.pipelines.cvr.model.GMLResult;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
@@ -57,19 +59,32 @@ public class ConsumeSampleReader implements ItemStreamReader<String> {
 
     @Value("#{jobParameters[jsonFilename]}")
     private String jsonFilename;
-    
+
+    @Value("#{jobParameters[gmlMode]}")
+    private Boolean gmlMode;
+
     @Autowired
     public CVRUtilities cvrUtilities;
-    
+
     private List<String> cvrSampleList = new ArrayList();
-    
+
     Logger log = Logger.getLogger(ConsumeSampleReader.class);
-    
+
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        CVRData cvrData = new CVRData();        
+
         // load cvr data from cvr_data.json file
-        File cvrFile = new File(jsonFilename);
+        File jsonFile = new File(jsonFilename);
+        if (gmlMode) {
+            this.cvrSampleList = loadSamplesFromGmlJson(jsonFile);
+        }
+        else {
+            this.cvrSampleList = loadSamplesFromJson(jsonFile);
+        }
+    }
+
+    private List<String> loadSamplesFromJson(File cvrFile) {
+        CVRData cvrData = new CVRData();
         try {
             cvrData = cvrUtilities.readJson(cvrFile);
         } catch (IOException e) {
@@ -81,7 +96,22 @@ public class ConsumeSampleReader implements ItemStreamReader<String> {
         for (CVRMergedResult result : cvrData.getResults()) {
             sampleList.add(result.getMetaData().getDmpSampleId());
         }
-        this.cvrSampleList = sampleList;
+        return sampleList;
+    }
+
+    private List<String> loadSamplesFromGmlJson(File cvrGmlFile) {
+        GMLData gmlData = new GMLData();
+        try {
+            gmlData = cvrUtilities.readGMLJson(cvrGmlFile);
+        } catch (IOException e) {
+            log.error("Error reading file: " + cvrGmlFile);
+            throw new ItemStreamException(e);
+        }
+        List<String> sampleList = new ArrayList();
+        for (GMLResult result : gmlData.getResults()) {
+            sampleList.add(result.getMetaData().getDmpSampleId());
+        }
+       return sampleList;
     }
 
     @Override
@@ -97,5 +127,5 @@ public class ConsumeSampleReader implements ItemStreamReader<String> {
         }
         return null;
     }
-    
+
 }

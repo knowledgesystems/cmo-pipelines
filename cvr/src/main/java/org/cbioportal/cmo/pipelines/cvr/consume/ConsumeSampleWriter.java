@@ -59,6 +59,9 @@ public class ConsumeSampleWriter implements ItemStreamWriter<String> {
     
     @Value("${dmp.server_name}")
     private String dmpServerName;
+
+    @Value("${dmp.gml_server_name}")
+    private String dmpGmlServerName;
     
     @Value("${dmp.tokens.consume_sample}")
     private String dmpConsumeSample;
@@ -71,6 +74,9 @@ public class ConsumeSampleWriter implements ItemStreamWriter<String> {
     
     @Value("#{jobParameters[testingMode]}")
     private boolean testingMode;
+
+    @Value("#{jobParameters[gmlMode]}")
+    private Boolean gmlMode;
     
     @Autowired
     public CVRUtilities cvrUtilities;
@@ -82,11 +88,11 @@ public class ConsumeSampleWriter implements ItemStreamWriter<String> {
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         // determine which dmp server url to use based on the file basename
-        if (jsonFilename.contains(cvrUtilities.CVR_FILE)) {
-            this.dmpConsumeUrl = dmpServerName + dmpConsumeSample + "/" + sessionId + "/";
+        if (gmlMode) {
+            this.dmpConsumeUrl = dmpGmlServerName + dmpConsumeGmlSample + "/" + sessionId + "/";
         }
-        else if (jsonFilename.contains(cvrUtilities.GML_FILE)) {
-            this.dmpConsumeUrl = dmpServerName + dmpConsumeGmlSample + "/" + sessionId + "/";
+        else {
+            this.dmpConsumeUrl = dmpServerName + dmpConsumeSample + "/" + sessionId + "/";
         }
     }
 

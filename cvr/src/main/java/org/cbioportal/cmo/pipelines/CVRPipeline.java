@@ -132,7 +132,7 @@ public class CVRPipeline {
         log.info("Shutting down CVR Pipeline");
     }
 
-    private static void launchConsumeSamplesJob(String[] args, String jsonFilename, boolean testingMode) throws Exception {
+    private static void launchConsumeSamplesJob(String[] args, String jsonFilename, boolean testingMode, boolean gml) throws Exception {
         // log wether in testing mode or not
         if (testingMode) {
             log.warn("ConsumeSamplesJob running in TESTING MODE - samples will NOT be consumed.");
@@ -146,7 +146,8 @@ public class CVRPipeline {
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
         JobParametersBuilder builder = new JobParametersBuilder()
                 .addString("jsonFilename", jsonFilename)
-                .addString("testingMode", String.valueOf(testingMode));
+                .addString("testingMode", String.valueOf(testingMode))
+                .addString("gmlMode", String.valueOf(gml));
         if (jsonFilename.contains(CVRUtilities.CVR_FILE)) {
             builder.addString("sessionId", ctx.getBean(SessionConfiguration.SESSION_ID, String.class));
         }
@@ -186,7 +187,7 @@ public class CVRPipeline {
                     help(options,1);
                 }
             }
-            launchConsumeSamplesJob(args, commandLine.getOptionValue("c"), commandLine.hasOption("t"));
+            launchConsumeSamplesJob(args, commandLine.getOptionValue("c"), commandLine.hasOption("t"), commandLine.hasOption("g"));
         }
         else {
             Integer maxNumSamplesToRemove = CVRUtilities.DEFAULT_MAX_NUM_SAMPLES_TO_REMOVE;
