@@ -9,9 +9,10 @@ export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk.x86_64
 export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
 export JAVA_BINARY=$JAVA_HOME/bin/java
 export PYTHON_BINARY=/data/tools/python2.7/bin/python
+export PYTHON3_BINARY=/data/tools/python3.4.10/bin/python3
 export MAVEN_BINARY=/data/portal-cron/bin/mvn
 export HG_BINARY=/usr/bin/hg
-export PATH=/data/tools/python2.7/bin:/data/tools:/home/grossb/local/bin:$PATH
+export PATH=/data/tools:/data/tools/python2.7/bin:/data/tools/python3.4.10/bin:/home/grossb/local/bin:$PATH
 
 #######################
 # environment variables for top-level data repositories / code bases
