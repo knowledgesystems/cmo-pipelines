@@ -1,0 +1,5 @@
+SOURCE_STUDY_ID	CLINICAL_ATTRIBUTE	DESTINATION_STUDY_ID
+test_msk_solid_heme	MSK_SLIDE_ID	test_destination_study_1
+test_msk_solid_heme	PED_IND	test_destination_study_1
+test_msk_solid_heme	GRADE	test_destination_study_2
+test_source_study_1	SMOKING_PACK_YEARS	test_destination_study_2
