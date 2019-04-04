@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
 MAX_ATTEMPTS=5
 

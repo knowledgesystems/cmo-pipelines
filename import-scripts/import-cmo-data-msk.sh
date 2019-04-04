@@ -19,15 +19,16 @@ msk_automation_notification_file=$(mktemp $tmp/msk-automation-portal-update-noti
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 CANCERSTUDIESLOGFILENAME="$PORTAL_HOME/logs/update-studies-dashi-gdac.log"
 
-
-# refresh cdd and oncotree cache
 CDD_ONCOTREE_RECACHE_FAIL=0
-bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
-if [ $? -gt 0 ]; then
-    CDD_ONCOTREE_RECACHE_FAIL=1
-    message="Failed to refresh CDD and/or ONCOTREE cache during TRIAGE import!"
-    echo $message
-    echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $pipeline_email_list
+if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
+    # refresh cdd and oncotree cache
+    bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
+    if [ $? -gt 0 ]; then
+        CDD_ONCOTREE_RECACHE_FAIL=1
+        message="Failed to refresh CDD and/or ONCOTREE cache during TRIAGE import!"
+        echo $message
+        echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $pipeline_email_list
+    fi
 fi
 
 # fetch updates in CMO repository

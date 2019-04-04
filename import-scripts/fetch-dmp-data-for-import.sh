@@ -70,29 +70,32 @@ if [ -z $JAVA_BINARY ] | [ -z $HG_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMP
     exit 2
 fi
 
-# refresh cdd and oncotree cache - by default this script will attempt to
-# refresh the CDD and ONCOTREE cache but we should check both exit codes
-# independently because of the various dependencies we have for both services
-CDD_RECACHE_FAIL=0; ONCOTREE_RECACHE_FAIL=0
-bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh --cdd-only
-if [ $? -gt 0 ]; then
-    message="Failed to refresh CDD cache!"
-    echo $message
-    echo -e "$message" | mail -s "CDD cache failed to refresh" $email_list
-    sendPreImportFailureMessageMskPipelineLogsSlack "$message"
-    CDD_RECACHE_FAIL=1
-fi
-bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh --oncotree-only
-if [ $? -gt 0 ]; then
-    message="Failed to refresh ONCOTREE cache!"
-    echo $message
-    echo -e "$message" | mail -s "ONCOTREE cache failed to refresh" $email_list
-    sendPreImportFailureMessageMskPipelineLogsSlack "$message"
-    ONCOTREE_RECACHE_FAIL=1
-fi
-if [[ $CDD_RECACHE_FAIL -gt 0 || $ONCOTREE_RECACHE_FAIL -gt 0 ]] ; then
-    echo "Oncotree and/or CDD recache failed! Exiting..."
-    exit 2
+if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
+    # refresh cdd and oncotree cache - by default this script will attempt to
+    # refresh the CDD and ONCOTREE cache but we should check both exit codes
+    # independently because of the various dependencies we have for both services
+    CDD_RECACHE_FAIL=0;
+    ONCOTREE_RECACHE_FAIL=0
+    bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh --cdd-only
+    if [ $? -gt 0 ]; then
+        message="Failed to refresh CDD cache!"
+        echo $message
+        echo -e "$message" | mail -s "CDD cache failed to refresh" $email_list
+        sendPreImportFailureMessageMskPipelineLogsSlack "$message"
+        CDD_RECACHE_FAIL=1
+    fi
+    bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh --oncotree-only
+    if [ $? -gt 0 ]; then
+        message="Failed to refresh ONCOTREE cache!"
+        echo $message
+        echo -e "$message" | mail -s "ONCOTREE cache failed to refresh" $email_list
+        sendPreImportFailureMessageMskPipelineLogsSlack "$message"
+        ONCOTREE_RECACHE_FAIL=1
+    fi
+    if [[ $CDD_RECACHE_FAIL -gt 0 || $ONCOTREE_RECACHE_FAIL -gt 0 ]] ; then
+        echo "Oncotree and/or CDD recache failed! Exiting..."
+        exit 2
+    fi
 fi
 
 # fetch clinical data mercurial

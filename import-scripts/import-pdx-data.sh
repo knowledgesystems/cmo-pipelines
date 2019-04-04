@@ -190,14 +190,16 @@ ALL_HG_FETCH_SUCCESS=0
 IMPORT_SUCCESS=0
 TOMCAT_SERVER_RESTART_SUCCESS=0
 
-# refresh cdd and oncotree cache
 CDD_ONCOTREE_RECACHE_FAIL=0
-bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
-if [ $? -gt 0 ]; then
-    CDD_ONCOTREE_RECACHE_FAIL=1
-    message="Failed to refresh CDD and/or ONCOTREE cache during CRDB PDX import!"
-    echo $message
-    echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $pipelines_email_list
+if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
+    # refresh cdd and oncotree cache
+    bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
+    if [ $? -gt 0 ]; then
+        CDD_ONCOTREE_RECACHE_FAIL=1
+        message="Failed to refresh CDD and/or ONCOTREE cache during CRDB PDX import!"
+        echo $message
+        echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $pipelines_email_list
+    fi
 fi
 
 DB_VERSION_FAIL=0

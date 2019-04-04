@@ -14,14 +14,16 @@ JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Dspring.profiles.active=d
 genie_portal_notification_file=$(mktemp $tmp/genie-portal-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_2018_06_01
 
-# refresh cdd and oncotree cache
 CDD_ONCOTREE_RECACHE_FAIL=0
-bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
-if [ $? -gt 0 ]; then
-    CDD_ONCOTREE_RECACHE_FAIL=1
-    message="Failed to refresh CDD and/or ONCOTREE cache during TRIAGE import!"
-    echo $message
-    echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $email_list
+if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
+    # refresh cdd and oncotree cache
+    bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
+    if [ $? -gt 0 ]; then
+        CDD_ONCOTREE_RECACHE_FAIL=1
+        message="Failed to refresh CDD and/or ONCOTREE cache during TRIAGE import!"
+        echo $message
+        echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $email_list
+    fi
 fi
 
 DB_VERSION_FAIL=0

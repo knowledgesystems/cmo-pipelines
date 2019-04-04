@@ -10,9 +10,9 @@ export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -D
 export JAVA_BINARY=$JAVA_HOME/bin/java
 export PYTHON_BINARY=/data/tools/python2.7/bin/python
 export PYTHON3_BINARY=/data/tools/python3.4.10/bin/python3
-export MAVEN_BINARY=/data/portal-cron/bin/mvn
+export MAVEN_BINARY=/data/tools/mvn
 export HG_BINARY=/usr/bin/hg
-export PATH=/data/tools:/data/tools/python2.7/bin:/data/tools/python3.4.10/bin:/home/grossb/local/bin:$PATH
+export PATH=/data/tools:/data/tools/python2.7/bin:/data/tools/python3.4.10/bin:$PATH
 
 #######################
 # environment variables for top-level data repositories / code bases
@@ -50,6 +50,12 @@ export DMP_DATA_HOME=$PORTAL_DATA_HOME/dmp
 export FOUNDATION_DATA_HOME=$PORTAL_DATA_HOME/foundation
 export IMPACT_DATA_HOME=$PORTAL_DATA_HOME/impact
 export DATAHUB_DATA_HOME=$PORTAL_DATA_HOME/datahub/public
+
+#######################
+# environment variables used across import scripts
+#######################
+#export INHIBIT_RECACHING_FROM_TOPBRAID=true
+
 #######################
 # environment variables used in the fetch-and-import-dmp-impact-data script
 #######################
