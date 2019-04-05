@@ -180,8 +180,8 @@ public class CVRPipeline {
         }
         if (commandLine.hasOption("c")) {
             for (Option option : commandLine.getOptions()) {
-                if (!option.getOpt().equals("t") && !option.getOpt().equals("c")) {
-                    String error_message = "The --consume_samples option is only compatible with the --test option. " +
+                if (!option.getOpt().equals("t") && !option.getOpt().equals("c") && !option.getOpt().equals("g")) {
+                    String error_message = "The --consume_samples option is only compatible with the --test and --gml options. " +
                                     "You used an incompatible option (--" + option.getLongOpt() + "/-" + option.getOpt() + ")";
                     log.error(error_message);
                     help(options,1);
