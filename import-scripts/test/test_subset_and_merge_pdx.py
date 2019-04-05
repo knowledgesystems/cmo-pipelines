@@ -4,6 +4,7 @@
 # Author: Avery Wang
 
 import unittest
+import filecmp
 import tempfile
 import os.path
 import os
@@ -17,10 +18,12 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
     def setUpClass(cls):
         resource_dir = "test/resources/subset_and_merge_pdx/"
         data_repos = os.path.join(resource_dir, "data_repos/")
-        cls.expected_files = os.path.join(resource_dir, "expected_output")
+        cls.expected_files = os.path.join(resource_dir, "expected_outputs")
         
         # move all data into a temporary directory for manipulation
         cls.temp_dir = os.path.join(resource_dir, "tmp")
+        if os.path.isdir(cls.temp_dir):
+            shutil.rmtree(cls.temp_dir)
         shutil.copytree(data_repos, cls.temp_dir)
         
         cls.lib = "./"
@@ -56,10 +59,16 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         for destination, source_to_source_mapping in destination_to_source_mapping.items():
             for source, source_mapping in source_to_source_mapping.items():
                 expected_directory = os.path.join(self.expected_files, "subset_source_step", destination, source)
-                subsetted_directory = os.path.join(self.root_directory, destination, source)
-                print "Will compare: " + expected_directory + " to " + subsetted_directory
+                actual_directory = os.path.join(self.root_directory, destination, source)
+                if not "test_destination_study_2" in actual_directory:
+                    continue
+                for file in os.listdir(expected_directory):
+                    sorted_expected_file = self.sort_lines_in_file(os.path.join(expected_directory, file))
+                    sorted_actual_file = self.sort_lines_in_file(os.path.join(actual_directory, file))
+                    self.assertTrue(filecmp.cmp(sorted_expected_file, sorted_actual_file))
+                    os.remove(sorted_expected_file)
+                    os.remove(sorted_actual_file)
 
- 
     def check_destination_source_mappings(self, destination_to_source_mapping):
         expected_destination_ids = ["test_destination_study_1", "test_destination_study_2"]
         expected_source_ids = ["test_source_study_1", "cmo_test_source_study_1", "test_msk_solid_heme", "crdb_pdx_raw_data"] 
@@ -107,6 +116,16 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         self.assertEquals(os.path.join(self.cmo_directory, "cmo/test/source/study_1"), resolve_source_study_path("cmo_test_source_study_1", [self.datahub_directory, self.cmo_directory, self.dmp_directory]))
         self.assertEquals(os.path.join(self.dmp_directory, "test_msk_solid_heme"), resolve_source_study_path("test_msk_solid_heme", [self.datahub_directory, self.cmo_directory, self.dmp_directory]))
         self.assertFalse(resolve_source_study_path("fake_study_path", [self.datahub_directory, self.cmo_directory, self.dmp_directory]))
+
+    def sort_lines_in_file(self, filename):
+        f = open(filename, "r")
+        to_write = sorted(f.readlines())
+        f.close()
+        sorted_filename = filename + "_sorted"
+        f = open(sorted_filename, "w")
+        f.write(''.join(to_write))
+        f.close()
+        return sorted_filename
 
 if __name__ == '__main__':
     unittest.main()
