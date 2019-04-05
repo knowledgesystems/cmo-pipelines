@@ -1,0 +1,7 @@
+type_of_cancer: mixed
+cancer_study_identifier: mixed_cbe_scaltrim_MS_ntrk
+name: Molecular Characterization of NTRK samples - Scaltriti (CMO MS_ntrk [07391])
+date_of_last_update: 2019-01-21
+description: To characterize the genetic landscape of NTRK-fused tumor samples from PDXs and primary cell lines established from patients enrolled in the LOXO101 clinical trial at MSKCC (Dr. Drilon). (updated on 2019-01-21) (ver v_2.0.1-41-g7c03a2d; BATCHES: B_P1_ZP,F,I_ZP,K,M_410_ZP,M_468_ZP,T_ZP,U_ZP,W)
+groups: COMPONC;SCALTRIM
+short_name: MIXED (CMO MS_ntrk [07391])
