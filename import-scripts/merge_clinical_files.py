@@ -281,7 +281,7 @@ def main():
 
     cdd_url = args.cdd_url
     directory = args.directory
-    study_id = args.study_id
+    study_id = args.study_id if has_overrides(args.study_id, cdd_url) else ""
 
     if not os.path.exists(directory):
         print >> ERROR_FILE, "No such directory '%s' - exiting..." % (directory)

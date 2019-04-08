@@ -106,7 +106,7 @@ MULTIPLE_RESOLVED_STUDY_PATHS = {}
 IMPACT_STUDY_ID = 'msk_solid_heme'
 CRDB_FETCH_SOURCE_ID= 'crdb_pdx_raw_data'
 
-CASE_ID_COLS = ["SAMPLE_ID", "PATIENT_ID"]
+CASE_ID_COLS = ["SAMPLE_ID", "PATIENT_ID", "ONCOTREE_CODE"]
 # TO TRACK WHETHER OR NOT TO IMPORT (TRIGGER FILES)
 # for each step (i.e subset sources/genomic data, merging, subset crdb-pdx clinical) - set a status flag in a map
 # at the end, evaluate status flags in map for each destination study
@@ -445,18 +445,12 @@ def filter_clinical_annotations(source_subdirectory, clinical_annotations):
         filtered_header = get_filtered_header(header, clinical_annotations)
         if not filtered_header:
             continue
+        attribute_indices = [header.index(attribute) for attribute in filtered_header]
         with open(clinical_file, "r") as f:
-            header_processed = False
             for line in f:
-                # add filtered header if not already processed
-                if not header_processed:
-                    to_write.append("\t".join(filtered_header))
-                    header_processed = True
-                    continue
-                # now add filtered data
-                data = dict(zip(header, map(str.strip, line.split('\t'))))
-                filtered_data = map(lambda x: data.get(x, ""), filtered_header)
-                to_write.append("\t".join(filtered_data))
+                data = line.rstrip("\n").split("\t")
+                data_to_write = [data[index] for index in attribute_indices]
+                to_write.append('\t'.join(data_to_write)) 
         with open(clinical_file, "w") as f:
             f.write('\n'.join(to_write) + "\n")
 
@@ -489,7 +483,7 @@ def convert_cmo_to_dmp_pids_in_clinical_files(source_subdirectory, source_mappin
                     pass
                 to_write.append('\t'.join(data))
         with open(clinical_file, "w") as f:
-            f.write('\n'.join(to_write))
+            f.write('\n'.join(to_write) + "\n")
 
 #------------------------------------------------------------------------------------------------------------
 # Functions for handling metafile processing
