@@ -12,6 +12,7 @@ import io
 import sys
 
 from subset_and_merge_crdb_pdx_studies import *
+from clinicalfile_utils import *
 
 class TestSubsetAndMergePDXStudies(unittest.TestCase):
 
@@ -22,7 +23,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         
         resource_dir = "test/resources/subset_and_merge_pdx/"
         cls.data_repos = os.path.join(resource_dir, "data_repos/")
-        cls.crdb_fetch_directory_backup = os.path.join(cls.data_repos, "crdb_pdx_raw_data/")
+        cls.crdb_fetch_directory_backup = os.path.join(cls.data_repos, "crdb_pdx_repos/crdb_pdx_raw_data/")
         cls.expected_files = os.path.join(resource_dir, "expected_outputs")
         
         # move all data into a temporary directory for manipulation
@@ -45,6 +46,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         cls.destination_source_patient_mapping_records = parse_file(cls.destination_to_source_mapping_file)
         cls.destination_source_clinical_annotation_mapping_records = parse_file(cls.clinical_annotations_mapping_file)
         cls.destination_to_source_mapping = create_destination_to_source_mapping(cls.destination_source_patient_mapping_records, cls.destination_source_clinical_annotation_mapping_records, cls.root_directory)
+        cls.source_id_to_path_mapping = create_source_id_to_path_mapping(cls.destination_to_source_mapping, [cls.datahub_directory, cls.cmo_directory, cls.dmp_directory], cls.crdb_fetch_directory)
     
     @classmethod
     def tearDownClass(cls):
@@ -106,8 +108,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         # setup `temp directory` to model entire data repo - everything is needed for subsetting
         shutil.rmtree(self.temp_dir)
         shutil.copytree(self.data_repos, self.temp_dir)
-        source_id_to_path_mapping = create_source_id_to_path_mapping(self.destination_to_source_mapping, [self.datahub_directory, self.cmo_directory, self.dmp_directory], self.crdb_fetch_directory)
-        subset_source_directories(self.destination_to_source_mapping, source_id_to_path_mapping, self.root_directory, self.lib)
+        subset_source_directories(self.destination_to_source_mapping, self.source_id_to_path_mapping, self.root_directory, self.lib)
         self.check_subset_source_step()
 
     def check_subset_source_step(self):
@@ -166,6 +167,35 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             for clinical_file in [filename for filename in os.listdir(expected_directory) if "data_clinical" in filename]:
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
 
+    def test_subset_timeline_files_step(self):
+        self.setup_root_directory_with_previous_test_output("merge_clinical_files_step")
+        shutil.copytree(self.crdb_fetch_directory_backup, self.crdb_fetch_directory)
+        subset_timeline_files(self.destination_to_source_mapping, self.source_id_to_path_mapping, self.root_directory, self.crdb_fetch_directory, self.lib)
+        self.check_subset_timeline_files_step()
+
+    def check_subset_timeline_files_step(self):
+        for destination in self.destination_to_source_mapping:
+            expected_directory = os.path.join(self.expected_files, "subset_timeline_files_step", destination)
+            actual_directory = os.path.join(self.root_directory, destination)
+            for timeline_file in [filename for filename in os.listdir(expected_directory) if "data_timeline" in filename]:
+                self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, timeline_file), os.path.join(expected_directory, timeline_file)))
+ 
+    def test_drop_hgvsp_short_column_step(self):
+        self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
+        files_with_hgvsp_short = self.get_files_with_hgvsp_short()
+        remove_hgvsp_short_column(self.destination_to_source_mapping, self.root_directory)
+        for file_with_hgvsp_short in files_with_hgvsp_short:
+            self.assertTrue("HGVSp_Short" not in get_header(file_with_hgvsp_short))
+    
+    def get_files_with_hgvsp_short(self):
+        files_with_hgvsp_short = []
+        for destination in self.destination_to_source_mapping:
+            directory = os.path.join(self.root_directory, destination)
+            mutations_file = os.path.join(directory, "data_mutations_extended.txt")
+            if os.path.isfile(mutations_file) and "HGVSp_Short" in get_header(mutations_file):
+                files_with_hgvsp_short.append(mutations_file)
+        return files_with_hgvsp_short
+    
     def setup_root_directory_with_previous_test_output(self, previous_step):
         shutil.rmtree(self.root_directory)
         for destination in self.destination_to_source_mapping:

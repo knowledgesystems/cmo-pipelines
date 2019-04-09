@@ -362,12 +362,12 @@ def subset_timeline_files(destination_to_source_mapping, source_id_to_path_mappi
         destination_directory = os.path.join(root_directory, destination)
         temp_directory = os.path.join(destination_directory, "tmp")
         os.mkdir(temp_directory)
-        subset_timeline_file_call = generate_bash_subset_call(lib, temp_directory, "/home/wanga5/", crdb_fetch_directory, patient_list, CLINICAL_SAMPLE_FILE_PATTERN)
+        subset_timeline_file_call = generate_bash_subset_call(lib, destination, temp_directory, crdb_fetch_directory, patient_list, CLINICAL_SAMPLE_FILE_PATTERN)
         subset_timeline_file_status = subprocess.call(subset_timeline_file_call, shell = True)
         if subset_timeline_file_status == 0:
             DESTINATION_STUDY_STATUS_FLAGS[destination][SUBSET_CLINICAL_FILES_SUCCESS] = True
             os.rename(os.path.join(temp_directory, "data_timeline.txt"), os.path.join(destination_directory, "data_timeline.txt"))
-        os.rmdir(temp_directory)
+        shutil.rmtree(temp_directory)
 
 def generate_import_trigger_files(destination_to_source_mapping, temp_directory):
     for destination in destination_to_source_mapping:
