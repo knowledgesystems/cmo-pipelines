@@ -20,7 +20,6 @@ DATAHUB_NAME = "datahub"
 MERGE_GENOMIC_FILES_SUCCESS = "MERGE_GENOMIC_FILES_SUCCESS"
 SUBSET_CLINICAL_FILES_SUCCESS = "SUBSET_CLINICAL_FILES_SUCCESS"
 HAS_ALL_METAFILES = "HAS_ALL_METAFILES"
-HAS_SPECIFIED_CLINICAL_ANNOTATIONS = "test"
 
 TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
 TRIGGER_FILE_REVERT_SUFFIX = "_revert_triggerfile"
@@ -121,7 +120,6 @@ class Patient():
         self.cmo_pid = cmo_pid
         self.dmp_pid = dmp_pid
 
-# Which patients and clinical annotations are wanted for a source
 class SourceMappings():
     def __init__(self):
         self.patients = []
@@ -144,11 +142,16 @@ class SourceMappings():
         self.clinical_annotations.append(clinical_annotation)
 
 #------------------------------------------------------------------------------------------------------------
-# Functions for general setup - loading mappings into a dictionaries to work with
+'''
+    Step 1: General Setup - loading mappings into dictionaries to work with
+'''
 
-# returns list of dictionaries, where each dictionary represents a row (keys are column headers)
-# will skip rows that do not contain same number of columns as header
 def parse_file(file):
+    '''
+        Returns a list of dictionaries, each dictionary representing a row
+        Dictionary keys are the column header
+        Skips rows that do not contain the same number of columns as the header
+    '''
     records = []
     with open(file, 'r') as f:
         reader = csv.DictReader(f, delimiter = "\t")
@@ -157,12 +160,16 @@ def parse_file(file):
                 records.append(record)
     return records
 
-# create a dictionary representation that can be used for subsetting
-# takes parse_file() output as input (list of dictionaries)
-# output: { DESTINATION_1 : { SOURCE_1 : [ PID_1, PID2, PID3...],
-#                             SOURCE_2 : [ PID_4, ...] },
-#           mixed_pdx_aacf : { ke_07_83_b : [ P_000001, ...] }}
 def create_destination_to_source_mapping(destination_source_patient_mapping_records, destination_source_clinical_annotation_mapping_records, root_directory):
+    '''
+        Creates a dictionary representation of the mappings per destination-source pairing which is
+        passed around for subsetting/merging/ etc. Takes parse_file() output as input (list of dictionaries)
+    
+        Ex: { DESTINATION_1 : { SOURCE_1 : SourceMappings([PID_1, PID_2...], [CLINATTR_1, CLINATTR_2]),
+                                SOURCE_2 : SourceMappings([PID_3, ...], ...) },
+              DESTINATION_2 : { SOURCE_1 : SourceMappings([PID_5, PID_6...]) }
+            }
+    '''
     destination_to_source_mapping = {}
     # load in all patients associated with source study per destination
     for record in destination_source_patient_mapping_records:
@@ -177,7 +184,7 @@ def create_destination_to_source_mapping(destination_source_patient_mapping_reco
             print destination_directory + " cannot be found. This study will not be generated until this study is created in mercurial and marked in google spreadsheets"
             continue
         if destination not in DESTINATION_STUDY_STATUS_FLAGS:
-            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False, HAS_SPECIFIED_CLINICAL_ANNOTATIONS : True }
+            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False }
         if destination not in SKIPPED_SOURCE_STUDIES:
             SKIPPED_SOURCE_STUDIES[destination] = set()
         if destination not in destination_to_source_mapping:
@@ -279,34 +286,11 @@ def create_source_id_to_path_mapping(destination_to_source_mapping, data_source_
         # resolved source path 'None' handled by resolve_source_study_path(...)
         source_id_to_path_mapping[source_id] = resolve_source_study_path(source_id, data_source_directories)
     return source_id_to_path_mapping
-
 #------------------------------------------------------------------------------------------------------------
-# generates files containing sample-ids linked to specified patient-ids (by destination-source)
-# placed in corresponding directories - multiple source per destination
-# i.e (/home/destination_study/source_1/subset_list, home/destination_study/source_2/subset_list)
-# not currently used -- covered by merge script (but might be needed later on)
-def generate_all_subset_sample_lists(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib):
-    for destination, source_to_source_mappings in destination_to_source_mapping.items():
-        for source, patients in source_to_source_mappings.items():
-            # destination directory is a working subdirectory matching the source
-            destination_directory = os.path.join(root_directory, destination, source)
-            source_directory = source_id_to_path_mapping[source]
-            if not os.path.isdir(destination_directory):
-                os.makedirs(destination_directory)
-            if source_directory:
-                patient_list = ','.join([patient.cmo_pid for patient in patients])
-                subset_script_call = generate_python_subset_call(lib, destination, destination_directory, source_directory, patient_list)
-                subprocess.call(subset_script_call, shell = True)
-            else:
-                print "ERROR: source path for " + source + " could not be found, skipping..."
+'''
+    Step 2: Subsetting source directory files into destination/source sub-directory
+'''
 
-def get_clinical_file_pattern_to_use(source_directory):
-    for clinical_file in [CLINICAL_SAMPLE_FILE_PATTERN, CLINICAL_FILE_PATTERN]:
-        if os.path.isfile(os.path.join(source_directory, clinical_file)):
-            return clinical_file
-
-#------------------------------------------------------------------------------------------------------------
-# subsets source directory files (clinical and genomic) into destination/source sub-directory
 def subset_source_directories(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib):
     for destination, source_to_source_mappings in destination_to_source_mapping.items():
         for source, source_mappings in source_to_source_mappings.items():
@@ -330,8 +314,112 @@ def subset_source_directories(destination_to_source_mapping, source_id_to_path_m
             else:
                 print "Error, source path for " + source + " could not be found, skipping..."
 
+def get_clinical_file_pattern_to_use(source_directory):
+    for clinical_file in [CLINICAL_SAMPLE_FILE_PATTERN, CLINICAL_FILE_PATTERN]:
+        if os.path.isfile(os.path.join(source_directory, clinical_file)):
+            return clinical_file
 #------------------------------------------------------------------------------------------------------------
-# merge all source directory files (clinical and genomic) across destination/source subdirectores (destination1/source1, destination1/source2, destination1/source3)
+'''
+    Step 3: Intermediary date processing - filter clinical annotations and rename patient ids
+'''
+
+def remove_unwanted_clinical_annotations_in_subsetted_source_studies(destination_to_source_mapping, root_directory):
+    '''
+        Wrapper which applies "filter-clinical-annotation" step to every source-destination pair. The step is not applied
+        to the CRDB-fetched files because we want to keep ALL CRDB-fetched clinical annotations
+    '''
+    for destination, source_to_source_mappings in destination_to_source_mapping.items():
+        for source, source_mapping in source_to_source_mappings.items():
+            if not source == CRDB_FETCH_SOURCE_ID and source not in SKIPPED_SOURCE_STUDIES[destination]:
+                source_subdirectory = os.path.join(root_directory, destination, source)
+                filter_clinical_annotations(source_subdirectory, source_mapping.clinical_annotations)
+
+def get_filtered_header(header, clinical_annotations):
+    '''
+        Returns filtered header containing only case id columns and the clinical annotations specified.
+    '''
+    # init the filtered header with the case id columns
+    filtered_header = [column for column in header if column in CASE_ID_COLS]
+    for column in header:
+        # add columns to filtered_header if in set of clinical annotations and not already in header
+        # the second check is done to ensure that duplicate columns are not added by accident
+        if column in clinical_annotations and not column in filtered_header:
+            filtered_header.append(column)
+    return filtered_header
+
+def filter_clinical_annotations(source_subdirectory, clinical_annotations):
+    '''
+        Given a directory - remove all clinical attributes across all clinical files that are not specified in clinical annotations.
+        "PATIENT_ID", "SAMPLE_ID", "ONCOTREE_CODE" are never removed because they are required for merging/importing.
+    '''
+    clinical_files = [os.path.join(source_subdirectory, filename) for filename in  os.listdir(source_subdirectory) if "data_clinical" in filename]
+    for clinical_file in clinical_files:
+        to_write = []
+        header = get_header(clinical_file)
+        filtered_header = get_filtered_header(header, clinical_annotations)
+        if not filtered_header:
+            continue
+        # gets index of the "filtered attributes" in the header
+        # writing out record columns by index (deals with metadata headers as well)
+        attribute_indices = [header.index(attribute) for attribute in filtered_header]
+        with open(clinical_file, "r") as f:
+            for line in f:
+                data = line.rstrip("\n").split("\t")
+                data_to_write = [data[index] for index in attribute_indices]
+                to_write.append('\t'.join(data_to_write)) 
+        with open(clinical_file, "w") as f:
+            f.write('\n'.join(to_write) + "\n")
+
+def convert_cmo_to_dmp_pids_in_subsetted_source_studies(destination_to_source_mapping, root_directory):
+    '''
+        For every source-destination pair - convert CMO patient ids to DMP patient ids across all clinical files
+        Needed because we are mergining clinical files between differenct sources (DMP and CMO) instead of just overwriting with CRDB-fetched clinical files
+        Subsetted CMO clinical files have CMO patient id to sample mappings - convert to DMP/destination patient id from source destination mapping file
+        Ex:
+            >>> Source 1 (CRDB/DMP)
+                DMP_PATIENT_1: Sample 1
+                DMP_PATIENT_2: Sample 2
+            
+            >>> Source 2 (CMO)
+                CMO_PATIENT_1: Sample 1
+                CMO_PATIENT_2: Sample 2
+        
+            Merge clashes for Sample 1 (matches to different patients in same destination study)
+    '''
+    for destination, source_to_source_mappings in destination_to_source_mapping.items():
+        for source, source_mapping in source_to_source_mappings.items():
+             if source not in SKIPPED_SOURCE_STUDIES[destination]:
+                source_subdirectory = os.path.join(root_directory, destination, source)
+                convert_cmo_to_dmp_pids_in_clinical_files(source_subdirectory, source_mapping)
+
+def convert_cmo_to_dmp_pids_in_clinical_files(source_subdirectory, source_mapping):
+    ''' 
+        Replaces patient id (defined as column indexed by "PATIENT_ID"). Looksup current value in the "Source/CMO patient id column" and
+        replaces it with the value in the "destination/DMP patient id column".
+    ''' 
+    clinical_files = [os.path.join(source_subdirectory, filename) for filename in  os.listdir(source_subdirectory) if "data_clinical" in filename]
+    for clinical_file in clinical_files:
+        to_write = []
+        header = get_header(clinical_file)
+        pid_index = header.index("PATIENT_ID")
+        # load data to write out - patient id column replaced with what's specified in "DESTINATION_PATIENT_ID" in source mapping file
+        # same line written if no mapping is available
+        with open(clinical_file, "r") as f:
+            for line in f:
+                data = line.rstrip("\n").split("\t")
+                try:   
+                    source_pid = data[pid_index]
+                    data[pid_index] = source_mapping.get_patient_for_cmo_pid(source_pid).dmp_pid
+                except:
+                    pass
+                to_write.append('\t'.join(data))
+        with open(clinical_file, "w") as f:
+            f.write('\n'.join(to_write) + "\n")
+#------------------------------------------------------------------------------------------------------------
+'''
+    Step 4: Merge all source directory files (clinical and genomic) across destination/source subdirectories (destination/source1, destination/source2, destination/source3)
+'''
+
 def merge_source_directories(destination_to_source_mapping, root_directory, lib):
     for destination, source_to_source_mappings in destination_to_source_mapping.items():
         destination_directory = os.path.join(root_directory, destination)
@@ -345,8 +433,11 @@ def merge_source_directories(destination_to_source_mapping, root_directory, lib)
         merge_source_subdirectories_status = subprocess.call(merge_source_subdirectories_call, shell = True)
         if merge_source_subdirectories_status == 0:
             DESTINATION_STUDY_STATUS_FLAGS[destination][MERGE_GENOMIC_FILES_SUCCESS] = True
+#------------------------------------------------------------------------------------------------------------
+'''
+    Step 5: Merge legacy and current clinical files (data_clinical_patient/sample.txt  with data_clinical.txt
+'''
 
-# for all destination directories - merge clinical files if destination has both legacy and current clinical files (data_clinical.txt + data_clinical_patient/sample.txt)
 def merge_clinical_files(destination_to_source_mapping, root_directory, lib):
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
@@ -354,7 +445,11 @@ def merge_clinical_files(destination_to_source_mapping, root_directory, lib):
         print merge_clinical_files_call
         subprocess.call(merge_clinical_files_call, shell = True)
 
-# subsets clinical files from crdb-pdx fetch directory into the top level destination directory
+#------------------------------------------------------------------------------------------------------------
+'''
+    Step 6: Subset CRDB-fetched timeline files and overwrite existing subsetted/merged timeline files
+'''
+
 def subset_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib):
     for destination, source_to_source_mappings in destination_to_source_mapping.items():
         patient_list = ','.join([patient.dmp_pid for source_mappings in source_to_source_mappings.values() for patient in source_mappings.patients])
@@ -368,6 +463,39 @@ def subset_timeline_files(destination_to_source_mapping, source_id_to_path_mappi
             DESTINATION_STUDY_STATUS_FLAGS[destination][SUBSET_CLINICAL_FILES_SUCCESS] = True
             os.rename(os.path.join(temp_directory, "data_timeline.txt"), os.path.join(destination_directory, "data_timeline.txt"))
         shutil.rmtree(temp_directory)
+#------------------------------------------------------------------------------------------------------------
+'''
+    Step 7: Post-processing - remove HGVSp_Short column from data_mutations_extended.txt
+'''
+
+def remove_hgvsp_short_column(destination_to_source_mapping, root_directory):
+    '''
+        Needed because CMO studies are unannotated but IMPACT studies are annotated. A merge of CMO and IMPACT studies
+        results in partially annotated MAF. The annotator will not annotate the unannotated records because it assumes
+        MAF is annotated based on presence of HGVSp_Short column. Removing the column triggers re-annotation of entire MAF 
+        upon import.
+    ''' 
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
+        if "HGVSp_Short" in get_header(maf):
+            hgvsp_short_index = get_header(maf).index("HGVSp_Short")
+            maf_to_write = []
+            maf_file = open(maf, "rU")
+            for line in maf_file:
+                if line.startswith("#"):
+                    maf_to_write.append(line.rstrip("\n"))
+                else:
+                    record = line.rstrip("\n").split('\t')
+                    maf_to_write.append('\t'.join(record[0:hgvsp_short_index] + record[hgvsp_short_index + 1:]))
+            maf_file.close()
+            new_file = open(maf, "w")
+            new_file.write('\n'.join(maf_to_write))
+            new_file.close()
+#------------------------------------------------------------------------------------------------------------
+'''
+    Functions for generating logging/notifications
+'''
 
 def generate_import_trigger_files(destination_to_source_mapping, temp_directory):
     for destination in destination_to_source_mapping:
@@ -416,85 +544,14 @@ def generate_warning_file(temp_directory, warning_file):
             warning_file.write("\n  ".join(success_code_message))
 
 #------------------------------------------------------------------------------------------------------------
-# Processing functions that occur after subsetting source studies - but before merging into destination studies
+'''
+    Functions for metafile handling
+'''
 
-# For source studies per destination - select for clinical annotations to keep as specified by CRDB fetched clinical annotations mapping file
-def remove_unwanted_clinical_annotations_in_subsetted_source_studies(destination_to_source_mapping, root_directory):
-    for destination, source_to_source_mappings in destination_to_source_mapping.items():
-        for source, source_mapping in source_to_source_mappings.items():
-            if not source == CRDB_FETCH_SOURCE_ID and source not in SKIPPED_SOURCE_STUDIES[destination]:
-                source_subdirectory = os.path.join(root_directory, destination, source)
-                filter_clinical_annotations(source_subdirectory, source_mapping.clinical_annotations)
-
-def get_filtered_header(header, clinical_annotations):
-    '''
-        Returns filtered header containing only case id columns and the clinical annotations specified.
-    '''
-    # init the filtered header with the case id columns
-    filtered_header = [column for column in header if column in CASE_ID_COLS]
-    for column in header:
-        # add columns to filtered_header if in set of clinical annotations and not already in header
-        # the second check is done to ensure that duplicate columns are not added by accident
-        if column in clinical_annotations and not column in filtered_header:
-            filtered_header.append(column)
-    return filtered_header
-
-# Given a directory - remove all clinical attributes in clinical files not specified in clinical_annotations
-# "PATIENT_ID" and "SAMPLE_ID" are never removed - because they are needed for "merging" in downstream steps
-def filter_clinical_annotations(source_subdirectory, clinical_annotations):
-    clinical_files = [os.path.join(source_subdirectory, filename) for filename in  os.listdir(source_subdirectory) if "data_clinical" in filename]
-    for clinical_file in clinical_files:
-        to_write = []
-        header = get_header(clinical_file)
-        filtered_header = get_filtered_header(header, clinical_annotations)
-        if not filtered_header:
-            continue
-        attribute_indices = [header.index(attribute) for attribute in filtered_header]
-        with open(clinical_file, "r") as f:
-            for line in f:
-                data = line.rstrip("\n").split("\t")
-                data_to_write = [data[index] for index in attribute_indices]
-                to_write.append('\t'.join(data_to_write)) 
-        with open(clinical_file, "w") as f:
-            f.write('\n'.join(to_write) + "\n")
-
-# For source studies per destination - convert CMO patient ids to DMP patient ids in clinical files
-# Needed because we are merging clinical files (from all sources and not just overwriting with CRDB-fetched clinical files)
-# Subsetted CMO clinical files have CMO patient id to sample mappings - convert these to DMP patient id specified in source to destination mapping file
-def convert_cmo_to_dmp_pids_in_subsetted_source_studies(destination_to_source_mapping, root_directory):
-    for destination, source_to_source_mappings in destination_to_source_mapping.items():
-        for source, source_mapping in source_to_source_mappings.items():
-             if source not in SKIPPED_SOURCE_STUDIES[destination]:
-                source_subdirectory = os.path.join(root_directory, destination, source)
-                convert_cmo_to_dmp_pids_in_clinical_files(source_subdirectory, source_mapping)
-
-# Converts pids across all clinical files in a directory (defined as files with "data_clinical" in name)
-def convert_cmo_to_dmp_pids_in_clinical_files(source_subdirectory, source_mapping):   
-    clinical_files = [os.path.join(source_subdirectory, filename) for filename in  os.listdir(source_subdirectory) if "data_clinical" in filename]
-    for clinical_file in clinical_files:
-        to_write = []
-        header = get_header(clinical_file)
-        pid_index = header.index("PATIENT_ID")
-        # load data to write out - patient id column replaced with what's specified in "DESTINATION_PATIENT_ID" in source mapping file
-        # same line written if no mapping is available
-        with open(clinical_file, "r") as f:
-            for line in f:
-                data = line.rstrip("\n").split("\t")
-                try:   
-                    source_pid = data[pid_index]
-                    data[pid_index] = source_mapping.get_patient_for_cmo_pid(source_pid).dmp_pid
-                except:
-                    pass
-                to_write.append('\t'.join(data))
-        with open(clinical_file, "w") as f:
-            f.write('\n'.join(to_write) + "\n")
-
-#------------------------------------------------------------------------------------------------------------
-# Functions for handling metafile processing
-
-# goes through all destination studies and checks for missing metafiles
-# missing metafiles are added to global map (destination : [ list of missing metafiles ]
 def get_all_destination_to_missing_metafiles_mapping(destination_to_source_mapping, root_directory):
+    '''
+        For all specified destination studies, check for missing metafiles and add to a global map.
+    '''
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
         missing_metafiles = get_missing_metafiles_in_directory(destination_directory)
@@ -505,8 +562,11 @@ def get_all_destination_to_missing_metafiles_mapping(destination_to_source_mappi
         else:
             DESTINATION_TO_MISSING_METAFILES_MAP[destination] = missing_metafiles
 
-# returns None if there no matching metafile
 def get_matching_metafile_name(filename):
+    '''
+        Given a filename (e.g data_clinical.txt) return matching metafile name. 
+        If there is no matching metafile - function returns None.
+    '''
     metafile_name = None
     if SEG_HG18_FILE_PATTERN in filename:
         metafile_name = filename.replace(SEG_HG18_FILE_PATTERN, SEG_HG18_META_PATTERN)
@@ -517,17 +577,21 @@ def get_matching_metafile_name(filename):
             metafile_name = FILE_TO_METAFILE_MAP[filename]
     return metafile_name
 
-# goes through all files in a directory and checks if corresponding metafiles exist
-# files which do not require a metafile are ignored
 def get_missing_metafiles_in_directory(directory):
+    '''
+        Goes through all files in a given directory and check for matching  metafiles.
+        Files which do not require a metafile are ignored.
+    '''
     expected_metafiles = [get_matching_metafile_name(file) for file in os.listdir(directory)]
     missing_metafiles = [metafile for metafile in expected_metafiles if metafile and not os.path.exists(os.path.join(directory, metafile))]
     return missing_metafiles
 
-# assumes directory starts off without metafiles
-# does not check whether metafiles already exist
-# metafiles are touched as long as a matching datafile is found in the directory
 def touch_missing_metafiles(directory):
+    '''
+        Assumes pre-condition: provided directory starts off without metafiles.
+        Does not check whether metafiles are exist
+        Metafiles are touched for datafiles found in the directory
+    '''
     for file in os.listdir(directory):
         metafile_name = get_matching_metafile_name(file)
         if metafile_name:
@@ -535,41 +599,9 @@ def touch_missing_metafiles(directory):
             subprocess.call(touch_metafile_call, shell = True)
 
 #------------------------------------------------------------------------------------------------------------
-# Utility functions for post-processing/cleanup - generally right before import
-
-# needed because IMPACT study is being automatically pulled in and need to be added to the existing data_clinical_sample.txt
-# data_clinical_sample.txt per destination study  is originally subsetted from CRDB-PDX fetched file and does not contain IMPACT samples
-# unmapped IMPACT samples are not mapped to their patients/shown as seperate patients in the portal
-# not currently needed - IMPACT now treated as any other source study
-def add_patient_sample_records(destination_to_source_mapping, root_directory, lib):
-    for destination in destination_to_source_mapping:
-        destination_directory = os.path.join(root_directory, destination)
-        impact_source_subdirectory = os.path.join(root_directory, destination, IMPACT_STUDY_ID)
-        add_clinical_records_call = generate_add_clinical_records_call(lib, destination_directory, impact_source_subdirectory)
-        add_clinical_records_status = subprocess.call(add_clinical_records_call, shell = True)
-
-# needed because CMO studies are unannotated but IMPACT studies are
-# a merge of CMO + IMPACT studies results in a partially annotated MAF
-# (IMPACT study is pulled in whenever patient-ids are DMP ids)
-# annotator assumes MAF is annotated because HGVSp_short column is present - CMO samples never annotated
-def remove_hgvsp_short_column(destination_to_source_mapping, root_directory):
-    for destination in destination_to_source_mapping:
-        destination_directory = os.path.join(root_directory, destination)
-        maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
-        if "HGVSp_Short" in get_header(maf):
-            hgvsp_short_index = get_header(maf).index("HGVSp_Short")
-            maf_to_write = []
-            maf_file = open(maf, "rU")
-            for line in maf_file:
-                if line.startswith("#"):
-                    maf_to_write.append(line.rstrip("\n"))
-                else:
-                    record = line.rstrip("\n").split('\t')
-                    maf_to_write.append('\t'.join(record[0:hgvsp_short_index] + record[hgvsp_short_index + 1:]))
-            maf_file.close()
-            new_file = open(maf, "w")
-            new_file.write('\n'.join(maf_to_write))
-            new_file.close()
+'''
+    Functions for removing extra/tempfiles - generally right before import
+'''
 
 def remove_file_if_exists(destination_directory, filename):
     file_to_remove = os.path.join(destination_directory, filename)
@@ -593,7 +625,9 @@ def remove_source_subdirectories(destination_to_source_mapping, root_directory):
             shutil.rmtree(source_subdirectory)
 
 #------------------------------------------------------------------------------------------------------------
-# Functions for generating executable commands
+'''
+    Functions for generating executable commands
+'''
 
 def generate_python_subset_call(lib, cancer_study_id, destination_directory, source_directory, patient_list):
     python_subset_call = 'python ' + lib + '/generate-clinical-subset.py --study-id=' + cancer_study_id + ' --clinical-file=' + source_directory + '/data_clinical.txt --filter-criteria="PATIENT_ID=' + patient_list + '" --subset-filename=' + destination_directory + "/subset_file.txt"
@@ -611,11 +645,53 @@ def generate_merge_clinical_files_call(lib, cancer_study_id, destination_directo
     merge_clinical_files_call = 'python ' + lib + '/merge_clinical_files.py -d ' + destination_directory + ' -s ' + cancer_study_id
     return merge_clinical_files_call
 
-# used in sample-mode because data_clinical_sample.txt is being extended - sample id should be used as primary key for each record
+
+#------------------------------------------------------------------------------------------------------------
+'''
+    Functions that are currently not used
+'''
+
+def generate_all_subset_sample_lists(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib):
+    '''
+        Generates files containing sample ids linked to specific patient ids (by destination-source)
+        Each 'subset list' is placed in corresponding directories (multiple source per destination)
+        Ex: (/home/destination_study/source_1/ subset_list, /home/destination_study/source_2/subset_list)
+        Not currently used - covered by merge script
+    '''
+    for destination, source_to_source_mappings in destination_to_source_mapping.items():
+        for source, patients in source_to_source_mappings.items():
+            # destination directory is a working subdirectory matching the source
+            destination_directory = os.path.join(root_directory, destination, source)
+            source_directory = source_id_to_path_mapping[source]
+            if not os.path.isdir(destination_directory):
+                os.makedirs(destination_directory)
+            if source_directory:
+                patient_list = ','.join([patient.cmo_pid for patient in patients])
+                subset_script_call = generate_python_subset_call(lib, destination, destination_directory, source_directory, patient_list)
+                subprocess.call(subset_script_call, shell = True)
+            else:
+                print "ERROR: source path for " + source + " could not be found, skipping..."
+
+def add_patient_sample_records(destination_to_source_mapping, root_directory, lib):
+    '''    
+        Needed because IMPACT study is being pulled in through a side process and needs to be added to the existing data_clinical_sample.txt
+        data_clinical_sample.txt per destination study  is originally subsetted from CRDB-PDX fetched file and does not contain IMPACT samples
+        Unmapped IMPACT samples are not mapped to their patients/shown as seperate patients in the portal
+        No longer used since 04/2019 - IMPACT integrated to normal subsetting/merging processes 
+    '''
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        impact_source_subdirectory = os.path.join(root_directory, destination, IMPACT_STUDY_ID)
+        add_clinical_records_call = generate_add_clinical_records_call(lib, destination_directory, impact_source_subdirectory)
+        add_clinical_records_status = subprocess.call(add_clinical_records_call, shell = True)
+
 def generate_add_clinical_records_call(lib, destination_directory, impact_source_subdirectory):
+    '''
+        used in sample-mode because data_clinical_sample.txt is being extended - sample id should be used as primary key for each record
+        No longer used since 04/2019 - IMPACT integrated to normal subsetting/merging processes 
+    '''
     add_clinical_records_call = 'python ' + lib + '/add_clinical_records.py -c ' + destination_directory + '/data_clinical_sample.txt -s ' + impact_source_subdirectory + '/data_clinical_sample.txt -f "PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE" -l' + lib
     return add_clinical_records_call
-
 #------------------------------------------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser()
