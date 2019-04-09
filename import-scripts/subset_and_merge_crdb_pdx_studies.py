@@ -355,15 +355,19 @@ def merge_clinical_files(destination_to_source_mapping, root_directory, lib):
         subprocess.call(merge_clinical_files_call, shell = True)
 
 # subsets clinical files from crdb-pdx fetch directory into the top level destination directory
-def subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib):
+def subset_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib):
     for destination, source_to_source_mappings in destination_to_source_mapping.items():
         patient_list = ','.join([patient.dmp_pid for source_mappings in source_to_source_mappings.values() for patient in source_mappings.patients])
         # destination directory is main study directory
         destination_directory = os.path.join(root_directory, destination)
-        subset_clinical_files_call = generate_bash_subset_call(lib, destination, "/home/wanga5/", crdb_fetch_directory, patient_list, CLINICAL_SAMPLE_FILE_PATTERN)
-        subset_clinical_files_status = subprocess.call(subset_clinical_files_call, shell = True)
-        if subset_clinical_files_status == 0:
+        temp_directory = os.path.join(destination_directory, "tmp")
+        os.mkdir(temp_directory)
+        subset_timeline_file_call = generate_bash_subset_call(lib, temp_directory, "/home/wanga5/", crdb_fetch_directory, patient_list, CLINICAL_SAMPLE_FILE_PATTERN)
+        subset_timeline_file_status = subprocess.call(subset_timeline_file_call, shell = True)
+        if subset_timeline_file_status == 0:
             DESTINATION_STUDY_STATUS_FLAGS[destination][SUBSET_CLINICAL_FILES_SUCCESS] = True
+            os.rename(os.path.join(temp_directory, "data_timeline.txt"), os.path.join(destination_directory, "data_timeline.txt"))
+        os.rmdir(temp_directory)
 
 def generate_import_trigger_files(destination_to_source_mapping, temp_directory):
     for destination in destination_to_source_mapping:
@@ -656,7 +660,7 @@ def main():
 
     # merge legacy and new format clinical files
     merge_clinical_files(destination_to_source_mapping, root_directory, lib)
-    subset_clinical_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib)
+    subset_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib)
     #add_patient_sample_records(destination_to_source_mapping, root_directory, lib)
     remove_hgvsp_short_column(destination_to_source_mapping, root_directory)
     remove_temp_subset_files(destination_to_source_mapping, root_directory)
