@@ -91,7 +91,7 @@ runGeneUpdatePipeline "cgds_genie"
 
 # run gene update for AWS gdac database
 export SPRING_CONFIG_LOCATION=$PIPELINES_CONFIG_HOME/properties/update-gene/application-aws-gdac.properties
-runGeneUpdatePipeline "cgds_gdac"
+runGeneUpdatePipeline "cgds_importer"
 
 # run gene update for AWS public database
 export SPRING_CONFIG_LOCATION=$PIPELINES_CONFIG_HOME/properties/update-gene/application-aws-public.properties
