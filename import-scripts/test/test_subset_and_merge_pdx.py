@@ -92,7 +92,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         for destination, source_to_source_mapping in self.destination_to_source_mapping.items():
             for source, source_mapping in source_to_source_mapping.items():
                 lookup_key = destination + source
-                self.assertEquals(set(expected_patients[lookup_key]), set([(patient.cmo_pid, patient.dmp_pid) for patient in source_mapping.patients]))
+                self.assertEquals(set(expected_patients[lookup_key]), set([(patient.source_pid, patient.destination_pid) for patient in source_mapping.patients]))
     
     def test_destination_source_clinical_annotations_mappings(self):
         '''
@@ -147,7 +147,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         # setup `crdb_pdx_repos` to expected files after filtering clinical annotations
         # crdb-pdx-raw-data is not present (not needed for this test) - data changes only applied to subset outputs
         self.setup_root_directory_with_previous_test_output("filter_clinical_annotations_step")
-        convert_cmo_to_dmp_pids_in_subsetted_source_studies(self.destination_to_source_mapping, self.root_directory)
+        convert_source_to_destination_pids_in_subsetted_source_studies(self.destination_to_source_mapping, self.root_directory)
         self.compare_clinical_files_for_step("rename_patients_step")
 
     def compare_clinical_files_for_step(self, step_name):
@@ -155,7 +155,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             for source, source_mapping in source_to_source_mapping.items():
                 expected_directory = os.path.join(self.expected_files, step_name, destination, source)
                 actual_directory = os.path.join(self.root_directory, destination, source)
-                for clinical_file in [filename for filename in os.listdir(expected_directory) if "data_clinical" in filename]:
+                for clinical_file in [filename for filename in os.listdir(expected_directory) if is_clinical_file(filename)]:
                     self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
 
     def test_merge_source_directories_step(self):
@@ -171,7 +171,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         for destination in self.destination_to_source_mapping:
             expected_directory = os.path.join(self.expected_files, "merge_source_directories_step", destination)
             actual_directory = os.path.join(self.root_directory, destination)
-            for clinical_file in [filename for filename in os.listdir(expected_directory) if "temp" not in filename]:
+            for clinical_file in [filename for filename in os.listdir(expected_directory) if "temp" not in filename and filename.endswith(".txt")]:
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
 
     def test_merge_clinical_files_step(self):
@@ -187,7 +187,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             expected_directory = os.path.join(self.expected_files, "merge_clinical_files_step",  destination)
             actual_directory = os.path.join(self.root_directory, destination)
             self.assertTrue("data_clinical.txt" not in os.listdir(actual_directory))
-            for clinical_file in [filename for filename in os.listdir(expected_directory) if "data_clinical" in filename]:
+            for clinical_file in [filename for filename in os.listdir(expected_directory) if is_clinical_file(filename)]:
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
 
     def test_subset_timeline_files_step(self):
@@ -203,7 +203,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         for destination in self.destination_to_source_mapping:
             expected_directory = os.path.join(self.expected_files, "subset_timeline_files_step", destination)
             actual_directory = os.path.join(self.root_directory, destination)
-            for timeline_file in [filename for filename in os.listdir(expected_directory) if "data_timeline" in filename]:
+            for timeline_file in [filename for filename in os.listdir(expected_directory) if "data_timeline" in filename and filename.endswith(".txt")]:
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, timeline_file), os.path.join(expected_directory, timeline_file)))
  
     def test_drop_hgvsp_short_column_step(self):
@@ -233,20 +233,41 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             shutil.copytree(expected_directory, actual_directory)
             
     def sort_and_compare_files(self, actual_file, expected_file):
-        sorted_actual_file = self.sort_lines_in_file(actual_file)
-        sorted_expected_file = self.sort_lines_in_file(expected_file)
-        files_are_equal = filecmp.cmp(sorted_expected_file, sorted_actual_file)
+        actual_header = get_header(actual_file)
+        expected_header = get_header(expected_file)
+        if sorted(actual_header) != sorted(expected_header):
+            return False
+        # sort files and compare
+        sorted_actual_file = self.sort_lines_in_file(expected_header, actual_file)
+        sorted_expected_file = self.sort_lines_in_file(expected_header, expected_file) 
+        file_contents_are_equal = filecmp.cmp(sorted_expected_file, sorted_actual_file)
         os.remove(sorted_actual_file)
         os.remove(sorted_expected_file)
-        return files_are_equal
-        
-    def sort_lines_in_file(self, filename):
+        return file_contents_are_equal
+
+    def sort_lines_in_file(self, ordered_header, filename):
+        to_write = [] 
         f = open(filename, "r")
-        to_write = sorted(f.readlines())
+        header = get_header(filename)
+        for line in f.readlines():
+            # sequenced sampels header - has to be sorted before being compared
+            if line.startswith("#sequenced_samples:"):
+                sequenced_samples = line.replace("#sequenced_samples:", "").strip().split(" ")
+                to_write.append(' '.join(sorted(sequenced_samples)))
+            # commented lines
+            elif line.startswith("#") and len(line.split("\t")) != (len(ordered_header)):
+                to_write.append(line.strip("\n"))
+            # load row into a dictionary mapped to header
+            # write out record to specific order
+            else:
+                data = dict(zip(header, map(str.strip, line.split('\t'))))
+                sorted_data = map(lambda x: data.get(x,''), ordered_header)
+                to_write.append('\t'.join(sorted_data))
         f.close()
+        sorted_to_write = sorted(to_write)
         sorted_filename = filename + "_sorted"
         f = open(sorted_filename, "w")
-        f.write(''.join(to_write))
+        f.write('\n'.join(sorted_to_write))
         f.close()
         return sorted_filename
 
