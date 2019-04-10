@@ -162,18 +162,23 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
 
         // ensures composite records will not be created until all requests for Patient Identifiers are completed
         for(String patientIdentifier : futurePatientIdentifiers.keySet()) {
-            futurePatientIdentifiers.get(patientIdentifier).get();
+            getCompletableFuturePatientIdentifiers(patientIdentifier, futurePatientIdentifiers);
         }
 
         int count = 0;
         LOG.info("creating composite Records");
         for(String  patientIdentifier : futurePatientIdentifiers.keySet()) {
-            PatientIdentifiers pids = futurePatientIdentifiers.get(patientIdentifier).get();
+            PatientIdentifiers pids = getCompletableFuturePatientIdentifiers(patientIdentifier, futurePatientIdentifiers);
             if (pids != null && !Strings.isNullOrEmpty(pids.getDmpPatientId())) {
+                if (pids.getDmpPatientId().equals("P-0000000")) {
+                    LOG.error("Patient ID " + patientIdentifier + " resolved to DMP ID: P-0000000");
+                    continue;
+                }
                 compositeRecords.add(new DDPCompositeRecord(pids.getDmpPatientId(), pids.getDmpSampleIds(), cohortPatientRecords.get(patientIdentifier)));
             } else {
                 LOG.error("Failed to resolve dmp id's for record '" + patientIdentifier + "' -- skipping");
                 ddpPatientListUtil.addPatientsMissingDMPId(Integer.parseInt(patientIdentifier));
+                continue;
             }
             count++;
             if (testMode && count >= TEST_MODE_PATIENT_THRESHOLD) {
@@ -185,6 +190,23 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
             return filterCompositeRecords(compositeRecords);
         }
         return compositeRecords;
+    }
+
+    /**
+     * Returns null if exception thrown while calling future patient identifiers.
+     *
+     * This can happen if we get a 403 Forbidden for high profile patients, which we do not have access to.
+     * There are also 401 unauthorized errors. These are thrown when we are not authorized yet to
+     * fetch data for these patients.
+     * @param pid
+     * @param futurePatientIdentifiers
+     * @return
+     */
+    private PatientIdentifiers getCompletableFuturePatientIdentifiers(String pid, Map<String, CompletableFuture<PatientIdentifiers>> futurePatientIdentifiers) {
+        try {
+            return futurePatientIdentifiers.get(pid).get();
+        } catch (Exception e) {}
+        return null;
     }
 
     /**
