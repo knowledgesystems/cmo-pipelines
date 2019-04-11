@@ -7,6 +7,7 @@ fi
 email_list="cbioportal-pipelines@cbio.mskcc.org"
 GENE_DATA_UPDATER_JAR_FILENAME="$PORTAL_HOME/lib/gene_data_updater.jar"
 JAVA_GENE_DATA_UPDATER_ARGS="$JAVA_PROXY_ARGS -jar $GENE_DATA_UPDATER_JAR_FILENAME"
+JAVA_SSL_TRUSTORE_ARGS="-Djavax.net.ssl.trustStore=$AWS_GDAC_SSL_TRUSTSTORE -Djavax.net.ssl.turstStorePassword=$TRUSTSTORE_PASSWORD"
 
 function attempt_wget_file {
     target_file_url=$1
@@ -59,14 +60,21 @@ fi
 
 function runGeneUpdatePipeline {
     DATABASE_NAME=$1
+    USE_SSL=$2
     if [ -z $DATABASE_NAME ]; then
         echo "Database name must be provided! Exiting..."
         exit 1
     fi
     export DATABASE_NAME=$DATABASE_NAME
 
+    JAVA_EXTRA_ARGS=""
+    if [[ ! -z "$USE_SSL" && "$USE_SSL" == "true" ]] ; then
+        echo "Using secure connection to database $DATABASE_NAME"
+        JAVA_EXTRA_ARGS=$JAVA_SSL_TRUSTORE_ARGS
+    fi
+
     echo "Starting gene data update job on database: $DATABASE_NAME"
-    $JAVA_BINARY $JAVA_GENE_DATA_UPDATER_ARGS -d $tmp/Homo_sapiens.gene_info -l $tmp/ref_GRCh38.p12_top_level.gff3 -n $tmp/gene-update-notification.txt
+    $JAVA_BINARY $JAVA_EXTRA_ARGS $JAVA_GENE_DATA_UPDATER_ARGS -d $tmp/Homo_sapiens.gene_info -l $tmp/ref_GRCh38.p12_top_level.gff3 -n $tmp/gene-update-notification.txt
     if [ $? -ne 0 ]; then
         echo "Error updating gene data"
         echo -e "Error updating gene data." | mail -s "Gene Data Update Failure: $DATABASE_NAME" $email_list
@@ -91,7 +99,7 @@ runGeneUpdatePipeline "cgds_genie"
 
 # run gene update for AWS gdac database
 export SPRING_CONFIG_LOCATION=$PIPELINES_CONFIG_HOME/properties/update-gene/application-aws-gdac.properties
-runGeneUpdatePipeline "cgds_gdac"
+runGeneUpdatePipeline "cgds_gdac" "true"
 
 # run gene update for AWS public database
 export SPRING_CONFIG_LOCATION=$PIPELINES_CONFIG_HOME/properties/update-gene/application-aws-public.properties
