@@ -32,19 +32,22 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline.util;
 
-import java.util.*;
-import javax.annotation.Resource;
-import org.junit.Assert;
-import org.junit.runner.RunWith;
-import org.junit.Test;
-import java.text.ParseException;
+import org.mskcc.cmo.ks.ddp.pipeline.DDPConfiguration;
 import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineRadiationRecord;
 import org.mskcc.cmo.ks.ddp.source.model.CohortPatient;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDemographics;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
+
+import java.util.*;
+import javax.annotation.Resource;
+import org.junit.Assert;
+import org.junit.runner.RunWith;
+import org.junit.Test;
+import java.text.ParseException;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 /**
@@ -52,7 +55,16 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  * @author ochoaa
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes=DDPUtilsTestConfiguration.class)
+@TestPropertySource(
+        properties = {
+            "ddp.cohort.map = {\"mskimpact\":2033,\"mskimpact_ped\":1852}",
+            "naaccr.ethnicity = naaccr_ethnicity.json",
+            "naaccr.race = naaccr_race.json",
+            "naaccr.sex = naaccr_sex.json"
+        },
+        inheritLocations = false
+)
+@ContextConfiguration(classes={DDPConfiguration.class, DDPUtilsTestConfiguration.class})
 public class DDPUtilsTest {
 
     @Resource(name="mockCompositePatientRecords")
@@ -476,6 +488,77 @@ public class DDPUtilsTest {
         clinicalRecord.setSURGERY("MY_SURGERY"); // doesn't matter if this was set
         String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\t3.123\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE);
+        Assert.assertEquals(expectedValue, returnedValue);
+    }
+
+    /**
+     * Test method for resolving a patient's years since birth.
+     *
+     * Confirm that empty string, null, or NA values return NA.
+     * Confirm that birth dates occurring at beginning and end of year
+     * return expected values.
+     * @throws Exception
+     */
+    @Test
+    public void resolvePatientYearsSinceBirthTest()throws Exception {
+        wait_until_midnight_if_necessary();
+        Date now = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(now);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        Integer currentYear = calendar.get(Calendar.YEAR);
+
+        resolvePatientYearsSinceBirthAndAssert("", "NA");
+        resolvePatientYearsSinceBirthAndAssert(null, "NA");
+        resolvePatientYearsSinceBirthAndAssert("NA", "NA");
+        resolvePatientYearsSinceBirthAndAssert("2000-05-01", String.valueOf(currentYear - 2000));
+        resolvePatientYearsSinceBirthAndAssert("2015-01-01", String.valueOf(currentYear - 2015));
+        resolvePatientYearsSinceBirthAndAssert("2014-12-31", String.valueOf(currentYear - 2014));
+    }
+
+    /**
+     * Test that invalid date of births will throw a ParseException.
+     *
+     * @throws Exception
+     */
+    @Test(expected = ParseException.class)
+    public void resolvePatientYearsSinceBirthWithExceptionTest() throws Exception {
+        wait_until_midnight_if_necessary();
+        DDPUtils.resolveYearsSinceBirth("05/01/2000");
+    }
+
+    /**
+     * Tests that NAACCR JSON mappings files are loaded and modeled correctly and
+     * returning expected values.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void loadNaaccrMappingsTest() throws Exception {
+        Map<String, String> naaccrEthnicityMap = DDPUtils.getNaaccrEthnicityMap();
+        Assert.assertTrue(!naaccrEthnicityMap.isEmpty());
+        Assert.assertEquals("1", DDPUtils.resolveNaaccrEthnicityCode("Mexican (includes Chicano)"));
+        Assert.assertEquals("NA", DDPUtils.resolveNaaccrEthnicityCode("MADEUPETHNICITYVALUE"));
+        Assert.assertEquals("NA", DDPUtils.resolveNaaccrEthnicityCode(null));
+
+        Map<String, String> naaccrRaceMap = DDPUtils.getNaaccrRaceMap();
+        Assert.assertTrue(!naaccrRaceMap.isEmpty());
+        Assert.assertEquals("1", DDPUtils.resolveNaaccrRaceCode("White"));
+        Assert.assertEquals("NA", DDPUtils.resolveNaaccrRaceCode("VULCAN"));
+        Assert.assertEquals("NA", DDPUtils.resolveNaaccrRaceCode(null));
+
+        Map<String, String> naaccrSexMap = DDPUtils.getNaaccrSexMap();
+        Assert.assertTrue(!naaccrSexMap.isEmpty());
+        Assert.assertEquals("1", DDPUtils.resolveNaaccrSexCode("Male"));
+        Assert.assertEquals("NA", DDPUtils.resolveNaaccrSexCode("TURTLE"));
+        Assert.assertEquals("NA", DDPUtils.resolveNaaccrSexCode(null));
+    }
+
+    private void resolvePatientYearsSinceBirthAndAssert(String birthDate, String expectedValue) throws ParseException {
+        String returnedValue = DDPUtils.resolveYearsSinceBirth(birthDate);
         Assert.assertEquals(expectedValue, returnedValue);
     }
 

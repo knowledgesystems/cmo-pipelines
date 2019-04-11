@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -32,11 +32,14 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline;
 
-import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
 import org.mskcc.cmo.ks.ddp.source.DDPDataSource;
+import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 import org.mskcc.cmo.ks.ddp.source.model.*;
 import org.mskcc.cmo.ks.ddp.source.exception.InvalidAuthenticationException;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.*;
 import com.google.common.base.Strings;
@@ -44,7 +47,6 @@ import org.apache.log4j.Logger;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 
 /**
  *
@@ -64,6 +66,9 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
     @Value("#{jobParameters[includeSurgery]}")
     private Boolean includeSurgery;
 
+    @Value("#{jobParameters[cohortName]}")
+    private String cohortName;
+
     @Autowired
     private DDPDataSource ddpDataSource;
 
@@ -81,6 +86,15 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
 
     @Autowired
     private TimelineSurgeryProcessor timelineSurgeryProcessor;
+
+    @Autowired
+    private SuppVitalStatusProcessor suppVitalStatusProcessor;
+
+    @Autowired
+    private SuppAgeProcessor suppAgeProcessor;
+
+    @Autowired
+    private SuppNaaccrMappingsProcessor suppNaaccrMappingsProcessor;
 
     private final Logger LOG = Logger.getLogger(DDPCompositeProcessor.class);
 
@@ -139,6 +153,14 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
         compositeResult.setTimelineRadiationResults(timelineRadiationProcessor.process(compositeRecord));
         compositeResult.setTimelineChemoResults(timelineChemoProcessor.process(compositeRecord));
         compositeResult.setTimelineSurgeryResults(timelineSurgeryProcessor.process(compositeRecord));
+
+        // if cohort is mskimpact then update composite record with supplemental data
+        // provided to genie (vital status, age as years since birth, naaccr codes)
+        if (DDPUtils.isMskimpactCohort(cohortName)) {
+            compositeResult.setSuppVitalStatusResult(suppVitalStatusProcessor.process(compositeRecord));
+            compositeResult.setSuppAgeResult(suppAgeProcessor.process(compositeRecord));
+            compositeResult.setSuppNaccrMappingsResult(suppNaaccrMappingsProcessor.process(compositeRecord));
+        }
         return compositeResult;
     }
 

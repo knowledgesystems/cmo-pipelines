@@ -30,3 +30,17 @@ async.DDP.thread.pool.size=50
 async.DDP.thread.pool.max=50
 processor.thread.pool.size=100
 processor.thread.pool.max=100
+
+# DDP cohort IDs
+ddp.cohort.map={"mskimpact":2033,"mskimpact_ped":1852}
+
+# NAACCR mappings resource filenames
+naaccr.ethnicity=naaccr_ethnicity.json
+naaccr.race=naaccr_race.json
+naaccr.sex=naaccr_sex.json
+
+# Supplemental data filenames (MSKIMPACT only)
+ddp.supp.dirname=ddp
+ddp.supp.vital_status_filename=ddp_vital_status.txt
+ddp.supp.age_filename=ddp_age.txt
+ddp.supp.naaccr_filename=ddp_naaccr.txt

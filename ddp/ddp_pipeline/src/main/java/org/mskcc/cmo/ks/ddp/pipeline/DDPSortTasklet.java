@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -31,7 +31,11 @@
 */
 package org.mskcc.cmo.ks.ddp.pipeline;
 
+import java.io.IOException;
 import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.model.SuppVitalStatusRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.model.SuppAgeRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.model.SuppNaaccrMappingsRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineChemoRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineRadiationRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineSurgeryRecord;
@@ -45,7 +49,7 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
 
 import org.apache.commons.lang.StringUtils;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
 
 /**
@@ -53,8 +57,6 @@ import java.util.*;
  * @author Avery Wang
  */
 public class DDPSortTasklet implements Tasklet {
-
-    Logger log = Logger.getLogger(DDPSortTasklet.class);
 
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDirectory;
@@ -75,35 +77,38 @@ public class DDPSortTasklet implements Tasklet {
     @Value("#{jobParameters[includeSurgery]}")
     private Boolean includeSurgery;
 
+    private final Logger LOG = Logger.getLogger(DDPSortTasklet.class);
+
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
 
-        String clinicalFilePath = Paths.get(outputDirectory, clinicalFilename).toString();
-        String clinicalHeader = StringUtils.join(ClinicalRecord.getFieldNames(includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery), "\t");
-        log.info("Sorting and overwriting " + clinicalFilePath);
-        DDPUtils.sortAndWrite(clinicalFilePath, clinicalHeader);
+        // sort and overwrite demographics file
+        Path clinicalFilePath = Paths.get(outputDirectory, clinicalFilename);
+        sortAndOverwriteFile(clinicalFilePath, ClinicalRecord.getFieldNames(includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery));
 
+        // sort and overwrite timeline files if applicable
         if (includeChemotherapy) {
             String timelineChemotherapyFilePath = Paths.get(outputDirectory, timelineChemotherapyFilename).toString();
             String timelineChemotherapyHeader = StringUtils.join(TimelineChemoRecord.getFieldNames(), "\t");
-            log.info("Sorting and overwriting " + timelineChemotherapyFilePath);
+            LOG.info("Sorting and overwriting " + timelineChemotherapyFilePath);
             DDPUtils.sortAndWrite(timelineChemotherapyFilePath, timelineChemotherapyHeader);
         }
 
         if (includeRadiation) {
-            String timelineRadiationFilePath = Paths.get(outputDirectory, timelineRadiationFilename).toString();
-            String timelineRadiationHeader = StringUtils.join(TimelineRadiationRecord.getFieldNames(), "\t");
-            log.info("Sorting and overwriting " + timelineRadiationFilePath);
-            DDPUtils.sortAndWrite(timelineRadiationFilePath, timelineRadiationHeader);
+            Path timelineRadiationFilePath = Paths.get(outputDirectory, timelineRadiationFilename);
+            sortAndOverwriteFile(timelineRadiationFilePath, TimelineRadiationRecord.getFieldNames());
         }
 
         if (includeSurgery) {
-            String timelineSurgeryFilePath = Paths.get(outputDirectory, timelineSurgeryFilename).toString();
-            String timelineSurgeryHeader = StringUtils.join(TimelineSurgeryRecord.getFieldNames(), "\t");
-            log.info("Sorting and overwriting " + timelineSurgeryFilePath);
-            DDPUtils.sortAndWrite(timelineSurgeryFilePath, timelineSurgeryHeader);
+            Path timelineSurgeryFilePath = Paths.get(outputDirectory, timelineSurgeryFilename);
+            sortAndOverwriteFile(timelineSurgeryFilePath, TimelineSurgeryRecord.getFieldNames());
         }
 
         return RepeatStatus.FINISHED;
+    }
+
+    private void sortAndOverwriteFile(Path filePath, List<String> fieldNames) throws IOException {
+        LOG.info("Sorting and overwriting file:" + filePath.toString());
+        DDPUtils.sortAndWrite(filePath.toString(), StringUtils.join(fieldNames, "\t"));
     }
 }

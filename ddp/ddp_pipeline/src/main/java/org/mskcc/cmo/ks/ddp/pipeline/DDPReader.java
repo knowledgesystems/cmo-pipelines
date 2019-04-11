@@ -47,8 +47,8 @@ import org.apache.log4j.Logger;
 import org.springframework.batch.item.*;
 import org.springframework.beans.factory.annotation.*;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CompletableFuture;
+import org.apache.commons.lang.StringUtils;
 /**
  *
  * @author ochoaa
@@ -67,8 +67,8 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
     @Value("#{jobParameters[testMode]}")
     private Boolean testMode;
 
-    @Resource(name = "cohortMapping")
-    private Map<String, Integer> cohortMapping;
+    @Resource(name = "ddpCohortMap")
+    private Map<String, Integer> ddpCohortMap;
 
     @Autowired
     private DDPDataSource ddpDataSource;
@@ -83,7 +83,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
     private Set<String> excludedPatientIds = new HashSet<>();
     private final Integer TEST_MODE_PATIENT_THRESHOLD = 500;
 
-    private Logger LOG = Logger.getLogger(DDPReader.class);
+    private final Logger LOG = Logger.getLogger(DDPReader.class);
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
@@ -98,20 +98,20 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
                 throw new ItemStreamException("Error loading excluded patient ids from: " + excludedPatientsFilename, e);
             }
         }
-        // get composite records by cohort id if given, otherwise use patient ids from subsetFilename
-        if (!Strings.isNullOrEmpty(cohortName)) {
+        // get composite records patient ids from subsetFilename, otherwise fetch records by cohort id
+        if (!Strings.isNullOrEmpty(subsetFilename)) {
+            try {
+                this.ddpCompositeRecordList = getCompositeRecordsByPatientIds();
+            } catch (Exception e) {
+                throw new ItemStreamException("Error fetching DDP records by subset ids: " + subsetFilename, e);
+            }
+        }
+        else {
             try {
                 this.ddpCompositeRecordList = getCompositeRecordsByCohortId();
             }
             catch (Exception e) {
                 throw new ItemStreamException("Error fetching DDP records by cohort name: " + cohortName, e);
-            }
-        }
-        else {
-            try {
-                this.ddpCompositeRecordList = getCompositeRecordsByPatientIds();
-            } catch (Exception e) {
-                throw new ItemStreamException("Error fetching DDP records by subset ids: " + subsetFilename, e);
             }
         }
         LOG.info("Fetched " + ddpCompositeRecordList.size()+  " DDP records");
@@ -123,7 +123,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
      * @return
      */
     private List<DDPCompositeRecord> getCompositeRecordsByCohortId() throws Exception {
-        Integer cohortId = cohortMapping.get(cohortName);
+        Integer cohortId = ddpCohortMap.get(cohortName);
         if (cohortId == null) {
             throw new ItemStreamException("Cohort not known by name: " + cohortName);
         }
@@ -156,7 +156,6 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
             } catch (Exception e) {
                 LOG.error("Failed to resolve dmp id's for record'" + record.getPID() + "' -- skipping (" + e.getMessage() + ")");
                 ddpPatientListUtil.addPatientsMissingDMPId(record.getPID());
-                continue;
             }
         }
 

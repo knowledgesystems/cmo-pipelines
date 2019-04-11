@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -32,28 +32,31 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline;
 
-import java.util.HashMap;
-import java.util.Map;
-import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Component;
+import org.mskcc.cmo.ks.ddp.pipeline.model.SuppAgeRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
+import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
+
+import org.apache.log4j.Logger;
+import org.springframework.batch.item.ItemProcessor;
 
 /**
  *
  * @author ochoaa
  */
-@Component
-public class CohortConfiguration {
+public class SuppAgeProcessor implements ItemProcessor<DDPCompositeRecord, String> {
 
-    // hack so that we can get map before Spring app is loaded
-    private static final Map<String, Integer> cohortMapping;
-    static {
-        cohortMapping = new HashMap<>();
-        cohortMapping.put("mskimpact", 2033);
-        cohortMapping.put("mskimpact_ped", 1852);
-    }
+    private final Logger LOG = Logger.getLogger(SuppAgeProcessor.class);
 
-    @Bean(name = "cohortMapping")
-    public static Map<String, Integer> cohortMapping() {
-        return cohortMapping;
+    @Override
+    public String process(DDPCompositeRecord compositeRecord) throws Exception {
+        String record = null;
+        SuppAgeRecord suppAgeRecord = new SuppAgeRecord(compositeRecord);
+        try {
+            record = DDPUtils.constructRecord(suppAgeRecord);
+        }
+        catch (NullPointerException e) {
+            LOG.error("Error converting supplemental age record to string: " + suppAgeRecord.toString());
+        }
+        return record;
     }
 }

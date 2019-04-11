@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -213,8 +213,19 @@ public class DDPCompositeRecord {
     }
 
     public String getPatientDeathDate() {
-        return (!Strings.isNullOrEmpty(patientDemographics.getPTDEATHDTE())) ? 
+        return (!Strings.isNullOrEmpty(patientDemographics.getPTDEATHDTE())) ?
                 patientDemographics.getPTDEATHDTE() : patientDemographics.getDeceasedDate();
+    }
+
+    public String getLastContactDate() {
+        // if patient is not deceased then return last contact date
+        // otherwise return date of death
+        String patientDeathDate = getPatientDeathDate();
+        if (!Strings.isNullOrEmpty(patientDeathDate)) {
+            return patientDeathDate;
+        }
+        return (!Strings.isNullOrEmpty(patientDemographics.getPLALASTCONTACTDTE()) ?
+                patientDemographics.getPLALASTCONTACTDTE() : patientDemographics.getLastContactDate());
     }
 
     public String getPatientRace() {

@@ -160,6 +160,24 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
+    public SuppVitalStatusProcessor suppVitalStatusProcessor() {
+        return new SuppVitalStatusProcessor();
+    }
+
+    @Bean
+    @StepScope
+    public SuppAgeProcessor suppAgeProcessor() {
+        return new SuppAgeProcessor();
+    }
+
+    @Bean
+    @StepScope
+    public SuppNaaccrMappingsProcessor suppNaaccrMappingsProcessor() {
+        return new SuppNaaccrMappingsProcessor();
+    }
+
+    @Bean
+    @StepScope
     public ItemStreamWriter<CompositeResult> clinicalWriter() {
         return new ClinicalWriter();
     }
@@ -184,6 +202,26 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
+    public ItemStreamWriter<CompositeResult> suppVitalStatusWriter() {
+        return new SuppVitalStatusWriter();
+    }
+
+
+    @Bean
+    @StepScope
+    public ItemStreamWriter<CompositeResult> suppAgeWriter() {
+        return new SuppAgeWriter();
+    }
+
+
+    @Bean
+    @StepScope
+    public ItemStreamWriter<CompositeResult> suppNaaccrMappingsWriter() {
+        return new SuppNaaccrMappingsWriter();
+    }
+
+    @Bean
+    @StepScope
     public CompositeItemWriter<CompositeResult> ddpCompositeWriter() {
         CompositeItemWriter<CompositeResult> writer = new CompositeItemWriter<>();
         List<ItemWriter<? super CompositeResult>> delegates = new ArrayList<>();
@@ -191,6 +229,9 @@ public class BatchConfiguration {
         delegates.add(timelineRadiationWriter());
         delegates.add(timelineChemoWriter());
         delegates.add(timelineSurgeryWriter());
+        delegates.add(suppVitalStatusWriter());
+        delegates.add(suppAgeWriter());
+        delegates.add(suppNaaccrMappingsWriter());
         writer.setDelegates(delegates);
         return writer;
     }

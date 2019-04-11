@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -47,9 +47,42 @@ import org.apache.commons.lang.StringUtils;
  * @author ochoaa
  */
 public class DDPUtils {
+    public static final String MSKIMPACT_STUDY_ID = "mskimpact";
     public static final Double DAYS_TO_YEARS_CONVERSION = 365.2422;
     public static final Double DAYS_TO_MONTHS_CONVERSION = 30.4167;
     public static final List<String> NULL_EMPTY_VALUES = Arrays.asList(new String[]{"NA", "N/A"});
+
+    private static Map<String, String> naaccrEthnicityMap;
+    private static Map<String, String> naaccrRaceMap;
+    private static Map<String, String> naaccrSexMap;
+
+    public static void setNaaccrEthnicityMap(Map<String, String> naaccrEthnicityMap) {
+        DDPUtils.naaccrEthnicityMap = naaccrEthnicityMap;
+    }
+
+    public static Map<String, String> getNaaccrEthnicityMap() {
+        return DDPUtils.naaccrEthnicityMap;
+    }
+
+    public static void setNaaccrRaceMap(Map<String, String> naaccrRaceMap) {
+        DDPUtils.naaccrRaceMap = naaccrRaceMap;
+    }
+
+    public static Map<String, String> getNaaccrRaceMap() {
+        return DDPUtils.naaccrRaceMap;
+    }
+
+    public static void setNaaccrSexMap(Map<String, String> naaccrSexMap) {
+        DDPUtils.naaccrSexMap = naaccrSexMap;
+    }
+
+    public static Map<String, String> getNaaccrSexMap() {
+        return DDPUtils.naaccrSexMap;
+    }
+
+    public static Boolean isMskimpactCohort(String cohortName) {
+        return (!Strings.isNullOrEmpty(cohortName) && DDPUtils.MSKIMPACT_STUDY_ID.equalsIgnoreCase(cohortName));
+    }
 
     /**
      * Resolve and anonymize patient current age.
@@ -270,12 +303,133 @@ public class DDPUtils {
      * @throws ParseException
      */
     private static Long getDateInDays(String dateValue) throws ParseException {
-        if (!Strings.isNullOrEmpty(dateValue)) {
+        if (!Strings.isNullOrEmpty(dateValue) && !NULL_EMPTY_VALUES.contains(dateValue)) {
             SimpleDateFormat sfd = new SimpleDateFormat("yyyy-MM-dd");
             Date date = sfd.parse(dateValue);
             return date.getTime() / (1000 * 60 * 60 * 24); // milliseconds -> minutes -> hours -> days
         }
         return null;
+    }
+
+    /**
+     * Returns the date in days as a string.
+     *
+     * If date value is null/NA or calculated date in days
+     * is null then 'NA' is returned.
+     * @param dateValue
+     * @return
+     * @throws ParseException
+     */
+    public static String getDateInDaysAsString(String dateValue) throws ParseException {
+        Long dateInDays = getDateInDays(dateValue);
+        if (dateInDays != null) {
+            return dateInDays.toString();
+        }
+        return "NA";
+    }
+
+    /**
+     * Parses the year from the given date.
+     *
+     * @param date
+     * @return
+     * @throws ParseException
+     */
+    public static Long parseYearFromDate(Date date) throws ParseException {
+        if (date != null) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(date);
+            return new Long(calendar.get(Calendar.YEAR));
+        }
+        return null;
+    }
+
+    /**
+     * Parses the year from the given date.
+     *
+     * @param dateValue
+     * @return
+     * @throws ParseException
+     */
+    public static Long parseYearFromDate(String dateValue) throws ParseException {
+        if (!Strings.isNullOrEmpty(dateValue) && !NULL_EMPTY_VALUES.contains(dateValue)) {
+            SimpleDateFormat sfd = new SimpleDateFormat("yyyy-MM-dd");
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(sfd.parse(dateValue));
+            return new Long(calendar.get(Calendar.YEAR));
+        }
+        return null;
+    }
+
+    /**
+     * Parses the year from the given date.
+     *
+     * Date format expected: yyyy-MM-dd.
+     *
+     * @param dateValue
+     * @return
+     * @throws ParseException
+     */
+    public static String parseYearFromDateAsString(String dateValue) throws ParseException {
+        Long year = parseYearFromDate(dateValue);
+        if (year != null) {
+            return year.toString();
+        }
+        return "NA";
+    }
+
+    /**
+     * Calculates the number of years since birth.
+     *
+     * @param birthDate
+     * @return
+     * @throws ParseException
+     */
+    public static String resolveYearsSinceBirth(String birthDate) throws ParseException {
+        if (!Strings.isNullOrEmpty(birthDate) && !NULL_EMPTY_VALUES.contains(birthDate)) {
+            Long currentYear = parseYearFromDate(new Date());
+            Long birthYear = parseYearFromDate(birthDate);
+            if (currentYear != null && birthYear != null && birthYear > -1) {
+                return String.valueOf(currentYear - birthYear);
+            }
+        }
+        return "NA";
+    }
+
+    /**
+     * Returns the NAACCR Ethnicity code for the given ethnicity or 'NA' if not
+     * NAACCR Ethnicity code mappings.
+     *
+     * @param ethnicity
+     * @return
+     */
+    public static String resolveNaaccrEthnicityCode(String ethnicity) {
+        return (Strings.isNullOrEmpty(ethnicity) ? "NA" :
+                naaccrEthnicityMap.getOrDefault(ethnicity.toUpperCase(), "NA"));
+    }
+
+    /**
+     * Returns the NAACCR Race code for the given ethnicity or 'NA' if not
+     * NAACCR Race code mappings.
+     *
+     * @param race
+     * @return
+     */
+    public static String resolveNaaccrRaceCode(String race) {
+        return (Strings.isNullOrEmpty(race) ? "NA" :
+                naaccrRaceMap.getOrDefault(race.toUpperCase(), "NA"));
+    }
+
+    /**
+     * Returns the NAACCR Sex code for the given ethnicity or 'NA' if not
+     * NAACCR Sex code mappings.
+     *
+     * @param sex
+     * @return
+     */
+    public static String resolveNaaccrSexCode(String sex) {
+        return (Strings.isNullOrEmpty(sex) ? "NA" :
+                naaccrSexMap.getOrDefault(sex.toUpperCase(), "NA"));
     }
 
     /**

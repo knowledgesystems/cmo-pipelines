@@ -33,10 +33,10 @@
 package org.mskcc.cmo.ks.ddp;
 
 import org.mskcc.cmo.ks.ddp.pipeline.BatchConfiguration;
-import org.mskcc.cmo.ks.ddp.pipeline.CohortConfiguration;
 
 import com.google.common.base.Strings;
 import java.io.File;
+import java.util.*;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -55,12 +55,12 @@ public class DDPPipeline {
 
     private static final Logger LOG = Logger.getLogger(DDPPipeline.class);
 
-    private static Options getOptions(String[] args) {
+    private static Options getOptions(Map<String, Integer> ddpCohortMap, String[] args) {
         Options options = new Options();
         options.addOption("h", "help", false, "Shows this help document and quits.")
                 .addOption("f", "fetch_data", true, "List of comma delimited additional data to fetch [diagnosis,radiation,chemotherapy,surgery] (demographics is always included)") // TODO do not hard code this
                 .addOption("o", "output_directory", true, "Output directory")
-                .addOption("c", "cohort_name", true, "Cohort name [" + StringUtils.join(CohortConfiguration.cohortMapping().keySet(), " | ") + "]")
+                .addOption("c", "cohort_name", true, "Cohort name [" + StringUtils.join(ddpCohortMap.keySet(), " | ") + "]")
                 .addOption("s", "subset_file", true, "File containing patient ID's to subset by")
                 .addOption("e", "excluded_patients_file", true, "File containg patient ID's to exclude")
                 .addOption("t", "test", false, "Run pipeline in test mode");
@@ -73,7 +73,7 @@ public class DDPPipeline {
         System.exit(exitStatus);
     }
 
-    private static void launchJob(String[] args,
+    private static void launchJob(ConfigurableApplicationContext ctx, String[] args,
                 String cohortName,
                 String subsetFilename,
                 String excludedPatientsFilename,
@@ -87,8 +87,6 @@ public class DDPPipeline {
         // by calling cohort endpoint with user-specified cohort name
         // NOTE:  the use-case of this is meant to generate list of patient IDs in DDP pediatric cohort
         // which we will use to subset MSK-IMPACT clinical/genomic data
-        SpringApplication app = new SpringApplication(DDPPipeline.class);
-        ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("cohortName", cohortName)
@@ -113,8 +111,8 @@ public class DDPPipeline {
     /**
      * Helper functions to validate inputs.
      */
-    private static Boolean isValidCohort(String cohortName) {
-        return CohortConfiguration.cohortMapping().containsKey(cohortName);
+    private static Boolean isValidCohort(Map<String, Integer> ddpCohortMap, String cohortName) {
+        return ddpCohortMap.containsKey(cohortName);
     }
     private static Boolean isValidFile(String filename) {
         File f = new File(filename);
@@ -126,7 +124,11 @@ public class DDPPipeline {
     }
 
     public static void main(String[] args) throws Exception {
-        Options options = DDPPipeline.getOptions(args);
+        SpringApplication app = new SpringApplication(DDPPipeline.class);
+        ConfigurableApplicationContext ctx = app.run(args);
+        Map<String, Integer> ddpCohortMap = ctx.getBean("ddpCohortMap", Map.class);
+
+        Options options = DDPPipeline.getOptions(ddpCohortMap, args);
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = parser.parse(options, args);
         if (commandLine.hasOption("h") || !commandLine.hasOption("o") ||
@@ -165,7 +167,7 @@ public class DDPPipeline {
         if (foundInvalidFetchOption) {
             help(options, 2);
         }
-        if (!Strings.isNullOrEmpty(cohortName) && !isValidCohort(cohortName)) {
+        if (!Strings.isNullOrEmpty(cohortName) && !isValidCohort(ddpCohortMap, cohortName)) {
             System.out.println("Cohort name provided is unknown - please provide valid cohort name!");
             help(options,2);
         }
@@ -181,7 +183,7 @@ public class DDPPipeline {
             System.out.println("No such directory: " + outputDirectory);
             help(options,2);
         }
-        launchJob(args, cohortName, subsetFilename, excludedPatientsFilename, outputDirectory, commandLine.hasOption("t"),
+        launchJob(ctx, args, cohortName, subsetFilename, excludedPatientsFilename, outputDirectory, commandLine.hasOption("t"),
             includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery);
     }
 }

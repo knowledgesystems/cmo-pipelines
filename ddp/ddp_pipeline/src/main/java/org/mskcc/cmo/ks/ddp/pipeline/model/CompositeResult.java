@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -43,6 +43,9 @@ public class CompositeResult {
     private List<String> timelineRadiationResults;
     private List<String> timelineChemoResults;
     private List<String> timelineSurgeryResults;
+    private String suppVitalStatusResult;
+    private String suppAgeResult;
+    private String suppNaccrMappingsResult;
 
     public CompositeResult(){}
 
@@ -100,5 +103,47 @@ public class CompositeResult {
      */
     public void setTimelineSurgeryResults(List<String> timelineSurgeryResults) {
         this.timelineSurgeryResults = timelineSurgeryResults;
+    }
+
+    /**
+     * @return the suppVitalStatusResult
+     */
+    public String getSuppVitalStatusResult() {
+        return suppVitalStatusResult;
+    }
+
+    /**
+     * @param suppVitalStatusResult the suppVitalStatusResult to set
+     */
+    public void setSuppVitalStatusResult(String suppVitalStatusResult) {
+        this.suppVitalStatusResult = suppVitalStatusResult;
+    }
+
+    /**
+     * @return the suppAgeResult
+     */
+    public String getSuppAgeResult() {
+        return suppAgeResult;
+    }
+
+    /**
+     * @param suppAgeResult the suppAgeResult to set
+     */
+    public void setSuppAgeResult(String suppAgeResult) {
+        this.suppAgeResult = suppAgeResult;
+    }
+
+    /**
+     * @return the suppNaccrMappingsResult
+     */
+    public String getSuppNaccrMappingsResult() {
+        return suppNaccrMappingsResult;
+    }
+
+    /**
+     * @param suppNaccrMappingsResult the suppNaccrMappingsResult to set
+     */
+    public void setSuppNaccrMappingsResult(String suppNaccrMappingsResult) {
+        this.suppNaccrMappingsResult = suppNaccrMappingsResult;
     }
 }

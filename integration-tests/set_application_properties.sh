@@ -13,4 +13,5 @@ rsync $JENKINS_PROPERTIES_DIRECTORY/fetch-cvr/$APPLICATION_PROPERTIES $CMO_PIPEL
 rsync $JENKINS_PROPERTIES_DIRECTORY/fetch-darwin/$APPLICATION_PROPERTIES $CMO_PIPELINES_DIRECTORY/darwin/src/main/resources
 rsync $JENKINS_PROPERTIES_DIRECTORY/fetch-crdb/$APPLICATION_PROPERTIES $CMO_PIPELINES_DIRECTORY/crdb/src/main/resources
 rsync $JENKINS_PROPERTIES_DIRECTORY/fetch-ddp/$APPLICATION_PROPERTIES $CMO_PIPELINES_DIRECTORY/ddp/ddp_pipeline/src/main/resources
+rsync $JENKINS_PROPERTIES_DIRECTORY/fetch-ddp/*.json $CMO_PIPELINES_DIRECTORY/ddp/ddp_pipeline/src/main/resources
 rsync $JENKINS_PIPELINES_CREDENTIALS/application-secure.properties $CMO_PIPELINES_DIRECTORY/ddp/ddp_pipeline/src/main/resources
