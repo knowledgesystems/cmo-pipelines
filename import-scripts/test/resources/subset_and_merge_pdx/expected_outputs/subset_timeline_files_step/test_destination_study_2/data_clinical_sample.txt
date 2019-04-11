@@ -9,4 +9,4 @@ s_C_001055_X003_d	P-DMP-P001	CHOL	Unavailable	DRILA_CHOL_X0001aS3	NTRK_0006cp9	4
 P-DMP-P001-T03-IM6	P-DMP-P001	GBC																																											
 s_C_001055_X002_d	P-DMP-P001	CHOL	Unavailable	DRILA_CHOL_X0001aS2	NTRK_0006b_2	43	P2					Metastasis	Lung Pleura	PDX	Core Biopsy	Yes	No																												
 P-DMP-P001-T01-IM5	P-DMP-P001	GBC																																											
-MSK_LX96	MSK_LX96	PLEMESO	Unavailable	RUDIC_PLEMESO_X0010aS1	MSK_LX96	69	P2	IV	T4	N0	M0	Primary	Lung Pleura	PDX	Surgery	Yes	No																												
+P-MSK-0001	P-MSK-0001	PLEMESO	Unavailable	RUDIC_PLEMESO_X0010aS1	P-MSK-0001	69	P2	IV	T4	N0	M0	Primary	Lung Pleura	PDX	Surgery	Yes	No																												

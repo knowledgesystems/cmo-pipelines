@@ -7,4 +7,4 @@ MSK_LX27	Female		White	YES
 MSK_LX6	Male		White	YES																
 P-DMP-P002	Male		White	YES																
 P-DMP-P001	Female	NON	White	YES																
-MSK_LX96	Male		Asian/ Far East/ Indian Subcontinent	YES																
+P-MSK-0001	Male		Asian/ Far East/ Indian Subcontinent	YES																

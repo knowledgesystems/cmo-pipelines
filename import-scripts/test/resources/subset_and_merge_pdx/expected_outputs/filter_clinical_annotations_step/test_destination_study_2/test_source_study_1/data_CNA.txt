@@ -1,4 +1,4 @@
-Hugo_Symbol	MSK_LX96
+Hugo_Symbol	P-MSK-0001
 TAP1	
 ERRFI1	0
 STK19	

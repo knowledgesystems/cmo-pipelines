@@ -80,14 +80,14 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             Test Step 1b: check patient mappings per source-destination pair
         '''
         expected_patients = {
-            "test_destination_study_1test_source_study_1" : [("MSK_LX229","P-0005562"),("MSK_LX27","MSK_LX27"),("MSK_LX6","MSK_LX6"),("MSK_LX96","MSK_LX96")],
-            "test_destination_study_2test_source_study_1" : [("MSK_LX96","MSK_LX96")],
-            "test_destination_study_1test_msk_solid_heme" : [("P-0003329","P-0003329"),("P-0005562","P-0005562")],
-            "test_destination_study_2test_msk_solid_heme" : [("P-0003329","P-0003329")],
-            "test_destination_study_1cmo_test_source_study_1" : [("p_C_001055","P-0003329")],       
-            "test_destination_study_2cmo_test_source_study_1" : [("p_C_001055","P-0003329")],
-            "test_destination_study_1crdb_pdx_raw_data" : [("p_C_001055","P-0003329"),("P-0003329","P-0003329"),("P-0005562","P-0005562"),("MSK_LX229","P-0005562"),("MSK_LX27","MSK_LX27"),("MSK_LX6","MSK_LX6"),("MSK_LX96","MSK_LX96")],
-            "test_destination_study_2crdb_pdx_raw_data" : [("p_C_001055","P-0003329"),("P-0003329","P-0003329"),("MSK_LX96","MSK_LX96")]
+            "test_destination_study_1test_source_study_1" : [("P-MSK-0002","P-DMP-P002"),("MSK_LX27","MSK_LX27"),("MSK_LX6","MSK_LX6"),("P-MSK-0001","P-MSK-0001")],
+            "test_destination_study_2test_source_study_1" : [("P-MSK-0001","P-MSK-0001")],
+            "test_destination_study_1test_msk_solid_heme" : [("P-DMP-P001","P-DMP-P001"),("P-DMP-P002","P-DMP-P002")],
+            "test_destination_study_2test_msk_solid_heme" : [("P-DMP-P001","P-DMP-P001")],
+            "test_destination_study_1cmo_test_source_study_1" : [("p_C_001055","P-DMP-P001")],       
+            "test_destination_study_2cmo_test_source_study_1" : [("p_C_001055","P-DMP-P001")],
+            "test_destination_study_1crdb_pdx_raw_data" : [("p_C_001055","P-DMP-P001"),("P-DMP-P001","P-DMP-P001"),("P-DMP-P002","P-DMP-P002"),("P-MSK-0002","P-DMP-P002"),("MSK_LX27","MSK_LX27"),("MSK_LX6","MSK_LX6"),("P-MSK-0001","P-MSK-0001")],
+            "test_destination_study_2crdb_pdx_raw_data" : [("p_C_001055","P-DMP-P001"),("P-DMP-P001","P-DMP-P001"),("P-MSK-0001","P-MSK-0001")]
         }
         for destination, source_to_source_mapping in self.destination_to_source_mapping.items():
             for source, source_mapping in source_to_source_mapping.items():
@@ -127,7 +127,10 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             for source, source_mapping in source_to_source_mapping.items():
                 expected_directory = os.path.join(self.expected_files, "subset_source_step", destination, source)
                 actual_directory = os.path.join(self.root_directory, destination, source)
-                for datafile in os.listdir(expected_directory):
+                for datafile in [filename for filename in os.listdir(expected_directory) if "temp" not in filename and filename.endswith(".txt")]:
+                    if not self.sort_and_compare_files(os.path.join(actual_directory, datafile), os.path.join(expected_directory, datafile)):
+                        shutil.copyfile(os.path.join(actual_directory, datafile), "/home/wanga5/temp")
+                        shutil.copyfile(os.path.join(expected_directory, datafile), "/home/wanga5/temp2")
                     self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, datafile), os.path.join(expected_directory, datafile)))
    
     def test_filter_clinical_annotations_step(self):
@@ -171,8 +174,8 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         for destination in self.destination_to_source_mapping:
             expected_directory = os.path.join(self.expected_files, "merge_source_directories_step", destination)
             actual_directory = os.path.join(self.root_directory, destination)
-            for clinical_file in [filename for filename in os.listdir(expected_directory) if "temp" not in filename and filename.endswith(".txt")]:
-                self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
+            for datafile in [filename for filename in os.listdir(expected_directory) if "temp" not in filename and filename.endswith(".txt")]:
+                self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, datafile), os.path.join(expected_directory, datafile)))
 
     def test_merge_clinical_files_step(self):
         '''
