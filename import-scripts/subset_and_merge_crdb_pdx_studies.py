@@ -115,9 +115,9 @@ class Patient():
         self.destination_pid = destination_pid
 
 class SourceMappings():
-    def __init__(self):
-        self.patients = []
-        self.clinical_annotations = []
+    def __init__(self, patients = None, clinical_annotations = None):
+        self.patients = patients if patients else []
+        self.clinical_annotations = clinical_annotations if clinical_annotations else []
 
     def get_patient_for_source_pid(self, source_pid):
         for patient in self.patients:
@@ -404,6 +404,7 @@ def convert_source_to_destination_pids_in_clinical_files(source_subdirectory, so
                 try:   
                     source_pid = data[pid_index]
                     data[pid_index] = source_mapping.get_patient_for_source_pid(source_pid).destination_pid
+                # passthrough for metadata headers/headers
                 except:
                     pass
                 to_write.append('\t'.join(data))
