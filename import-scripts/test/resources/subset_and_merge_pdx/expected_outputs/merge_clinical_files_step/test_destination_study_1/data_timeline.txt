@@ -90,10 +90,6 @@ P-DMP-P001	0		SURGERY										EXPLORATORY LAPAROTOMY/ EXPLORATORY CELIOTOMY W/ 
 P-DMP-P001	862		IMAGING														CT Scan	Abdomen	Metastasis											
 MSK_LX6	92		IMAGING														PET Scan	Abdomen/Chest/Pelvis	Progression											
 MSK_LX27	29	50	Treatment				Medical therapy	Systemic therapy	cisplatin+pemetrexed			progression of disease																	22	
-MSK_LX27	126	210	Treatment				Medical therapy	Systemic therapy	nivolumab+lirilumab			progression of disease																	85	
-MSK_LX27	214	219	Treatment				Palliative	Radiation therapy	RT (L pelvis)			completed regimen																	6	
-MSK_LX27	248	249	Treatment				Palliative	Radiation therapy	RT (L scapula)			completed regimen																	2	
-MSK_LX27	248	249	Treatment				Palliative	Radiation therapy	RT (R lateral rib area)			completed regimen																	2	
 P-MSK-0001	48	99	Treatment				Medical therapy	Systemic therapy	carboplatin+pemetrexed			completed regimen																	52	
 MSK_LX6	128		Surgery										Lingulectomy, partial anterior segmentectomy of LLL lung, MLND	Anterior segment lower lobe of lingula, upper lobe of lung, resection	Thoracic cavity	lung														
 P-MSK-0001	141		Surgery										no surgery, unresectable tumor																	

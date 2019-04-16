@@ -155,7 +155,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             for source, sourcemapping in source_to_sourcemapping.items():
                 expected_directory = os.path.join(self.expected_files, "subset_source_step", destination, source)
                 actual_directory = os.path.join(self.root_directory, destination, source)
-                for datafile in [filename for filename in os.listdir(expected_directory) if "temp" not in filename and filename.endswith(".txt")]:
+                for datafile in [filename for filename in os.listdir(expected_directory) if "temp" not in filename and (filename.endswith(".txt") or filename.endswith(".seg"))]:
                     self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, datafile), os.path.join(expected_directory, datafile)))
 
     def test_filter_clinical_annotations_step(self):
@@ -199,7 +199,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         for destination in self.mock_destination_to_source_mapping:
             expected_directory = os.path.join(self.expected_files, "merge_source_directories_step", destination)
             actual_directory = os.path.join(self.root_directory, destination)
-            for datafile in [filename for filename in os.listdir(expected_directory) if "temp" not in filename and filename.endswith(".txt")]:
+            for datafile in [filename for filename in os.listdir(expected_directory) if "temp" not in filename and (filename.endswith(".txt") or filename.endswith(".seg"))]:
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, datafile), os.path.join(expected_directory, datafile)))
 
     def test_merge_clinical_files_step(self):
@@ -231,7 +231,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         for destination in self.mock_destination_to_source_mapping:
             expected_directory = os.path.join(self.expected_files, "subset_timeline_files_step", destination)
             actual_directory = os.path.join(self.root_directory, destination)
-            for timeline_file in [filename for filename in os.listdir(expected_directory) if "data_timeline" in filename and filename.endswith(".txt")]:
+            for timeline_file in [filename for filename in os.listdir(expected_directory) if "data_timeline" in filename and (filename.endswith(".txt") or filename.endswith(".seg"))]:
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, timeline_file), os.path.join(expected_directory, timeline_file)))
 
     def test_drop_hgvsp_short_column_step(self):
@@ -288,7 +288,8 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             # load row into a dictionary mapped to header
             # write out record to specific order
             else:
-                data = dict(zip(header, map(str.strip, line.split('\t'))))
+                # strip # sign at the beginning because header might start with different column
+                data = dict(zip(header, map(str.strip, line.strip("#").split('\t'))))
                 sorted_data = map(lambda x: data.get(x,''), ordered_header)
                 to_write.append('\t'.join(sorted_data))
         f.close()

@@ -48,7 +48,7 @@ def get_header_to_attribute_type_map(study_id, header, base_cdd_url):
         - attribute_type: [PATIENT | SAMPLE]
     '''
     metadata_mapping = {}
-    response = requests.post(base_cdd_url + "?cancerStudy=" + study_id if study_id else base_cdd_url, json=list(header))
+    response = requests.post(base_cdd_url + "?cancerStudy=" + study_id if has_overrides(study_id, base_cdd_url) else base_cdd_url, json=list(header))
     check_response_returned(response)
     response_as_json = json.loads(response.text)
 
@@ -60,7 +60,7 @@ def get_header_to_attribute_type_map(study_id, header, base_cdd_url):
 # return a dictionary of attributes in list to all their metadata
 def get_attribute_to_metadata_map(study_id, header, base_cdd_url):
     metadata_mapping = {}
-    response = requests.post(base_cdd_url + "?cancerStudy=" + study_id if study_id else base_cdd_url, json=list(header))
+    response = requests.post(base_cdd_url + "?cancerStudy=" + study_id if has_overrides(study_id, base_cdd_url) else base_cdd_url, json=list(header))
     check_response_returned(response)
     response_as_json = json.loads(response.text)
     for attribute in response_as_json:
@@ -281,7 +281,7 @@ def main():
 
     cdd_url = args.cdd_url
     directory = args.directory
-    study_id = args.study_id if has_overrides(args.study_id, cdd_url) else ""
+    study_id = args.study_id
 
     if not os.path.exists(directory):
         print >> ERROR_FILE, "No such directory '%s' - exiting..." % (directory)

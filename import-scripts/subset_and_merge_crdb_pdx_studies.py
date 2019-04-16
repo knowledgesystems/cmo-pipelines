@@ -24,6 +24,8 @@ HAS_ALL_METAFILES = "HAS_ALL_METAFILES"
 TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
 TRIGGER_FILE_REVERT_SUFFIX = "_revert_triggerfile"
 
+OUTPUT_FILE = sys.stderr
+
 SEG_HG18_FILE_PATTERN = '_data_cna_hg18.seg'
 SEG_HG18_META_PATTERN = '_meta_cna_hg18_seg.txt'
 SEG_HG19_FILE_PATTERN = '_data_cna_hg19.seg'
@@ -175,7 +177,7 @@ def create_destination_to_source_mapping(destination_source_patient_mapping_reco
         destination_directory = os.path.join(root_directory, destination)
         if not os.path.isdir(destination_directory):
             MISSING_DESTINATION_STUDIES.add(destination)
-            print destination_directory + " cannot be found. This study will not be generated until this study is created in mercurial and marked in google spreadsheets"
+            print >> OUTPUT_FILE, destination_directory + " cannot be found. This study will not be generated until the directory for this study is created in mercurial and marked in google spreadsheets"
             continue
         if destination not in DESTINATION_STUDY_STATUS_FLAGS:
             DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False }
@@ -238,13 +240,13 @@ def resolve_source_study_path(source_id, data_source_directories):
         return source_paths[0]
     # multiple paths found, source id is non-unique. Report error for warning file
     if len(source_paths) == 2 and any([True for source_path in source_paths if DATAHUB_NAME in source_path]):
-        print "Datahub and one other source directory resolved for source id: " + source_id + ", using datahub source directory."
+        print >> OUTPUT_FILE, "Datahub and one other source directory resolved for source id: " + source_id + ", using datahub source directory."
         return [source_path for source_path in source_paths if DATAHUB_NAME in source_path][0]
     elif len(source_paths) >= 2:
-        print "Multiple directories resolved for source id: " + source_id
+        print >> OUTPUT_FILE, "Multiple directories resolved for source id: " + source_id
         MULTIPLE_RESOLVED_STUDY_PATHS[source_id] = source_paths
     else:
-        print "Source directory path not found for " + source_id
+        print >> OUTPUT_FILE, "Source directory path not found for " + source_id
         MISSING_SOURCE_STUDIES.add(source_id)
     return None
 
@@ -306,7 +308,7 @@ def subset_source_directories(destination_to_source_mapping, source_id_to_path_m
                     SKIPPED_SOURCE_STUDIES[destination].add(source)
                     shutil.rmtree(working_source_subdirectory)
             else:
-                print "Error, source path for " + source + " could not be found, skipping..."
+                print >> OUTPUT_FILE, "Error, source path for " + source + " could not be found, skipping..."
 
 def get_clinical_file_pattern_to_use(source_directory):
     for clinical_file in [CLINICAL_SAMPLE_FILE_PATTERN, CLINICAL_FILE_PATTERN]:
@@ -361,8 +363,7 @@ def filter_clinical_annotations(source_subdirectory, clinical_annotations):
                 data = line.rstrip("\n").split("\t")
                 data_to_write = [data[index] for index in attribute_indices]
                 to_write.append('\t'.join(data_to_write)) 
-        with open(clinical_file, "w") as f:
-            f.write('\n'.join(to_write) + "\n")
+        write_data_list_to_file(clinical_file, to_write)
 
 def convert_source_to_destination_pids_in_subsetted_source_studies(destination_to_source_mapping, root_directory):
     '''
@@ -408,8 +409,7 @@ def convert_source_to_destination_pids_in_clinical_files(source_subdirectory, so
                 except:
                     pass
                 to_write.append('\t'.join(data))
-        with open(clinical_file, "w") as f:
-            f.write('\n'.join(to_write) + "\n")
+        write_data_list_to_file(clinical_file, to_write)
 #------------------------------------------------------------------------------------------------------------
 '''
     Step 4: Merge all source directory files (clinical and genomic) across destination/source subdirectories (destination/source1, destination/source2, destination/source3)
@@ -437,7 +437,6 @@ def merge_clinical_files(destination_to_source_mapping, root_directory, lib):
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
         merge_clinical_files_call = generate_merge_clinical_files_call(lib, destination, destination_directory)
-        print merge_clinical_files_call
         subprocess.call(merge_clinical_files_call, shell = True)
 #------------------------------------------------------------------------------------------------------------
 '''
@@ -483,9 +482,7 @@ def remove_hgvsp_short_column(destination_to_source_mapping, root_directory):
                     record = line.rstrip("\n").split('\t')
                     maf_to_write.append('\t'.join(record[0:hgvsp_short_index] + record[hgvsp_short_index + 1:]))
             maf_file.close()
-            new_file = open(maf, "w")
-            new_file.write('\n'.join(maf_to_write))
-            new_file.close()
+            write_data_list_to_file(maf, maf_to_write)
 #------------------------------------------------------------------------------------------------------------
 '''
     Functions for generating logging/notifications
@@ -615,6 +612,14 @@ def remove_source_subdirectories(destination_to_source_mapping, root_directory):
         source_subdirectories = [os.path.join(root_directory, destination, source) for source in source_id_to_sourcemappings if source not in SKIPPED_SOURCE_STUDIES[destination]]
         for source_subdirectory in source_subdirectories:
             shutil.rmtree(source_subdirectory)
+#------------------------------------------------------------------------------------------------------------
+'''
+   General utility functions (TODO: move out into module) 
+'''
+
+def write_data_list_to_file(filename, data_list):
+    with open(filename, "w") as f:
+            f.write('\n'.join(data_list) + "\n")
 #------------------------------------------------------------------------------------------------------------
 '''
     Functions for generating executable commands
