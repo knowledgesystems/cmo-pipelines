@@ -1,0 +1,6 @@
+Hugo_Symbol	P-MSK-0001
+TAP1	
+ERRFI1	0
+SDHB	0
+SDHD	0
+SH2B3	0

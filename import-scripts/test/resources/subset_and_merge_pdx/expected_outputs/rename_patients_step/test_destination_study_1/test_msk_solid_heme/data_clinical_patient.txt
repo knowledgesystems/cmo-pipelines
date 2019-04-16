@@ -1,0 +1,7 @@
+#Patient Identifier	Pediatric Case Indicator
+#Identifier to uniquely specify a patient.	Indication on whether this case is a pediatric patient or not
+#STRING	STRING
+#1	1
+PATIENT_ID	PED_IND
+P-DMP-P001	No
+P-DMP-P002	No

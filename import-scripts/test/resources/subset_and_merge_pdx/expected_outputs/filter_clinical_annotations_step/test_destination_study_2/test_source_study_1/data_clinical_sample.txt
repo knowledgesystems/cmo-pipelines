@@ -1,0 +1,6 @@
+#Patient Identifier	Sample Identifier	Oncotree Code
+#Identifier to uniquely specify a patient.	A unique sample identifier.	Oncotree Code
+#STRING	STRING	STRING
+#1	1	1
+PATIENT_ID	SAMPLE_ID	ONCOTREE_CODE
+P-MSK-0001	P-MSK-0001	PLMESO

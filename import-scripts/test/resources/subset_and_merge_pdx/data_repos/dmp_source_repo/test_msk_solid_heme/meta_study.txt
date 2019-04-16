@@ -1,0 +1,5 @@
+type_of_cancer: mixed
+cancer_study_identifier: test_fake_dmp_study
+name: DMP Fake Study
+short_name: DMP Fake Study Cohort
+description: Fake studies for stuff

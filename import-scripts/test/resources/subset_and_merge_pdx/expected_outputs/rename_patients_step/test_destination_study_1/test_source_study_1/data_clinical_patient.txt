@@ -1,0 +1,9 @@
+#Patient Identifier
+#Identifier to uniquely specify a patient.
+#STRING
+#1
+PATIENT_ID
+MSK_LX27
+MSK_LX6
+P-MSK-0001
+P-DMP-P002

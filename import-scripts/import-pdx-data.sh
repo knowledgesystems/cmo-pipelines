@@ -268,10 +268,11 @@ fi
 # call subsetting/constuction python script (add touch a trigger file for successful subset/merge) (add subroutine which creates process command) (touch needed meta files for the generated data files)
 if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
     mapping_filename="source_to_destination_mappings.txt"
+    clinical_annotation_mapping_filename="clinical_annotations_mappings.txt"
     scripts_directory="$PORTAL_HOME/scripts"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/subset-and-merge-crdb-pdx-studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --data-source-directories $DATAHUB_DATA_HOME,$BIC_DATA_HOME,$PRIVATE_DATA_HOME --impact-root-directory $DMP_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME
+    $PYTHON_BINARY $PORTAL_HOME/scripts/subset_and_merge_crdb_pdx_studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --data-source-directories $DATAHUB_DATA_HOME,$BIC_DATA_HOME,$PRIVATE_DATA_HOME,$DMP_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME --clinical-annotation-mapping-file $clinical_annotation_mapping_filename
     if [ $? -ne 0 ] ; then
-        echo "error: subset-and-merge-crdb-pdx-studies.py exited with non zero status"
+        echo "error: subset_and_merge_crdb_pdx_studies.py exited with non zero status"
         sendFailureMessageMskPipelineLogsSlack "CRDB PDX Subset-And-Merge Script Failure"
         cleanUpEntireMercurialRepository $CRDB_FETCHER_PDX_HOME
     else

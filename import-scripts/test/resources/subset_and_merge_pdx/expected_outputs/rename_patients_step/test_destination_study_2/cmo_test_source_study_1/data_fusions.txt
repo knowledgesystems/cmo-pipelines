@@ -1,0 +1,3 @@
+Hugo_Symbol	Entrez_Gene_Id	Center	Tumor_Sample_Barcode	Fusion	DNA_support	RNA_support	Method	Frame	Comments
+LMNA		CMO	s_C_001055_X002_d	LMNA-NTRK1	yes	unknown		mid-exon	
+NTRK1		CMO	s_C_001055_X002_d	LMNA-NTRK1	yes	unknown		mid-exon	

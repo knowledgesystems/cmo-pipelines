@@ -1,6 +1,12 @@
 import os
 import linecache
 
+DISPLAY_NAME = "DISPLAY_NAME"
+DESCRIPTION = "DESCRIPTION"
+DATATYPE = "DATATYPE"
+ATTRIBUTE_TYPE = "ATTRIBUTE_TYPE"
+PRIORITY = "PRIORITY"
+
 # returns header as list of attributes
 def get_header(file):
     header = []
@@ -74,37 +80,48 @@ def get_attribute_type_line(file):
         return []
 
 def add_metadata_for_attribute(attribute, all_metadata_lines):
-    all_metadata_lines["DISPLAY_NAME"].append(attribute.replace("_", " ").title())
-    all_metadata_lines["DESCRIPTION"].append(attribute.replace("_", " ").title())
-    all_metadata_lines["DATATYPE"].append("STRING")
-    all_metadata_lines["ATTRIBUTE_TYPE"].append("SAMPLE")
-    all_metadata_lines["PRIORITY"].append("1")
+    all_metadata_lines[DISPLAY_NAME].append(attribute.replace("_", " ").title())
+    all_metadata_lines[DESCRIPTION].append(attribute.replace("_", " ").title())
+    all_metadata_lines[DATATYPE].append("STRING")
+    all_metadata_lines[ATTRIBUTE_TYPE].append("SAMPLE")
+    all_metadata_lines[PRIORITY].append("1")
 
 def get_all_metadata_lines(file):
     all_metadata_lines = {}
-    all_metadata_lines["DISPLAY_NAME"] = get_display_name_line(file)
-    all_metadata_lines["DESCRIPTION"] = get_description_line(file)
-    all_metadata_lines["DATATYPE"] = get_datatype_line(file)
-    all_metadata_lines["ATTRIBUTE_TYPE"] = get_attribute_type_line(file)
-    all_metadata_lines["PRIORITY"] = get_priority_line(file)
+    all_metadata_lines[DISPLAY_NAME] = get_display_name_line(file)
+    all_metadata_lines[DESCRIPTION] = get_description_line(file)
+    all_metadata_lines[DATATYPE] = get_datatype_line(file)
+    all_metadata_lines[ATTRIBUTE_TYPE] = get_attribute_type_line(file)
+    all_metadata_lines[PRIORITY] = get_priority_line(file)
     return all_metadata_lines
 
 def get_all_metadata_mappings(file):
     all_metadata_mapping = {}
-    all_metadata_mapping["DISPLAY_NAME"] = get_display_name_mapping(file)
-    all_metadata_mapping["DESCRIPTION"] = get_description_mapping(file)
-    all_metadata_mapping["DATATYPE"] = get_datatype_mapping(file)
-    all_metadata_mapping["ATTRIBUTE_TYPE"] = get_attribute_type_mapping(file)
-    all_metadata_mapping["PRIORITY"] = get_priority_mapping(file)
+    all_metadata_mapping[DISPLAY_NAME] = get_display_name_mapping(file)
+    all_metadata_mapping[DESCRIPTION] = get_description_mapping(file)
+    all_metadata_mapping[DATATYPE] = get_datatype_mapping(file)
+    all_metadata_mapping[ATTRIBUTE_TYPE] = get_attribute_type_mapping(file)
+    all_metadata_mapping[PRIORITY] = get_priority_mapping(file)
     return all_metadata_mapping
 
+# return list representing order metadata header lines to write
+def get_metadata_header_line_order(file):
+    to_return = [DISPLAY_NAME,
+                 DESCRIPTION,
+                 DATATYPE,
+                 ATTRIBUTE_TYPE,
+                 PRIORITY]
+    if not is_old_format(file):
+        to_return.remove(ATTRIBUTE_TYPE)
+    return to_return
+
 def write_metadata_headers(metadata_lines,clinical_filename):
-    print '\t'.join(metadata_lines["DISPLAY_NAME"]).replace('\n', '')
-    print '\t'.join(metadata_lines["DESCRIPTION"]).replace('\n', '')
-    print '\t'.join(metadata_lines["DATATYPE"]).replace('\n', '')
+    print '\t'.join(metadata_lines[DISPLAY_NAME]).replace('\n', '')
+    print '\t'.join(metadata_lines[DESCRIPTION]).replace('\n', '')
+    print '\t'.join(metadata_lines[DATATYPE]).replace('\n', '')
     if is_old_format(clinical_filename):
-        print '\t'.join(metadata_lines["ATTRIBUTE_TYPE"]).replace('\n', '')
-    print '\t'.join(metadata_lines["PRIORITY"]).replace('\n', '')
+        print '\t'.join(metadata_lines[ATTRIBUTE_TYPE]).replace('\n', '')
+    print '\t'.join(metadata_lines[PRIORITY]).replace('\n', '')
 
 def write_header_line(line, output_file):
     os.write(output_file, '#')
@@ -116,3 +133,6 @@ def write_data(file, output_file):
         for line in source_file:
             if not line.startswith("#"):
                 os.write(output_file, line)
+
+def is_clinical_file(filename):
+    return "data_clinical" in filename and filename.endswith(".txt")

@@ -1,0 +1,9 @@
+#Sample Identifier	Patient Identifier	Oncotree Code	Institute Source	MSK Slide ID	PED NCCN Level	Neoplasm Histologic Grade
+#A unique sample identifier.	Identifier to uniquely specify a patient.	Oncotree Code	Institute Source	MSK Slide ID	PED NCCN Level	Numeric value to express the degree of abnormality of cancer cells, a measure of differentiation and aggressiveness.
+#STRING	STRING	STRING	STRING	STRING	STRING	STRING
+#1	1	1	1	1	1	1
+SAMPLE_ID	PATIENT_ID	ONCOTREE_CODE	INSTITUTE	MSK_SLIDE_ID	PED_NCCN_LEVEL	GRADE
+P-DMP-P001-T01-IM5	P-DMP-P001	GBC	MSKCC			
+P-DMP-P001-T02-IM6	P-DMP-P001	GBC	MSKCC	553220		
+P-DMP-P001-T03-IM6	P-DMP-P001	GBC	MSKCC	628961		
+P-DMP-P001-T04-IM6	P-DMP-P001	GBC	MSKCC	881619		

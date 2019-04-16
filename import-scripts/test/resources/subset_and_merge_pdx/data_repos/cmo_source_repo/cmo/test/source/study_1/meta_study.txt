@@ -1,0 +1,6 @@
+type_of_cancer: mixed
+cancer_study_identifier: cmo_test_source_study_1
+name: Molecular Characterization of NTRK samples - Scaltriti (CMO MS_ntrk [07391])
+date_of_last_update: 1776-07-04
+description: More fake data for the metafile
+short_name: MIXED 
