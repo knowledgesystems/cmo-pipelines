@@ -4,6 +4,9 @@
 **/src/main/resources/application-secure.properties
 **/src/main/resources/log4j.properties
 **/src/main/resources/application-pancan.properties
+**/src/main/resources/application-aws-gdac.properties
+**/src/main/resources/application-aws-public.properties
+**/src/main/resources/phi-scanner-attributes.txt
 **/src/main/resources/logback.xml
 import-scripts/clinicalfile_utils.pyc
 target
