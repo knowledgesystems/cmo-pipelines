@@ -460,11 +460,15 @@ def process_header(data_filenames, reference_set, keep_match, merge_style):
                     if not hdr in non_case_ids:
                         non_case_ids.append(hdr)
                     continue
+                # case_id already exists - should not be duplicated
+                if hdr in case_ids:
+                    continue
+                # case_id does not pass keep_match test
                 if len(reference_set) > 0:
-                    if (keep_match == (hdr in reference_set)) and not hdr in case_ids:
-                        case_ids.append(hdr)
-                else:
-                    case_ids.append(hdr)
+                    if not (keep_match == (hdr in reference_set)):
+                        continue
+                # no reference set OR reference set passed keep_match test
+                case_ids.append(hdr)
             # udpate profile header data with new case ids and new non case ids
             profile_header_data['non_case_ids'] = non_case_ids
             profile_header_data['case_ids'] = case_ids
