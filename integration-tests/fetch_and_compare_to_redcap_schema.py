@@ -125,7 +125,7 @@ def cvr_fetch(lib, fetch_directory):
 def ddp_fetch(lib, fetch_directory):
     with open(os.path.join(fetch_directory, "test_patient_list.txt"), "w") as f:
         f.write("P-0000001")
-    return "java -jar " + os.path.join(lib, "ddp_fetcher.jar") + " -o " + fetch_directory + " -s " + os.path.join(fetch_directory, "test_patient_list.txt")
+    return "java -jar " + os.path.join(lib, "ddp_fetcher.jar") + " -f diagnosis,radiation,chemotherapy,surgery -o " + fetch_directory + " -s " + os.path.join(fetch_directory, "test_patient_list.txt")
 
 # dictionary/switch-like function that calls fetch-function based on which fetchers are included in github tags
 def fetch_data_source_files(fetchers_to_test, fetch_directory, lib):
