@@ -1,0 +1,6 @@
+#Patient Identifier	N Stage	M Stage	Any Pretreatment	Sex	Ethnicity Category	Race Category	Smoking History	Year of Diagnosis	Overall Survival (Months)	Overall Survival Status	Person Cigarette Smoking History Pack Year Value	Overall Survival Days
+#Identifier to uniquely specify a patient.	N Stage	M Stage	Pretreated	Sex	The text for reporting information about ethnicity.	The text for reporting information about race.	Smoking History	Year of Diagnosis	Overall survival in months since initial diagonosis.	Overall patient survival status.	Numeric computed value to represent lifetime tobacco exposure defined as number of cigarettes smoked per day x number of years smoked divided by 20.	Overall patient survival days
+#STRING	STRING	STRING	STRING	STRING	STRING	STRING	STRING	NUMBER	NUMBER	STRING	NUMBER	NUMBER
+#1	1	1	1	1	1	1	1	1	1	9	1	1
+PATIENT_ID	N_STAGE	M_STAGE	PRETREATED	SEX	ETHNICITY	RACE	SMOKING_HISTORY	YEAR_OF_DIAGNOSIS	OS_MONTHS	OS_STATUS	SMOKING_PACK_YEARS	OS_DAYS
+P-MSK-0001	N0	M0	No	Male	Non-Spanish;Non-Hispanic	asian	Former	2014	7	DECEASED	2.5	209

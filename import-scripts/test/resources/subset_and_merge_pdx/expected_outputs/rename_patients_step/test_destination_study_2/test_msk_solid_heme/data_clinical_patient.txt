@@ -1,0 +1,6 @@
+#Patient Identifier
+#Identifier to uniquely specify a patient.
+#STRING
+#1
+PATIENT_ID
+P-DMP-P001

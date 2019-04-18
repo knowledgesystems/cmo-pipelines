@@ -1,0 +1,98 @@
+PATIENT_ID	START_DATE	STOP_DATE	EVENT_TYPE	SAMPLE_ID	PDX_ID	PASSAGE_ID	TREATMENT_TYPE	SUBTYPE	AGENT	RESPONSE	RESPONSE_DURATION_MONTHS	REASON_FOR_TX_DISCONTINUATION	SURGERY_DETAILS	EVENT_TYPE_DETAILED	PROCEDURE_LOCATION	PROCEDURE_LOCATION_SPECIFY	DIAGNOSTIC_TYPE	DIAGNOSTIC_TYPE_SITE	IMAGING	SPECIMEN_TYPE	SPECIMEN_SITE	AGE_AT_PROCEDURE	LATERALITY	DISEASE_STATUS	METASTATIC_SITE	SAMPLE_TYPE	SITE_OF_RECURRENCE	TREATMENT_NOTES	DURATION_OF_THERAPY_DAYS	NOTE
+MSK_LX27	29	50	TREATMENT				MEDICAL TX	Chemotherapy	Pemetrexed	Partial Response	1	Side Effects																New onset arterial fibrillation		
+MSK_LX27	231		IMAGING														CT Scan	Chest	Mixed Response											
+P-DMP-P002	387	429	TREATMENT				MEDICAL TX	Immunotherapy	Nivolumab (Opdivo)	Partial Response	2	Progression of Disease																		
+P-DMP-P002	456		SURGERY										PERICARDIAL DRAINAGE		Thoracic Cavity	Pericardial Effusion														
+P-DMP-P002	408		SURGERY										NBB NEEDLE BIOPSY BODY LUNG/PLEURA CT		Thoracic Cavity	Lung														
+P-MSK-0001	34	99	TREATMENT				MEDICAL TX	Chemotherapy	Pemetrexed	Mixed Response	2	Completed Regimen																Carboplatin + Pemetrexed		
+P-MSK-0001	83		IMAGING														CT Scan	Chest	Progression											
+P-DMP-P001	871		STATUS																							Metastasis	Abdominopelvic Cavity			
+P-DMP-P001	907	1334	TREATMENT				MEDICAL TX	Chemotherapy	Gemcitabine	Mixed Response	15	Progression of Disease																Cisplatin/Gemcitabine/MEK162 per protocol 13-004		
+P-DMP-P001	874		SURGERY										NBB NEEDLE BIOPSY BODY BONE	Biopsy of omental mass	Abdominopelvic Cavity	Omentum														
+P-DMP-P001	1355		SURGERY										NBB NEEDLE BIOPSY BODY SOFT TISSUE		Abdominopelvic Cavity	Peritoneum														
+P-DMP-P001	1629		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+P-DMP-P001	902		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P001	1961		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P001	2276		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+MSK_LX27	248	249	TREATMENT				MEDICAL TX	Radiation Therapy	RT	No Response	0	Completed Regimen																L scapula; 400 x 2 fractions R lateral rib; 400 cGy x 2 fractions		
+MSK_LX27	114		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+MSK_LX27	235		IMAGING														CT Scan	Abdomen/Pelvis	Mixed Response											
+P-DMP-P002	8		IMAGING														MRI	Brain	Metastasis											
+P-DMP-P002	297		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+P-DMP-P001	2000	2041	TREATMENT				MEDICAL TX	Chemotherapy	FOLFIRI	Mixed Response	0	Progression of Disease																		
+P-DMP-P001	1778		SURGERY										NBN NEEDLE BIOPSY NEURO SPINE MRI		Skeletal	Iliac Fossa														
+P-DMP-P001	1033		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+P-DMP-P001	862		IMAGING														CT Scan	Abdomen	Progression											
+P-DMP-P001	1348		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P002	103		SURGERY										THORACENTESIS IR		Thoracic Cavity	Pleural Effusion														
+P-MSK-0001	0		SURGERY										THORACOTOMY WITH  BIOPSY LUNG/PLEURA	R	Thoracic Cavity	Lung Pleura														
+P-DMP-P001	907	1334	TREATMENT				MEDICAL TX	Targeted Therapy	Binimetinib (MEK162)	Mixed Response	15	Progression of Disease																Cisplatin/Gemcitabine/Binimetinib (MEK162) per protocol 13-004		
+MSK_LX6	0		SURGERY										NBB NEEDLE BIOPSY BODY LUNG/PLEURA CT		Thoracic Cavity	Lung Upper Lobe														
+MSK_LX27	126	210	TREATMENT				MEDICAL TX	Immunotherapy	Nivolumab (Opdivo)	No Response	0	Progression of Disease																		
+MSK_LX27	0		SURGERY										NBB NEEDLE BIOPSY BODY LUNG/PLEURA CT		Thoracic Cavity	Lung Lower Lobe														
+MSK_LX27	4		IMAGING														PET/CT	Body	Initial Presentation											
+P-DMP-P002	380		SURGERY										EXCISION CHEST WALL TUMOR INCL RIBS W/ PLASTI	L	Thoracic Cavity	Chest Wall														
+P-DMP-P002	129		IMAGING														CT Scan	Chest/Abdomen	Recurrence											
+P-DMP-P001	907	1334	TREATMENT				MEDICAL TX	Chemotherapy	Cisplatin	Mixed Response	15	Progression of Disease																Cisplatin/Gemcitabine/MEK162 per protocol 13-004		
+P-DMP-P001	2315	2343	TREATMENT				MEDICAL TX	Targeted Therapy	Trametinib (GSK1120212)	Mixed Response	1	Other																		
+P-DMP-P001	908		SURGERY										NBB NEEDLE BIOPSY BODY SOFT TISSUE	Left supraclavicular lymph node biopsy	Lymph Nodes	Supraclavicular														
+P-DMP-P001	1348		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+P-DMP-P001	2323		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+P-DMP-P001	2101		IMAGING														PET/CT	Body	Metastasis											
+P-DMP-P001	1520		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P001	1645		SPECIMEN	s_C_001055_X002_d	DRILA_CHOL_X0001aS2	P2														Pleural Drain		47		Refractory						
+P-DMP-P002	0		SURGERY										CREATION PERICARDIAL WINDOW//PARTIAL RESECTION FOR DRAINAGE		Thoracic Cavity	Pericardial Effusion														
+P-DMP-P002	431		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+P-DMP-P001	2069	2216	TREATMENT				MEDICAL TX	Chemotherapy	Gemcitabine/Cisplatin	Partial Response	5	Side Effects																		
+P-DMP-P001	1796	1965	TREATMENT				MEDICAL TX	Targeted Therapy	TPX-0005	Partial Response	5	Progression of Disease																TPX-0005		
+P-DMP-P001	1285		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P001	1629		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P001	1778		SPECIMEN	s_C_001055_X003_d	DRILA_CHOL_X0001aS3	P9														Pleural Drain		48		Refractory						
+MSK_LX6	128		SURGERY										REMOVAL LUNG SINGLE LOBECTOMY	L	Thoracic Cavity	Lung														
+MSK_LX27	29	50	TREATMENT				MEDICAL TX	Chemotherapy	Cisplatin	Partial Response	1	Side Effects																New onset arterial fibrillation		
+MSK_LX27	214	219	TREATMENT				MEDICAL TX	Radiation Therapy	EBRT	No Response	0	Completed Regimen																L hip 400 cGy x 5 fractions		
+MSK_LX27	213		IMAGING														CT Scan	Abdomen/Pelvis	Progression											
+MSK_LX27	117		IMAGING														MRI	Brain	Metastasis											
+P-DMP-P002	318	348	TREATMENT				MEDICAL TX	Chemotherapy	Docetaxel ( Taxotere )	Partial Response	1	Side Effects																Docetaxel + Ramucirumab; could not continue due to toxicity		
+P-DMP-P002	0		SURGERY										CREATION PERICARDIAL WINDOW//PARTIAL RESECTION FOR DRAINAGE	Pericardium	Thoracic Cavity	Pleural Effusion														
+P-DMP-P002	8		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Initial Presentation											
+P-MSK-0001	33		IMAGING														CT Scan	Chest	Initial Presentation											
+P-DMP-P001	2315	2343	TREATMENT				MEDICAL TX	Chemotherapy	testname	Partial Response		Other																Hydroxychloroquine		
+P-DMP-P001	1645		SURGERY										NBB NEEDLE BIOPSY BODY SOFT TISSUE		Skeletal	Spine L4														
+P-DMP-P001	1771		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P001	1845		IMAGING														PET/CT	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P001	870		IMAGING														PET/CT	Body	Metastasis											
+P-DMP-P001	1033		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Metastasis											
+P-DMP-P001	1285		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+MSK_LX6	128		SPECIMEN	MSK_LX6	RUDIC_SCLC_X0003aS1	P3														Surgery		66		Newly Diagnosed						
+MSK_LX27	92		SURGERY										NBB NEEDLE BIOPSY BODY SOFT TISSUE US		Soft Tissue	Pelvis														
+MSK_LX27	65		IMAGING														PET/CT	Body	Partial Response											
+MSK_LX27	92		SPECIMEN	MSK_LX27	RUDIC_LUAD_X0005aS1	P3														Core Biopsy		63		Refractory						
+P-DMP-P002	326	348	TREATMENT				MEDICAL TX	Immunotherapy	Ramicuramab	Partial Response	1	Side Effects																Docetaxel + Ramucirumab; could not continue due to toxicity		
+P-DMP-P002	8		IMAGING														PET Scan	Body	Initial Presentation											
+P-DMP-P002	384		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Stable Disease											
+P-MSK-0001	141		SPECIMEN	P-MSK-0001	RUDIC_PLEMESO_X0010aS1	P2														Surgery		70		Newly Diagnosed						
+P-DMP-P001	0		SURGERY										EXPLORATORY LAPAROTOMY/ EXPLORATORY CELIOTOMY W/ WO BIOPSY/ BIOPSIES		Abdominopelvic Cavity	Gallbladder														
+P-DMP-P001	2189		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+MSK_LX27	126	210	TREATMENT				MEDICAL TX	Immunotherapy	Lirilumab	No Response	0	Progression of Disease																		
+P-DMP-P002	30	135	TREATMENT				MEDICAL TX	Chemotherapy	Carboplatin + Pemetrexed + Bevacizumab	Mixed Response	11	Completed Regimen																		
+P-DMP-P002	156	297	TREATMENT				MEDICAL TX	Chemotherapy	Pemetrexed	Partial Response	8	Progression of Disease																		
+P-DMP-P002	88		IMAGING														CT Scan	Chest/Abdomen	Partial Response											
+P-DMP-P002	380		SPECIMEN	P-MSK-0002	RUDIC_LUAD_X0132aS1	P1														Surgery		67		Refractory						
+P-MSK-0001	34	99	TREATMENT				MEDICAL TX	Chemotherapy	Carboplatin	Mixed Response	2	Completed Regimen																Carboplatin + Pemetrexed		
+P-MSK-0001	141		SURGERY										THORACOTOMY MAJOR W/ EXPLORATION/BIOPSY	thoracotomy; unresectable	Thoracic Cavity	Lung Pleura														
+P-DMP-P001	1356	1776	TREATMENT				MEDICAL TX	Targeted Therapy	LOXO-101	Partial Response	13	Progression of Disease																		
+P-DMP-P001	1825	1965	TREATMENT				MEDICAL TX	Immunotherapy	Denosumab (Xgeva; Prolia)	Partial Response	4	Progression of Disease																		
+P-DMP-P001	0		SURGERY										LAPAROSCOPIC CHOLECYSTECTOMY		Abdominopelvic Cavity	Gallbladder														
+P-DMP-P001	1159		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+P-DMP-P001	1407		IMAGING														CT Scan	Abdomen/Chest/Pelvis	Progression											
+P-DMP-P001	0		SURGERY										EXPLORATORY LAPAROTOMY/ EXPLORATORY CELIOTOMY W/ WO BIOPSY/ BIOPSIES		Abdominopelvic Cavity	Spine L4														
+P-DMP-P001	862		IMAGING														CT Scan	Abdomen	Metastasis											
+MSK_LX6	92		IMAGING														PET Scan	Abdomen/Chest/Pelvis	Progression											
+MSK_LX27	29	50	Treatment				Medical therapy	Systemic therapy	cisplatin+pemetrexed			progression of disease																	22	
+P-MSK-0001	48	99	Treatment				Medical therapy	Systemic therapy	carboplatin+pemetrexed			completed regimen																	52	
+MSK_LX6	128		Surgery										Lingulectomy, partial anterior segmentectomy of LLL lung, MLND	Anterior segment lower lobe of lingula, upper lobe of lung, resection	Thoracic cavity	lung														
+P-MSK-0001	141		Surgery										no surgery, unresectable tumor																	
+MSK_LX27	92		SPECIMEN	MSK_LX27																										Sample days from diagnosis
+MSK_LX6	128		SPECIMEN	MSK_LX6																										Sample days from diagnosis
+P-MSK-0001	141		SPECIMEN	P-MSK-0001																										Sample days from diagnosis

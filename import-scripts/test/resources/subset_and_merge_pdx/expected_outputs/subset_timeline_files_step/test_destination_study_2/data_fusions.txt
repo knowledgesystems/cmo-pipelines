@@ -1,0 +1,8 @@
+Hugo_Symbol	Entrez_Gene_Id	Center	Tumor_Sample_Barcode	Fusion	DNA_support	RNA_support	Method	Frame	Comments
+LMNA	0	MSKCC-DMP	P-DMP-P001-T01-IM5	NTRK1-LMNA fusion	yes	unknown		unknown	null Known fusion
+LMNA	0	MSKCC-DMP	P-DMP-P001-T03-IM6	NTRK1-LMNA fusion	yes	unknown		unknown	LMNA (NM_170707) - NTRK1 (NM_002529) fusion (LMNA exons 1-2 fused to NTRK1 exons 12 - 17): c.495:LMNA_c.1355-112:NTRK1del Note: The LMNA - NTRK1 fusion includes the kinase domain of NTRK1. One of the breakpoints is within LMNA exon 2.
+AXIN1	0	MSKCC-DMP	P-DMP-P001-T03-IM6	AXIN1-intragenic	yes	unknown		unknown	AXIN1 (NM_003502) rearrangement: c.2031_chr16:g.344783del Note: The AXIN1 rearrangement is an intragenic deletion of exon 8. One of the breakpoints is within exon 8. The functional significance is undetermined.
+LMNA	0	MSKCC-DMP	P-DMP-P001-T04-IM6	NTRK1-LMNA fusion	yes	unknown		unknown	LMNA (NM_170707) - NTRK1 (NM_002529) fusion (LMNA exons 1-2 fused to NTRK1 exons 12 - 17): c.495:LMNA_c.1355-112:NTRK1del Note: The LMNA - NTRK1 fusion includes the kinase domain of NTRK1. One of the breakpoints is within LMNA exon 2.
+AXIN1	0	MSKCC-DMP	P-DMP-P001-T02-IM6	AXIN1-intragenic	yes	unknown		unknown	AXIN1 (NM_003502) Rearrangement: c.1956-1065_c.2031del Note: The AXIN1 Rearrangement is a deletion which affects the splice site of exon 8, potentially disabling the function of the gene.
+LMNA		CMO	s_C_001055_X002_d	LMNA-NTRK1	yes	unknown		mid-exon	
+NTRK1		CMO	s_C_001055_X002_d	LMNA-NTRK1	yes	unknown		mid-exon	

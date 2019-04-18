@@ -1,0 +1,7 @@
+cancer_study_identifier: test_fake_dmp_study 
+genetic_alteration_type: COPY_NUMBER_ALTERATION
+stable_id: fake_dmp_cna
+show_profile_in_analysis_tab: true
+profile_name: Copy Number Alterations 
+profile_description: Copy number alterations from targeted sequencing via MK-IMPACT, HEME on Illumina HiSeq sequencers.
+datatype: DISCRETE

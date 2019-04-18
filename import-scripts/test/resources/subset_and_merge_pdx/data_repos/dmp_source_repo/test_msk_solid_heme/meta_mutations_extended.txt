@@ -1,0 +1,8 @@
+cancer_study_identifier: test_fake_dmp_study
+genetic_alteration_type: MUTATION_EXTENDED
+datatype: MAF
+stable_id: mskimpact_mutations
+profile_name: Mutations
+profile_description: Mutation data from MSK-IMPACT, HEME.
+show_profile_in_analysis_tab: true
+data_filename: data_mutations_extended.txt

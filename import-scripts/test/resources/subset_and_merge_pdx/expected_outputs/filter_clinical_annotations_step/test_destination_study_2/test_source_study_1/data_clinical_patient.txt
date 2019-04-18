@@ -1,0 +1,6 @@
+#Patient Identifier	Person Cigarette Smoking History Pack Year Value
+#Identifier to uniquely specify a patient.	Numeric computed value to represent lifetime tobacco exposure defined as number of cigarettes smoked per day x number of years smoked divided by 20.
+#STRING	NUMBER
+#1	1
+PATIENT_ID	SMOKING_PACK_YEARS
+P-MSK-0001	2.5

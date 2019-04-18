@@ -1,0 +1,2 @@
+SAMPLE_ID	mutations
+P-MSK-0001	IMPACT410

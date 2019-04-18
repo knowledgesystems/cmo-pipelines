@@ -1,0 +1,8 @@
+cancer_study_identifier: test_fake_dmp_study
+genetic_alteration_type: FUSION
+datatype: FUSION
+stable_id: mskimpact_mutations
+profile_name: Fusions (GML)
+profile_description: Fusion data derived from mutation file. (GML)
+show_profile_in_analysis_tab: false
+data_filename: data_fusions_gml.txt

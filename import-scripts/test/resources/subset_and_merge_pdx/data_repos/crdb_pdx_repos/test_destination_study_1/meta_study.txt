@@ -1,0 +1,5 @@
+type_of_cancer: mixed
+cancer_study_identifier: test_destination_study_1
+name: AACF PDX Cohort
+short_name: 
+description: 

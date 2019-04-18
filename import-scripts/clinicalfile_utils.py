@@ -116,3 +116,6 @@ def write_data(file, output_file):
         for line in source_file:
             if not line.startswith("#"):
                 os.write(output_file, line)
+
+def is_clinical_file(filename):
+    return "data_clinical" in filename and filename.endswith(".txt")
