@@ -253,6 +253,20 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                 files_with_hgvsp_short.append(mutations_file)
         return files_with_hgvsp_short
 
+    def test_add_display_sample_name_column_step(self):
+        '''
+            Test Step 7: check HGVSp_Short column is dropped from files
+        '''
+        self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
+        add_display_sample_name_column(self.mock_destination_to_source_mapping, self.root_directory)
+        self.check_add_display_sample_name_column_step()
+
+    def check_add_display_sample_name_column_step(self):
+        for destination in self.mock_destination_to_source_mapping:
+            actual_directory = os.path.join(self.root_directory, destination)
+            expected_directory = os.path.join(self.expected_files, "add_display_sample_name_column_step", destination)
+            self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, "data_clinical_sample.txt"), os.path.join(expected_directory, "data_clinical_sample.txt")))
+
     def setup_root_directory_with_previous_test_output(self, previous_step):
         shutil.rmtree(self.root_directory)
         for destination in self.mock_destination_to_source_mapping:
@@ -261,6 +275,8 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             shutil.copytree(expected_directory, actual_directory)
 
     def sort_and_compare_files(self, actual_file, expected_file):
+        if not os.path.isfile(actual_file):
+            return False
         actual_header = get_header(actual_file)
         expected_header = get_header(expected_file)
         if sorted(actual_header) != sorted(expected_header):
