@@ -160,7 +160,7 @@ def create_destination_to_source_mapping(destination_source_patient_mapping_reco
     '''
         Creates a dictionary representation of the mappings per destination-source pairing which is
         passed around for subsetting/merging/ etc. Takes parse_file() output as input (list of dictionaries)
-    
+
         Ex: { DESTINATION_1 : { SOURCE_1 : SourceMappings([PID_1, PID_2...], [CLINATTR_1, CLINATTR_2]),
                                 SOURCE_2 : SourceMappings([PID_3, ...], ...) },
               DESTINATION_2 : { SOURCE_1 : SourceMappings([PID_5, PID_6...]) }
@@ -362,7 +362,7 @@ def filter_clinical_annotations(source_subdirectory, clinical_annotations):
             for line in f:
                 data = line.rstrip("\n").split("\t")
                 data_to_write = [data[index] for index in attribute_indices]
-                to_write.append('\t'.join(data_to_write)) 
+                to_write.append('\t'.join(data_to_write))
         write_data_list_to_file(clinical_file, to_write)
 
 def convert_source_to_destination_pids_in_subsetted_source_studies(destination_to_source_mapping, root_directory):
@@ -374,11 +374,11 @@ def convert_source_to_destination_pids_in_subsetted_source_studies(destination_t
             >>> Source 1 (CRDB/DMP)
                 DMP_PATIENT_1: Sample 1
                 DMP_PATIENT_2: Sample 2
-            
+
             >>> Source 2 (CMO)
                 CMO_PATIENT_1: Sample 1
                 CMO_PATIENT_2: Sample 2
-        
+
             Merge clashes for Sample 1 (matches to different patients in same destination study)
     '''
     for destination, source_id_to_sourcemappings in destination_to_source_mapping.items():
@@ -388,10 +388,10 @@ def convert_source_to_destination_pids_in_subsetted_source_studies(destination_t
                 convert_source_to_destination_pids_in_clinical_files(source_subdirectory, source_mapping)
 
 def convert_source_to_destination_pids_in_clinical_files(source_subdirectory, source_mapping):
-    ''' 
+    '''
         Replaces patient id (defined as column indexed by "PATIENT_ID"). Looksup current value in the "Source/CMO patient id column" and
         replaces it with the value in the "destination/DMP patient id column".
-    ''' 
+    '''
     clinical_files = [os.path.join(source_subdirectory, filename) for filename in  os.listdir(source_subdirectory) if is_clinical_file(filename)]
     for clinical_file in clinical_files:
         to_write = []
@@ -402,7 +402,7 @@ def convert_source_to_destination_pids_in_clinical_files(source_subdirectory, so
         with open(clinical_file, "r") as f:
             for line in f:
                 data = line.rstrip("\n").split("\t")
-                try:   
+                try:
                     source_pid = data[pid_index]
                     data[pid_index] = source_mapping.get_patient_for_source_pid(source_pid).destination_pid
                 # passthrough for metadata headers/headers
@@ -458,30 +458,63 @@ def subset_timeline_files(destination_to_source_mapping, source_id_to_path_mappi
         shutil.rmtree(temp_directory)
 #------------------------------------------------------------------------------------------------------------
 '''
-    Step 7: Post-processing - remove HGVSp_Short column from data_mutations_extended.txt
+    Step 7: Post-processing - remove HGVSp_Short column from data_mutations_extended.txt and add DISPLAY_SAMPLE_ID column
 '''
+def add_display_sample_name_column(destination_to_source_mapping, root_directory):
+    '''
+        Frontend feature allows value in new DISPLAY_SAMPLE_ID column to be displayed. Empty values will default back
+        to normal sample id. This is being added so PDX sample ids will be used as sample ids if available.
+    '''
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        clinical_file = os.path.join(destination_directory, CLINICAL_SAMPLE_FILE_PATTERN)
+
+        if "PDX_ID" in get_header(clinical_file):
+            to_write = []
+            # get headers and add DISPLAY_SAMPLE_NAME default metadata TODO: change to hit CDD(?)
+            all_metadata_lines = get_all_metadata_lines(clinical_file)
+            add_metadata_for_attribute("DISPLAY_SAMPLE_NAME", all_metadata_lines)
+            for metadata_header_type in get_metadata_header_line_order(clinical_file):
+                to_write.append('\t'.join(all_metadata_lines[metadata_header_type]))
+
+            pdx_id_index = get_header(clinical_file).index("PDX_ID")
+            header_processed = False
+            with open(clinical_file, "r") as f:
+                for line in f.readlines():
+                    # skip metadata headers - already processed
+                    if line.startswith("#"):
+                        continue
+                    record = line.rstrip("\n").split('\t')
+                    # add new attribute/column to the end of header
+                    if not header_processed:
+                        record.append("DISPLAY_SAMPLE_NAME")
+                        header_processed = True
+                    # add PDX_ID to end of record (lines up with DISPLAY_SAMPLE_NAME)
+                    else:
+                        record.append(record[pdx_id_index])
+                    to_write.append('\t'.join(record))
+            write_data_list_to_file(clinical_file, to_write)
 
 def remove_hgvsp_short_column(destination_to_source_mapping, root_directory):
     '''
         Needed because CMO studies are unannotated but IMPACT studies are annotated. A merge of CMO and IMPACT studies
         results in partially annotated MAF. The annotator will not annotate the unannotated records because it assumes
-        MAF is annotated based on presence of HGVSp_Short column. Removing the column triggers re-annotation of entire MAF 
+        MAF is annotated based on presence of HGVSp_Short column. Removing the column triggers re-annotation of entire MAF
         upon import.
-    ''' 
+    '''
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
         maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
         if "HGVSp_Short" in get_header(maf):
             hgvsp_short_index = get_header(maf).index("HGVSp_Short")
             maf_to_write = []
-            maf_file = open(maf, "rU")
-            for line in maf_file:
-                if line.startswith("#"):
-                    maf_to_write.append(line.rstrip("\n"))
-                else:
-                    record = line.rstrip("\n").split('\t')
-                    maf_to_write.append('\t'.join(record[0:hgvsp_short_index] + record[hgvsp_short_index + 1:]))
-            maf_file.close()
+            with open(maf, "rU") as maf_file:
+                for line in maf_file.readlines():
+                    if line.startswith("#"):
+                        maf_to_write.append(line.rstrip("\n"))
+                    else:
+                        record = line.rstrip("\n").split('\t')
+                        maf_to_write.append('\t'.join(record[0:hgvsp_short_index] + record[hgvsp_short_index + 1:]))
             write_data_list_to_file(maf, maf_to_write)
 #------------------------------------------------------------------------------------------------------------
 '''
@@ -554,7 +587,7 @@ def get_all_destination_to_missing_metafiles_mapping(destination_to_source_mappi
 
 def get_matching_metafile_name(filename):
     '''
-        Given a filename (e.g data_clinical.txt) return matching metafile name. 
+        Given a filename (e.g data_clinical.txt) return matching metafile name.
         If there is no matching metafile - function returns None.
     '''
     metafile_name = None
@@ -614,7 +647,7 @@ def remove_source_subdirectories(destination_to_source_mapping, root_directory):
             shutil.rmtree(source_subdirectory)
 #------------------------------------------------------------------------------------------------------------
 '''
-   General utility functions (TODO: move out into module) 
+   General utility functions (TODO: move out into module)
 '''
 
 def write_data_list_to_file(filename, data_list):
@@ -682,12 +715,14 @@ def main():
     merge_source_directories(destination_to_source_mapping, root_directory, lib)
     remove_source_subdirectories(destination_to_source_mapping, root_directory)
     merge_clinical_files(destination_to_source_mapping, root_directory, lib)
-    
+
     # overwrite timeline with CRDB-timeline subset
     subset_timeline_files(destination_to_source_mapping, source_id_to_path_mapping, root_directory, crdb_fetch_directory, lib)
-    
+
     # post-processing remove hgvsp_short to trigger re-annotation and generate all logging/triggers
     remove_hgvsp_short_column(destination_to_source_mapping, root_directory)
+    add_display_sample_name_column(destination_to_source_mapping, root_directory)
+
     remove_temp_subset_files(destination_to_source_mapping, root_directory)
     get_all_destination_to_missing_metafiles_mapping(destination_to_source_mapping, root_directory)
     generate_import_trigger_files(destination_to_source_mapping, temp_directory)
