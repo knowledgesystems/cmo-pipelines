@@ -1,6 +1,5 @@
 type_of_cancer: mixed
-cancer_study_identifier: mskimpact
-name: MSK Clinical Sequencing Cohort (MSKCC)
-short_name: MSK-IMPACT, HEME, ARCHER Clinical Sequencing Cohort
-description: Targeted sequencing of clinical cases via MSK-IMPACT, MSK-IMPACT Heme, and ARCHER platforms. Please follow the <a href="http://cmo.mskcc.org/cmo/initiatives/msk-impact/">publication guidelines</a> when using this data in abstracts or journal articles. <font color="red">This data is available to MSK investigators only, not to be published or shared with anyone outside of MSK.</font>
-groups: MSKPUB;BERGERM1;DMP;SOLITD
+cancer_study_identifier: test_fake_dmp_study
+name: DMP Fake Study
+short_name: DMP Fake Study Cohort
+description: Fake studies for stuff

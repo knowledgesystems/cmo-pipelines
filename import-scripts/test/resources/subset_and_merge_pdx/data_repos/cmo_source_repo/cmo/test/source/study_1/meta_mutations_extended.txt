@@ -1,5 +1,5 @@
-cancer_study_identifier: mixed_cbe_scaltrim_MS_ntrk
-stable_id: mixed_cbe_scaltrim_MS_ntrk_mutations
+cancer_study_identifier: cmo_test_source_study_1
+stable_id: cmo_test_source_study_1
 profile_name: Mutations
 profile_description: IMPACT468 sequencing of tumor/normal samples
 genetic_alteration_type: MUTATION_EXTENDED
