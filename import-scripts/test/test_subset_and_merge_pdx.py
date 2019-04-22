@@ -147,7 +147,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         # setup `temp directory` to model entire data repo - everything is needed for subsetting
         shutil.rmtree(self.temp_dir)
         shutil.copytree(self.data_repos, self.temp_dir)
-        subset_source_directories(self.mock_destination_to_source_mapping, self.source_id_to_path_mapping, self.root_directory, self.lib)
+        subset_source_directories_for_destination_studies(self.mock_destination_to_source_mapping, self.source_id_to_path_mapping, self.root_directory, self.lib)
         self.check_subset_source_step()
 
     def check_subset_source_step(self):
@@ -191,7 +191,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             Test Step 4: check sources are correctly merged into destination studies
         '''
         self.setup_root_directory_with_previous_test_output("rename_patients_step")
-        merge_source_directories(self.mock_destination_to_source_mapping, self.root_directory, self.lib)
+        merge_source_directories_for_destination_studies(self.mock_destination_to_source_mapping, self.root_directory, self.lib)
         remove_source_subdirectories(self.mock_destination_to_source_mapping, self.root_directory)
         self.check_merge_source_directories_step()
 
