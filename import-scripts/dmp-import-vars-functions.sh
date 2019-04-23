@@ -19,8 +19,7 @@ JAVA_REDCAP_PIPELINE_ARGS="-jar $REDCAP_PIPELINE_JAR_FILENAME"
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
-#default darwin demographics row count is 2 to allow minimum records written to be 1 in fetched Darwin Demographics result (allow 10% drop)
-DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT=2
+##TO-DO: ADD DEFAULT DDP DEMOGRAPHICS ROW COUNT
 
 # Clinical attribute fields which should never be filtered because of empty content
 FILTER_EMPTY_COLUMNS_KEEP_COLUMN_LIST="PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE,PARTA_CONSENTED_12_245,PARTC_CONSENTED_12_245"
@@ -127,10 +126,9 @@ function import_crdb_to_redcap {
 }
 
 # Function for importing mskimpact darwin files to redcap
-function import_mskimpact_darwin_to_redcap {
+function import_mskimpact_darwin_caisis_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_caisis_gbm.txt mskimpact_clinical_caisis ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_darwin_demographics.txt mskimpact_data_clinical_darwin_demographics ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_imaging_caisis_gbm.txt mskimpact_timeline_imaging_caisis ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_specimen_caisis_gbm.txt mskimpact_timeline_specimen_caisis ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_status_caisis_gbm.txt mskimpact_timeline_status_caisis ; then return_value=1 ; fi
@@ -157,16 +155,10 @@ function import_mskimpact_supp_date_to_redcap {
 function import_mskimpact_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp.txt mskimpact_data_clinical_ddp_demographics ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_pediatrics.txt mskimpact_data_clinical_ddp_demographics_pediatrics ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskimpact_timeline_chemotherapy_ddp; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_ddp_radiation.txt mskimpact_timeline_radiation_ddp ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_ddp_surgery.txt mskimpact_timeline_surgery_ddp ; then return_value=1 ; fi
-    return $return_value
-}
-
-# Function for importing hemepact darwin files to redcap
-function import_hemepact_darwin_to_redcap {
-    return_value=0
-    if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_clinical_supp_darwin_demographics.txt hemepact_data_clinical_supp_darwin_demographics ; then return_value=1 ; fi
     return $return_value
 }
 
@@ -188,16 +180,9 @@ function import_hemepact_supp_date_to_redcap {
 function import_hemepact_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_clinical_ddp.txt hemepact_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_chemotherapy.txt hemepact_timeline_chemotherapy_ddp; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_radiation.txt hemepact_timeline_radiation_ddp ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_surgery.txt hemepact_data_timeline_surgery_ddp ; then return_value=1 ; fi
-    return $return_value
-}
-
-# Function for importing raindance darwin files to redcap
-function import_raindance_darwin_to_redcap {
-    return_value=0
-    if ! import_project_to_redcap $MSK_RAINDANCE_DATA_HOME/data_clinical_supp_darwin_demographics.txt mskraindance_data_clinical_supp_darwin_demographics ; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_chemotherapy.txt hemepact_timeline_chemotherapy_ddp; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_radiation.txt hemepact_timeline_radiation_ddp ; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_surgery.txt hemepact_data_timeline_surgery_ddp ; then return_value=1 ; fi
     return $return_value
 }
 
@@ -219,16 +204,9 @@ function import_raindance_supp_date_to_redcap {
 function import_raindance_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_RAINDANCE_DATA_HOME/data_clinical_ddp.txt mskraindance_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_RAINDANCE_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskraindance_timeline_chemotherapy_ddp; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_RAINDANCE_DATA_HOME/data_timeline_ddp_radiation.txt mskraindance_timeline_radiation_ddp ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_RAINDANCE_DATA_HOME/data_timeline_ddp_surgery.txt mskraindance_data_timeline_surgery_ddp ; then return_value=1 ; fi
-    return $return_value
-}
-
-# Function for importing archer darwin files to redcap
-function import_archer_darwin_to_redcap {
-    return_value=0
-    if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_supp_darwin_demographics.txt mskarcher_data_clinical_supp_darwin_demographics ; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_RAINDANCE_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskraindance_timeline_chemotherapy_ddp; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_RAINDANCE_DATA_HOME/data_timeline_ddp_radiation.txt mskraindance_timeline_radiation_ddp ; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_RAINDANCE_DATA_HOME/data_timeline_ddp_surgery.txt mskraindance_data_timeline_surgery_ddp ; then return_value=1 ; fi
     return $return_value
 }
 
@@ -250,9 +228,9 @@ function import_archer_supp_date_to_redcap {
 function import_archer_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_ddp.txt mskarcher_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskarcher_timeline_chemotherapy_ddp; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_radiation.txt mskarcher_timeline_radiation_ddp ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_surgery.txt mskarcher_data_timeline_surgery_ddp ; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskarcher_timeline_chemotherapy_ddp; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_radiation.txt mskarcher_timeline_radiation_ddp ; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_surgery.txt mskarcher_data_timeline_surgery_ddp ; then return_value=1 ; fi
     return $return_value
 }
 

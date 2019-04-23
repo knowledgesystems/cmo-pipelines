@@ -69,6 +69,9 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
     @Value("#{jobParameters[cohortName]}")
     private String cohortName;
 
+    @Value("#{stepExecutionContext['pediatricCohortPatientIdsSet']}")
+    private Set<Integer> pediatricCohortPatientIdsSet;
+
     @Autowired
     private DDPDataSource ddpDataSource;
 
@@ -115,6 +118,9 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
         // are null because an exception will be thrown in that case too (by the repository)
         try {
             compositeRecord.setPatientDemographics(futurePatientDemographics.get());
+            if (!pediatricCohortPatientIdsSet.isEmpty()) {
+                compositeRecord.setPediatricPatientStatus(pediatricCohortPatientIdsSet.contains(compositeRecord.getPatientDemographics().getDeidentPT()));
+            }
         } catch (InvalidAuthenticationException e) {
             throw new RuntimeException(e.getMessage());
         } catch (Exception e) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -36,6 +36,7 @@ import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -53,6 +54,9 @@ import java.util.*;
 @ComponentScan(basePackages = {"org.mskcc.cmo.ks.ddp.pipeline", "org.cbioportal.cmo.pipelines.common"})
 public class DDPEmailTasklet implements Tasklet {
 
+    @Value("${email.subject}")
+    private String subject;
+
     @Autowired
     private EmailUtil emailUtil;
 
@@ -64,7 +68,6 @@ public class DDPEmailTasklet implements Tasklet {
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
         StringBuilder body = new StringBuilder();
-        String subject = "DDP pipeline errors";
         Set<String> patientsMissingDMPIds = ddpPatientListUtil.getPatientsMissingDMPIds();
         if (patientsMissingDMPIds.size() > 0) {
             body.append(constructMissingPatientsText(patientsMissingDMPIds, "patients filtered because of missing DMP IDs"));

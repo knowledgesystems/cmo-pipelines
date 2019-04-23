@@ -406,11 +406,12 @@ public class DDPUtilsTest {
         clinicalRecord.setSEX("Female");
         clinicalRecord.setETHNICITY("MY_ETHNICITY");
         clinicalRecord.setOS_STATUS("LIVING");
+        clinicalRecord.setPED_IND("Yes");
         clinicalRecord.setOS_MONTHS("3.123");
         clinicalRecord.setRADIATION_THERAPY("MY_RADIATION_THERAPY");
         clinicalRecord.setCHEMOTHERAPY("  MY_CHEMOTHERAPY  "); // it does a trim too
         clinicalRecord.setSURGERY("MY_SURGERY");
-        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\t3.123\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY\tMY_SURGERY";
+        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tYes\t3.123\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY\tMY_SURGERY";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.TRUE);
         Assert.assertEquals(expectedValue, returnedValue);
     }
@@ -425,11 +426,12 @@ public class DDPUtilsTest {
         clinicalRecord.setSEX("Female");
         clinicalRecord.setETHNICITY("MY_ETHNICITY");
         clinicalRecord.setOS_STATUS("LIVING");
+        clinicalRecord.setPED_IND("No");
         clinicalRecord.setOS_MONTHS("NA");
         clinicalRecord.setRADIATION_THERAPY("MY_RADIATION_THERAPY");
         clinicalRecord.setCHEMOTHERAPY("  MY_CHEMOTHERAPY  "); // it does a trim too
         clinicalRecord.setSURGERY("MY_SURGERY");
-        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY\tMY_SURGERY";
+        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tNo\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY\tMY_SURGERY";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.FALSE, Boolean.TRUE, Boolean.TRUE, Boolean.TRUE);
         Assert.assertEquals(expectedValue, returnedValue);
     }
@@ -444,11 +446,12 @@ public class DDPUtilsTest {
         clinicalRecord.setSEX("Female");
         clinicalRecord.setETHNICITY("MY_ETHNICITY");
         clinicalRecord.setOS_STATUS("LIVING");
+        clinicalRecord.setPED_IND("NA");
         clinicalRecord.setOS_MONTHS("3.123");
         clinicalRecord.setRADIATION_THERAPY("MY_RADIATION_THERAPY"); // doesn't matter if this was set
         clinicalRecord.setCHEMOTHERAPY("  MY_CHEMOTHERAPY  "); // it does a trim too
         clinicalRecord.setSURGERY("MY_SURGERY");
-        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\t3.123\tMY_CHEMOTHERAPY\tMY_SURGERY";
+        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tNA\t3.123\tMY_CHEMOTHERAPY\tMY_SURGERY";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.TRUE, Boolean.FALSE, Boolean.TRUE, Boolean.TRUE);
         Assert.assertEquals(expectedValue, returnedValue);
     }
@@ -463,11 +466,12 @@ public class DDPUtilsTest {
         clinicalRecord.setSEX("Female");
         clinicalRecord.setETHNICITY("MY_ETHNICITY");
         clinicalRecord.setOS_STATUS("LIVING");
+        clinicalRecord.setPED_IND("Yes");
         clinicalRecord.setOS_MONTHS("3.123");
         clinicalRecord.setRADIATION_THERAPY("MY_RADIATION_THERAPY");
         clinicalRecord.setCHEMOTHERAPY("  MY_CHEMOTHERAPY  "); // doesn't matter if this was set
         clinicalRecord.setSURGERY("MY_SURGERY");
-        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\t3.123\tMY_RADIATION_THERAPY\tMY_SURGERY";
+        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tYes\t3.123\tMY_RADIATION_THERAPY\tMY_SURGERY";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE, Boolean.TRUE);
         Assert.assertEquals(expectedValue, returnedValue);
     }
@@ -482,11 +486,12 @@ public class DDPUtilsTest {
         clinicalRecord.setSEX("Female");
         clinicalRecord.setETHNICITY("MY_ETHNICITY");
         clinicalRecord.setOS_STATUS("LIVING");
+        clinicalRecord.setPED_IND("No");
         clinicalRecord.setOS_MONTHS("3.123");
         clinicalRecord.setRADIATION_THERAPY("MY_RADIATION_THERAPY");
         clinicalRecord.setCHEMOTHERAPY("  MY_CHEMOTHERAPY  "); // it does a trim too
         clinicalRecord.setSURGERY("MY_SURGERY"); // doesn't matter if this was set
-        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\t3.123\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY";
+        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tNo\t3.123\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE);
         Assert.assertEquals(expectedValue, returnedValue);
     }
