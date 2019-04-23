@@ -51,6 +51,7 @@ public class DDPCompositeRecord {
     private List<Radiation> radiationProcedures;
     private List<Chemotherapy> chemoProcedures;
     private List<Surgery> surgicalProcedures;
+    private Boolean pediatricPatientStatus;
 
     public DDPCompositeRecord(){}
 
@@ -283,5 +284,19 @@ public class DDPCompositeRecord {
             }
         }
         return Boolean.FALSE;
+    }
+
+    /**
+     * @return the pediatricPatientStatus
+     */
+    public Boolean getPediatricPatientStatus() {
+        return pediatricPatientStatus;
+    }
+
+    /**
+     * @param pediatricPatientStatus the pediatricPatientStatus to set
+     */
+    public void setPediatricPatientStatus(Boolean pediatricPatientStatus) {
+        this.pediatricPatientStatus = pediatricPatientStatus;
     }
 }

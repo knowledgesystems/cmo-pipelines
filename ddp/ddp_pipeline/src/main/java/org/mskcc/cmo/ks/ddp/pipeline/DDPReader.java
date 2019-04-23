@@ -81,6 +81,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
 
     private List<DDPCompositeRecord> ddpCompositeRecordList;
     private Set<String> excludedPatientIds = new HashSet<>();
+    private final String MSKIMPACT_PED_COHORT_NAME = "mskimpact_ped";
     private final Integer TEST_MODE_PATIENT_THRESHOLD = 500;
 
     private final Logger LOG = Logger.getLogger(DDPReader.class);
@@ -114,7 +115,30 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
                 throw new ItemStreamException("Error fetching DDP records by cohort name: " + cohortName, e);
             }
         }
+        // add pediatric cohort patient ids to execution context for processor
+        ec.put("pediatricCohortPatientIdsSet", getPediatricCohortPatientIdsSet());
         LOG.info("Fetched " + ddpCompositeRecordList.size()+  " DDP records");
+    }
+
+    /**
+     * Fetches the pediatric cohort patient list from DDP.
+     * The set of DDP IDs will be used to update the pediatric cohort status
+     * of a composite patient record during the processing step.
+     *
+     * @return
+     */
+    private Set<Integer> getPediatricCohortPatientIdsSet() {
+        Set<Integer> pediatricCohortPatientIdsSet = new HashSet<>();
+        try {
+            List<CohortPatient> mskimpactPedPatients = ddpDataSource.getPatientRecordsByCohortId(ddpCohortMap.get(MSKIMPACT_PED_COHORT_NAME));
+            for (CohortPatient patient : mskimpactPedPatients) {
+                pediatricCohortPatientIdsSet.add(patient.getPID());
+            }
+            LOG.info("Successfully fetched " + String.valueOf(mskimpactPedPatients.size()) + " DDP patient IDs belonging to " + MSKIMPACT_PED_COHORT_NAME + " cohort");
+        } catch (Exception e) {
+            LOG.error("Error fetching DDP pediatric cohort patient list - will not be able to update PED_IND status for clinical data");
+        }
+        return pediatricCohortPatientIdsSet;
     }
 
     /**
