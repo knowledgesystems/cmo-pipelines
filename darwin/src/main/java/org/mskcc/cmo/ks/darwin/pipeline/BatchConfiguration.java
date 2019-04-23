@@ -67,6 +67,7 @@ public class BatchConfiguration {
     public static final String MSKIMPACT_JOB = "mskimpactJob";
     public static final String MSK_JOB = "mskJob";
     public static final String SKCM_MSKCC_2015_CHANT_JOB = "skcm_mskcc_2015_chantJob";
+    public static final String MSK_CAISIS_JOB = "mskCaisisJob";
 
     @Value("${darwin.chunk_size}")
     private Integer chunkSize;
@@ -80,6 +81,15 @@ public class BatchConfiguration {
     @Bean
     public static PropertySourcesPlaceholderConfigurer propertyConfigInDev() {
         return new PropertySourcesPlaceholderConfigurer();
+    }
+
+    @Bean
+    public Job mskCaisisJob() {
+        return jobBuilderFactory.get(MSK_CAISIS_JOB)
+                .start(mskimpactTimelineBrainSpineStep())
+                .next(mskimpactClinicalBrainSpineStep())
+                .next(mskimpactEmailStep())
+                .build();
     }
 
     @Bean

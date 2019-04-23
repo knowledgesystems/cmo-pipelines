@@ -23,10 +23,7 @@ EXPORT_SUPP_DATE_ARCHER_FAIL=0
 
 # Assume fetchers have failed until they complete successfully
 FETCH_CRDB_IMPACT_FAIL=1
-FETCH_DARWIN_IMPACT_FAIL=1
-FETCH_DARWIN_HEME_FAIL=1
-FETCH_DARWIN_RAINDANCE_FAIL=1
-FETCH_DARWIN_ARCHER_FAIL=1
+FETCH_DARWIN_CAISIS_FAIL=1
 FETCH_DDP_IMPACT_FAIL=1
 FETCH_DDP_HEME_FAIL=1
 FETCH_DDP_RAINDANCE_FAIL=1
@@ -176,22 +173,17 @@ fi
 # MSKIMPACT DATA FETCHES
 # TODO: move other pre-import/data-fetch steps here (i.e exporting raw files from redcap)
 
-# fetch Darwin data
-echo "fetching Darwin impact data"
+# fetch darwin caisis data
+echo "fetching Darwin CAISIS data for mskimpact..."
 echo $(date)
-# if darwin demographics row count less than or equal to default row count then set it to default value
-MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $MSKIMPACT_REDCAP_BACKUP/data_clinical_mskimpact_data_clinical_darwin_demographics.txt)
-if [ $MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT ] ; then
-    MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT
-fi
-$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -s mskimpact -c $MSKIMPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT
+$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -s mskimpact -d $MSK_IMPACT_DATA_HOME -c
 if [ $? -gt 0 ] ; then
     cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DARWIN Fetch"
+    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Darwin CAISIS Fetch"
 else
-    FETCH_DARWIN_IMPACT_FAIL=0
-    echo "committing darwin data"
-    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY commit -m "Latest MSKIMPACT Dataset: Darwin"
+    FETCH_DARWIN_CAISIS_FAIL=0
+    echo "committing darwin caisis data"
+    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY commit -m "Latest MSKIMPACT Dataset: Darwin CAISIS"
 fi
 
 if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
@@ -256,18 +248,35 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
     fi
 fi
 
-if [ $FETCH_DARWIN_IMPACT_FAIL -eq 0 ] ; then
-    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PED_IND"] == "Yes") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_supp_darwin_demographics.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
-    # For future use: when we want to replace darwin demographics attributes with ddp-fetched attributes instead of just for ped-cohort
-    #awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_patient_list.txt
-    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -o $MSK_IMPACT_DATA_HOME -s $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt -f diagnosis,radiation,chemotherapy,surgery
+# fetch ddp demographics data
+echo "fetching DDP demographics data for mskimpact..."
+echo $(date)
+mskimpact_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $mskimpact_dmp_pids_file
+##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -s $mskimpact_dmp_pids_file -o $MSK_IMPACT_DATA_HOME
+if [ $? -gt 0 ] ; then
+    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Demographics Fetch"
+else
+    FETCH_DDP_IMPACT_FAIL=0
+    echo "committing ddp data"
+    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY commit -m "Latest MSKIMPACT Dataset: DDP Demographics"
+fi
+
+# fetch ddp data for pediatric cohort
+if [ $FETCH_DDP_IMPACT_FAIL -eq 0 ] ; then
+    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PED_IND"] == "Yes") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_ddp.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
+    # override default ddp clinical filename so that pediatric demographics file does not conflict with mskimpact demographics file
+    DDP_PEDIATRIC_PROP_OVERRIDES="-Dddp.clinical_filename=data_clinical_ddp_pediatrics.txt"
+    $JAVA_BINARY $DDP_PEDIATRIC_PROP_OVERRIDES $JAVA_DDP_FETCHER_ARGS -o $MSK_IMPACT_DATA_HOME -s $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt -f diagnosis,radiation,chemotherapy,surgery
     if [ $? -gt 0 ] ; then
         cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Fetch"
+        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Pediatric DDP Fetch"
     else
         FETCH_DDP_IMPACT_FAIL=0
-        echo "committing DDP data"
-        cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY commit -m "Latest MSKIMPACT Dataset: DDP demographics/timeline"
+        echo "committing Pediatric DDP data"
+        cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY commit -m "Latest MSKIMPACT Dataset: Pediatric DDP demographics/timeline"
     fi
 fi
 
@@ -288,23 +297,6 @@ fi
 
 # -----------------------------------------------------------------------------------------------------------
 # HEMEPACT DATA FETCHES
-
-echo "fetching Darwin heme data"
-echo $(date)
-# if darwin demographics row count less than or equal to default row count then set it to default value
-HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $HEMEPACT_REDCAP_BACKUP/data_clinical_hemepact_data_clinical_supp_darwin_demographics.txt)
-if [ $HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT ] ; then
-    HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT
-fi
-$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -s mskimpact_heme -c $HEMEPACT_DARWIN_DEMOGRAPHICS_RECORD_COUNT
-if [ $? -gt 0 ] ; then
-    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-    sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DARWIN Fetch"
-else
-    FETCH_DARWIN_HEME_FAIL=0
-    echo "committing darwin data for heme"
-    cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY commit -m "Latest HEMEPACT Dataset: Darwin"
-fi
 
 if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
     # fetch new/updated heme samples using CVR Web service (must come after mercurial fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
@@ -333,39 +325,25 @@ if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
     fi
 fi
 
-# For future use: when we want to replace darwin demographics attributes with ddp-fetched attributes
-#if [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
-#    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $MSK_DMP_TMPDIR/hemepact_patient_list.txt
-#    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -o $MSK_HEMEPACT_DATA_HOME -s $MSK_DMP_TMPDIR/hemepact_patient_list.txt
-#    if [ $? -gt 0 ] ; then
-#        cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-#        sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Fetch"
-#    else
-#        FETCH_DDP_HEME_FAIL=0
-#        echo "committing DDP data for heme"
-#        cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY commit -m "Latest HEMEPACT Dataset: DDP demographics/timeline"
-#    fi
-#fi
+# fetch ddp demographics data
+echo "fetching DDP demographics data for heme..."
+echo $(date)
+
+mskimpact_heme_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_heme_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $mskimpact_heme_dmp_pids_file
+##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -s $mskimpact_heme_dmp_pids_file -o $MSK_HEMEPACT_DATA_HOME
+if [ $? -gt 0 ] ; then
+    cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Demographics Fetch"
+else
+    FETCH_DDP_HEME_FAIL=0
+    echo "committing ddp data"
+    cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY commit -m "Latest HEMEPACT Dataset: DDP Demographics"
+fi
 
 # -----------------------------------------------------------------------------------------------------------
 # RAINDANCE DATA FETCHES
-
-echo "fetching Darwin raindance data"
-echo $(date)
-# if darwin demographics row count less than or equal to default row count then set it to default value
-RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $RAINDANCE_REDCAP_BACKUP/data_clinical_mskraindance_data_clinical_supp_darwin_demographics.txt)
-if [ $RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT ] ; then
-    RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT
-fi
-$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -d $MSK_RAINDANCE_DATA_HOME -s mskraindance -c $RAINDANCE_DARWIN_DEMOGRAPHICS_RECORD_COUNT
-if [ $? -gt 0 ] ; then
-    cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-    sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DARWIN Fetch"
-else
-    FETCH_DARWIN_RAINDANCE_FAIL=0
-    echo "commting darwin data for raindance"
-    cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY commit -m "Latest RAINDANCE Dataset: Darwin"
-fi
 
 if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] ; then
     # fetch new/updated raindance samples using CVR Web service (must come after mercurial fetching). The -s flag skips segment data fetching
@@ -393,39 +371,25 @@ if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] ; then
     fi
 fi
 
-# For future use: when we want to replace darwin demographics attributes with ddp-fetched attributes
-#if [ $FETCH_CVR_RAINDANCE_FAIL -eq 0 ] ; then
-#    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical.txt | sort | uniq > $MSK_DMP_TMPDIR/mskraindance_patient_list.txt
-#    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -o $MSK_RAINDANCE_DATA_HOME -s $MSK_DMP_TMPDIR/mskraindance_patient_list.txt
-#    if [ $? -gt 0 ] ; then
-#        cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-#        sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Fetch"
-#    else
-#        FETCH_DDP_RAINDANCE_FAIL=0
-#        echo "committing DDP data for raindance"
-#        cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY commit -m "Latest RAINDANCE Dataset: DDP demographics/timeline"
-#    fi
-#fi
+# fetch ddp demographics data
+echo "fetching DDP demographics data for mskraindance..."
+echo $(date)
+
+mskraindance_dmp_pids_file=$MSK_DMP_TMPDIR/mskraindance_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical.txt | sort | uniq > $mskraindance_dmp_pids_file
+##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskraindance -s $mskraindance_dmp_pids_file -o $MSK_RAINDANCE_DATA_HOME
+if [ $? -gt 0 ] ; then
+    cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Demographics Fetch"
+else
+    FETCH_DDP_RAINDANCE_FAIL=0
+    echo "committing ddp data"
+    cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY commit -m "Latest RAINDANCE Dataset: DDP Demographics"
+fi
 
 # -----------------------------------------------------------------------------------------------------------
 # ARCHER DATA FETCHES
-
-echo "fetching Darwin archer data"
-echo $(date)
-# if darwin demographics row count less than or equal to default row count then set it to default value
-ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $ARCHER_REDCAP_BACKUP/data_clinical_mskarcher_data_clinical_supp_darwin_demographics.txt)
-if [ $ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT ] ; then
-    ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DARWIN_DEMOGRAPHICS_ROW_COUNT
-fi
-$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -s mskarcher -c $ARCHER_DARWIN_DEMOGRAPHICS_RECORD_COUNT
-if [ $? -gt 0 ] ; then
-    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-    sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DARWIN Fetch"
-else
-    FETCH_DARWIN_ARCHER_FAIL=0
-    echo " committing darwin data for archer"
-    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Darwin"
-fi
 
 if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
     # fetch new/updated archer samples using CVR Web service (must come after mercurial fetching).
@@ -454,19 +418,22 @@ if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
     fi
 fi
 
-# For future use: when we want to replace darwin demographics attributes with ddp-fetched attributes
-#if [ $FETCH_CVR_ARCHER_FAIL -eq 0 ] ; then
-#    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt | sort | uniq > $MSK_DMP_TMPDIR/mskarcher_patient_list.txt
-#    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -o $MSK_ARCHER_UNFILTERED_DATA_HOME -s $MSK_DMP_TMPDIR/mskarcher_patient_list.txt
-#    if [ $? -gt 0 ] ; then
-#        cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-#        sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Fetch"
-#    else
-#        FETCH_DDP_ARCHER_FAIL=0
-#        echo "committing DDP data for archer"
-#        cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: DDP demographics/timeline"
-#    fi
-#fi
+# fetch ddp demographics data
+echo "fetching DDP demographics data for mskarcher..."
+echo $(date)
+
+mskarcher_dmp_pids_file=$MSK_DMP_TMPDIR/mskarcher_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt | sort | uniq > $mskarcher_dmp_pids_file
+##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskarcher -s $mskarcher_dmp_pids_file -o $MSK_ARCHER_UNFILTERED_DATA_HOME
+if [ $? -gt 0 ] ; then
+    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Demographics Fetch"
+else
+    FETCH_DDP_ARCHER_FAIL=0
+    echo "committing ddp data"
+    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: DDP Demographics"
+fi
 
 # -----------------------------------------------------------------------------------------------------------
 # GENERATE CANCER TYPE CASE LISTS AND SUPP DATE ADDED FILES
@@ -556,6 +523,7 @@ fi
 
 # import newly fetched files into redcap
 echo "Starting import into redcap"
+echo $(date)
 
 ## MSKIMPACT imports
 
@@ -564,16 +532,16 @@ if [ $PERFORM_CRDB_FETCH -gt 0 ] && [ $FETCH_CRDB_IMPACT_FAIL -eq 0 ] ; then
     import_crdb_to_redcap
     if [ $? -gt 0 ] ; then
         #NOTE: we have decided to allow import of mskimpact project to proceed even when CRDB data has been lost from redcap (not setting IMPORT_STATUS_IMPACT)
-        sendPreImportFailureMessageMskPipelineLogsSlack "Mskimpact CRDB Redcap Import - Recovery Of Redcap Project Needed!"
+        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CRDB Redcap Import - Recovery Of Redcap Project Needed!"
     fi
 fi
 
 # imports mskimpact darwin data into redcap
-if [ $FETCH_DARWIN_IMPACT_FAIL -eq 0 ] ; then
-    import_mskimpact_darwin_to_redcap
+if [ $FETCH_DARWIN_CAISIS_FAIL -eq 0 ] ; then
+    import_mskimpact_darwin_caisis_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_IMPACT=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "Mskimpact Darwin Redcap Import"
+        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Darwin CAISIS Redcap Import"
     fi
 fi
 
@@ -582,7 +550,7 @@ if [ $FETCH_DDP_IMPACT_FAIL -eq 0 ] ; then
     import_mskimpact_ddp_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_IMPACT=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "Mskimpact DDP Redcap Import"
+        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Redcap Import"
     fi
 fi
 
@@ -591,70 +559,50 @@ if [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
     import_mskimpact_cvr_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_IMPACT=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "Mskimpact CVR Redcap Import"
+        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Redcap Import"
     fi
     if [ $EXPORT_SUPP_DATE_IMPACT_FAIL -eq 0 ] ; then
         import_mskimpact_supp_date_to_redcap
         if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Mskimpact Supp Date Redcap Import. Project is now empty, data restoration required"
+            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Supp Date Redcap Import. Project is now empty, data restoration required"
         fi
     fi
 fi
 
 ## HEMEPACT imports
 
-# imports hemepact darwin data into redcap
-if [ $FETCH_DARWIN_HEME_FAIL -eq 0 ] ; then
-    import_hemepact_darwin_to_redcap
-    if [ $? -gt 0 ] ; then
-        IMPORT_STATUS_HEME=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "Hemepact Darwin Redcap Import"
-    fi
+if [ $FETCH_DDP_HEME_FAIL -eq 0 ] ; then
+   import_hemepact_ddp_to_redcap
+   if [$? -gt 0 ] ; then
+       IMPORT_STATUS_HEME=1
+       sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Redcap Import"
+   fi
 fi
-
-# For future use: imports hemepact ddp data into redcap
-#if [ $FETCH_DDP_HEME_FAIL -eq 0 ] ; then
-#    import_hemepact_ddp_to_redcap
-#    if [$? -gt 0 ] ; then
-#        IMPORT_STATUS_HEME=1
-#        sendPreImportFailureMessageMskPipelineLogsSlack "Hemepact DDP Redcap Import"
-#    fi
-#fi
 
 # imports hemepact cvr data into redcap
 if [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
     import_hemepact_cvr_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_HEME=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "Hemepact CVR Redcap Import"
+        sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Redcap Import"
     fi
     if [ $EXPORT_SUPP_DATE_HEME_FAIL -eq 0 ] ; then
         import_hemepact_supp_date_to_redcap
         if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Mskimpact Supp Date Redcap Import. Project is now empty, data restoration required"
+            sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT Supp Date Redcap Import. Project is now empty, data restoration required"
         fi
     fi
 fi
 
 ## ARCHER imports
 
-# imports archer darwin data into redcap
-if [ $FETCH_DARWIN_ARCHER_FAIL -eq 0 ] ; then
-    import_archer_darwin_to_redcap
-    if [ $? -gt 0 ] ; then
-        IMPORT_STATUS_ARCHER=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED Darwin Redcap Import"
-    fi
+if [ $FETCH_DDP_ARCHER_FAIL -eq 0 ] ; then
+   import_archer_ddp_to_redcap
+   if [$? -gt 0 ] ; then
+       IMPORT_STATUS_ARCHER=1
+       sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Redcap Import"
+   fi
 fi
-
-# For future use: imports archer ddp data into redcap
-#if [ $FETCH_DDP_ARCHER_FAIL -eq 0 ] ; then
-#    import_archer_ddp_to_redcap
-#    if [$? -gt 0 ] ; then
-#        IMPORT_STATUS_ARCHER=1
-#        sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Redcap Import"
-#    fi
-#fi
 
 # imports archer cvr data into redcap
 if [ $FETCH_CVR_ARCHER_FAIL -eq 0 ] ; then
@@ -673,35 +621,25 @@ fi
 
 ## RAINDANCE imports
 
-# imports raindance darwin data into redcap
-if [ $FETCH_DARWIN_RAINDANCE_FAIL -eq 0 ] ; then
-    import_raindance_darwin_to_redcap
-    if [ $? -gt 0 ] ; then
-        IMPORT_STATUS_RAINDANCE=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "Raindance Darwin Redcap Import"
-    fi
+if [ $FETCH_DDP_RAINDANCE_FAIL -eq 0 ] ; then
+   import_raindance_ddp_to_redcap
+   if [$? -gt 0 ] ; then
+       IMPORT_STATUS_RAINDANCE=1
+       sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Redcap Import"
+   fi
 fi
-
-# For future use: imports raindance ddp data into redcap
-#if [ $FETCH_DDP_RAINDANCE_FAIL -eq 0 ] ; then
-#    import_raindance_ddp_to_redcap
-#    if [$? -gt 0 ] ; then
-#        IMPORT_STATUS_RAINDANCE=1
-#        sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Redcap Import"
-#    fi
-#fi
 
 # imports raindance cvr data into redcap
 if [ $FETCH_CVR_RAINDANCE_FAIL -eq 0 ] ; then
     import_raindance_cvr_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_RAINDANCE=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "Raindance CVR Redcap Import"
+        sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE CVR Redcap Import"
     fi
     if [ $EXPORT_SUPP_DATE_RAINDANCE_FAIL -eq 0 ] ; then
         import_raindance_supp_date_to_redcap
         if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Raindance Supp Date Redcap Import. Project is now empty, data restoration required"
+            sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE Supp Date Redcap Import. Project is now empty, data restoration required"
         fi
     fi
 fi
@@ -733,7 +671,7 @@ $HG_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPAC
 
 echo "exporting impact data from redcap"
 if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
-    export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics,mskimpact_timeline_radiation_ddp,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp
+    export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics,mskimpact_timeline_radiation_ddp,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_IMPACT=1
         cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
@@ -1123,7 +1061,7 @@ fi
 # tmp directory for subsetting purposes to prevent any conflicts and allow easier debugging of any issues that arise
 MSKIMPACT_PED_TMP_DIR=$MSK_DMP_TMPDIR/mskimpact_ped_tmp
 rsync -a $MSK_IMPACT_DATA_HOME/* $MSKIMPACT_PED_TMP_DIR
-export_stable_id_from_redcap mskimpact $MSKIMPACT_PED_TMP_DIR mskimpact_clinical_caisis,mskimpact_timeline_surgery_caisis,mskimpact_timeline_status_caisis,mskimpact_timeline_treatment_caisis,mskimpact_timeline_imaging_caisis,mskimpact_timeline_specimen_caisis,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp
+export_stable_id_from_redcap mskimpact $MSKIMPACT_PED_TMP_DIR mskimpact_clinical_caisis,mskimpact_timeline_surgery_caisis,mskimpact_timeline_status_caisis,mskimpact_timeline_treatment_caisis,mskimpact_timeline_imaging_caisis,mskimpact_timeline_specimen_caisis,mskimpact_data_clinical_ddp_demographics,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp
 if [ $? -gt 0 ] ; then
     echo "MSKIMPACT redcap export for MSKIMPACT_PED failed! Study will not be updated in the portal"
     sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT_PED redcap export"

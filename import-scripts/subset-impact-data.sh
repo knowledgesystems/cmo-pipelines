@@ -61,9 +61,9 @@ MERGE_SCRIPT_FAILURE=0
 ADD_METADATA_HEADERS_FAILURE=0
 
 if [ $STUDY_ID == "genie" ]; then
-    # in the case of genie data, the input data directory must be the mskimpact data home, where we expect to see darwin_naaccr.txt
-    # copy the darwin genie files to the output directory with different filenames
-    cp $INPUT_DIRECTORY/darwin/darwin_naaccr.txt $OUTPUT_DIRECTORY/data_clinical_supp_patient.txt
+    # in the case of genie data, the input data directory must be the mskimpact data home, where we expect to see ddp_naaccr.txt
+    # copy the ddp genie files to the output directory with different filenames
+    cp $INPUT_DIRECTORY/ddp/ddp_naaccr.txt $OUTPUT_DIRECTORY/data_clinical_supp_patient.txt
     cut -f1,2 $CLINICAL_FILENAME | grep -v "^#" > $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt
 
     # run the generate clinical subset script to generate list of sample ids to subset from impact data - subset of sample ids will be written to given $SUBSET_FILENAME
@@ -76,9 +76,9 @@ if [ $STUDY_ID == "genie" ]; then
         # starting in Nov 2018 releases, all vital status information will be removed from patient file and placed in a separate file:
         # get the patients from the filtered set of patients from the generate-clinical-subset.py call and expand file with the vital status columns
         cut -f1 $OUTPUT_DIRECTORY/data_clinical_supp_patient.txt > $OUTPUT_DIRECTORY/vital_status.txt
-        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/expand-clinical-data.py --study-id="genie" --clinical-file="$OUTPUT_DIRECTORY/vital_status.txt" --clinical-supp-file="$INPUT_DIRECTORY/darwin/darwin_vital_status.txt" --fields="YEAR_CONTACT,YEAR_DEATH,INT_CONTACT,INT_DOD,DEAD" --identifier-column-name="PATIENT_ID"
+        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/expand-clinical-data.py --study-id="genie" --clinical-file="$OUTPUT_DIRECTORY/vital_status.txt" --clinical-supp-file="$INPUT_DIRECTORY/ddp/ddp_vital_status.txt" --fields="YEAR_CONTACT,YEAR_DEATH,INT_CONTACT,INT_DOD,DEAD" --identifier-column-name="PATIENT_ID"
         if [ $? -gt 0 ] ; then
-            echo "Failed to expand $OUTPUT_DIRECTORY/vital_status.txt with YEAR_CONTACT, YEAR_DEATH, INT_CONTACT, INT_DOD, DEAD from $INPUT_DIRECTORY/darwin/darwin_vital_status.txt. Exiting..."
+            echo "Failed to expand $OUTPUT_DIRECTORY/vital_status.txt with YEAR_CONTACT, YEAR_DEATH, INT_CONTACT, INT_DOD, DEAD from $INPUT_DIRECTORY/ddp/ddp_vital_status.txt. Exiting..."
             exit 2
         fi
         # expand data_clinical_supp_sample.txt with ONCOTREE_CODE, SAMPLE_TYPE, GENE_PANEL from data_clinical.txt
@@ -91,7 +91,7 @@ if [ $STUDY_ID == "genie" ]; then
 
         # add age at seq report using cvr/seq_date.txt
         echo "Adding AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt"
-        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --seq-date-file="$INPUT_DIRECTORY/cvr/seq_date.txt" --age-file="$INPUT_DIRECTORY/darwin/darwin_age.txt" --convert-to-days="true"
+        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --seq-date-file="$INPUT_DIRECTORY/cvr/seq_date.txt" --age-file="$INPUT_DIRECTORY/ddp/ddp_age.txt" --convert-to-days="true"
         if [ $? -gt 0 ] ; then
             echo "Failed to add AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt using $INPUT_DIRECTORY/cvr/seq_date.txt. Exiting..."
             exit 2l
