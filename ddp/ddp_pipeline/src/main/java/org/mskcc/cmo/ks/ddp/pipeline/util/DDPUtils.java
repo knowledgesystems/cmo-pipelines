@@ -432,6 +432,13 @@ public class DDPUtils {
                 naaccrSexMap.getOrDefault(sex.toUpperCase(), "NA"));
     }
 
+    public static String resolvePediatricCohortPatientStatus(Boolean pediatricCohortPatientStatus) {
+        if (pediatricCohortPatientStatus == null) {
+            return "NA";
+        }
+        return (pediatricCohortPatientStatus ? "Yes" : "No");
+    }
+
     /**
      * Converts record as tab-delimited string of values.
      *

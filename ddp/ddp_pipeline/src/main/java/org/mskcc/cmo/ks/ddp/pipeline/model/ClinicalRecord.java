@@ -51,6 +51,7 @@ public class ClinicalRecord {
     private String SEX;
     private String ETHNICITY;
     private String OS_STATUS;
+    private String PED_IND;
     private String OS_MONTHS;
     private String RADIATION_THERAPY;
     private String CHEMOTHERAPY;
@@ -66,6 +67,7 @@ public class ClinicalRecord {
         this.SEX = DDPUtils.resolvePatientSex(compositeRecord);
         this.ETHNICITY = compositeRecord.getPatientEthnicity() == null ? "NA" : compositeRecord.getPatientEthnicity();;
         this.OS_STATUS = DDPUtils.resolveOsStatus(compositeRecord);
+        this.PED_IND = DDPUtils.resolvePediatricCohortPatientStatus(compositeRecord.getPediatricPatientStatus());
         this.OS_MONTHS = DDPUtils.resolveOsMonths(OS_STATUS, compositeRecord);
         this.RADIATION_THERAPY = compositeRecord.hasReceivedRadiation() ? "Yes" : "No";
         this.CHEMOTHERAPY = compositeRecord.hasReceivedChemo() ? "Yes" : "No";
@@ -171,6 +173,20 @@ public class ClinicalRecord {
     }
 
     /**
+     * @return the PED_IND
+     */
+    public String getPED_IND() {
+        return PED_IND;
+    }
+
+    /**
+     * @param PED_IND the PED_IND to set
+     */
+    public void setPED_IND(String PED_IND) {
+        this.PED_IND = PED_IND;
+    }
+
+    /**
      * @return the OS_MONTHS
      */
     public String getOS_MONTHS() {
@@ -245,6 +261,7 @@ public class ClinicalRecord {
         fieldNames.add("SEX");
         fieldNames.add("ETHNICITY");
         fieldNames.add("OS_STATUS");
+        fieldNames.add("PED_IND");
         // OS_MONTHS depends on fields from the diagnosis query
         // so if querying diagnosis is turned off all fields will be NA
         if (includeDiagnosis) {
