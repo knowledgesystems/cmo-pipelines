@@ -181,7 +181,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
     }
 
     private void processAgeFile(ExecutionContext ec) {
-        File mskimpactAgeFile = new File(stagingDirectory, cvrUtilities.DARWIN_AGE_FILE);
+        File mskimpactAgeFile = new File(stagingDirectory, cvrUtilities.DDP_AGE_FILE);
         if (!mskimpactAgeFile.exists()) {
             log.error("File does not exist - skipping data loading from age file: " + mskimpactAgeFile.getName());
             return;
