@@ -40,6 +40,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.apache.log4j.Logger;
+import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 /**
  *
  * @author jake
@@ -54,7 +55,8 @@ public class DarwinPipeline {
         options.addOption("h", "help", false, "shows this help document and quits.")
                 .addOption("d", "directory", true, "Output directory")
                 .addOption("s", "study", true, "Cancer Study ID")
-                .addOption("c", "current_demographics_rec_count", true, "Count of records in current demographics file. Used to sanity check num of records in latest demographics data fetch.");
+                .addOption("r", "current_demographics_rec_count", false, "Count of records in current demographics file. Used to sanity check num of records in latest demographics data fetch. Required only when not running the CAISIS only mode.")
+                .addOption("c", "caisis_mode", false, "Flag to run the MSK CAISIS job only");
         return options;
     }
 
@@ -95,6 +97,24 @@ public class DarwinPipeline {
         }
     }
 
+    private static void launchCaisisJob(String[] args, String outputDirectory, String studyID) throws Exception {
+        SpringApplication app = new SpringApplication(DarwinPipeline.class);
+        app.setWebEnvironment(false);
+        ConfigurableApplicationContext ctx = app.run(args);
+        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
+
+        JobParameters jobParameters = new JobParametersBuilder()
+                .addString("outputDirectory", outputDirectory)
+                .addString("studyID", studyID)
+                .toJobParameters();
+        Job job = ctx.getBean(BatchConfiguration.MSK_CAISIS_JOB, Job.class);
+        JobExecution jobExecution = jobLauncher.run(job, jobParameters);
+        if (!jobExecution.getExitStatus().equals(ExitStatus.COMPLETED)) {
+            log.error("DarwinPipeline Job '" + BatchConfiguration.MSK_CAISIS_JOB + "' exited with status: " + jobExecution.getExitStatus());
+            System.exit(2);
+        }
+    }
+
     public static void main(String[] args) throws Exception{
         Options options = DarwinPipeline.getOptions(args);
         CommandLineParser parser = new DefaultParser();
@@ -102,10 +122,13 @@ public class DarwinPipeline {
         if (commandLine.hasOption("h")||
             !commandLine.hasOption("directory")||
             !commandLine.hasOption("study") ||
-            !commandLine.hasOption("current_demographics_rec_count")){
+            (!commandLine.hasOption("current_demographics_rec_count") && !commandLine.hasOption("caisis_mode"))){
             help(options, 0);
         }
-
-        launchJob(args, commandLine.getOptionValue("directory"), commandLine.getOptionValue("study"), commandLine.getOptionValue("current_demographics_rec_count"));
+        if (commandLine.hasOption("c")) {
+            launchCaisisJob(args, commandLine.getOptionValue("d"), commandLine.getOptionValue("s"));
+        } else {
+            launchJob(args, commandLine.getOptionValue("d"), commandLine.getOptionValue("s"), commandLine.getOptionValue("r"));
+        }
     }
 }
