@@ -46,6 +46,7 @@
           </arguments>
           <environmentVariables>
             <PYTHONPATH>$PYTHONPATH</PYTHONPATH>
+            <ANNOTATOR_JAR>${ANNOTATOR_JAR}</ANNOTATOR_JAR>
           </environmentVariables>
         </configuration>
       </plugin>

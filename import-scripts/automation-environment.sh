@@ -28,6 +28,7 @@ export CMO_PIPELINES_HOME=$PORTAL_GIT_HOME/cmo-pipelines
 export PIPELINES_HOME=$PORTAL_GIT_HOME/pipelines
 export CBIOPORTAL_HOME=$PORTAL_GIT_HOME/cbioportal
 export GENOME_NEXUS_ANNOTATOR_HOME=$PORTAL_GIT_HOME/genome-nexus-annotation-pipeline
+export ANNOTATOR_JAR=$GENOME_NEXUS_ANNOTATOR_HOME/annotationPipeline/target/annotationPipeline*.jar
 export ONCO_HOME=$PORTAL_GIT_HOME/oncotree
 export CDD_HOME=$PORTAL_GIT_HOME/clinical-data-dictionary
 export DDP_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/application-secure.properties

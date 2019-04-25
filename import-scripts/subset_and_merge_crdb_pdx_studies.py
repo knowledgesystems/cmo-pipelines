@@ -37,6 +37,7 @@ DESTINATION_STUDY_STATUS_FLAGS = {}
 MERGE_GENOMIC_FILES_SUCCESS = "MERGE_GENOMIC_FILES_SUCCESS"
 SUBSET_CLINICAL_FILES_SUCCESS = "SUBSET_CLINICAL_FILES_SUCCESS"
 HAS_ALL_METAFILES = "HAS_ALL_METAFILES"
+ANNOTATION_SUCCESS = "ANNOTATION_SUCESS"
 
 # trigger file suffixes
 TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
@@ -50,6 +51,7 @@ SAMPLE_ID_COLUMN = "SAMPLE_ID"
 PATIENT_ID_COLUMN = "PATIENT_ID"
 ONCOTREE_CODE_COLUMN = "ONCOTREE_CODE"
 SEQUENCED_SAMPLES_HEADER_TAG = "#sequenced_samples:"
+ANNOTATED_MAF_FILE_PATTERN = "data_mutations_annotated.txt"
 
 # minimally required columns in final header
 REQUIRED_CLINICAL_COLUMNS = [SAMPLE_ID_COLUMN, PATIENT_ID_COLUMN, ONCOTREE_CODE_COLUMN]
@@ -204,7 +206,7 @@ def create_destination_to_source_mapping(destination_source_patient_mapping_reco
 
         # init dict records for destination if not already encountered
         if destination not in DESTINATION_STUDY_STATUS_FLAGS:
-            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False }
+            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False, ANNOTATION_SUCCESS: False}
         if destination not in SKIPPED_SOURCE_STUDIES:
             SKIPPED_SOURCE_STUDIES[destination] = set()
         if destination not in destination_to_source_mapping:
@@ -518,12 +520,12 @@ def subset_timeline_files(destination_to_source_mapping, source_id_to_path_mappi
 # ------------------------------------------------------------------------------------------------------------
 # STEP 7: Post-processing.
 
-def post_process_and_cleanup_destination_study_data(destination_to_source_mapping, root_directory):
+def post_process_and_cleanup_destination_study_data(destination_to_source_mapping, root_directory, annotator_jar):
     """
         Runs all of the post-process and cleanup steps on the destination studies.
     """
-    remove_hgvsp_short_column(destination_to_source_mapping, root_directory)
     insert_maf_sequenced_samples_header(destination_to_source_mapping, root_directory)
+    annotate_maf(destination_to_source_mapping, root_directory, annotator_jar)
     add_display_sample_name_column(destination_to_source_mapping, root_directory)
     # remove temp subset files after subsetting calls complete
     remove_temp_subset_files(destination_to_source_mapping, root_directory)
@@ -580,33 +582,25 @@ def get_ordered_metadata_with_display_sample_name_attribute(clinical_file):
         ordered_metadata_lines.append('\t'.join(all_metadata_lines[metadata_header_type]))
     return ordered_metadata_lines
 
-
-def remove_hgvsp_short_column(destination_to_source_mapping, root_directory):
+def annotate_maf(destination_to_source_mapping, root_directory, annotator_jar):
     """
-        Removes HGSVp_Short column from MAF to force annotation on the fly during import.
-
-        This is necessary since CMO studies are not annotated prior to import but IMPACT studies are annotated.
-        A merge of CMO and IMPACT studies results in partially annotated MAF which the importer will interpret as
-        "annotated" due to the presence of the HGVSp_Short column.
+        Runs the annotator on the MAF.
     """
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
-        maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
-        header = get_header(maf)
-        if HGVSP_SHORT_COLUMN in header:
-            hgvsp_short_index = header.index(HGVSP_SHORT_COLUMN)
-            maf_to_write = []
-            with open(maf, "rU") as maf_file:
-                for line in maf_file.readlines():
-                    if line.startswith("#"):
-                        maf_to_write.append(line.rstrip("\n"))
-                    else:
-                        # remove data from record in HGVSp_Short column
-                        record = line.rstrip("\n").split('\t')
-                        del record[hgvsp_short_index]
-                        maf_to_write.append('\t'.join(record))
-            write_data_list_to_file(maf, maf_to_write)
+        orig_maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
+        annot_maf = os.path.join(destination_directory, ANNOTATED_MAF_FILE_PATTERN)
 
+        annotator_call = generate_annotator_call(annotator_jar, destination_directory)
+        annotator_status = subprocess.call(annotator_call, shell = True)
+        # if annotation succeeded then replace original maf with annotated maf
+        # otherwise remove annotated maf if exists in destination study directory
+        if annotator_status == 0:
+            shutil.copy(annot_maf, orig_maf)
+            DESTINATION_STUDY_STATUS_FLAGS[destination][ANNOTATION_SUCCESS] = True
+        else:
+            if os.path.isfile(annot_maf):
+                os.remove(annot_maf)
 
 def insert_maf_sequenced_samples_header(destination_to_source_mapping, root_directory):
     """
@@ -699,6 +693,8 @@ def generate_warning_file(temp_directory, warning_file):
                     success_code_message.append("%s study failed because it was unable to subset crdb-pdx clinical/timeline files" % (destination))
                 elif not success_code_map[HAS_ALL_METAFILES]:
                     success_code_message.append("%s study failed because the following metafiles are missing\n\t%s" % (destination, "\n\t".join(DESTINATION_TO_MISSING_METAFILES_MAP[destination])))
+                elif not success_code_map[ANNOTATION_SUCCESS]:
+                    success_code_message.append("%s study failed annotation through Genome Nexus" % (destination))
                 else:
                     success_code_message.append("%s study failed for an unknown reason" % (destination))
         if success_code_message:
@@ -815,7 +811,11 @@ def generate_merge_clinical_files_call(lib, cancer_study_id, destination_directo
     merge_clinical_files_call = 'python ' + lib + '/merge_clinical_files.py -d ' + destination_directory + ' -s ' + cancer_study_id
     return merge_clinical_files_call
 
-# ------------------------------------------------------------------------------------------------------------
+def generate_annotator_call(annotator_jar, destination_directory):
+    annotator_call = 'java -jar ' + annotator_jar + ' -f ' + destination_directory + '/data_mutations_extended.txt ' + '-o ' + destination_directory + '/' + ANNOTATED_MAF_FILE_PATTERN + ' -i mskcc'
+    return annotator_call
+
+#------------------------------------------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--clinical-annotation-mapping-file", help = "CRDB-fetched file containing clinical attributes per source/id destination/id", required = True)
@@ -826,6 +826,7 @@ def main():
     parser.add_argument("-r", "--root-directory", help = "root directory for all new studies (i.e dmp to mskimpact, hemepact, raindance...", required = True)
     parser.add_argument("-t", "--temp-directory", help = "temp directory to store trigger files", required = True)
     parser.add_argument("-w", "--warning-file", help = "file to store all warnings/errors for email", required = True)
+    parser.add_argument("-a", "--annotator", help="path to annotator jar", required = True)
 
     args = parser.parse_args()
     data_source_directories = map(str.strip, args.data_source_directories.split(','))
@@ -836,6 +837,7 @@ def main():
     root_directory = args.root_directory
     temp_directory = args.temp_directory
     warning_file = args.warning_file
+    annotator_jar = args.annotator
 
     # parse the two mapping files provided (which patients and which clinical attributes)
     destination_source_patient_mapping_records = parse_file(destination_to_source_mapping_filename, False)
@@ -869,7 +871,7 @@ def main():
 
     # STEP 7: Post-processing.
     # post-processing destination study data
-    post_process_and_cleanup_destination_study_data(destination_to_source_mapping, root_directory)
+    post_process_and_cleanup_destination_study_data(destination_to_source_mapping, root_directory, annotator_jar)
 
     # generate all logging and trigger files
     identify_missing_metafiles_for_destination_studies(destination_to_source_mapping, root_directory)

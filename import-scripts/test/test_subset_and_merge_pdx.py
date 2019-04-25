@@ -18,6 +18,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.annotator_jar = os.getenv("ANNOTATOR_JAR")
         # needed because our bash scripts reference $PYTHON_BINARY
         os.environ["PYTHON_BINARY"] = sys.executable
 
@@ -234,28 +235,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             for timeline_file in [filename for filename in os.listdir(expected_directory) if "data_timeline" in filename and (filename.endswith(".txt") or filename.endswith(".seg"))]:
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, timeline_file), os.path.join(expected_directory, timeline_file)))
 
-    def test_drop_hgvsp_short_column_step(self):
-        """
-            Test Step 7(a): check HGVSp_Short column is dropped from files
-        """
-        self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
-        files_with_hgvsp_short = self.get_files_with_hgvsp_short()
-        remove_hgvsp_short_column(self.mock_destination_to_source_mapping, self.root_directory)
-        for file_with_hgvsp_short in files_with_hgvsp_short:
-            self.assertTrue("HGVSp_Short" not in get_header(file_with_hgvsp_short))
-
-    def get_files_with_hgvsp_short(self):
-        files_with_hgvsp_short = []
-        for destination in self.mock_destination_to_source_mapping:
-            directory = os.path.join(self.root_directory, destination)
-            mutations_file = os.path.join(directory, MUTATION_FILE_PATTERN)
-            if os.path.isfile(mutations_file) and "HGVSp_Short" in get_header(mutations_file):
-                files_with_hgvsp_short.append(mutations_file)
-        return files_with_hgvsp_short
-
     def test_insert_sequenced_sample_header_step(self):
         """
-            Test Step 7(b): check that inserted sequenced samples header match between files.
+            Test Step 7(a): check that inserted sequenced samples header match between files.
         """
         self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
         insert_maf_sequenced_samples_header(self.mock_destination_to_source_mapping, self.root_directory)
@@ -269,7 +251,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
 
     def test_add_display_sample_name_column_step(self):
         """
-            Test Step 7(c): check that DISPLAY_SAMPLE_NAME column is added to clinical header
+            Test Step 7(b): check that DISPLAY_SAMPLE_NAME column is added to clinical header
         """
         self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
         add_display_sample_name_column(self.mock_destination_to_source_mapping, self.root_directory)
@@ -280,6 +262,56 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             actual_directory = os.path.join(self.root_directory, destination)
             expected_directory = os.path.join(self.expected_files, "add_display_sample_name_column_step", destination)
             self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, "data_clinical_sample.txt"), os.path.join(expected_directory, "data_clinical_sample.txt")))
+
+    def test_annotate_maf(self):
+        """
+            Test Step 7(c): check that MAF is annotated.
+        """
+        self.assertTrue(os.path.isfile(self.annotator_jar), "ANNOTATOR_JAR could not be resolved from sys environment! %s" % (self.annotator_jar))
+        self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
+        self.copy_maf_and_drop_hgvsp_short_column()
+        annotate_maf(self.mock_destination_to_source_mapping, self.root_directory, self.annotator_jar)
+        self.check_annotate_maf_step()
+
+    def check_annotate_maf_step(self):
+        hgvsp_column_values = []
+        for destination in self.mock_destination_to_source_mapping:
+            destination_directory = os.path.join(self.root_directory, destination)
+            orig_maf_copy = os.path.join(destination_directory, "orig_data_mutations_extended.txt")
+            annot_maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
+            self.assertFalse((HGVSP_SHORT_COLUMN in get_header(orig_maf_copy)))
+            self.assertTrue((HGVSP_SHORT_COLUMN in get_header(annot_maf)))
+
+            for record in parse_file(annot_maf, True):
+                if record[HGVSP_SHORT_COLUMN] and not record[HGVSP_SHORT_COLUMN] in ["NA", "N/A"]:
+                    hgvsp_column_values.append(record[HGVSP_SHORT_COLUMN])
+            self.assertTrue(len(hgvsp_column_values) > 0)
+
+    def copy_maf_and_drop_hgvsp_short_column(self):
+        """
+            Make a copy of the MAF and drop the HGVSp_Short column from the file.
+            When the annotate_maf() step runs, the original MAF is replaced with the
+            annotated MAF so this copy is necessary for testing.
+        """
+        for destination in self.mock_destination_to_source_mapping:
+            destination_directory = os.path.join(self.root_directory, destination)
+            maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
+            maf_copy = os.path.join(destination_directory, "orig_data_mutations_extended.txt")
+            shutil.copy(maf, maf_copy)
+            header = get_header(maf_copy)
+            if HGVSP_SHORT_COLUMN in header:
+                hgvsp_short_index = header.index(HGVSP_SHORT_COLUMN)
+                maf_to_write = []
+                with open(maf, "rU") as maf_file:
+                    for line in maf_file.readlines():
+                        if line.startswith("#"):
+                            maf_to_write.append(line.rstrip("\n"))
+                        else:
+                            # remove data from record in HGVSp_Short column
+                            record = line.rstrip("\n").split('\t')
+                            del record[hgvsp_short_index]
+                            maf_to_write.append('\t'.join(record))
+                write_data_list_to_file(maf_copy, maf_to_write)
 
     def setup_root_directory_with_previous_test_output(self, previous_step):
         shutil.rmtree(self.root_directory)

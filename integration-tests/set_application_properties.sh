@@ -15,3 +15,6 @@ rsync $JENKINS_PROPERTIES_DIRECTORY/fetch-crdb/$APPLICATION_PROPERTIES $CMO_PIPE
 rsync $JENKINS_PROPERTIES_DIRECTORY/fetch-ddp/$APPLICATION_PROPERTIES $CMO_PIPELINES_DIRECTORY/ddp/ddp_pipeline/src/main/resources
 rsync $JENKINS_PROPERTIES_DIRECTORY/fetch-ddp/*.json $CMO_PIPELINES_DIRECTORY/ddp/ddp_pipeline/src/main/resources
 rsync $JENKINS_PIPELINES_CREDENTIALS/application-secure.properties $CMO_PIPELINES_DIRECTORY/ddp/ddp_pipeline/src/main/resources
+
+cp $JENKINS_USER_HOME_DIRECTORY/jobs/genome-nexus-annotation-pipeline/workspace/annotationPipeline/target/annotationPipeline*.jar $CMO_PIPELINES_DIRECTORY/annotator.jar
+
