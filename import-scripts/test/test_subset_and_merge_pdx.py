@@ -43,8 +43,8 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         cls.clinical_annotations_mapping_file = os.path.join(cls.crdb_fetch_directory, "clinical_annotations_mappings.txt")
 
         # load source mapping one time - reuse same mapping for all tests
-        cls.destination_source_patient_mapping_records = parse_file(cls.destination_to_source_mapping_file)
-        cls.destination_source_clinical_annotation_mapping_records = parse_file(cls.clinical_annotations_mapping_file)
+        cls.destination_source_patient_mapping_records = parse_file(cls.destination_to_source_mapping_file, False)
+        cls.destination_source_clinical_annotation_mapping_records = parse_file(cls.clinical_annotations_mapping_file, False)
         cls.destination_to_source_mapping = create_destination_to_source_mapping(cls.destination_source_patient_mapping_records, cls.destination_source_clinical_annotation_mapping_records, cls.root_directory)
         cls.source_id_to_path_mapping = create_source_id_to_path_mapping(cls.destination_to_source_mapping, [cls.datahub_directory, cls.cmo_directory, cls.dmp_directory], cls.crdb_fetch_directory)
 
@@ -82,18 +82,18 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         return destination_to_source_mapping
 
     def test_resolve_source_study_path(self):
-        '''
+        """
             Test that CMO studies will be found by substituting underscores
             Not found studies will return None
-        '''
+        """
         self.assertEquals(os.path.join(self.cmo_directory, "cmo/test/source/study_1"), resolve_source_study_path("cmo_test_source_study_1", [self.datahub_directory, self.cmo_directory, self.dmp_directory]))
         self.assertEquals(os.path.join(self.dmp_directory, "test_msk_solid_heme"), resolve_source_study_path("test_msk_solid_heme", [self.datahub_directory, self.cmo_directory, self.dmp_directory]))
         self.assertFalse(resolve_source_study_path("fake_study_path", [self.datahub_directory, self.cmo_directory, self.dmp_directory]))
 
     def test_destination_source_mappings(self):
-        '''
+        """
             Test Step 1a: check source-destination mappings are loaded in correctly
-        '''
+        """
         expected_destination_ids = ["test_destination_study_1", "test_destination_study_2"]
         expected_source_ids = ["test_source_study_1", "cmo_test_source_study_1", "test_msk_solid_heme", "crdb_pdx_raw_data"]
         destination_ids = self.destination_to_source_mapping.keys()
@@ -104,9 +104,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             self.assertEquals(set(expected_source_ids), set(self.destination_to_source_mapping[destination_id].keys()))
 
     def test_destination_source_patient_mappings(self):
-        '''
+        """
             Test Step 1b: check patient mappings per source-destination pair
-        '''
+        """
         expected_patients = {
             "test_destination_study_1test_source_study_1" : [("P-MSK-0002","P-DMP-P002"),("MSK_LX27","MSK_LX27"),("MSK_LX6","MSK_LX6"),("P-MSK-0001","P-MSK-0001")],
             "test_destination_study_2test_source_study_1" : [("P-MSK-0001","P-MSK-0001")],
@@ -123,9 +123,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                 self.assertEquals(set(expected_patients[lookup_key]), set([(patient.source_pid, patient.destination_pid) for patient in sourcemapping.patients]))
 
     def test_destination_source_clinical_annotations_mappings(self):
-        '''
+        """
             Test Step 1c: check clinical annotation mapping per source-destination pair
-        '''
+        """
         expected_clinical_annotations =  {
             "test_destination_study_1test_msk_solid_heme" : ["MSK_SLIDE_ID", "PED_IND"],
             "test_destination_study_2test_msk_solid_heme" : ["GRADE"],
@@ -141,9 +141,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                     self.assertFalse(sourcemapping.clinical_annotations)
 
     def test_subset_source_step(self):
-        '''
+        """
             Test Step 2: check subset source studies per destination
-        '''
+        """
         # setup `temp directory` to model entire data repo - everything is needed for subsetting
         shutil.rmtree(self.temp_dir)
         shutil.copytree(self.data_repos, self.temp_dir)
@@ -159,9 +159,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                     self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, datafile), os.path.join(expected_directory, datafile)))
 
     def test_filter_clinical_annotations_step(self):
-        '''
+        """
             Test Step 3a: check clinical annotations are correctly filtered
-        '''
+        """
         # setup `crdb_pdx_repos` to expected files after intial subset
         # crdb-pdx-raw-data is not present (not needed for this test) - data changes only applied to subset outputs
         self.setup_root_directory_with_previous_test_output("subset_source_step")
@@ -169,9 +169,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         self.compare_clinical_files_for_step("filter_clinical_annotations_step")
 
     def test_rename_patients_step(self):
-        '''
+        """
             Test Step 3b: check patient ids are correctly renamed
-        '''
+        """
         # setup `crdb_pdx_repos` to expected files after filtering clinical annotations
         # crdb-pdx-raw-data is not present (not needed for this test) - data changes only applied to subset outputs
         self.setup_root_directory_with_previous_test_output("filter_clinical_annotations_step")
@@ -187,9 +187,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                     self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
 
     def test_merge_source_directories_step(self):
-        '''
+        """
             Test Step 4: check sources are correctly merged into destination studies
-        '''
+        """
         self.setup_root_directory_with_previous_test_output("rename_patients_step")
         merge_source_directories_for_destination_studies(self.mock_destination_to_source_mapping, self.root_directory, self.lib)
         remove_source_subdirectories(self.mock_destination_to_source_mapping, self.root_directory)
@@ -203,9 +203,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, datafile), os.path.join(expected_directory, datafile)))
 
     def test_merge_clinical_files_step(self):
-        '''
+        """
             Test Step 5: check legacy and current clinical files are merged together
-        '''
+        """
         self.setup_root_directory_with_previous_test_output("merge_source_directories_step")
         merge_clinical_files(self.mock_destination_to_source_mapping, self.root_directory, self.lib)
         self.check_merge_clinical_files_step()
@@ -219,9 +219,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
 
     def test_subset_timeline_files_step(self):
-        '''
+        """
             Test Step 6: check timeline files are subsetted into destination study from crdb-fetched directory
-        '''
+        """
         self.setup_root_directory_with_previous_test_output("merge_clinical_files_step")
         shutil.copytree(self.crdb_fetch_directory_backup, self.crdb_fetch_directory)
         subset_timeline_files(self.mock_destination_to_source_mapping, self.source_id_to_path_mapping, self.root_directory, self.crdb_fetch_directory, self.lib)
@@ -235,9 +235,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, timeline_file), os.path.join(expected_directory, timeline_file)))
 
     def test_drop_hgvsp_short_column_step(self):
-        '''
-            Test Step 7: check HGVSp_Short column is dropped from files
-        '''
+        """
+            Test Step 7(a): check HGVSp_Short column is dropped from files
+        """
         self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
         files_with_hgvsp_short = self.get_files_with_hgvsp_short()
         remove_hgvsp_short_column(self.mock_destination_to_source_mapping, self.root_directory)
@@ -248,15 +248,29 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         files_with_hgvsp_short = []
         for destination in self.mock_destination_to_source_mapping:
             directory = os.path.join(self.root_directory, destination)
-            mutations_file = os.path.join(directory, "data_mutations_extended.txt")
+            mutations_file = os.path.join(directory, MUTATION_FILE_PATTERN)
             if os.path.isfile(mutations_file) and "HGVSp_Short" in get_header(mutations_file):
                 files_with_hgvsp_short.append(mutations_file)
         return files_with_hgvsp_short
 
+    def test_insert_sequenced_sample_header_step(self):
+        """
+            Test Step 7(b): check that inserted sequenced samples header match between files.
+        """
+        self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
+        insert_maf_sequenced_samples_header(self.mock_destination_to_source_mapping, self.root_directory)
+        self.check_insert_maf_sequenced_samples_header_step()
+
+    def check_insert_maf_sequenced_samples_header_step(self):
+        for destination in self.mock_destination_to_source_mapping:
+            actual_directory = os.path.join(self.root_directory, destination)
+            expected_directory = os.path.join(self.expected_files, "post_process_seq_samples_header", destination)
+            self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, MUTATION_FILE_PATTERN), os.path.join(expected_directory, MUTATION_FILE_PATTERN)))
+
     def test_add_display_sample_name_column_step(self):
-        '''
-            Test Step 7: check HGVSp_Short column is dropped from files
-        '''
+        """
+            Test Step 7(c): check that DISPLAY_SAMPLE_NAME column is added to clinical header
+        """
         self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
         add_display_sample_name_column(self.mock_destination_to_source_mapping, self.root_directory)
         self.check_add_display_sample_name_column_step()
@@ -282,6 +296,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         if sorted(actual_header) != sorted(expected_header):
             return False
         # sort files and compare
+        # NOTE: expected and actual file headers contain the same columns but may not necessarily be
+        # in the same exact order so we use 'expected_header' when sorting the actual file generated
+        # for comparison against the expected file output
         sorted_actual_file = self.sort_records_and_lines_in_file(expected_header, actual_file)
         sorted_expected_file = self.sort_records_and_lines_in_file(expected_header, expected_file)
         file_contents_are_equal = filecmp.cmp(sorted_expected_file, sorted_actual_file)
