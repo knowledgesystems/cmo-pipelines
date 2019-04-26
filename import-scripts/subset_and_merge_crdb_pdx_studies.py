@@ -41,6 +41,7 @@ SUBSET_CLINICAL_FILES_SUCCESS = "SUBSET_CLINICAL_FILES_SUCCESS"
 HAS_ALL_METAFILES = "HAS_ALL_METAFILES"
 ANNOTATION_SUCCESS = "ANNOTATION_SUCESS"
 GENERATE_CASE_LISTS_SUCCESS = "GENERATE_CASE_LISTS_SUCCESS"
+PASSED_VALIDATION = "PASSED_VALIDATION"
 
 # trigger file suffixes
 TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
@@ -55,6 +56,7 @@ PATIENT_ID_COLUMN = "PATIENT_ID"
 ONCOTREE_CODE_COLUMN = "ONCOTREE_CODE"
 SEQUENCED_SAMPLES_HEADER_TAG = "#sequenced_samples:"
 ANNOTATED_MAF_FILE_PATTERN = "data_mutations_annotated.txt"
+VALIDATION_REPORT_SUFFIX = "-validation.html"
 
 # minimally required columns in final header
 REQUIRED_CLINICAL_COLUMNS = [SAMPLE_ID_COLUMN, PATIENT_ID_COLUMN, ONCOTREE_CODE_COLUMN]
@@ -209,7 +211,14 @@ def create_destination_to_source_mapping(destination_source_patient_mapping_reco
 
         # init dict records for destination if not already encountered
         if destination not in DESTINATION_STUDY_STATUS_FLAGS:
-            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False, ANNOTATION_SUCCESS: False, GENERATE_CASE_LISTS_SUCCESS : False }
+            DESTINATION_STUDY_STATUS_FLAGS[destination] = {
+                    MERGE_GENOMIC_FILES_SUCCESS : False,
+                    SUBSET_CLINICAL_FILES_SUCCESS : False,
+                    HAS_ALL_METAFILES : False,
+                    ANNOTATION_SUCCESS : False,
+                    GENERATE_CASE_LISTS_SUCCESS : False,
+                    PASSED_VALIDATION : False
+            }
         if destination not in SKIPPED_SOURCE_STUDIES:
             SKIPPED_SOURCE_STUDIES[destination] = set()
         if destination not in destination_to_source_mapping:
@@ -664,6 +673,29 @@ def generate_case_lists(lib, destination_to_source_mapping, root_directory, case
             DESTINATION_STUDY_STATUS_FLAGS[destination][GENERATE_CASE_LISTS_SUCCESS] = True
 
 # ------------------------------------------------------------------------------------------------------------
+# STEP 8: Validate and log invalid studies
+
+def validate_destination_studies(destination_to_source_mapping, root_directory, temp_directory, lib):
+    """
+       Runs the cBioPortal validator on each destination study.
+
+       Copies validation report to the CRDB PDX temp directory if it fails. Otherwise, removes the validation
+       report from the destination study directory.
+    """
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(destination, root_directory)
+        if destination_directory in MISSING_DESTINATION_STUDIES:
+            continue
+        destination_validation_report_file = os.path.join(destination_directory, destination + VALIDATION_REPORT_SUFFIX)
+        validate_data_call = generate_validate_data_call(destination_directory, destination_validation_report_file, lib)
+        validate_data_status = subprocess.call(validate_data_call, shell = True)
+        if validate_data_status == 0:
+            DESTINATION_STUDY_STATUS_FLAGS[destination][PASSED_VALIDATION] = True
+            os.remove(destination_validation_report_file)
+        else:
+            shutil.copy(destination_validation_report_file, os.path.join(temp_directory, destination + VALIDATION_REPORT_SUFFIX))
+
+# ------------------------------------------------------------------------------------------------------------
 # Functions for logging and notifications.
 
 def generate_import_trigger_files(destination_to_source_mapping, temp_directory):
@@ -720,6 +752,8 @@ def generate_warning_file(temp_directory, warning_file):
                     success_code_message.append("%s study failed annotation through Genome Nexus" % (destination))
                 elif not success_code_map[GENERATE_CASE_LISTS_SUCCESS]:
                     success_code_message.append("%s study failed because it was unable to generate case list files" % (destination))
+                elif not success_code_map[PASSED_VALIDATION]:
+                    success_code_message.append("%s study failed because the constructed study failed validation\n\t%s" % (destination, "\n\t".join(DESTINATION_TO_MISSING_METAFILES_MAP[destination])))
                 else:
                     success_code_message.append("%s study failed for an unknown reason" % (destination))
         if success_code_message:
@@ -844,6 +878,10 @@ def generate_generate_case_lists_call(lib, cancer_study_id, destination_director
     generate_case_lists_call = 'python ' + lib + '/generate_case_lists.py -c ' + case_lists_config_file + ' -d ' + destination_case_lists_directory + ' -s ' + destination_directory + ' -i ' + cancer_study_id
     return generate_case_lists_call
 
+def generate_validate_data_call(destination_directory, destination_validation_report_file, lib):
+    validate_studies_call = 'python3 ' + lib + '/validateData.py -s ' + destination_directory + ' -html ' + destination_validation_report_file
+    return validate_studies_call
+
 # ------------------------------------------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser()
@@ -906,6 +944,10 @@ def main():
 
     # generate all logging and trigger files
     identify_missing_metafiles_for_destination_studies(destination_to_source_mapping, root_directory)
+
+    # STEP 8: Validate destination studies
+    validate_destination_studies(destination_to_source_mapping, root_directory, temp_directory, lib)
+
     generate_import_trigger_files(destination_to_source_mapping, temp_directory)
     generate_warning_file(temp_directory, warning_file)
 

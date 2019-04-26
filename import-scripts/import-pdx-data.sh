@@ -387,9 +387,14 @@ if [ -s "$importer_notification_file" ] ; then
     cat "$importer_notification_file" >> "$EMAIL_MESSAGE_FILE"
 fi
 
+validation_report_attachments=""
+for validation_report in $(find $CRDB_PDX_TMPDIR -name "*-validation.html"); do
+    validation_report_attachments+=" -a $validation_report"
+done
+
 echo -e "Sending email:"
 cat "$EMAIL_MESSAGE_FILE"
-cat "$EMAIL_MESSAGE_FILE" | mail -s "$EMAIL_SUBJECT" $pdx_email_list
+cat "$EMAIL_MESSAGE_FILE" | mailx -s "$EMAIL_SUBJECT" $validation_report_attachments $pdx_email_list
 
 echo "Cleaning up any untracked files from MSK-PDX import..."
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/crdb_pdx
