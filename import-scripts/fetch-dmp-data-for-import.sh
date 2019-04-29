@@ -173,22 +173,6 @@ fi
 # MSKIMPACT DATA FETCHES
 # TODO: move other pre-import/data-fetch steps here (i.e exporting raw files from redcap)
 
-# fetch ddp demographics data
-echo "fetching DDP demographics data for mskimpact..."
-echo $(date)
-mskimpact_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_patient_list.txt
-awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $mskimpact_dmp_pids_file
-##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -s $mskimpact_dmp_pids_file -o $MSK_IMPACT_DATA_HOME
-if [ $? -gt 0 ] ; then
-    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Demographics Fetch"
-else
-    FETCH_DDP_IMPACT_FAIL=0
-    echo "committing ddp data"
-    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY commit -m "Latest MSKIMPACT Dataset: DDP Demographics"
-fi
-
 # fetch darwin caisis data
 echo "fetching Darwin CAISIS data for mskimpact..."
 echo $(date)
@@ -264,6 +248,22 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
     fi
 fi
 
+# fetch ddp demographics data
+echo "fetching DDP demographics data for mskimpact..."
+echo $(date)
+mskimpact_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $mskimpact_dmp_pids_file
+##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -s $mskimpact_dmp_pids_file -o $MSK_IMPACT_DATA_HOME
+if [ $? -gt 0 ] ; then
+    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Demographics Fetch"
+else
+    FETCH_DDP_IMPACT_FAIL=0
+    echo "committing ddp data"
+    cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY commit -m "Latest MSKIMPACT Dataset: DDP Demographics"
+fi
+
 # fetch ddp data for pediatric cohort
 if [ $FETCH_DDP_IMPACT_FAIL -eq 0 ] ; then
     awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PED_IND"] == "Yes") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_ddp.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
@@ -298,23 +298,6 @@ fi
 # -----------------------------------------------------------------------------------------------------------
 # HEMEPACT DATA FETCHES
 
-# fetch ddp demographics data
-echo "fetching DDP demographics data for heme..."
-echo $(date)
-
-mskimpact_heme_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_heme_patient_list.txt
-awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $mskimpact_heme_dmp_pids_file
-##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -s $mskimpact_heme_dmp_pids_file -o $MSK_HEMEPACT_DATA_HOME
-if [ $? -gt 0 ] ; then
-    cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-    sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Demographics Fetch"
-else
-    FETCH_DDP_HEME_FAIL=0
-    echo "committing ddp data"
-    cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY commit -m "Latest HEMEPACT Dataset: DDP Demographics"
-fi
-
 if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
     # fetch new/updated heme samples using CVR Web service (must come after mercurial fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
     echo "fetching CVR heme data..."
@@ -342,25 +325,25 @@ if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
     fi
 fi
 
-# -----------------------------------------------------------------------------------------------------------
-# RAINDANCE DATA FETCHES
-
 # fetch ddp demographics data
-echo "fetching DDP demographics data for mskraindance..."
+echo "fetching DDP demographics data for heme..."
 echo $(date)
 
-mskraindance_dmp_pids_file=$MSK_DMP_TMPDIR/mskraindance_patient_list.txt
-awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical.txt | sort | uniq > $mskraindance_dmp_pids_file
+mskimpact_heme_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_heme_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $mskimpact_heme_dmp_pids_file
 ##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskraindance -s $mskraindance_dmp_pids_file -o $MSK_RAINDANCE_DATA_HOME
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -s $mskimpact_heme_dmp_pids_file -o $MSK_HEMEPACT_DATA_HOME
 if [ $? -gt 0 ] ; then
-    cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-    sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Demographics Fetch"
+    cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Demographics Fetch"
 else
-    FETCH_DDP_RAINDANCE_FAIL=0
+    FETCH_DDP_HEME_FAIL=0
     echo "committing ddp data"
-    cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY commit -m "Latest RAINDANCE Dataset: DDP Demographics"
+    cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY commit -m "Latest HEMEPACT Dataset: DDP Demographics"
 fi
+
+# -----------------------------------------------------------------------------------------------------------
+# RAINDANCE DATA FETCHES
 
 if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] ; then
     # fetch new/updated raindance samples using CVR Web service (must come after mercurial fetching). The -s flag skips segment data fetching
@@ -388,25 +371,25 @@ if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] ; then
     fi
 fi
 
-# -----------------------------------------------------------------------------------------------------------
-# ARCHER DATA FETCHES
-
 # fetch ddp demographics data
-echo "fetching DDP demographics data for mskarcher..."
+echo "fetching DDP demographics data for mskraindance..."
 echo $(date)
 
-mskarcher_dmp_pids_file=$MSK_DMP_TMPDIR/mskarcher_patient_list.txt
-awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt | sort | uniq > $mskarcher_dmp_pids_file
+mskraindance_dmp_pids_file=$MSK_DMP_TMPDIR/mskraindance_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical.txt | sort | uniq > $mskraindance_dmp_pids_file
 ##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskarcher -s $mskarcher_dmp_pids_file -o $MSK_ARCHER_UNFILTERED_DATA_HOME
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskraindance -s $mskraindance_dmp_pids_file -o $MSK_RAINDANCE_DATA_HOME
 if [ $? -gt 0 ] ; then
-    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
-    sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Demographics Fetch"
+    cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Demographics Fetch"
 else
-    FETCH_DDP_ARCHER_FAIL=0
+    FETCH_DDP_RAINDANCE_FAIL=0
     echo "committing ddp data"
-    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: DDP Demographics"
+    cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY commit -m "Latest RAINDANCE Dataset: DDP Demographics"
 fi
+
+# -----------------------------------------------------------------------------------------------------------
+# ARCHER DATA FETCHES
 
 if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
     # fetch new/updated archer samples using CVR Web service (must come after mercurial fetching).
@@ -433,6 +416,23 @@ if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
             cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED dataset"
         fi
     fi
+fi
+
+# fetch ddp demographics data
+echo "fetching DDP demographics data for mskarcher..."
+echo $(date)
+
+mskarcher_dmp_pids_file=$MSK_DMP_TMPDIR/mskarcher_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt | sort | uniq > $mskarcher_dmp_pids_file
+##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskarcher -s $mskarcher_dmp_pids_file -o $MSK_ARCHER_UNFILTERED_DATA_HOME
+if [ $? -gt 0 ] ; then
+    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Demographics Fetch"
+else
+    FETCH_DDP_ARCHER_FAIL=0
+    echo "committing ddp data"
+    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: DDP Demographics"
 fi
 
 # -----------------------------------------------------------------------------------------------------------
