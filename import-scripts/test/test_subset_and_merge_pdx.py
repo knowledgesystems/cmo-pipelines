@@ -26,6 +26,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         cls.data_repos = os.path.join(resource_dir, "data_repos/")
         cls.crdb_fetch_directory_backup = os.path.join(cls.data_repos, "crdb_pdx_repos/crdb_pdx_raw_data/")
         cls.expected_files = os.path.join(resource_dir, "expected_outputs")
+        cls.case_lists_config_file = "test/resources/generate_case_lists/case_list_config.tsv"
 
         # move all data into a temporary directory for manipulation
         cls.temp_dir = os.path.join(resource_dir, tempfile.mkdtemp())
@@ -249,23 +250,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             expected_directory = os.path.join(self.expected_files, "post_process_seq_samples_header", destination)
             self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, MUTATION_FILE_PATTERN), os.path.join(expected_directory, MUTATION_FILE_PATTERN)))
 
-    def test_add_display_sample_name_column_step(self):
-        """
-            Test Step 7(b): check that DISPLAY_SAMPLE_NAME column is added to clinical header
-        """
-        self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
-        add_display_sample_name_column(self.mock_destination_to_source_mapping, self.root_directory)
-        self.check_add_display_sample_name_column_step()
-
-    def check_add_display_sample_name_column_step(self):
-        for destination in self.mock_destination_to_source_mapping:
-            actual_directory = os.path.join(self.root_directory, destination)
-            expected_directory = os.path.join(self.expected_files, "add_display_sample_name_column_step", destination)
-            self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, "data_clinical_sample.txt"), os.path.join(expected_directory, "data_clinical_sample.txt")))
-
     def test_annotate_maf(self):
         """
-            Test Step 7(c): check that MAF is annotated.
+            Test Step 7(b): check that MAF is annotated.
         """
         self.assertTrue(os.path.isfile(self.annotator_jar), "ANNOTATOR_JAR could not be resolved from sys environment! %s" % (self.annotator_jar))
         self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
@@ -312,6 +299,55 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                             del record[hgvsp_short_index]
                             maf_to_write.append('\t'.join(record))
                 write_data_list_to_file(maf_copy, maf_to_write)
+
+    def test_add_display_sample_name_column_step(self):
+        """
+            Test Step 7(c): check that DISPLAY_SAMPLE_NAME column is added to clinical header
+        """
+        self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
+        add_display_sample_name_column(self.mock_destination_to_source_mapping, self.root_directory)
+        self.check_add_display_sample_name_column_step()
+
+    def check_add_display_sample_name_column_step(self):
+        for destination in self.mock_destination_to_source_mapping:
+            actual_directory = os.path.join(self.root_directory, destination)
+            expected_directory = os.path.join(self.expected_files, "add_display_sample_name_column_step", destination)
+            self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, "data_clinical_sample.txt"), os.path.join(expected_directory, "data_clinical_sample.txt")))
+
+    def test_generate_case_lists_step(self):
+        """
+            Test Step 7(d): check that case lists are generated for destination studies
+        """
+        self.setup_root_directory_with_previous_test_output("post_process_seq_samples_header")
+        generate_case_lists(self.lib, self.mock_destination_to_source_mapping, self.root_directory, self.case_lists_config_file)
+        self.check_generate_case_lists_step()
+
+    def check_generate_case_lists_step(self):
+        for destination in self.mock_destination_to_source_mapping:
+            actual_directory = os.path.join(self.root_directory, destination + "/" + CASE_LISTS_DESTINATION_SUBDIR)
+            expected_directory = os.path.join(self.expected_files, "post_process_generate_case_lists/" + destination + "/" + CASE_LISTS_DESTINATION_SUBDIR)
+
+            # confirm that case lists sub-directory actually exists and then compare all case lists files if true
+            if not os.path.exists(actual_directory):
+                self.fail("%s directory does not exist for destination study: %s" % (actual_directory, destination))
+
+            actual_case_lists = self.get_all_case_list_files_in_directory(actual_directory)
+            expected_case_lists = self.get_all_case_list_files_in_directory(expected_directory)
+
+            if len(actual_case_lists) != len(expected_case_lists):
+                self.fail("Expected number of case list files (%s) does not match actual number of case lists files generated (%s): " % (str(len(expected_case_lists)), str(len(actual_case_lists))))
+
+            for case_list_filename in expected_case_lists:
+                expected_file = expected_case_lists[case_list_filename]
+                actual_file = actual_case_lists[case_list_filename]
+                self.assertTrue(self.sort_and_compare_files(actual_file, expected_file), "Expected and actual case list files differ for destination study '%s': %s" % (destination, case_list_filename))
+
+    def get_all_case_list_files_in_directory(self, case_list_directory):
+        case_list_files = {}
+        for filename in os.listdir(case_list_directory):
+            if filename.startswith(CASE_LISTS_FILE_PREFIX):
+                case_list_files[filename] = os.path.join(case_list_directory, filename)
+        return case_list_files
 
     def setup_root_directory_with_previous_test_output(self, previous_step):
         shutil.rmtree(self.root_directory)

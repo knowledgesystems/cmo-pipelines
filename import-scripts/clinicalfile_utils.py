@@ -87,26 +87,20 @@ def get_metadata_mapping(clinical_file, attribute_line):
         metadata_mapping[attributes[i]] = metadata[i]
     return metadata_mapping
 
-
-# get existing priority mapping in a given file
-def get_description_mapping(clinical_file):
-    return get_metadata_mapping(clinical_file, 2)
-
-
-def get_datatype_mapping(clinical_file):
-    return get_metadata_mapping(clinical_file, 3)
-
-
 def get_display_name_mapping(clinical_file):
     return get_metadata_mapping(clinical_file, 1)
 
+def get_description_mapping(clinical_file):
+    return get_metadata_mapping(clinical_file, 2)
+
+def get_datatype_mapping(clinical_file):
+    return get_metadata_mapping(clinical_file, 3)
 
 def get_priority_mapping(clinical_file):
     if has_legacy_clinical_metadata_headers(clinical_file):
         return get_metadata_mapping(clinical_file, 5)
     else:
         return get_metadata_mapping(clinical_file, 4)
-
 
 def get_attribute_type_mapping(clinical_file):
     if has_legacy_clinical_metadata_headers(clinical_file):

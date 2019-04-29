@@ -56,6 +56,7 @@ export DATAHUB_DATA_HOME=$PORTAL_DATA_HOME/datahub/public
 # environment variables used across import scripts
 #######################
 #export INHIBIT_RECACHING_FROM_TOPBRAID=true
+export CASE_LIST_CONFIG_FILE=$PIPELINES_CONFIG_HOME/resources/case_list_config.tsv
 
 #######################
 # environment variables used in the fetch-and-import-dmp-impact-data script

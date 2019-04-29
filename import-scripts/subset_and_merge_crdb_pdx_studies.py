@@ -16,6 +16,8 @@ OUTPUT_FILE = sys.stderr
 CMO_ROOT_DIRECTORY = "/data/portal-cron/cbio-portal-data/bic-mskcc/"
 DATAHUB_REPO_NAME = "datahub"
 CRDB_FETCH_SOURCE_ID= 'crdb_pdx_raw_data'
+CASE_LISTS_DESTINATION_SUBDIR = "case_lists"
+CASE_LISTS_FILE_PREFIX = "cases_"
 
 # columns in destination-to-source mapping file
 PATIENT_ID_KEY = "PATIENT_ID"
@@ -38,6 +40,7 @@ MERGE_GENOMIC_FILES_SUCCESS = "MERGE_GENOMIC_FILES_SUCCESS"
 SUBSET_CLINICAL_FILES_SUCCESS = "SUBSET_CLINICAL_FILES_SUCCESS"
 HAS_ALL_METAFILES = "HAS_ALL_METAFILES"
 ANNOTATION_SUCCESS = "ANNOTATION_SUCESS"
+GENERATE_CASE_LISTS_SUCCESS = "GENERATE_CASE_LISTS_SUCCESS"
 
 # trigger file suffixes
 TRIGGER_FILE_COMMIT_SUFFIX = "_commit_triggerfile"
@@ -206,7 +209,7 @@ def create_destination_to_source_mapping(destination_source_patient_mapping_reco
 
         # init dict records for destination if not already encountered
         if destination not in DESTINATION_STUDY_STATUS_FLAGS:
-            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False, ANNOTATION_SUCCESS: False}
+            DESTINATION_STUDY_STATUS_FLAGS[destination] = { MERGE_GENOMIC_FILES_SUCCESS : False, SUBSET_CLINICAL_FILES_SUCCESS : False, HAS_ALL_METAFILES : False, ANNOTATION_SUCCESS: False, GENERATE_CASE_LISTS_SUCCESS : False }
         if destination not in SKIPPED_SOURCE_STUDIES:
             SKIPPED_SOURCE_STUDIES[destination] = set()
         if destination not in destination_to_source_mapping:
@@ -520,13 +523,14 @@ def subset_timeline_files(destination_to_source_mapping, source_id_to_path_mappi
 # ------------------------------------------------------------------------------------------------------------
 # STEP 7: Post-processing.
 
-def post_process_and_cleanup_destination_study_data(destination_to_source_mapping, root_directory, annotator_jar):
+def post_process_and_cleanup_destination_study_data(lib, destination_to_source_mapping, root_directory, annotator_jar, case_lists_config_file):
     """
         Runs all of the post-process and cleanup steps on the destination studies.
     """
-    insert_maf_sequenced_samples_header(destination_to_source_mapping, root_directory)
-    annotate_maf(destination_to_source_mapping, root_directory, annotator_jar)
-    add_display_sample_name_column(destination_to_source_mapping, root_directory)
+    insert_maf_sequenced_samples_header(destination_to_source_mapping, root_directory) # step 7(a)
+    annotate_maf(destination_to_source_mapping, root_directory, annotator_jar) # step 7(b)
+    add_display_sample_name_column(destination_to_source_mapping, root_directory) # step 7(c)
+    generate_case_lists(lib, destination_to_source_mapping, root_directory, case_lists_config_file) # step 7(d)
     # remove temp subset files after subsetting calls complete
     remove_temp_subset_files(destination_to_source_mapping, root_directory)
     # clean up source subdirectories from destination study paths after merges are complete
@@ -640,6 +644,25 @@ def generate_sequenced_samples_header(clinical_file):
         samples.add(row[SAMPLE_ID_COLUMN])
     return "%s %s" % (SEQUENCED_SAMPLES_HEADER_TAG, " ".join(list(samples)))
 
+def generate_case_lists(lib, destination_to_source_mapping, root_directory, case_lists_config_file):
+    """
+        Generates standard case lists for each destination study.
+        i.e., cases_all.txt, cases_sequenced.txt, etc.
+    """
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        destination_case_lists_directory = os.path.join(destination_directory, CASE_LISTS_DESTINATION_SUBDIR)
+
+        # create case list sub-directory if does not exist yet
+        if not os.path.exists(destination_case_lists_directory):
+            os.mkdir(destination_case_lists_directory)
+
+        # generate standard case lists for each destination study
+        generate_case_lists_call = generate_generate_case_lists_call(lib, destination, destination_directory, destination_case_lists_directory, case_lists_config_file)
+        generate_case_lists_status = subprocess.call(generate_case_lists_call, shell = True)
+        if generate_case_lists_status == 0:
+            DESTINATION_STUDY_STATUS_FLAGS[destination][GENERATE_CASE_LISTS_SUCCESS] = True
+
 # ------------------------------------------------------------------------------------------------------------
 # Functions for logging and notifications.
 
@@ -695,6 +718,8 @@ def generate_warning_file(temp_directory, warning_file):
                     success_code_message.append("%s study failed because the following metafiles are missing\n\t%s" % (destination, "\n\t".join(DESTINATION_TO_MISSING_METAFILES_MAP[destination])))
                 elif not success_code_map[ANNOTATION_SUCCESS]:
                     success_code_message.append("%s study failed annotation through Genome Nexus" % (destination))
+                elif not success_code_map[GENERATE_CASE_LISTS_SUCCESS]:
+                    success_code_message.append("%s study failed because it was unable to generate case list files" % (destination))
                 else:
                     success_code_message.append("%s study failed for an unknown reason" % (destination))
         if success_code_message:
@@ -815,7 +840,11 @@ def generate_annotator_call(annotator_jar, destination_directory):
     annotator_call = 'java -jar ' + annotator_jar + ' -f ' + destination_directory + '/data_mutations_extended.txt ' + '-o ' + destination_directory + '/' + ANNOTATED_MAF_FILE_PATTERN + ' -i mskcc'
     return annotator_call
 
-#------------------------------------------------------------------------------------------------------------
+def generate_generate_case_lists_call(lib, cancer_study_id, destination_directory, destination_case_lists_directory, case_lists_config_file):
+    generate_case_lists_call = 'python ' + lib + '/generate_case_lists.py -c ' + case_lists_config_file + ' -d ' + destination_case_lists_directory + ' -s ' + destination_directory + ' -i ' + cancer_study_id
+    return generate_case_lists_call
+
+# ------------------------------------------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--clinical-annotation-mapping-file", help = "CRDB-fetched file containing clinical attributes per source/id destination/id", required = True)
@@ -826,7 +855,8 @@ def main():
     parser.add_argument("-r", "--root-directory", help = "root directory for all new studies (i.e dmp to mskimpact, hemepact, raindance...", required = True)
     parser.add_argument("-t", "--temp-directory", help = "temp directory to store trigger files", required = True)
     parser.add_argument("-w", "--warning-file", help = "file to store all warnings/errors for email", required = True)
-    parser.add_argument("-a", "--annotator", help="path to annotator jar", required = True)
+    parser.add_argument("-a", "--annotator", help = "path to annotator jar", required = True)
+    parser.add_argument("-s", "--sample-lists-config", help = "file where sample (case) list configuration rules are stored", required = True)
 
     args = parser.parse_args()
     data_source_directories = map(str.strip, args.data_source_directories.split(','))
@@ -838,6 +868,7 @@ def main():
     temp_directory = args.temp_directory
     warning_file = args.warning_file
     annotator_jar = args.annotator
+    case_lists_config_file = args.sample_lists_config
 
     # parse the two mapping files provided (which patients and which clinical attributes)
     destination_source_patient_mapping_records = parse_file(destination_to_source_mapping_filename, False)
@@ -871,7 +902,7 @@ def main():
 
     # STEP 7: Post-processing.
     # post-processing destination study data
-    post_process_and_cleanup_destination_study_data(destination_to_source_mapping, root_directory, annotator_jar)
+    post_process_and_cleanup_destination_study_data(lib, destination_to_source_mapping, root_directory, annotator_jar, case_lists_config_file)
 
     # generate all logging and trigger files
     identify_missing_metafiles_for_destination_studies(destination_to_source_mapping, root_directory)

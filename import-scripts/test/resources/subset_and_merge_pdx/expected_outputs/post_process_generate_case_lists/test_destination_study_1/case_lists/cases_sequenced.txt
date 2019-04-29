@@ -1,0 +1,6 @@
+cancer_study_identifier: test_destination_study_1
+stable_id: test_destination_study_1_sequenced
+case_list_name: Sequenced Tumors
+case_list_description: All (Next-Gen) sequenced samples (11 samples)
+case_list_category: all_cases_with_mutation_data
+case_list_ids: P-DMP-P001-T03-IM6	P-MSK-0001	MSK_LX6	MSK_LX27	P-DMP-P001-T01-IM5	P-DMP-P002-T01-IM5	P-MSK-0002	s_C_001055_X002_d	P-DMP-P001-T04-IM6	P-DMP-P001-T02-IM6	s_C_001055_X003_d

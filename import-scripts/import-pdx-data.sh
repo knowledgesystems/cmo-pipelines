@@ -148,8 +148,8 @@ fi
 
 . $PATH_TO_AUTOMATION_SCRIPT
 
-if [ -z $BIC_DATA_HOME ] | [ -z $PRIVATE_DATA_HOME ] | [ -z $PDX_DATA_HOME ] | [ -z $HG_BINARY ] | [ -z $PYTHON_BINARY ] | [ -z $DATAHUB_DATA_HOME ] | [ -z $ANNOTATOR_JAR ] ; then
-    message="could not run import-pdx-data.sh: automation-environment.sh script must be run in order to set needed environment variables (like BIC_DATA_HOME, PDX_DATA_HOME, ANNOTATOR_JAR...)"
+if [ -z $BIC_DATA_HOME ] | [ -z $PRIVATE_DATA_HOME ] | [ -z $PDX_DATA_HOME ] | [ -z $HG_BINARY ] | [ -z $PYTHON_BINARY ] | [ -z $DATAHUB_DATA_HOME ] | [ -z $ANNOTATOR_JAR ] | [ -z $CASE_LIST_CONFIG_FILE  ]; then
+    message="could not run import-pdx-data.sh: automation-environment.sh script must be run in order to set needed environment variables (like BIC_DATA_HOME, PDX_DATA_HOME, ANNOTATOR_JAR, CASE_LIST_CONFIG_FILE,...)"
     echo ${message}
     echo -e "${message}" |  mail -s "import-pdx-data failed to run." $pipelines_email_list
     sendFailureMessageMskPipelineLogsSlack "CRDB PDX Pipeline Failure"
@@ -270,7 +270,7 @@ if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
     mapping_filename="source_to_destination_mappings.txt"
     clinical_annotation_mapping_filename="clinical_annotations_mappings.txt"
     scripts_directory="$PORTAL_HOME/scripts"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/subset_and_merge_crdb_pdx_studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --data-source-directories $DATAHUB_DATA_HOME,$BIC_DATA_HOME,$PRIVATE_DATA_HOME,$DMP_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME --clinical-annotation-mapping-file $clinical_annotation_mapping_filename --annotator $ANNOTATOR_JAR
+    $PYTHON_BINARY $PORTAL_HOME/scripts/subset_and_merge_crdb_pdx_studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --data-source-directories $DATAHUB_DATA_HOME,$BIC_DATA_HOME,$PRIVATE_DATA_HOME,$DMP_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME --clinical-annotation-mapping-file $clinical_annotation_mapping_filename --annotator $ANNOTATOR_JAR --sample-lists-config $CASE_LIST_CONFIG_FILE
     if [ $? -ne 0 ] ; then
         echo "error: subset_and_merge_crdb_pdx_studies.py exited with non zero status"
         sendFailureMessageMskPipelineLogsSlack "CRDB PDX Subset-And-Merge Script Failure"
