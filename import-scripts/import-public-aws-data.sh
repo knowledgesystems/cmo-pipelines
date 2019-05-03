@@ -17,6 +17,7 @@ JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,addres
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 public_aws_portal_notification_file=$(mktemp $tmp/aws-public-portal-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_latest_stable
+TOMCAT_SERVER_SHOULD_BE_RESTARTED=0 # 0 = skip the restart, non-0 = do the restart
 
 CDD_ONCOTREE_RECACHE_FAIL=0
 if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
@@ -91,39 +92,41 @@ if [[ $DB_VERSION_FAIL -eq 0 && $PRIVATE_FETCH_FAIL -eq 0 && $CMO_IMPACT_FETCH_F
     echo "importing cancer type updates into public aws portal database..."
     $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
     echo "importing study data into public aws portal database..."
-    IMPORT_FAIL=0
     $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal public-aws-portal --update-worksheet --notification-file "$public_aws_portal_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source uniprot
-    if [ $? -gt 0 ]; then
+    IMPORT_EXIT_STATUS=$?
+    if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
         echo "Public aws import failed!"
-        IMPORT_FAIL=1
         EMAIL_BODY="Public aws import failed"
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "Import failure: public aws" $email_list
     fi
-    num_studies_updated=`cat $tmp/num_studies_updated.txt`
-    echo "'$num_studies_updated' studies have been updated"
+    num_studies_updated=''
+    num_studies_updated_filename="$tmp/num_studies_updated.txt"
+    if [ -r "$num_studies_updated_filename" ] ; then 
+        num_studies_updated=$(cat "$num_studies_updated_filename")
+    fi
+    if [ -z $num_studies_updated ] ; then
+        echo "could not determine the number of studies that have been updated"
+        # if import fails [presumed to have failed if num_studies_updated.txt is missing or empty], some checked-off studies still may have been successfully imported, so restart tomcat
+        TOMCAT_SERVER_SHOULD_BE_RESTARTED=1
+    else
+        echo "'$num_studies_updated' studies have been updated"
+        if [[ $num_studies_updated != "0" ]]; then
+            # if at least 1 study was imported, restart tomcat
+            TOMCAT_SERVER_SHOULD_BE_RESTARTED=1
+        fi
+    fi
 fi
 
-# TODO: replace this with restart of Kubernetes instance
-PUBLIC_TOMCAT_RESTART=1
-if [ $PUBLIC_TOMCAT_RESTART -eq 0 ] ; then
-echo "requesting redeployment of public aws portal war..."
-   TOMCAT_HOST_LIST=(dashi.cbio.mskcc.org dashi2.cbio.mskcc.org)
-   TOMCAT_HOST_USERNAME=cbioportal_importer
-   TOMCAT_HOST_SSH_KEY_FILE=${HOME}/.ssh/id_rsa_public_tomcat_restarts_key
-   TOMCAT_SERVER_RESTART_PATH=/srv/data/portal-cron/public-tomcat-restart
-   SSH_OPTIONS="-i ${TOMCAT_HOST_SSH_KEY_FILE} -o BATCHMODE=yes -o ConnectTimeout=3"
-   declare -a failed_restart_server_list
-   for server in ${TOMCAT_HOST_LIST[@]}; do
-       if ! ssh ${SSH_OPTIONS} ${TOMCAT_HOST_USERNAME}@${server} touch ${TOMCAT_SERVER_RESTART_PATH} ; then
-           failed_restart_server_list[${#failed_restart_server_list[*]}]=${server}
-       fi
-   done
-   if [ ${#failed_restart_server_list[*]} -ne 0 ] ; then
-       EMAIL_BODY="Attempt to trigger a restart of the public-tomcat server on the following hosts failed: ${failed_restart_server_list[*]}"
-       echo -e "Sending email $EMAIL_BODY"
-       echo -e "$EMAIL_BODY" | mail -s "Public Tomcat Restart Error : unable to trigger restart" $email_list
-   fi
+if [ $TOMCAT_SERVER_SHOULD_BE_RESTARTED -ne 0 ] ; then
+    echo "requesting redeployment of public aws portal tomcat pods..."
+    bash $PORTAL_HOME/scripts/restart-aws-public-portal.sh
+    RESTART_EXIT_STATUS=$?
+    if [ $RESTART_EXIT_STATUS -ne 0 ] ; then
+        EMAIL_BODY="Attempt to trigger a redeployment of the public aws portal tomcat pods failed"
+        echo -e "Sending email $EMAIL_BODY"
+        echo -e "$EMAIL_BODY" | mail -s "Public AWS Portal Tomcat Pod Redeployment Error : unable to trigger redeployment" $email_list
+    fi
 fi
 
 EMAIL_BODY="The Public aws database version is incompatible. Imports will be skipped until database is updated."
