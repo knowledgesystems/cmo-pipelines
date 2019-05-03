@@ -32,7 +32,6 @@
 
 package org.mskcc.cmo.ks.crdb.pipeline;
 
-import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBDataset;
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXClinicalAnnotationMapping;
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXClinicalPatientDataset;
@@ -69,11 +68,6 @@ public class BatchConfiguration {
     @Bean
     public CRDBUtils crdbUtils() {
         return new CRDBUtils();
-    }
-
-    @Bean
-    public EmailUtil emailUtil() {
-        return new EmailUtil();
     }
 
     @Bean
@@ -274,7 +268,6 @@ public class BatchConfiguration {
             .reader(crdbPDXTimelineReader())
             .processor(crdbPDXTimelineProcessor())
             .writer(crdbPDXTimelineWriter())
-            .listener(crdbPDXTimelineListener())
             .build();
     }
 
@@ -294,12 +287,6 @@ public class BatchConfiguration {
     @StepScope
     public ItemStreamWriter<String> crdbPDXTimelineWriter() {
         return new CRDBPDXTimelineWriter();
-    }
-
-    @Bean
-    @StepScope
-    public StepExecutionListener crdbPDXTimelineListener() {
-        return new CRDBPDXTimelineListener();
     }
 }
 
