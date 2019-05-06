@@ -61,6 +61,9 @@ VALIDATION_REPORT_SUFFIX = "-validation.html"
 # minimally required columns in final header
 REQUIRED_CLINICAL_COLUMNS = [SAMPLE_ID_COLUMN, PATIENT_ID_COLUMN, ONCOTREE_CODE_COLUMN]
 
+# argument for validator
+CBIOPORTAL_URL="http://cbioportal.org"
+
 # meta/data filename patterns
 SEG_HG18_FILE_PATTERN = '_data_cna_hg18.seg'
 SEG_HG18_META_PATTERN = '_meta_cna_hg18_seg.txt'
@@ -675,19 +678,20 @@ def generate_case_lists(lib, destination_to_source_mapping, root_directory, case
 # ------------------------------------------------------------------------------------------------------------
 # STEP 8: Validate and log invalid studies
 
-def validate_destination_studies(destination_to_source_mapping, root_directory, temp_directory, lib):
+def validate_destination_studies(destination_to_source_mapping, root_directory, temp_directory):
     """
        Runs the cBioPortal validator on each destination study.
 
        Copies validation report to the CRDB PDX temp directory if it fails. Otherwise, removes the validation
        report from the destination study directory.
     """
+    validator_lib_path = os.path.join(os.environ['CBIOPORTAL_HOME'], 'core/src/main/scripts/importer');
     for destination in destination_to_source_mapping:
-        destination_directory = os.path.join(destination, root_directory)
+        destination_directory = os.path.join(root_directory, destination)
         if destination_directory in MISSING_DESTINATION_STUDIES:
             continue
         destination_validation_report_file = os.path.join(destination_directory, destination + VALIDATION_REPORT_SUFFIX)
-        validate_data_call = generate_validate_data_call(destination_directory, destination_validation_report_file, lib)
+        validate_data_call = generate_validate_data_call(destination_directory, destination_validation_report_file, validator_lib_path)
         validate_data_status = subprocess.call(validate_data_call, shell = True)
         if validate_data_status == 0:
             DESTINATION_STUDY_STATUS_FLAGS[destination][PASSED_VALIDATION] = True
@@ -753,7 +757,7 @@ def generate_warning_file(temp_directory, warning_file):
                 elif not success_code_map[GENERATE_CASE_LISTS_SUCCESS]:
                     success_code_message.append("%s study failed because it was unable to generate case list files" % (destination))
                 elif not success_code_map[PASSED_VALIDATION]:
-                    success_code_message.append("%s study failed because the constructed study failed validation\n\t%s" % (destination, "\n\t".join(DESTINATION_TO_MISSING_METAFILES_MAP[destination])))
+                    success_code_message.append("%s study failed because the constructed study failed validation." % (destination))
                 else:
                     success_code_message.append("%s study failed for an unknown reason" % (destination))
         if success_code_message:
@@ -879,7 +883,7 @@ def generate_generate_case_lists_call(lib, cancer_study_id, destination_director
     return generate_case_lists_call
 
 def generate_validate_data_call(destination_directory, destination_validation_report_file, lib):
-    validate_studies_call = 'python3 ' + lib + '/validateData.py -s ' + destination_directory + ' -html ' + destination_validation_report_file
+    validate_studies_call = 'python3 ' + lib + '/validateData.py -s ' + destination_directory + ' -html ' + destination_validation_report_file + ' -u ' + CBIOPORTAL_URL
     return validate_studies_call
 
 # ------------------------------------------------------------------------------------------------------------
@@ -946,7 +950,7 @@ def main():
     identify_missing_metafiles_for_destination_studies(destination_to_source_mapping, root_directory)
 
     # STEP 8: Validate destination studies
-    validate_destination_studies(destination_to_source_mapping, root_directory, temp_directory, lib)
+    validate_destination_studies(destination_to_source_mapping, root_directory, temp_directory)
 
     generate_import_trigger_files(destination_to_source_mapping, temp_directory)
     generate_warning_file(temp_directory, warning_file)
