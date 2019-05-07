@@ -89,7 +89,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         if (testMode) {
-            LOG.info("Running DDP pipeline in test mode - data will only be processed for 50 patients");
+            LOG.info("Running DDP pipeline in test mode - data will only be processed for " + TEST_MODE_PATIENT_THRESHOLD + " patients");
         }
         // load patient ids to exclude from final result set if excludePatientsFilename provided
         if (!Strings.isNullOrEmpty(excludedPatientsFilename)) {
@@ -172,6 +172,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
         Map<String, CompletableFuture<PatientIdentifiers>> futurePatientIdentifiers = new HashMap<String, CompletableFuture<PatientIdentifiers>>();
         Map<String, CohortPatient> cohortPatientRecords = new HashMap<String, CohortPatient>();
 
+        int count = 0;
         for (CohortPatient record : records) {
             try {
                 cohortPatientRecords.put(record.getPID().toString(), record);
@@ -181,6 +182,10 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
                 LOG.error("Failed to resolve dmp id's for record'" + record.getPID() + "' -- skipping (" + e.getMessage() + ")");
                 ddpPatientListUtil.addPatientsMissingDMPId(record.getPID());
             }
+            count++;
+            if (testMode && count >= TEST_MODE_PATIENT_THRESHOLD) {
+                break;
+            }
         }
 
         // ensures composite records will not be created until all requests for Patient Identifiers are completed
@@ -188,7 +193,6 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
             getCompletableFuturePatientIdentifiers(patientIdentifier, futurePatientIdentifiers);
         }
 
-        int count = 0;
         LOG.info("creating composite Records");
         for(String  patientIdentifier : futurePatientIdentifiers.keySet()) {
             PatientIdentifiers pids = getCompletableFuturePatientIdentifiers(patientIdentifier, futurePatientIdentifiers);
@@ -202,10 +206,6 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
                 LOG.error("Failed to resolve dmp id's for record '" + patientIdentifier + "' -- skipping");
                 ddpPatientListUtil.addPatientsMissingDMPId(Integer.parseInt(patientIdentifier));
                 continue;
-            }
-            count++;
-            if (testMode && count >= TEST_MODE_PATIENT_THRESHOLD) {
-                break;
             }
         }
         // filter composite records to return if excluded patient id list is not empty

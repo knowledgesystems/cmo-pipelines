@@ -124,7 +124,8 @@ public class BatchConfiguration {
     @Bean
     public Job ddpCohortJob() {
         return jobBuilderFactory.get(DDP_COHORT_JOB)
-                .start(ddpStep())
+                .start(ddpSeqDateStep())
+                .next(ddpStep())
                 .next(ddpSortStep())
                 .next(ddpEmailStep())
                 .build();
@@ -234,6 +235,19 @@ public class BatchConfiguration {
         delegates.add(suppNaaccrMappingsWriter());
         writer.setDelegates(delegates);
         return writer;
+    }
+
+    @Bean
+    public Step ddpSeqDateStep() {
+        return stepBuilderFactory.get("ddpSeqDateStep")
+        .tasklet(ddpSeqDateTasklet())
+        .build();
+    }
+
+    @Bean
+    @StepScope
+    public Tasklet ddpSeqDateTasklet() {
+        return new DDPSeqDateTasklet();
     }
 
     @Bean

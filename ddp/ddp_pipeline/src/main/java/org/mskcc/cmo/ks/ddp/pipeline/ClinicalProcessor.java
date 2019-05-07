@@ -54,12 +54,14 @@ public class ClinicalProcessor implements ItemProcessor<DDPCompositeRecord, Stri
     private Boolean includeChemotherapy;
     @Value("#{jobParameters[includeSurgery]}")
     private Boolean includeSurgery;
+    @Value("#{jobParameters[includeSurvival]}")
+    private Boolean includeSurvival;
     private final Logger LOG = Logger.getLogger(ClinicalProcessor.class);
 
     @Override
     public String process(DDPCompositeRecord compositeRecord) throws Exception {
         String record = null;
-        ClinicalRecord clinicalRecord = new ClinicalRecord(compositeRecord);
+        ClinicalRecord clinicalRecord = new ClinicalRecord(compositeRecord, includeSurvival);
         try {
             record = DDPUtils.constructRecord(clinicalRecord, includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery);
         }

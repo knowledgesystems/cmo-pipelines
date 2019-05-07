@@ -56,10 +56,11 @@ public class ClinicalRecord {
     private String RADIATION_THERAPY;
     private String CHEMOTHERAPY;
     private String SURGERY;
+    private Boolean includeSurvival;
 
     public ClinicalRecord(){}
 
-    public ClinicalRecord(DDPCompositeRecord compositeRecord) throws ParseException {
+    public ClinicalRecord(DDPCompositeRecord compositeRecord, Boolean includeSurvival) throws ParseException {
         this.PATIENT_ID = compositeRecord.getDmpPatientId();
         this.AGE_CURRENT = DDPUtils.resolvePatientCurrentAge(compositeRecord);
         this.RACE = compositeRecord.getPatientRace() == null ? "NA" : compositeRecord.getPatientRace();
@@ -68,7 +69,7 @@ public class ClinicalRecord {
         this.ETHNICITY = compositeRecord.getPatientEthnicity() == null ? "NA" : compositeRecord.getPatientEthnicity();;
         this.OS_STATUS = DDPUtils.resolveOsStatus(compositeRecord);
         this.PED_IND = DDPUtils.resolvePediatricCohortPatientStatus(compositeRecord.getPediatricPatientStatus());
-        this.OS_MONTHS = DDPUtils.resolveOsMonths(OS_STATUS, compositeRecord);
+        this.OS_MONTHS = includeSurvival != null && includeSurvival ? DDPUtils.resolveOsMonths(OS_STATUS, compositeRecord) : "NA";
         this.RADIATION_THERAPY = compositeRecord.hasReceivedRadiation() ? "Yes" : "No";
         this.CHEMOTHERAPY = compositeRecord.hasReceivedChemo() ? "Yes" : "No";
         this.SURGERY = compositeRecord.hasReceivedSurgery() ? "Yes" : "No";
@@ -262,11 +263,10 @@ public class ClinicalRecord {
         fieldNames.add("ETHNICITY");
         fieldNames.add("OS_STATUS");
         fieldNames.add("PED_IND");
-        // OS_MONTHS depends on fields from the diagnosis query
-        // so if querying diagnosis is turned off all fields will be NA
-        if (includeDiagnosis) {
-            fieldNames.add("OS_MONTHS");
-        }
+        // OS_MONTHS depends on fields from the diagnosis query OR seq_date.txt
+        // so if querying diagnosis is turned off and we do not get a seq_date.txt file
+        // then all fields will be NA
+        fieldNames.add("OS_MONTHS");
         if (includeRadiation) {
             fieldNames.add("RADIATION_THERAPY");
         }

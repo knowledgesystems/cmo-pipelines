@@ -46,6 +46,7 @@ import org.junit.Assert;
 import org.junit.runner.RunWith;
 import org.junit.Test;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -235,20 +236,32 @@ public class DDPUtilsTest {
 
     @Test(expected = ParseException.class)
     public void resolveOsMonthsParseExceptionTest() throws ParseException {
-        resolveOsMonthsAndAssert("LIVING", "invalid date", "ignore", "ignore", "NA");
+        resolveOsMonthsAndAssert("LIVING", "invalid date", "ignore", "ignore", "ignore", "NA");
     }
 
     @Test
     public void resolveOsMonthsTest() throws ParseException {
-        resolveOsMonthsAndAssert("LIVING", null, "ignore", "2016-01-02", "NA");
-        resolveOsMonthsAndAssert("LIVING", "", "ignore", "2016-01-02", "NA");
-        resolveOsMonthsAndAssert("DECEASED", "ignore", null, "2016-01-02", "NA");
-        resolveOsMonthsAndAssert("DECEASED", "ignore", "", "2016-01-02", "NA");
-        resolveOsMonthsAndAssert("DECEASED", "ignore", "2016-01-02", null, "NA");
-        resolveOsMonthsAndAssert("LIVING", "2018-04-20", "ignore", "2018-02-19",
+        // these are using diagnosis method
+        resolveOsMonthsAndAssert("LIVING", null, "ignore", "2016-01-02", null, "NA");
+        resolveOsMonthsAndAssert("LIVING", "", "ignore", "2016-01-02", null, "NA");
+        resolveOsMonthsAndAssert("DECEASED", "ignore", null, "2016-01-02", null, "NA");
+        resolveOsMonthsAndAssert("DECEASED", "ignore", "", "2016-01-02", null, "NA");
+        resolveOsMonthsAndAssert("DECEASED", "ignore", "2016-01-02", null, null, "NA");
+        resolveOsMonthsAndAssert("LIVING", "2018-04-20", "ignore", "2018-02-19", null,
             String.format("%.3f", 60 / DDPUtils.DAYS_TO_MONTHS_CONVERSION));
-        resolveOsMonthsAndAssert("DECEASED", "ignore", "2018-04-21", "2018-02-19",
+        resolveOsMonthsAndAssert("DECEASED", "ignore", "2018-04-21", "2018-02-19", null,
             String.format("%.3f", 61 / DDPUtils.DAYS_TO_MONTHS_CONVERSION));
+
+        // these will use seq date method, even if diagnosis is set
+        resolveOsMonthsAndAssert("LIVING", "2019-01-31", "ignore", "ignore", "Sat, 01 Feb 2014 19:41:02 GMT",
+            String.format("%.3f", 60.0));
+        resolveOsMonthsAndAssert("LIVING", "2019-04-12", "ignore", "ignore", "Fri, 13 Oct 2017 15:33:32 GMT",
+            String.format("%.3f", 17.9506));
+        resolveOsMonthsAndAssert("DECEASED", "ignore", "2017-01-20", "ignore", "Fri, 22 Aug 2014 16:09:17 GMT",
+            String.format("%.3f", 28.997));
+        // the following has both diagnosis and seq date, seq date wins
+        resolveOsMonthsAndAssert("LIVING", "2019-04-12", "ignore", "2018-02-19", "Fri, 13 Oct 2017 15:33:32 GMT",
+            String.format("%.3f", 17.9506));
     }
 
     /**
@@ -431,7 +444,7 @@ public class DDPUtilsTest {
         clinicalRecord.setRADIATION_THERAPY("MY_RADIATION_THERAPY");
         clinicalRecord.setCHEMOTHERAPY("  MY_CHEMOTHERAPY  "); // it does a trim too
         clinicalRecord.setSURGERY("MY_SURGERY");
-        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tNo\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY\tMY_SURGERY";
+        String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tNo\tNA\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY\tMY_SURGERY";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.FALSE, Boolean.TRUE, Boolean.TRUE, Boolean.TRUE);
         Assert.assertEquals(expectedValue, returnedValue);
     }
@@ -493,6 +506,29 @@ public class DDPUtilsTest {
         clinicalRecord.setSURGERY("MY_SURGERY"); // doesn't matter if this was set
         String expectedValue = "MY_PT_ID\t20\tMY_RACE\tMY_RELIGION\tFemale\tMY_ETHNICITY\tLIVING\tNo\t3.123\tMY_RADIATION_THERAPY\tMY_CHEMOTHERAPY";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE);
+        Assert.assertEquals(expectedValue, returnedValue);
+    }
+
+    @Test
+    public void constructRecordOverloadedIncludeSurvival() throws Exception {
+        DDPUtils.setUseSeqDateOsMonthsMethod(Boolean.TRUE);
+        String dmpPatientId = "MY_PT_ID";
+        DDPCompositeRecord compositeRecord = new DDPCompositeRecord(dmpPatientId);
+        CohortPatient cohortPatient = new CohortPatient();
+        cohortPatient.setPTVITALSTATUS("ALIVE");
+        PatientDemographics patientDemographics = new PatientDemographics();
+        patientDemographics.setPLALASTACTVDTE("2019-04-12");
+        patientDemographics.setCurrentAge(new Integer(75));
+        Map<String, Date> patientFirstSeqDateMap = new HashMap<String, Date>();
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
+        Date seqDate = simpleDateFormat.parse("Fri, 13 Oct 2017 15:33:32 GMT");
+        patientFirstSeqDateMap.put(dmpPatientId, seqDate);
+        DDPUtils.setPatientFirstSeqDateMap(patientFirstSeqDateMap);
+        compositeRecord.setPatientDemographics(patientDemographics);
+        compositeRecord.setCohortPatient(cohortPatient); 
+        ClinicalRecord clinicalRecord = new ClinicalRecord(compositeRecord, Boolean.TRUE);
+        String expectedValue = "MY_PT_ID\t75\tNA\tNA\tNA\tNA\tLIVING\tNA\t17.951";
+        String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.TRUE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE);
         Assert.assertEquals(expectedValue, returnedValue);
     }
 
@@ -626,13 +662,26 @@ public class DDPUtilsTest {
         Assert.assertEquals(expectedValue, returnedValue);
     }
 
-    private void resolveOsMonthsAndAssert(String osStatus, String plaLastActvDte, String deceasedDate, String firstDiagnosisDate, String expectedValue) throws ParseException {
+    private void resolveOsMonthsAndAssert(String osStatus, String plaLastActvDte, String deceasedDate, String firstDiagnosisDate, String firstSeqDate, String expectedValue) throws ParseException {
         DDPCompositeRecord testPatient = new DDPCompositeRecord();
+        String dmpPatientId = "TEST_PATIENT_ID";
+        testPatient.setDmpPatientId(dmpPatientId);
         PatientDemographics testDemographics = new PatientDemographics();
         testDemographics.setDeceasedDate(deceasedDate);
         testDemographics.setPLALASTACTVDTE(plaLastActvDte);
         testPatient.setPatientDemographics(testDemographics);
         PatientDiagnosis patientDiagnosis = new PatientDiagnosis();
+        // seq date will have priority over first diagnosis date if it exists
+        Map<String, Date> patientFirstSeqDateMap = new HashMap<String, Date>();
+        if (firstSeqDate != null) {
+            DDPUtils.setUseSeqDateOsMonthsMethod(Boolean.TRUE);
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
+            Date seqDate = simpleDateFormat.parse(firstSeqDate);
+            patientFirstSeqDateMap.put(dmpPatientId, seqDate);
+        } else {
+            DDPUtils.setUseSeqDateOsMonthsMethod(Boolean.FALSE);
+        }
+        DDPUtils.setPatientFirstSeqDateMap(patientFirstSeqDateMap);
         patientDiagnosis.setTumorDiagnosisDate(firstDiagnosisDate);
         testPatient.setPatientDiagnosis(Collections.singletonList(patientDiagnosis));
         String returnedValue = DDPUtils.resolveOsMonths(osStatus, testPatient);

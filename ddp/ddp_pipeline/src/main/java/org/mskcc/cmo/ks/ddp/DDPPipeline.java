@@ -58,10 +58,11 @@ public class DDPPipeline {
     private static Options getOptions(Map<String, Integer> ddpCohortMap, String[] args) {
         Options options = new Options();
         options.addOption("h", "help", false, "Shows this help document and quits.")
-                .addOption("f", "fetch_data", true, "List of comma delimited additional data to fetch [diagnosis,radiation,chemotherapy,surgery] (demographics is always included)") // TODO do not hard code this
+                .addOption("f", "fetch_data", true, "List of comma delimited additional data to fetch [diagnosis,radiation,chemotherapy,surgery,survival] (demographics is always included)") // TODO do not hard code this
                 .addOption("o", "output_directory", true, "Output directory")
                 .addOption("c", "cohort_name", true, "Cohort name [" + StringUtils.join(ddpCohortMap.keySet(), " | ") + "]")
-                .addOption("s", "subset_file", true, "File containing patient ID's to subset by")
+                .addOption("p", "patient_subset_file", true, "File containing patient ID's to subset by")
+                .addOption("s", "seq_date_file", true, "File containing patient sequence dates for OS_MONTHS")
                 .addOption("e", "excluded_patients_file", true, "File containg patient ID's to exclude")
                 .addOption("t", "test", false, "Run pipeline in test mode");
         return options;
@@ -76,13 +77,15 @@ public class DDPPipeline {
     private static void launchJob(ConfigurableApplicationContext ctx, String[] args,
                 String cohortName,
                 String subsetFilename,
+                String seqDateFilename,
                 String excludedPatientsFilename,
                 String outputDirectory,
                 Boolean testMode,
                 Boolean includeDiagnosis,
                 Boolean includeRadiation,
                 Boolean includeChemotherapy,
-                Boolean includeSurgery) throws Exception {
+                Boolean includeSurgery,
+                Boolean includeSurvival) throws Exception {
         // TO-DO: Set up job that generates file containing line-delimited list of patient IDs
         // by calling cohort endpoint with user-specified cohort name
         // NOTE:  the use-case of this is meant to generate list of patient IDs in DDP pediatric cohort
@@ -91,6 +94,7 @@ public class DDPPipeline {
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("cohortName", cohortName)
                 .addString("subsetFilename", subsetFilename)
+                .addString("seqDateFilename", seqDateFilename)
                 .addString("excludedPatientsFilename", excludedPatientsFilename)
                 .addString("outputDirectory", outputDirectory)
                 .addString("testMode", String.valueOf(testMode))
@@ -98,6 +102,7 @@ public class DDPPipeline {
                 .addString("includeRadiation", String.valueOf(includeRadiation))
                 .addString("includeChemotherapy", String.valueOf(includeChemotherapy))
                 .addString("includeSurgery", String.valueOf(includeSurgery))
+                .addString("includeSurvival", String.valueOf(includeSurvival))
                 .toJobParameters();
         Job job = ctx.getBean(BatchConfiguration.DDP_COHORT_JOB, Job.class);
         JobExecution jobExecution = jobLauncher.run(job, jobParameters);
@@ -141,7 +146,8 @@ public class DDPPipeline {
             fetchOptions = commandLine.getOptionValue("f").split(",");
         }
         String cohortName = commandLine.hasOption("c") ? commandLine.getOptionValue("c") : "";
-        String subsetFilename = commandLine.hasOption("s") ? commandLine.getOptionValue("s") : "";
+        String subsetFilename = commandLine.hasOption("p") ? commandLine.getOptionValue("p") : "";
+        String seqDateFilename = commandLine.hasOption("s") ? commandLine.getOptionValue("s") : "";
         String excludedPatientsFilename = commandLine.hasOption("e") ? commandLine.getOptionValue("e") : "";
         String outputDirectory = commandLine.getOptionValue("o");
         boolean foundInvalidFetchOption = false;
@@ -149,6 +155,7 @@ public class DDPPipeline {
         boolean includeRadiation = false;
         boolean includeChemotherapy = false;
         boolean includeSurgery = false;
+        boolean includeSurvival = false;
         // note we will have at least one data set to fetch because this is a required argument
         for (String fetchOption : fetchOptions) {
             if ("diagnosis".equals(fetchOption)) {
@@ -159,6 +166,8 @@ public class DDPPipeline {
                 includeChemotherapy = true;
             } else if ("surgery".equals(fetchOption)) {
                 includeSurgery = true;
+            } else if ("survival".equals(fetchOption)) {
+                includeSurvival = true;
             } else {
                 System.out.println("Fetch option '" + fetchOption + "' is unknown - please provide valid fetch option!");
                 foundInvalidFetchOption = true;
@@ -169,21 +178,32 @@ public class DDPPipeline {
         }
         if (!Strings.isNullOrEmpty(cohortName) && !isValidCohort(ddpCohortMap, cohortName)) {
             System.out.println("Cohort name provided is unknown - please provide valid cohort name!");
-            help(options,2);
+            help(options, 2);
         }
         if (!Strings.isNullOrEmpty(subsetFilename) && !isValidFile(subsetFilename)) {
             System.out.println("No such file: " + subsetFilename);
-            help(options,2);
+            help(options, 2);
+        }
+        if (!Strings.isNullOrEmpty(seqDateFilename) && !isValidFile(seqDateFilename)) {
+            System.out.println("No such file: " + seqDateFilename);
+            help(options, 2);
+        }
+        if (includeSurvival && !includeDiagnosis && !commandLine.hasOption("s")) {
+            System.out.println("Fetch option 'survival' must be run with either fetch option 'diagnosis' or with a seq_date_file (-s)");
+            help(options, 2);
+        }
+        if (!includeSurvival && commandLine.hasOption("s")) {
+            LOG.warn("seq_date_file (-s) given but option 'survival' not selected.  No survival information will be included."); // just warn user, do not exit
         }
         if (!Strings.isNullOrEmpty(excludedPatientsFilename) && !isValidFile(excludedPatientsFilename)) {
             System.out.println("No such file: " + excludedPatientsFilename);
-            help(options,2);
+            help(options, 2);
         }
         if (!isValidDirectory(outputDirectory)) {
             System.out.println("No such directory: " + outputDirectory);
-            help(options,2);
+            help(options, 2);
         }
-        launchJob(ctx, args, cohortName, subsetFilename, excludedPatientsFilename, outputDirectory, commandLine.hasOption("t"),
-            includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery);
+        launchJob(ctx, args, cohortName, subsetFilename, seqDateFilename, excludedPatientsFilename, outputDirectory, commandLine.hasOption("t"),
+            includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery, includeSurvival);
     }
 }

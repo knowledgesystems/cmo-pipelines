@@ -254,7 +254,7 @@ echo $(date)
 mskimpact_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_patient_list.txt
 awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $mskimpact_dmp_pids_file
 ##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -s $mskimpact_dmp_pids_file -o $MSK_IMPACT_DATA_HOME
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -p $mskimpact_dmp_pids_file -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f survival -o $MSK_IMPACT_DATA_HOME
 if [ $? -gt 0 ] ; then
     cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Demographics Fetch"
@@ -269,7 +269,7 @@ if [ $FETCH_DDP_IMPACT_FAIL -eq 0 ] ; then
     awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PED_IND"] == "Yes") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_ddp.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
     # override default ddp clinical filename so that pediatric demographics file does not conflict with mskimpact demographics file
     DDP_PEDIATRIC_PROP_OVERRIDES="-Dddp.clinical_filename=data_clinical_ddp_pediatrics.txt"
-    $JAVA_BINARY $DDP_PEDIATRIC_PROP_OVERRIDES $JAVA_DDP_FETCHER_ARGS -o $MSK_IMPACT_DATA_HOME -s $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt -f diagnosis,radiation,chemotherapy,surgery
+    $JAVA_BINARY $DDP_PEDIATRIC_PROP_OVERRIDES $JAVA_DDP_FETCHER_ARGS -o $MSK_IMPACT_DATA_HOME -p $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f diagnosis,radiation,chemotherapy,surgery,survival
     if [ $? -gt 0 ] ; then
         cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Pediatric DDP Fetch"
@@ -332,7 +332,7 @@ echo $(date)
 mskimpact_heme_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_heme_patient_list.txt
 awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $mskimpact_heme_dmp_pids_file
 ##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -s $mskimpact_heme_dmp_pids_file -o $MSK_HEMEPACT_DATA_HOME
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -p $mskimpact_heme_dmp_pids_file -s $MSK_HEMEPACT_DATA_HOME/cvr/seq_date.txt -f survival -o $MSK_HEMEPACT_DATA_HOME
 if [ $? -gt 0 ] ; then
     cd $MSK_HEMEPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Demographics Fetch"
@@ -378,7 +378,7 @@ echo $(date)
 mskraindance_dmp_pids_file=$MSK_DMP_TMPDIR/mskraindance_patient_list.txt
 awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical.txt | sort | uniq > $mskraindance_dmp_pids_file
 ##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskraindance -s $mskraindance_dmp_pids_file -o $MSK_RAINDANCE_DATA_HOME
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskraindance -p $mskraindance_dmp_pids_file -s $MSK_RAINDANCE_DATA_HOME/cvr/seq_date.txt -f survival -o $MSK_RAINDANCE_DATA_HOME
 if [ $? -gt 0 ] ; then
     cd $MSK_RAINDANCE_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Demographics Fetch"
@@ -425,7 +425,7 @@ echo $(date)
 mskarcher_dmp_pids_file=$MSK_DMP_TMPDIR/mskarcher_patient_list.txt
 awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt | sort | uniq > $mskarcher_dmp_pids_file
 ##TO-DO: ADD ARG TO PASS IN "YESTERDAY'S" DEMOGRAHICS RECORD COUNT TO DDP TO ENSURE WE AREN'T OVERWRITING WITH INVALID DATA
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskarcher -s $mskarcher_dmp_pids_file -o $MSK_ARCHER_UNFILTERED_DATA_HOME
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskarcher -p $mskarcher_dmp_pids_file -s $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/seq_date.txt -f survival -o $MSK_ARCHER_UNFILTERED_DATA_HOME
 if [ $? -gt 0 ] ; then
     cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Demographics Fetch"

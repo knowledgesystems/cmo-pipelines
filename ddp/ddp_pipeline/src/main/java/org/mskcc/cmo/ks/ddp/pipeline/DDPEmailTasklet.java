@@ -33,6 +33,7 @@ package org.mskcc.cmo.ks.ddp.pipeline;
 
 import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,6 +80,10 @@ public class DDPEmailTasklet implements Tasklet {
         Set<String> patientsMissingDiagnoses = ddpPatientListUtil.getPatientsMissingDiagnoses();
         if (patientsMissingDiagnoses.size() > 0) {
             body.append(constructMissingPatientsText(patientsMissingDiagnoses, "patients that were included are missing diagnoses"));
+        }
+        Set<String> patientsMissingSurvival = DDPUtils.getPatientsMissingSurvival();
+        if (patientsMissingSurvival.size() > 0) { // size will be zero if we either did not include survival information or if every patient has it
+            body.append(constructMissingPatientsText(patientsMissingSurvival, "patients that were included are missing survival information"));
         }
         if (!body.toString().isEmpty()) {
             emailUtil.sendEmailToDefaultRecipient(subject, body.toString());

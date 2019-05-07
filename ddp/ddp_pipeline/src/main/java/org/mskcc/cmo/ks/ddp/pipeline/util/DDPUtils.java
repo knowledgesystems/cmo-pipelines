@@ -41,12 +41,14 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.io.*;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  *
  * @author ochoaa
  */
 public class DDPUtils {
+
     public static final String MSKIMPACT_STUDY_ID = "mskimpact";
     public static final Double DAYS_TO_YEARS_CONVERSION = 365.2422;
     public static final Double DAYS_TO_MONTHS_CONVERSION = 30.4167;
@@ -55,6 +57,9 @@ public class DDPUtils {
     private static Map<String, String> naaccrEthnicityMap;
     private static Map<String, String> naaccrRaceMap;
     private static Map<String, String> naaccrSexMap;
+    private static Map<String, Date> patientFirstSeqDateMap = new HashMap<String, Date>();
+    private static Set<String> patientsMissingSurvival = new HashSet<>();
+    private static Boolean useSeqDateOsMonthsMethod = Boolean.FALSE;
 
     public static void setNaaccrEthnicityMap(Map<String, String> naaccrEthnicityMap) {
         DDPUtils.naaccrEthnicityMap = naaccrEthnicityMap;
@@ -78,6 +83,26 @@ public class DDPUtils {
 
     public static Map<String, String> getNaaccrSexMap() {
         return DDPUtils.naaccrSexMap;
+    }
+
+    public static void setPatientFirstSeqDateMap(Map<String, Date> patientFirstSeqDateMap) {
+        DDPUtils.patientFirstSeqDateMap = patientFirstSeqDateMap;
+    }
+
+    public static Map<String, Date> getPatientFirstSeqDateMap() {
+        return DDPUtils.patientFirstSeqDateMap;
+    }
+
+    public static Set<String> getPatientsMissingSurvival() {
+        return DDPUtils.patientsMissingSurvival;
+    }
+
+    public static Boolean getUseSeqDateOsMonthsMethod() {
+        return DDPUtils.useSeqDateOsMonthsMethod;
+    }
+
+    public static void setUseSeqDateOsMonthsMethod(Boolean useSeqDateOsMonthsMethod) {
+        DDPUtils.useSeqDateOsMonthsMethod = useSeqDateOsMonthsMethod;
     }
 
     public static Boolean isMskimpactCohort(String cohortName) {
@@ -204,7 +229,7 @@ public class DDPUtils {
     /**
      * Calculate OS_MONTHS.
      *
-     * Note: In some cases, patients may not have any tumor diagnoses in the system yet. These are NA.
+     * Note: In some cases, patients may not have any sequence date or tumor diagnoses in the system yet. These are NA.
      *
      * @param osStatus
      * @param compositeRecord
@@ -213,14 +238,38 @@ public class DDPUtils {
      */
     public static String resolveOsMonths(String osStatus, DDPCompositeRecord compositeRecord) throws ParseException {
         String osMonths = "NA";
-        Long referenceAgeInDays = (osStatus.equals("LIVING")) ?
+        Long referenceInDays = (osStatus.equals("LIVING")) ?
                 getDateInDays(compositeRecord.getPatientDemographics().getPLALASTACTVDTE()) :
                 getDateInDays(compositeRecord.getPatientDemographics().getDeceasedDate());
-        Long firstTumorDiagnosisDateInDays = getFirstTumorDiagnosisDateInDays(compositeRecord.getPatientDiagnosis());
-        if (referenceAgeInDays != null && firstTumorDiagnosisDateInDays != null) {
-            osMonths = String.format("%.3f", (referenceAgeInDays - firstTumorDiagnosisDateInDays) / DAYS_TO_MONTHS_CONVERSION);
+        List<PatientDiagnosis> patientDiagnosis = compositeRecord.getPatientDiagnosis();
+        Long firstDateInDays = null;
+        // if we were given a seq_date.txt file, use that
+        // otherwise use diagnosis
+        if (DDPUtils.getUseSeqDateOsMonthsMethod()) { // here we want to read it from seq_date.txt
+            firstDateInDays = getFirstTumorSeqDateInDays(compositeRecord.getDmpPatientId());
+        } else if (patientDiagnosis != null && patientDiagnosis.size() > 0) {
+            firstDateInDays = getFirstTumorDiagnosisDateInDays(patientDiagnosis);
+        }
+        if (referenceInDays != null && firstDateInDays != null) {
+            osMonths = String.format("%.3f", (referenceInDays - firstDateInDays) / DAYS_TO_MONTHS_CONVERSION);
+        }
+        if (osMonths == "NA") {
+            patientsMissingSurvival.add(compositeRecord.getDmpPatientId());
         }
         return osMonths;
+    }
+
+    /**
+     * Return the earliest patient tumor sequence date in days.
+     *
+     * @param dmpPatientId
+     * @return
+     */
+    private static Long getFirstTumorSeqDateInDays(String dmpPatientId) {
+        if (DDPUtils.patientFirstSeqDateMap.containsKey(dmpPatientId)) {
+            return getDateInDays(DDPUtils.patientFirstSeqDateMap.get(dmpPatientId));
+        }
+        return null;
     }
 
     /**
@@ -286,9 +335,8 @@ public class DDPUtils {
      *
      * @param date
      * @return
-     * @throws ParseException
      */
-    private static Long getDateInDays(Date date) throws ParseException {
+    private static Long getDateInDays(Date date) {
         if (date != null) {
             return date.getTime() / (1000 * 60 * 60 * 24); // milliseconds -> minutes -> hours -> days
         }
