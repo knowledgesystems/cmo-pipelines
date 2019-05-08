@@ -254,6 +254,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         """
             Test Step 7(b): check that MAF is annotated.
         """
+        print "\n\n\n\n HERE IS THE ANNOTATOR JAR I'M CHECKING FOR " + self.annotator_jar
         self.assertTrue(os.path.isfile(self.annotator_jar), "ANNOTATOR_JAR could not be resolved from sys environment! %s" % (self.annotator_jar))
         self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
         self.copy_maf_and_drop_hgvsp_short_column()
