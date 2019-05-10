@@ -1,5 +1,6 @@
-import os
 import linecache
+import os
+import re
 
 DISPLAY_NAME = "DISPLAY_NAME"
 DESCRIPTION = "DESCRIPTION"
@@ -7,6 +8,9 @@ DATATYPE = "DATATYPE"
 ATTRIBUTE_TYPE = "ATTRIBUTE_TYPE"
 PRIORITY = "PRIORITY"
 METADATA_PREFIX = "#"
+
+def is_clinical_file(filename):
+    return (re.match('data_clinical[_a-z]*.txt', os.path.basename(filename)) != None)
 
 def parse_file(data_file, allow_empty_values):
     """
@@ -78,7 +82,6 @@ def has_legacy_clinical_metadata_headers(clinical_file):
             break
     return (len(metadata_headers) == 5)
 
-
 def get_metadata_mapping(clinical_file, attribute_line):
     metadata_mapping = {}
     metadata = linecache.getline(clinical_file, attribute_line).rstrip().replace("#", "").split('\t')
@@ -143,7 +146,6 @@ def add_metadata_for_attribute(attribute, all_metadata_lines):
     all_metadata_lines[ATTRIBUTE_TYPE].append("SAMPLE")
     all_metadata_lines[PRIORITY].append("1")
 
-
 def get_all_metadata_lines(clinical_file):
     all_metadata_lines = {DISPLAY_NAME: get_display_name_line(clinical_file),
                           DESCRIPTION: get_description_line(clinical_file),
@@ -152,7 +154,6 @@ def get_all_metadata_lines(clinical_file):
                           PRIORITY: get_priority_line(clinical_file)}
     return all_metadata_lines
 
-
 def get_all_metadata_mappings(clinical_file):
     all_metadata_mapping = {DISPLAY_NAME: get_display_name_mapping(clinical_file),
                             DESCRIPTION: get_description_mapping(clinical_file),
@@ -160,7 +161,6 @@ def get_all_metadata_mappings(clinical_file):
                             ATTRIBUTE_TYPE: get_attribute_type_mapping(clinical_file),
                             PRIORITY: get_priority_mapping(clinical_file)}
     return all_metadata_mapping
-
 
 # return list representing order metadata header lines to write
 def get_metadata_header_line_order(clinical_file):
@@ -173,6 +173,18 @@ def get_metadata_header_line_order(clinical_file):
         to_return.remove(ATTRIBUTE_TYPE)
     return to_return
 
+def get_ordered_metadata_and_add_new_attribute(clinical_file, new_attribute):
+    """
+        Returns ordered clinical metadata with new attribute metadata added as well.
+    """
+    ## TODO: change to hit CDD(?)
+    all_metadata_lines = get_all_metadata_lines(clinical_file)
+    add_metadata_for_attribute(new_attribute, all_metadata_lines)
+
+    ordered_metadata_lines = []
+    for metadata_header_type in get_metadata_header_line_order(clinical_file):
+        ordered_metadata_lines.append('\t'.join(all_metadata_lines[metadata_header_type]))
+    return ordered_metadata_lines
 
 def write_metadata_headers(metadata_lines, clinical_filename):
     print '\t'.join(metadata_lines[DISPLAY_NAME]).replace('\n', '')
@@ -182,12 +194,10 @@ def write_metadata_headers(metadata_lines, clinical_filename):
         print '\t'.join(metadata_lines[ATTRIBUTE_TYPE]).replace('\n', '')
     print '\t'.join(metadata_lines[PRIORITY]).replace('\n', '')
 
-
 def write_header_line(line, output_file):
     os.write(output_file, '#')
     os.write(output_file, '\t'.join(line))
     os.write(output_file, '\n')
-
 
 def write_data(data_file, output_file):
     with open(data_file) as source_file:
@@ -195,6 +205,54 @@ def write_data(data_file, output_file):
             if not line.startswith("#"):
                 os.write(output_file, line)
 
+def duplicate_existing_attribute_to_new_attribute(clinical_file, existing_attribute_name, new_attribute_name):
+    """
+        Duplicates a specified attribute in clinical file (including values) under a new specified attribute name.
+        The new (duplicated) attribute is added as the last column in the file.
+    """
 
-def is_clinical_file(filename):
-    return "data_clinical" in filename and filename.endswith(".txt")
+    to_write = []
+    header = get_header(clinical_file)
+    header_processed = False
+
+    if existing_attribute_name in header:
+        to_write = get_ordered_metadata_and_add_new_attribute(clinical_file, new_attribute_name)
+        header = get_header(clinical_file)
+        existing_attribute_index = header.index(existing_attribute_name)
+        with open(clinical_file, "r") as f:
+            for line in f.readlines():
+                # skip metadata headers - already processed
+                if line.startswith("#"):
+                    continue
+                data = line.rstrip("\n").split('\t')
+                # add new attribute/column to the end of header
+                if not header_processed:
+                    data.append(new_attribute_name)
+                    header_processed = True
+                # add value from existing attribute to end of data (lines up with new attribute)
+                else:
+                    data.append(data[existing_attribute_index])
+                to_write.append('\t'.join(data))
+        write_data_list_to_file(clinical_file, to_write)
+
+def get_value_set_for_clinical_attribute(clinical_file, clinical_attribute):
+    """
+        Returns a set containing all values found in a specific column of the clinical file.
+        Values are taken column matching 'clinical_attribute' argument (case-specific)
+        e.g 'get_value_set_for_clinical_attribute("clinical_file", "SAMPLE_ID")'
+            will return a set with all sample ids in "clinical_file"
+    """
+    value_set = set()
+    if clinical_attribute not in get_header(clinical_file):
+        raise KeyError("%s is not an attribute in %s" % (clinical_attribute, clinical_file))
+    for row in parse_file(clinical_file, True):
+        value_set.add(row[clinical_attribute])
+    return value_set
+
+def write_data_list_to_file(filename, data_list):
+    """
+        Writes data to file where 'data_list' is a
+        list of formatted data to write to given file.
+    """
+    with open(filename, "w") as f:
+            f.write('\n'.join(data_list) + "\n")

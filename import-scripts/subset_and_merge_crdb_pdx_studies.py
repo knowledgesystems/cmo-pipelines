@@ -7,7 +7,9 @@ import re
 import shutil
 import subprocess
 import sys
-from clinicalfile_utils import *
+
+import clinicalfile_utils
+import validation_utils
 
 # ------------------------------------------------------------------------------------------------------------
 OUTPUT_FILE = sys.stderr
@@ -54,7 +56,6 @@ HGVSP_SHORT_COLUMN = "HGVSp_Short"
 SAMPLE_ID_COLUMN = "SAMPLE_ID"
 PATIENT_ID_COLUMN = "PATIENT_ID"
 ONCOTREE_CODE_COLUMN = "ONCOTREE_CODE"
-SEQUENCED_SAMPLES_HEADER_TAG = "#sequenced_samples:"
 ANNOTATED_MAF_FILE_PATTERN = "data_mutations_annotated.txt"
 VALIDATION_REPORT_SUFFIX = "-validation.html"
 
@@ -411,10 +412,10 @@ def filter_clinical_annotations(source_subdirectory, clinical_annotations):
 
         Note: "PATIENT_ID", "SAMPLE_ID", "ONCOTREE_CODE" are never removed because they are required for merging and importing.
     """
-    clinical_files = [os.path.join(source_subdirectory, filename) for filename in os.listdir(source_subdirectory) if is_clinical_file(filename)]
+    clinical_files = [os.path.join(source_subdirectory, filename) for filename in os.listdir(source_subdirectory) if clinicalfile_utils.is_clinical_file(filename)]
     for clinical_file in clinical_files:
         to_write = []
-        header = get_header(clinical_file)
+        header = clinicalfile_utils.get_header(clinical_file)
         filtered_header = get_filtered_header(header, clinical_annotations)
         if not filtered_header:
             continue
@@ -426,7 +427,7 @@ def filter_clinical_annotations(source_subdirectory, clinical_annotations):
                 data = line.rstrip("\n").split("\t")
                 data_to_write = [data[index] for index in attribute_indices]
                 to_write.append("\t".join(data_to_write))
-        write_data_list_to_file(clinical_file, to_write)
+        clinicalfile_utils.write_data_list_to_file(clinical_file, to_write)
 
 def convert_source_to_destination_pids_in_subsetted_source_studies(destination_to_source_mapping, root_directory):
     """
@@ -458,10 +459,10 @@ def convert_source_to_destination_pids_in_clinical_files(source_subdirectory, so
     """
         Updates source patient ids with the designated patient id to use for the final/processed destination study.
     """
-    clinical_files = [os.path.join(source_subdirectory, filename) for filename in  os.listdir(source_subdirectory) if is_clinical_file(filename)]
+    clinical_files = [os.path.join(source_subdirectory, filename) for filename in  os.listdir(source_subdirectory) if clinicalfile_utils.is_clinical_file(filename)]
     for clinical_file in clinical_files:
         to_write = []
-        header = get_header(clinical_file)
+        header = clinicalfile_utils.get_header(clinical_file)
         pid_index = header.index("PATIENT_ID")
         # load data to write out - patient id column replaced with what's specified in "DESTINATION_PATIENT_ID" in source mapping file
         # same line written if no mapping is available
@@ -475,7 +476,7 @@ def convert_source_to_destination_pids_in_clinical_files(source_subdirectory, so
                 except:
                     pass
                 to_write.append('\t'.join(data))
-        write_data_list_to_file(clinical_file, to_write)
+        clinicalfile_utils.write_data_list_to_file(clinical_file, to_write)
 
 # ------------------------------------------------------------------------------------------------------------
 # STEP 4: Merge all source directory files (clinical and genomic) across destination/source subdirectories (destination/source1, destination/source2, destination/source3).
@@ -542,61 +543,28 @@ def post_process_and_cleanup_destination_study_data(lib, destination_to_source_m
     insert_maf_sequenced_samples_header(destination_to_source_mapping, root_directory) # step 7(a)
     annotate_maf(destination_to_source_mapping, root_directory, annotator_jar) # step 7(b)
     add_display_sample_name_column(destination_to_source_mapping, root_directory) # step 7(c)
-    generate_case_lists(lib, destination_to_source_mapping, root_directory, case_lists_config_file) # step 7(d)
+    generate_destination_study_case_lists(lib, destination_to_source_mapping, root_directory, case_lists_config_file) # step 7(d)
+    standardize_destination_study_cna_data(destination_to_source_mapping, root_directory) # step 7(e)
     # remove temp subset files after subsetting calls complete
     remove_temp_subset_files(destination_to_source_mapping, root_directory)
     # clean up source subdirectories from destination study paths after merges are complete
     remove_source_subdirectories(destination_to_source_mapping, root_directory)
 
-
-def add_display_sample_name_column(destination_to_source_mapping, root_directory):
+def insert_maf_sequenced_samples_header(destination_to_source_mapping, root_directory):
     """
-        Adds DISPLAY_SAMPLE_ID to clinical sample file to support frontend feature which allows
-        value in DISPLAY_SAMPLE_ID to be displayed over value in SAMPLE_ID. This is to allow PDX
-        sample ids to be displayed as the sample ids if PDX ids are available.
+        Inserts the '#sequenced_samples' header into the MAF using the list of samples
+        loaded from clinical sample file.
 
-        Empty values for DISPLAY_SAMPLE_NAME will default to values in SAMPLE_ID.
+        This is necessary for when the case lists get generated for studies prior to
+        validation and import. Some samples may be sequenced but may not have variants
+        so they would not be added to the generated cases_sequenced.txt sample list
+        since they would not exist in the MAF.
     """
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
         clinical_file = os.path.join(destination_directory, CLINICAL_SAMPLE_FILE_PATTERN)
-        header = get_header(clinical_file)
-
-        if PDX_ID_COLUMN in header:
-            # get ordered metadata lines with DISPLAY_SAMPLE_NAME added as well.
-            to_write = get_ordered_metadata_with_display_sample_name_attribute(clinical_file)
-            pdx_id_index = header.index(PDX_ID_COLUMN)
-            header_processed = False
-            with open(clinical_file, "r") as f:
-                for line in f.readlines():
-                    # skip metadata headers - already processed
-                    if line.startswith("#"):
-                        continue
-                    data = line.rstrip("\n").split('\t')
-                    # add new attribute/column to the end of header
-                    if not header_processed:
-                        data.append(DISPLAY_SAMPLE_NAME_COLUMN)
-                        header_processed = True
-                    # add PDX_ID to end of data (lines up with DISPLAY_SAMPLE_NAME)
-                    else:
-                        data.append(data[pdx_id_index])
-                    to_write.append('\t'.join(data))
-            write_data_list_to_file(clinical_file, to_write)
-
-
-def get_ordered_metadata_with_display_sample_name_attribute(clinical_file):
-    """
-        Returns ordered clinical metadata with the DISPLAY_SAMPLE_NAME metadata added as well.
-    """
-    # get headers and add DISPLAY_SAMPLE_NAME default metadata
-    ## TODO: change to hit CDD(?)
-    all_metadata_lines = get_all_metadata_lines(clinical_file)
-    add_metadata_for_attribute(DISPLAY_SAMPLE_NAME_COLUMN, all_metadata_lines)
-
-    ordered_metadata_lines = []
-    for metadata_header_type in get_metadata_header_line_order(clinical_file):
-        ordered_metadata_lines.append('\t'.join(all_metadata_lines[metadata_header_type]))
-    return ordered_metadata_lines
+        maf_file = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
+        validation_utils.insert_maf_sequenced_samples_header(clinical_file, maf_file)
 
 def annotate_maf(destination_to_source_mapping, root_directory, annotator_jar):
     """
@@ -618,48 +586,24 @@ def annotate_maf(destination_to_source_mapping, root_directory, annotator_jar):
             if os.path.isfile(annot_maf):
                 os.remove(annot_maf)
 
-def insert_maf_sequenced_samples_header(destination_to_source_mapping, root_directory):
+def add_display_sample_name_column(destination_to_source_mapping, root_directory):
     """
-        Inserts the '#sequenced_samples' header into the MAF using the list of samples
-        loaded from clinical sample file.
+        Adds DISPLAY_SAMPLE_ID to clinical sample file to support frontend feature which allows
+        value in DISPLAY_SAMPLE_ID to be displayed over value in SAMPLE_ID. This is to allow PDX
+        sample ids to be displayed as the sample ids if PDX ids are available.
 
-        This is necessary for when the case lists get generated for studies prior to
-        validation and import. Some samples may be sequenced but may not have variants
-        so they would not be added to the generated cases_sequenced.txt sample list
-        since they would not exist in the MAF.
+        Empty values for DISPLAY_SAMPLE_NAME will default to values in SAMPLE_ID.
     """
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
-
-        # get sequenced samples header from samples in clinical file
         clinical_file = os.path.join(destination_directory, CLINICAL_SAMPLE_FILE_PATTERN)
-        sequenced_samples_header = generate_sequenced_samples_header(clinical_file)
+        clinicalfile_utils.duplicate_existing_attribute_to_new_attribute(clinical_file, PDX_ID_COLUMN, DISPLAY_SAMPLE_NAME_COLUMN)
 
-        # load data from maf and insert the sequenced samples header as first row in file
-        to_write = [sequenced_samples_header]
-        maf_file = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
-        with open(maf_file, "rU") as maf:
-            for line in maf.readlines():
-                # do not want to accidentally write two sequenced sample headers to file
-                if line.startswith(SEQUENCED_SAMPLES_HEADER_TAG):
-                    continue
-                to_write.append(line.rstrip("\n"))
-        write_data_list_to_file(maf_file, to_write)
-
-def generate_sequenced_samples_header(clinical_file):
-    """
-        Returns a formatted sequenced samples header containing all
-        samples from 'SAMPLE_ID' column in clinical file.
-    """
-    samples = set()
-    for row in parse_file(clinical_file, True):
-        samples.add(row[SAMPLE_ID_COLUMN])
-    return "%s %s" % (SEQUENCED_SAMPLES_HEADER_TAG, " ".join(list(samples)))
-
-def generate_case_lists(lib, destination_to_source_mapping, root_directory, case_lists_config_file):
+def generate_destination_study_case_lists(lib, destination_to_source_mapping, root_directory, case_lists_config_file):
     """
         Generates standard case lists for each destination study.
         i.e., cases_all.txt, cases_sequenced.txt, etc.
+        Overwrites existing case lists in directory.
     """
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
@@ -670,10 +614,22 @@ def generate_case_lists(lib, destination_to_source_mapping, root_directory, case
             os.mkdir(destination_case_lists_directory)
 
         # generate standard case lists for each destination study
-        generate_case_lists_call = generate_generate_case_lists_call(lib, destination, destination_directory, destination_case_lists_directory, case_lists_config_file)
-        generate_case_lists_status = subprocess.call(generate_case_lists_call, shell = True)
-        if generate_case_lists_status == 0:
+        try:
+            validation_utils.call_generate_case_lists(case_lists_config_file, destination_case_lists_directory, destination_directory, destination, True)
             DESTINATION_STUDY_STATUS_FLAGS[destination][GENERATE_CASE_LISTS_SUCCESS] = True
+        except:
+            print >> OUTPUT_FILE, "Error generating case lists for study %s" % (destination)
+            continue
+
+def standardize_destination_study_cna_data(destination_to_source_mapping, root_directory):
+    """
+        Uses validation_utils to cleanup CNA files.
+        Currently only checks for blank CNA values and replaces them with "NA".
+    """
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        cna_file = os.path.join(destination_directory, CNA_FILE_PATTERN)
+        validation_utils.standardize_cna_file(cna_file)
 
 # ------------------------------------------------------------------------------------------------------------
 # STEP 8: Validate and log invalid studies
@@ -693,7 +649,8 @@ def validate_destination_studies(destination_to_source_mapping, root_directory, 
         destination_validation_report_file = os.path.join(destination_directory, destination + VALIDATION_REPORT_SUFFIX)
         validate_data_call = generate_validate_data_call(destination_directory, destination_validation_report_file, validator_lib_path)
         validate_data_status = subprocess.call(validate_data_call, shell = True)
-        if validate_data_status == 0:
+        # if validator completely passes or passes with warnings...
+        if validate_data_status == 0 or validate_data_status == 3:
             DESTINATION_STUDY_STATUS_FLAGS[destination][PASSED_VALIDATION] = True
             os.remove(destination_validation_report_file)
         else:
@@ -845,17 +802,6 @@ def remove_source_subdirectories(destination_to_source_mapping, root_directory):
             shutil.rmtree(source_subdirectory)
 
 # ------------------------------------------------------------------------------------------------------------
-# General helper function for writing data to a file.
-
-def write_data_list_to_file(filename, data_list):
-    """
-        Writes data to file where 'data_list' is a
-        list of formatted data to write to given file.
-    """
-    with open(filename, "w") as f:
-            f.write('\n'.join(data_list) + "\n")
-
-# ------------------------------------------------------------------------------------------------------------
 # Functions for generating executable commands
 
 def generate_python_subset_call(lib, cancer_study_id, destination_directory, source_directory, patient_list):
@@ -877,10 +823,6 @@ def generate_merge_clinical_files_call(lib, cancer_study_id, destination_directo
 def generate_annotator_call(annotator_jar, destination_directory):
     annotator_call = 'java -jar ' + annotator_jar + ' -f ' + destination_directory + '/data_mutations_extended.txt ' + '-o ' + destination_directory + '/' + ANNOTATED_MAF_FILE_PATTERN + ' -i mskcc'
     return annotator_call
-
-def generate_generate_case_lists_call(lib, cancer_study_id, destination_directory, destination_case_lists_directory, case_lists_config_file):
-    generate_case_lists_call = 'python ' + lib + '/generate_case_lists.py -c ' + case_lists_config_file + ' -d ' + destination_case_lists_directory + ' -s ' + destination_directory + ' -i ' + cancer_study_id
-    return generate_case_lists_call
 
 def generate_validate_data_call(destination_directory, destination_validation_report_file, lib):
     validate_studies_call = 'python3 ' + lib + '/validateData.py -s ' + destination_directory + ' -html ' + destination_validation_report_file + ' -u ' + CBIOPORTAL_URL
@@ -913,8 +855,8 @@ def main():
     case_lists_config_file = args.sample_lists_config
 
     # parse the two mapping files provided (which patients and which clinical attributes)
-    destination_source_patient_mapping_records = parse_file(destination_to_source_mapping_filename, False)
-    destination_source_clinical_annotation_mapping_records = parse_file(clinical_annotation_mapping_filename, False)
+    destination_source_patient_mapping_records = clinicalfile_utils.parse_file(destination_to_source_mapping_filename, False)
+    destination_source_clinical_annotation_mapping_records = clinicalfile_utils.parse_file(clinical_annotation_mapping_filename, False)
 
     # STEP 1: General Setup - loading mappings into dictionaries to work with.
     # create a dictionary mapping (destination - source) to a SourceMappings object

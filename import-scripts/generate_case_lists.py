@@ -33,7 +33,7 @@
 
 # ------------------------------------------------------------------------------
 # Script which generates case lists given a cBioPortal study directory containing
-# genomic files, a directory to write the case list files to, a cancer study stable id, 
+# genomic files, a directory to write the case list files to, a cancer study stable id,
 # and a tab delimited case lists configuration file with the following columns:
 #   CASE_LIST_FILENAME
 #   STAGING_FILENAME
@@ -230,7 +230,7 @@ def write_case_list_file(case_list_config_header, case_list_config_fields, study
         case_list_file.write("case_list_category: " + case_list_config_fields[case_list_config_header.index("META_CASE_LIST_CATEGORY")] + "\n")
         case_list_file.write("case_list_ids: " + '\t'.join(case_set) + "\n")
 
-def main():
+def parse_generate_case_list_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--case-list-config-file', action = 'store', dest = 'case_list_config_file', required = True, help = 'Path to the case list configuration file.  An example can be found in "test/resources/generate_case_lists/case_list_config.tsv"')
     parser.add_argument('-d', '--case-list-dir', action = 'store', dest = 'case_list_dir', required = True, help = 'Path to the directory in which the case list files should be written')
@@ -238,8 +238,9 @@ def main():
     parser.add_argument('-i', '--study-id', action = 'store', dest = 'study_id', required = True, help = 'The cancer study stable id')
     parser.add_argument('-o', '--overwrite', action = 'store_true', dest = 'overwrite', required = False, help = 'When given, overwrite the case list files')
     parser.add_argument('-v', '--verbose', action = 'store_true', dest = 'verbose', required = False, help = 'When given, be verbose')
-    args = parser.parse_args()
+    return parser
 
+def main(args):
     case_list_config_filename = args.case_list_config_file
     case_list_dir = args.case_list_dir
     study_dir = args.study_dir
@@ -254,6 +255,9 @@ def main():
         print "LOG: study_id='%s'" % (study_id)
         print "LOG: overwrite='%s'" % (overwrite)
         print "LOG: verbose='%s'" % (verbose)
+
+    # initalize an argparser for generating help message
+    parser = parse_generate_case_list_args()
 
     if not os.path.isfile(case_list_config_filename):
         print >> sys.stderr, "ERROR: case list configuration file '%s' does not exist or is not a file" % (case_list_config_filename)
@@ -273,4 +277,6 @@ def main():
     generate_case_lists(case_list_config_filename, case_list_dir, study_dir, study_id, overwrite, verbose)
 
 if __name__ == '__main__':
-    main()
+    parser = parse_generate_case_list_args()
+    args = parser.parse_args()
+    main(args)

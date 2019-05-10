@@ -6,13 +6,13 @@
 import unittest
 import filecmp
 import tempfile
-import os.path
 import os
 import io
 import sys
 
+import clinicalfile_utils
+import validation_utils
 from subset_and_merge_crdb_pdx_studies import *
-from clinicalfile_utils import *
 
 class TestSubsetAndMergePDXStudies(unittest.TestCase):
 
@@ -45,8 +45,8 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         cls.clinical_annotations_mapping_file = os.path.join(cls.crdb_fetch_directory, "clinical_annotations_mappings.txt")
 
         # load source mapping one time - reuse same mapping for all tests
-        cls.destination_source_patient_mapping_records = parse_file(cls.destination_to_source_mapping_file, False)
-        cls.destination_source_clinical_annotation_mapping_records = parse_file(cls.clinical_annotations_mapping_file, False)
+        cls.destination_source_patient_mapping_records = clinicalfile_utils.parse_file(cls.destination_to_source_mapping_file, False)
+        cls.destination_source_clinical_annotation_mapping_records = clinicalfile_utils.parse_file(cls.clinical_annotations_mapping_file, False)
         cls.destination_to_source_mapping = create_destination_to_source_mapping(cls.destination_source_patient_mapping_records, cls.destination_source_clinical_annotation_mapping_records, cls.root_directory)
         cls.source_id_to_path_mapping = create_source_id_to_path_mapping(cls.destination_to_source_mapping, [cls.datahub_directory, cls.cmo_directory, cls.dmp_directory], cls.crdb_fetch_directory)
 
@@ -185,7 +185,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             for source, sourcemapping in source_to_sourcemapping.items():
                 expected_directory = os.path.join(self.expected_files, step_name, destination, source)
                 actual_directory = os.path.join(self.root_directory, destination, source)
-                for clinical_file in [filename for filename in os.listdir(expected_directory) if is_clinical_file(filename)]:
+                for clinical_file in [filename for filename in os.listdir(expected_directory) if clinicalfile_utils.is_clinical_file(filename)]:
                     self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
 
     def test_merge_source_directories_step(self):
@@ -217,7 +217,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             expected_directory = os.path.join(self.expected_files, "merge_clinical_files_step",  destination)
             actual_directory = os.path.join(self.root_directory, destination)
             self.assertTrue("data_clinical.txt" not in os.listdir(actual_directory))
-            for clinical_file in [filename for filename in os.listdir(expected_directory) if is_clinical_file(filename)]:
+            for clinical_file in [filename for filename in os.listdir(expected_directory) if clinicalfile_utils.is_clinical_file(filename)]:
                 self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, clinical_file), os.path.join(expected_directory, clinical_file)))
 
     def test_subset_timeline_files_step(self):
@@ -247,15 +247,18 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
     def check_insert_maf_sequenced_samples_header_step(self):
         for destination in self.mock_destination_to_source_mapping:
             actual_directory = os.path.join(self.root_directory, destination)
-            expected_directory = os.path.join(self.expected_files, "post_process_seq_samples_header", destination)
+            expected_directory = os.path.join(self.expected_files, "post_process_seq_samples_header_step", destination)
             self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, MUTATION_FILE_PATTERN), os.path.join(expected_directory, MUTATION_FILE_PATTERN)))
 
     def test_annotate_maf(self):
         """
             Test Step 7(b): check that MAF is annotated.
+            Since there is no guarantee annotator jar is available (during unit tests) - test will be skipped if unavailable
+            To have this test run, set env variable $ANNOTATOR_JAR to an actual annotator jar build
         """
-        print "\n\n\n\n HERE IS THE ANNOTATOR JAR I'M CHECKING FOR " + self.annotator_jar
-        self.assertTrue(os.path.isfile(self.annotator_jar), "ANNOTATOR_JAR could not be resolved from sys environment! %s" % (self.annotator_jar))
+        if not os.path.isfile(self.annotator_jar):
+            print "Specified annotator jar %s does not exist. Skipping test..." % (self.annotator_jar)
+            return
         self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
         self.copy_maf_and_drop_hgvsp_short_column()
         annotate_maf(self.mock_destination_to_source_mapping, self.root_directory, self.annotator_jar)
@@ -267,10 +270,10 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             destination_directory = os.path.join(self.root_directory, destination)
             orig_maf_copy = os.path.join(destination_directory, "orig_data_mutations_extended.txt")
             annot_maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
-            self.assertFalse((HGVSP_SHORT_COLUMN in get_header(orig_maf_copy)))
-            self.assertTrue((HGVSP_SHORT_COLUMN in get_header(annot_maf)))
+            self.assertFalse((HGVSP_SHORT_COLUMN in clinicalfile_utils.get_header(orig_maf_copy)))
+            self.assertTrue((HGVSP_SHORT_COLUMN in clinicalfile_utils.get_header(annot_maf)))
 
-            for record in parse_file(annot_maf, True):
+            for record in clinicalfile_utils.parse_file(annot_maf, True):
                 if record[HGVSP_SHORT_COLUMN] and not record[HGVSP_SHORT_COLUMN] in ["NA", "N/A"]:
                     hgvsp_column_values.append(record[HGVSP_SHORT_COLUMN])
             self.assertTrue(len(hgvsp_column_values) > 0)
@@ -286,7 +289,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             maf = os.path.join(destination_directory, MUTATION_FILE_PATTERN)
             maf_copy = os.path.join(destination_directory, "orig_data_mutations_extended.txt")
             shutil.copy(maf, maf_copy)
-            header = get_header(maf_copy)
+            header = clinicalfile_utils.get_header(maf_copy)
             if HGVSP_SHORT_COLUMN in header:
                 hgvsp_short_index = header.index(HGVSP_SHORT_COLUMN)
                 maf_to_write = []
@@ -299,7 +302,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                             record = line.rstrip("\n").split('\t')
                             del record[hgvsp_short_index]
                             maf_to_write.append('\t'.join(record))
-                write_data_list_to_file(maf_copy, maf_to_write)
+                clinicalfile_utils.write_data_list_to_file(maf_copy, maf_to_write)
 
     def test_add_display_sample_name_column_step(self):
         """
@@ -315,18 +318,18 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             expected_directory = os.path.join(self.expected_files, "add_display_sample_name_column_step", destination)
             self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, "data_clinical_sample.txt"), os.path.join(expected_directory, "data_clinical_sample.txt")))
 
-    def test_generate_case_lists_step(self):
+    def test_generate_destination_study_case_lists_step(self):
         """
             Test Step 7(d): check that case lists are generated for destination studies
         """
-        self.setup_root_directory_with_previous_test_output("post_process_seq_samples_header")
-        generate_case_lists(self.lib, self.mock_destination_to_source_mapping, self.root_directory, self.case_lists_config_file)
+        self.setup_root_directory_with_previous_test_output("post_process_seq_samples_header_step")
+        generate_destination_study_case_lists(self.lib, self.mock_destination_to_source_mapping, self.root_directory, self.case_lists_config_file)
         self.check_generate_case_lists_step()
 
     def check_generate_case_lists_step(self):
         for destination in self.mock_destination_to_source_mapping:
             actual_directory = os.path.join(self.root_directory, destination + "/" + CASE_LISTS_DESTINATION_SUBDIR)
-            expected_directory = os.path.join(self.expected_files, "post_process_generate_case_lists/" + destination + "/" + CASE_LISTS_DESTINATION_SUBDIR)
+            expected_directory = os.path.join(self.expected_files, "post_process_generate_case_lists_step/" + destination + "/" + CASE_LISTS_DESTINATION_SUBDIR)
 
             # confirm that case lists sub-directory actually exists and then compare all case lists files if true
             if not os.path.exists(actual_directory):
@@ -350,6 +353,20 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
                 case_list_files[filename] = os.path.join(case_list_directory, filename)
         return case_list_files
 
+    def test_standardize_destination_study_cna_data_step(self):
+        """
+            Test Step 7(e): check blank values in CNA files are filled in with "NA"
+        """
+        self.setup_root_directory_with_previous_test_output("post_process_generate_case_lists_step")
+        standardize_destination_study_cna_data(self.mock_destination_to_source_mapping, self.root_directory)
+        self.check_standardize_destination_study_cna_data_step()
+
+    def check_standardize_destination_study_cna_data_step(self):
+        for destination in self.mock_destination_to_source_mapping:
+            actual_directory = os.path.join(self.root_directory, destination)
+            expected_directory = os.path.join(self.expected_files, "post_process_standardize_cna_data_step", destination)
+            self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, "data_CNA.txt"), os.path.join(expected_directory, "data_CNA.txt")))
+
     def setup_root_directory_with_previous_test_output(self, previous_step):
         shutil.rmtree(self.root_directory)
         for destination in self.mock_destination_to_source_mapping:
@@ -360,8 +377,8 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
     def sort_and_compare_files(self, actual_file, expected_file):
         if not os.path.isfile(actual_file):
             return False
-        actual_header = get_header(actual_file)
-        expected_header = get_header(expected_file)
+        actual_header = clinicalfile_utils.get_header(actual_file)
+        expected_header = clinicalfile_utils.get_header(expected_file)
         if sorted(actual_header) != sorted(expected_header):
             return False
         # sort files and compare
@@ -378,7 +395,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
     def sort_records_and_lines_in_file(self, ordered_header, filename):
         to_write = []
         f = open(filename, "r")
-        header = get_header(filename)
+        header = clinicalfile_utils.get_header(filename)
         for line in f.readlines():
             # sequenced sampels header - has to be sorted before being compared
             if line.startswith("#sequenced_samples:"):
