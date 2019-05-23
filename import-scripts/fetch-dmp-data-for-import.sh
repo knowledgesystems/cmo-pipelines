@@ -671,7 +671,7 @@ $HG_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPAC
 
 echo "exporting impact data from redcap"
 if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
-    export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics,mskimpact_timeline_radiation_ddp,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp
+    export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics,mskimpact_timeline_radiation_ddp,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp,mskimpact_pediatrics_sample_supp,mskimpact_pediatrics_patient_supp,mskimpact_pediatrics_supp_timeline
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_IMPACT=1
         cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
