@@ -17,14 +17,17 @@ if [[ -d "$tmp" && "$tmp" != "/" ]]; then
 fi
 email_list="cbioportal-pipelines@cbio.mskcc.org"
 now=$(date "+%Y-%m-%d-%H-%M-%S")
-IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/aws-gdac-importer.jar"
 TRUSTSTORE_PASSWORD=`cat $AWS_GDAC_SSL_TRUSTSTORE_PASSWORD_FILE`
-JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185"
+ENABLE_DEBUGGING=0
+JAVA_DEBUG_ARGS=""
+if [ $ENABLE_DEBUGGING != "0" ] ; then
+    JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185"
+fi
+IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/aws-gdac-importer.jar"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Djavax.net.ssl.trustStore=$AWS_GDAC_SSL_TRUSTSTORE -Djavax.net.ssl.turstStorePassword=$TRUSTSTORE_PASSWORD -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 static_gdac_aws_notification_file=$(mktemp $tmp/static-aws-gdac-update-notification.$now.XXXXXX)
 gdac_aws_notification_file=$(mktemp $tmp/aws-gdac-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
-
 
 DB_VERSION_FAIL=0
 # check database version before importing anything

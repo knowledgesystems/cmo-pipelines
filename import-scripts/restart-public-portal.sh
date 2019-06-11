@@ -2,7 +2,7 @@
 
 KUBECTL_BINARY=kubectl
 if ! which $KUBECTL_BINARY > /dev/null 2>&1 ; then
-    echo "Error : restart-aws-public-portal.sh requires $KUBECTL_BINARY, which was not found in the current PATH"
+    echo "Error : restart-public-portal.sh requires $KUBECTL_BINARY, which was not found in the current PATH"
     exit 1
 fi
 
