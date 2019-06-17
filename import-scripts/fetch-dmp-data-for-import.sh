@@ -589,7 +589,7 @@ fi
 
 if [ $FETCH_DDP_HEME_FAIL -eq 0 ] ; then
    import_hemepact_ddp_to_redcap
-   if [$? -gt 0 ] ; then
+   if [ $? -gt 0 ] ; then
        IMPORT_STATUS_HEME=1
        sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Redcap Import"
    fi
@@ -614,7 +614,7 @@ fi
 
 if [ $FETCH_DDP_ARCHER_FAIL -eq 0 ] ; then
    import_archer_ddp_to_redcap
-   if [$? -gt 0 ] ; then
+   if [ $? -gt 0 ] ; then
        IMPORT_STATUS_ARCHER=1
        sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Redcap Import"
    fi
@@ -639,7 +639,7 @@ fi
 
 if [ $FETCH_DDP_RAINDANCE_FAIL -eq 0 ] ; then
    import_raindance_ddp_to_redcap
-   if [$? -gt 0 ] ; then
+   if [ $? -gt 0 ] ; then
        IMPORT_STATUS_RAINDANCE=1
        sendPreImportFailureMessageMskPipelineLogsSlack "RAINDANCE DDP Redcap Import"
    fi
