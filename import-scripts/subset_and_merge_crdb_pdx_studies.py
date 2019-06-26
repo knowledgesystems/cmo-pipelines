@@ -545,6 +545,7 @@ def post_process_and_cleanup_destination_study_data(lib, destination_to_source_m
     add_display_sample_name_column(destination_to_source_mapping, root_directory) # step 7(c)
     generate_destination_study_case_lists(lib, destination_to_source_mapping, root_directory, case_lists_config_file) # step 7(d)
     standardize_destination_study_cna_data(destination_to_source_mapping, root_directory) # step 7(e)
+    standardize_destination_study_gene_matrix_data(destination_to_source_mapping, root_directory) # step 7(f)
     # remove temp subset files after subsetting calls complete
     remove_temp_subset_files(destination_to_source_mapping, root_directory)
     # clean up source subdirectories from destination study paths after merges are complete
@@ -630,6 +631,16 @@ def standardize_destination_study_cna_data(destination_to_source_mapping, root_d
         destination_directory = os.path.join(root_directory, destination)
         cna_file = os.path.join(destination_directory, CNA_FILE_PATTERN)
         validation_utils.standardize_cna_file(cna_file)
+
+def standardize_destination_study_gene_matrix_data(destination_to_source_mapping, root_directory):
+    """
+        Uses validation_utils to cleanup gene matrix files.
+        Currently only checks for blank "cna" gene panel column and fills in with "mutations" gene panel
+    """
+    for destination in destination_to_source_mapping:
+        destination_directory = os.path.join(root_directory, destination)
+        gene_matrix_file = os.path.join(destination_directory, GENE_MATRIX_FILE_PATTERN)
+        validation_utils.standardize_gene_matrix_file(gene_matrix_file)
 
 # ------------------------------------------------------------------------------------------------------------
 # STEP 8: Validate and log invalid studies

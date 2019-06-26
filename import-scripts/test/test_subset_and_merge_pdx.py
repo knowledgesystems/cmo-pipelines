@@ -367,6 +367,20 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             expected_directory = os.path.join(self.expected_files, "post_process_standardize_cna_data_step", destination)
             self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, "data_CNA.txt"), os.path.join(expected_directory, "data_CNA.txt")))
 
+    def test_standardize_destination_study_gene_matrix_data_step(self):
+        """
+            Test Step 7(f): check blank values in gene matrix files are filled in
+        """
+        self.setup_root_directory_with_previous_test_output("post_process_standardize_cna_data_step")
+        standardize_destination_study_gene_matrix_data(self.mock_destination_to_source_mapping, self.root_directory)
+        self.check_standardize_destination_study_gene_matrix_data_step()
+
+    def check_standardize_destination_study_gene_matrix_data_step(self):
+        for destination in self.mock_destination_to_source_mapping:
+            actual_directory = os.path.join(self.root_directory, destination)
+            expected_directory = os.path.join(self.expected_files, "post_process_standardize_gene_matrix_data_step", destination)
+            self.assertTrue(self.sort_and_compare_files(os.path.join(actual_directory, "data_gene_matrix.txt"), os.path.join(expected_directory, "data_gene_matrix.txt")))
+
     def setup_root_directory_with_previous_test_output(self, previous_step):
         shutil.rmtree(self.root_directory)
         for destination in self.mock_destination_to_source_mapping:

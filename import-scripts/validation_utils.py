@@ -48,6 +48,59 @@ def fill_in_blank_cna_values(cna_file):
 
     clinicalfile_utils.write_data_list_to_file(cna_file, to_write)
 
+def standardize_gene_matrix_file(gene_matrix_file):
+    """
+        Various processes for standardizing a gene matrix file.
+        Other steps can be added in the future if necessary.
+    """
+    if not os.path.isfile(gene_matrix_file):
+        print "Specified gene matrix file (%s) does not exist, no changes made..." % (gene_matrix_file)
+        return
+    fill_in_blank_gene_panel_values(gene_matrix_file)
+
+def fill_in_blank_gene_panel_values(gene_matrix_file):
+    """
+        Fill in blank values to pass validation with the following logic:
+            - blank CNA gene panels will filled in with the mutations gene panel
+            - "NA" will be used for all other blank values (or if mutations gene panel is unavailable)
+        e.g merges of cmo studies with newer studies results in blank cna gene panel for older samples
+            because cmo studies did not have a cna gene panel column
+    """
+    header_processed = False
+    header = []
+    to_write = []
+    mutations_gene_panel_index = -1
+    cna_gene_panel_index = -1
+
+    with open(gene_matrix_file, "r") as f:
+        for line in f.readlines():
+            data = line.rstrip('\n').split('\t')
+            if line.startswith('#'):
+                to_write.append(line.rstrip('\n'))
+            else:
+                if not header_processed:
+                    header = data
+                    mutations_gene_panel_index = header.index('mutations')
+                    cna_gene_panel_index = header.index('cna')
+                    to_write.append(line.rstrip('\n'))
+                    header_processed = True
+                    continue
+                # create copy of list with mutations gene panel replacing cna gene panel
+                # fill in with NA if mutations gene panel not available
+                processed_data = []
+                for index, data_value in enumerate(data):
+                    if data_value:
+                        processed_data.append(data_value)
+                    # special case for cna gene panel (copy mutations gene panel if it exists)
+                    elif mutations_gene_panel_index != -1 and index == cna_gene_panel_index:
+                        processed_data.append(data[mutations_gene_panel_index])
+                    # no mutations gene panel available OR any other blank values
+                    else:
+                        processed_data.append("NA")
+                to_write.append('\t'.join(processed_data))
+
+    clinicalfile_utils.write_data_list_to_file(gene_matrix_file, to_write)
+
 def generate_sequenced_samples_header(clinical_file):
     """
         Returns a formatted sequenced samples header containing all
