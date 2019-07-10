@@ -65,6 +65,7 @@ export CASE_LIST_CONFIG_FILE=$PIPELINES_CONFIG_HOME/resources/case_list_config.t
 export MSK_DMP_TMPDIR=$PORTAL_HOME/tmp/import-cron-dmp-msk
 export MSK_IMPACT_CONSUME_TRIGGER=$MSK_DMP_TMPDIR/mskimpact_consume_trigger.txt
 export MSK_HEMEPACT_CONSUME_TRIGGER=$MSK_DMP_TMPDIR/mskimpact_heme_consume_trigger.txt
+export MSK_ACCESS_CONSUME_TRIGGER=$MSK_DMP_TMPDIR/mskaccess_consume_trigger.txt
 export MSK_RAINDANCE_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/mskraindance_import_trigger.txt
 export MSK_ARCHER_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/mskarcher_import_trigger.txt
 export MSK_SOLID_HEME_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/msk_solid_heme_import_trigger.txt
@@ -84,6 +85,7 @@ export MSK_RAINDANCE_DATA_HOME=$DMP_DATA_HOME/mskraindance
 export MSK_HEMEPACT_DATA_HOME=$DMP_DATA_HOME/mskimpact_heme
 export MSK_ARCHER_DATA_HOME=$DMP_DATA_HOME/mskarcher
 export MSK_ARCHER_UNFILTERED_DATA_HOME=$DMP_DATA_HOME/mskarcher_unfiltered
+export MSK_ACCESS_DATA_HOME=$DMP_DATA_HOME/mskaccess
 export MSK_MIXEDPACT_DATA_HOME=$DMP_DATA_HOME/mixedpact
 export MSK_SOLID_HEME_DATA_HOME=$DMP_DATA_HOME/msk_solid_heme
 export MSK_KINGS_DATA_HOME=$DMP_DATA_HOME/msk_kingscounty
@@ -107,6 +109,7 @@ export MSKIMPACT_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskimpact
 export HEMEPACT_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskimpact_heme
 export RAINDANCE_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskraindance
 export ARCHER_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskarcher
+export ACCESS_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskaccess
 
 #######################
 # environment variables used in the import-pdx-data script

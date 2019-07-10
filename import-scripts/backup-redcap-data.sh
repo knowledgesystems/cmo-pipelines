@@ -9,11 +9,13 @@ MSKIMPACT_REDCAP_EXPORT_FAIL=0
 RAINDANCE_REDCAP_EXPORT_FAIL=0
 HEMEPACT_REDCAP_EXPORT_FAIL=0
 ARCHER_REDCAP_EXPORT_FAIL=0
+ACCESS_REDCAP_EXPORT_FAIL=0
 
 MSKIMPACT_VALIDATION_FAIL=0
 RAINDANCE_VALIDATION_FAIL=0
 HEMEPACT_VALIDATION_FAIL=0
 ARCHER_VALIDATION_FAIL=0
+ACCESS_VALIDATION_FAIL=0
 
 # -----------------------------------------------------------------------------------------------------------
 # FUNCTIONS
@@ -143,13 +145,34 @@ else
     fi
 fi
 
+# export and commit ACCESS REDCap data
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskaccess -d $ACCESS_REDCAP_BACKUP
+if [ $? -gt 0 ]; then
+    echo "Failed to export REDCap data snapshot for ACCESS! Aborting any changes made during export..."
+    cd $ACCESS_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+    ACCESS_REDCAP_EXPORT_FAIL=1
+    sendFailureMessageMskPipelineLogsSlack "ACCESS export"
+else
+    validateRedcapExportForStudy $ACCESS_REDCAP_BACKUP
+    if [ $? -gt 0 ]; then
+        echo "Validation of ACCESS REDCap snapshot failed! Aborting any changes made during export..."
+        ACCESS_VALIDATION_FAIL=1
+        cd $ACCESS_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+        ACCESS_REDCAP_EXPORT_FAIL=1
+        sendFailureMessageMskPipelineLogsSlack "ACCESS validation"
+    else
+        echo "Committing ACCESS REDCap data snapshot"
+        cd $ACCESS_REDCAP_BACKUP; $HG_BINARY commit -m "ACCESS REDCap Snapshot"
+    fi
+fi
+
 # push outgoing changesets to mercurial repo
 echo "Pushing REDCap snapshot back to mercurial repository..."
 echo $(date)
 cd $REDCAP_BACKUP_DATA_HOME; $HG_BINARY push
 
 # slack successful backup message
-if [[ $MSKIMPACT_REDCAP_EXPORT_FAIL -eq 0 && $MSKIMPACT_VALIDATION_FAIL -eq 0 && $RAINDANCE_REDCAP_EXPORT_FAIL -eq 0 && $RAINDANCE_VALIDATION_FAIL -eq 0 && $HEMEPACT_REDCAP_EXPORT_FAIL -eq 0 && $HEMEPACT_VALIDATION_FAIL -eq 0 && $ARCHER_REDCAP_EXPORT_FAIL -eq 0 && $ARCHER_VALIDATION_FAIL -eq 0 ]]; then
+if [[ $MSKIMPACT_REDCAP_EXPORT_FAIL -eq 0 && $MSKIMPACT_VALIDATION_FAIL -eq 0 && $RAINDANCE_REDCAP_EXPORT_FAIL -eq 0 && $RAINDANCE_VALIDATION_FAIL -eq 0 && $HEMEPACT_REDCAP_EXPORT_FAIL -eq 0 && $HEMEPACT_VALIDATION_FAIL -eq 0 && $ARCHER_REDCAP_EXPORT_FAIL -eq 0 && $ARCHER_VALIDATION_FAIL -eq 0 && $ACCESS_REDCAP_EXPORT_FAIL -eq 0 && $ACCESS_VALIDATION_FAIL -eq 0 ]]; then
     sendSuccessMessageMskPipelineLogsSlack "ALL studies"
 else
     if [[ $MSKIMPACT_REDCAP_EXPORT_FAIL -eq 0 && $MSKIMPACT_VALIDATION_FAIL -eq 0 ]] ; then
@@ -163,6 +186,9 @@ else
     fi
     if [[ $ARCHER_REDCAP_EXPORT_FAIL -eq 0 && $ARCHER_VALIDATION_FAIL -eq 0 ]] ; then
         sendSuccessMessageMskPipelineLogsSlack "ARCHER"
+    fi
+    if [[ $ACCESS_REDCAP_EXPORT_FAIL -eq 0 && $ACCESS_VALIDATION_FAIL -eq 0 ]] ; then
+        sendSuccessMessageMskPipelineLogsSlack "ACCESS"
     fi
 fi
 
@@ -194,6 +220,12 @@ if [ $ARCHER_REDCAP_EXPORT_FAIL -gt 0 ]; then
     echo $EMAIL_BODY | mail -s "[URGENT]: ARCHER REDCap Backup Failure" $email_list
 fi
 
+EMAIL_BODY="Failed to backup ACCESS REDCap data"
+if [ $ACCESS_REDCAP_EXPORT_FAIL -gt 0 ]; then
+    echo "Sending email $EMAIL_BODY"
+    echo $EMAIL_BODY | mail -s "[URGENT]: ACCESS REDCap Backup Failure" $email_list
+fi
+
 # send emails for validation failures
 EMAIL_BODY="Validation of MSKIMPACT REDCap data failed"
 if [ $MSKIMPACT_VALIDATION_FAIL -gt 0 ]; then
@@ -217,4 +249,10 @@ EMAIL_BODY="Validation of ARCHER REDCap data failed"
 if [ $ARCHER_VALIDATION_FAIL -gt 0 ]; then
     echo "Sending email $EMAIL_BODY"
     echo $EMAIL_BODY | mail -s "[URGENT]: ARCHER REDCap Data Validation Failure" $email_list
+fi
+
+EMAIL_BODY="Validation of ACCESS REDCap data failed"
+if [ $ACCESS_VALIDATION_FAIL -gt 0 ]; then
+    echo "Sending email $EMAIL_BODY"
+    echo $EMAIL_BODY | mail -s "[URGENT]: ACCESS REDCap Data Validation Failure" $email_list
 fi

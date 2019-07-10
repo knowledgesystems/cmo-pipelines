@@ -10,6 +10,7 @@ IMPORT_STATUS_IMPACT=0
 IMPORT_STATUS_HEME=0
 IMPORT_STATUS_RAINDANCE=0
 IMPORT_STATUS_ARCHER=0
+IMPORT_STATUS_ACCESS=0
 
 # Flags for ARCHER fusions merge failure
 ARCHER_MERGE_IMPACT_FAIL=0
@@ -20,6 +21,7 @@ EXPORT_SUPP_DATE_IMPACT_FAIL=0
 EXPORT_SUPP_DATE_HEME_FAIL=0
 EXPORT_SUPP_DATE_RAINDANCE_FAIL=0
 EXPORT_SUPP_DATE_ARCHER_FAIL=0
+EXPORT_SUPP_DATE_ACCESS_FAIL=0
 
 # Assume fetchers have failed until they complete successfully
 FETCH_CRDB_IMPACT_FAIL=1
@@ -28,10 +30,12 @@ FETCH_DDP_IMPACT_FAIL=1
 FETCH_DDP_HEME_FAIL=1
 FETCH_DDP_RAINDANCE_FAIL=1
 FETCH_DDP_ARCHER_FAIL=1
+FETCH_DDP_ACCESS_FAIL=1
 FETCH_CVR_IMPACT_FAIL=1
 FETCH_CVR_HEME_FAIL=1
 FETCH_CVR_RAINDANCE_FAIL=1
 FETCH_CVR_ARCHER_FAIL=1
+FETCH_CVR_ACCESS_FAIL=1
 
 UNLINKED_ARCHER_SUBSET_FAIL=0
 MIXEDPACT_MERGE_FAIL=0
@@ -110,7 +114,7 @@ fi
 # if export fails:
 # don't re-import into redcap (would wipe out days worth of data)
 # consider failing import
-
+printTimeStampedDataProcessingStepMessage "export of supp date files from redcap"
 echo "exporting impact data_clinical_supp_date.txt from redcap"
 export_project_from_redcap $MSK_IMPACT_DATA_HOME mskimpact_supp_date_cbioportal_added
 if [ $? -gt 0 ] ; then
@@ -139,8 +143,15 @@ if [ $? -gt 0 ] ; then
     sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER Redcap export of mskarcher_data_clinical_supp_date"
 fi
 
-# IF WE CANCEL ANY IMPORT, LET REDCAP GET AHEAD OF CURRENCY, BUT DON'T LET MERCURIAL ADVANCE [REVERT]
+echo "exporting access data_clinical_supp_date.txt from redcap"
+export_project_from_redcap $MSK_ACCESS_DATA_HOME mskaccess_data_clinical_supp_date
+if [ $? -gt 0 ] ; then
+    EXPORT_SUPP_DATE_ACCESS_FAIL=1
+    sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap export of mskaccess_data_clinical_supp_date"
+fi
 
+# IF WE CANCEL ANY IMPORT, LET REDCAP GET AHEAD OF CURRENCY, BUT DON'T LET MERCURIAL ADVANCE [REVERT]
+printTimeStampedDataProcessingStepMessage "export of cvr clinical files from redcap"
 echo "exporting impact data_clinical.txt from redcap"
 export_project_from_redcap $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_cvr
 if [ $? -gt 0 ] ; then
@@ -169,13 +180,19 @@ if [ $? -gt 0 ] ; then
     sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER Redcap export of mskarcher_data_clinical_cvr"
 fi
 
+echo "exporting access data_clinical.txt from redcap"
+export_project_from_redcap $MSK_ACCESS_DATA_HOME mskaccess_data_clinical
+if [ $? -gt 0 ] ; then
+    IMPORT_STATUS_ACCESS=1
+    sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap export of mskaccess_data_clinical_cvr"
+fi
+
 # -----------------------------------------------------------------------------------------------------------
 # MSKIMPACT DATA FETCHES
 # TODO: move other pre-import/data-fetch steps here (i.e exporting raw files from redcap)
-
+printTimeStampedDataProcessingStepMessage "MSKIMPACT data processing"
 # fetch darwin caisis data
-echo "fetching Darwin CAISIS data for mskimpact..."
-echo $(date)
+printTimeStampedDataProcessingStepMessage "Darwin CAISIS fetch for mskimpact"
 $JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -s mskimpact -d $MSK_IMPACT_DATA_HOME -c
 if [ $? -gt 0 ] ; then
     cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
@@ -188,8 +205,7 @@ fi
 
 if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
     # fetch new/updated IMPACT samples using CVR Web service   (must come after mercurial fetching)
-    echo "fetching samples from CVR Web service  ..."
-    echo $(date)
+    printTimeStampedDataProcessingStepMessage "CVR fetch for mskimpact"
     $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR fetch failed!"
@@ -221,8 +237,7 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
     fi
 
     # fetch new/updated IMPACT germline samples using CVR Web service   (must come after normal cvr fetching)
-    echo "fetching CVR GML data ..."
-    echo $(date)
+    printTimeStampedDataProcessingStepMessage "CVR germline fetch for mskimpact"
     $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR Germline fetch failed!"
@@ -249,8 +264,7 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
 fi
 
 # fetch ddp demographics data
-echo "fetching DDP demographics data for mskimpact..."
-echo $(date)
+printTimeStampedDataProcessingStepMessage "DDP demographics fetch for mskimpact"
 mskimpact_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_patient_list.txt
 awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $mskimpact_dmp_pids_file
 MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $MSKIMPACT_REDCAP_BACKUP/data_clinical_mskimpact_data_clinical_ddp_demographics.txt)
@@ -286,8 +300,7 @@ fi
 
 if [ $PERFORM_CRDB_FETCH -gt 0 ] ; then
     # fetch CRDB data
-    echo "fetching CRDB data"
-    echo $(date)
+    printTimeStampedDataProcessingStepMessage "CRDB fetch for mskimpact"
     $JAVA_BINARY $JAVA_CRDB_FETCHER_ARGS --directory $MSK_IMPACT_DATA_HOME
     # no need for hg update/commit ; CRDB generated files are stored in redcap and not mercurial
     if [ $? -gt 0 ] ; then
@@ -301,11 +314,11 @@ fi
 
 # -----------------------------------------------------------------------------------------------------------
 # HEMEPACT DATA FETCHES
+printTimeStampedDataProcessingStepMessage "HEMEPACT data processing"
 
 if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
     # fetch new/updated heme samples using CVR Web service (must come after mercurial fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
-    echo "fetching CVR heme data..."
-    echo $(date)
+    printTimeStampedDataProcessingStepMessage "CVR fetch for hemepact"
     $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR heme fetch failed!"
@@ -330,9 +343,7 @@ if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
 fi
 
 # fetch ddp demographics data
-echo "fetching DDP demographics data for heme..."
-echo $(date)
-
+printTimeStampedDataProcessingStepMessage "DDP demographics fetch for hemepact"
 mskimpact_heme_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_heme_patient_list.txt
 awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $mskimpact_heme_dmp_pids_file
 HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $HEMEPACT_REDCAP_BACKUP/data_clinical_hemepact_data_clinical_ddp_demographics.txt)
@@ -352,11 +363,11 @@ fi
 
 # -----------------------------------------------------------------------------------------------------------
 # RAINDANCE DATA FETCHES
+printTimeStampedDataProcessingStepMessage "RAINDANCE data processing"
 
 if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] ; then
     # fetch new/updated raindance samples using CVR Web service (must come after mercurial fetching). The -s flag skips segment data fetching
-    echo "fetching CVR raindance data..."
-    echo $(date)
+    printTimeStampedDataProcessingStepMessage "CVR fetch for raindance"
     $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_RAINDANCE_DATA_HOME -n data_clinical_mskraindance_data_clinical.txt -s -i mskraindance $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR raindance fetch failed!"
@@ -380,9 +391,7 @@ if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] ; then
 fi
 
 # fetch ddp demographics data
-echo "fetching DDP demographics data for mskraindance..."
-echo $(date)
-
+printTimeStampedDataProcessingStepMessage "DDP demographics fetch for raindance"
 mskraindance_dmp_pids_file=$MSK_DMP_TMPDIR/mskraindance_patient_list.txt
 awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical.txt | sort | uniq > $mskraindance_dmp_pids_file
 RAINDANCE_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $RAINDANCE_REDCAP_BACKUP/data_clinical_mskraindance_data_clinical_ddp_demographics.txt)
@@ -402,11 +411,11 @@ fi
 
 # -----------------------------------------------------------------------------------------------------------
 # ARCHER DATA FETCHES
+printTimeStampedDataProcessingStepMessage "ARCHER data processing"
 
 if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
     # fetch new/updated archer samples using CVR Web service (must come after mercurial fetching).
-    echo "fetching CVR archer data..."
-    echo $(date)
+    printTimeStampedDataProcessingStepMessage "CVR fetch for archer"
     # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
     $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
@@ -431,9 +440,7 @@ if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
 fi
 
 # fetch ddp demographics data
-echo "fetching DDP demographics data for mskarcher..."
-echo $(date)
-
+printTimeStampedDataProcessingStepMessage "DDP demographics fetch for archer"
 mskarcher_dmp_pids_file=$MSK_DMP_TMPDIR/mskarcher_patient_list.txt
 awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt | sort | uniq > $mskarcher_dmp_pids_file
 ARCHER_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $ARCHER_REDCAP_BACKUP/data_clinical_mskarcher_data_clinical_ddp_demographics.txt)
@@ -449,6 +456,55 @@ else
     FETCH_DDP_ARCHER_FAIL=0
     echo "committing ddp data"
     cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: DDP Demographics"
+fi
+
+# -----------------------------------------------------------------------------------------------------------
+# ACCESS DATA FETCHES
+printTimeStampedDataProcessingStepMessage "ACCESS data processing"
+
+if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
+    # fetch new/updated archer samples using CVR Web service (must come after mercurial fetching).
+    printTimeStampedDataProcessingStepMessage "CVR fetch for access"
+    # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b $CVR_TEST_MODE_ARGS
+    if [ $? -gt 0 ] ; then
+        echo "CVR ACCESS fetch failed!"
+        echo "This will not affect importing of mskimpact"
+        cd $MSK_ACCESS_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+        sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS CVR Fetch"
+        IMPORT_STATUS_ACCESS=1
+    else
+        # check for PHI
+        $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ACCESS_DATA_HOME/cvr_data.json
+        if [ $? -gt 0 ] ; then
+            echo "PHI attributes found in $MSK_ACCESS_DATA_HOME/cvr_data.json! ACCESS will not be imported!"
+            cd $MSK_ACCESS_DATA_HOME; $HG_BINARY update -C ; find . -name "*.orig" -delete
+            sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS PHI attributes scan failed on $MSK_ACCESS_DATA_HOME/cvr_data.json"
+            IMPORT_STATUS_ACCESS=1
+        else
+            FETCH_CVR_ACCESS_FAIL=0
+            cd $MSK_ACCESS_DATA_HOME ; $HG_BINARY commit -m "Latest ACCESS dataset"
+        fi
+    fi
+fi
+
+# fetch ddp demographics data
+printTimeStampedDataProcessingStepMessage "DDP demographics fetch for acess"
+mskaccess_dmp_pids_file=$MSK_DMP_TMPDIR/mskaccess_patient_list.txt
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt | sort | uniq > $mskaccess_dmp_pids_file
+ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $ACCESS_REDCAP_BACKUP/data_clinical_mskaccess_data_clinical_ddp_demographics.txt)
+if [ $ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
+    ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
+fi
+
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskaccess -p $mskaccess_dmp_pids_file -s $MSK_ACCESS_DATA_HOME/cvr/seq_date.txt -f survival -o $MSK_ACCESS_DATA_HOME -r $ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT
+if [ $? -gt 0 ] ; then
+    cd $MSK_ACCESS_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+    sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS DDP Demographics Fetch"
+else
+    FETCH_DDP_ACCESS_FAIL=0
+    echo "committing ddp data"
+    cd $MSK_ACCESS_DATA_HOME ; $HG_BINARY commit -m "Latest ACCESS Dataset: DDP Demographics"
 fi
 
 # -----------------------------------------------------------------------------------------------------------
@@ -489,6 +545,15 @@ if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] && [ $FETCH_CVR_RAINDANCE_FAIL -eq 0 ] ; t
     cd $MSK_RAINDANCE_DATA_HOME ; find . -name "*.orig" -delete ; $HG_BINARY add * ; $HG_BINARY revert data_clinical* data_timeline* --no-backup ; $HG_BINARY commit -m "Latest RAINDANCE Dataset: Case Lists"
     if [ $EXPORT_SUPP_DATE_RAINDANCE_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_RAINDANCE_DATA_HOME "data_clinical_mskraindance_data_clinical.txt" "data_clinical_mskraindance_data_clinical_supp_date.txt"
+    fi
+fi
+
+# generate case lists by cancer type and add "DATE ADDED" info to clinical data for ACCESS
+if [ $IMPORT_STATUS_ACCESS -eq 0 ] && [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
+    addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_mskaccess_data_clinical.txt"
+    cd $MSK_ACCESS_DATA_HOME ; find . -name "*.orig" -delete ; $HG_BINARY add * ; $HG_BINARY revert data_clinical* data_timeline* --no-backup ; $HG_BINARY commit -m "Latest ACCESS Dataset: Case Lists"
+    if [ $EXPORT_SUPP_DATE_ACCESS_FAIL -eq 0 ] ; then
+        addDateAddedData $MSK_ACCESS_DATA_HOME "data_clinical_mskaccess_data_clinical.txt" "data_clinical_mskaccess_data_clinical_supp_date.txt"
     fi
 fi
 
@@ -538,8 +603,7 @@ fi
 # IMPROT PROJECTS INTO REDCAP
 
 # import newly fetched files into redcap
-echo "Starting import into redcap"
-echo $(date)
+printTimeStampedDataProcessingStepMessage "redcap import for all cohorts"
 
 ## MSKIMPACT imports
 
@@ -659,6 +723,32 @@ if [ $FETCH_CVR_RAINDANCE_FAIL -eq 0 ] ; then
         fi
     fi
 fi
+
+## ACCESS imports
+
+if [ $FETCH_DDP_ACCESS_FAIL -eq 0 ] ; then
+   import_access_ddp_to_redcap
+   if [$? -gt 0 ] ; then
+       IMPORT_STATUS_ACCESS=1
+       sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS DDP Redcap Import"
+   fi
+fi
+
+# imports access cvr data into redcap
+if [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
+    import_access_cvr_to_redcap
+    if [ $? -gt 0 ] ; then
+        IMPORT_STATUS_ACCESS=1
+        sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS CVR Redcap Import"
+    fi
+    if [ $EXPORT_SUPP_DATE_ACCESS_FAIL -eq 0 ] ; then
+        import_access_supp_date_to_redcap
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Supp Date Redcap Import. Project is now empty, data restoration required"
+        fi
+    fi
+fi
+
 echo "Import into redcap finished"
 
 # -------------------------------------------------------------
@@ -676,16 +766,20 @@ remove_raw_clinical_timeline_data_files $MSK_RAINDANCE_DATA_HOME
 echo "removing raw clinical & timeline files for mskarcher"
 remove_raw_clinical_timeline_data_files $MSK_ARCHER_UNFILTERED_DATA_HOME
 
+echo "removing raw clinical & timeline files for mskaccess"
+remove_raw_clinical_timeline_data_files $MSK_ACCESS_DATA_HOME
+
 # commit raw file cleanup - study staging directories should only contain files for portal import
-$HG_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPACT, RAINDANCE, ARCHER"
+$HG_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPACT, RAINDANCE, ARCHER, ACCESS"
 
 
 # -------------------------------------------------------------
 # REDCAP EXPORTS - CBIO STAGING FORMATS
+printTimeStampedDataProcessingStepMessage "export of redcap data"
 
 ## MSKIMPACT export
 
-echo "exporting impact data from redcap"
+printTimeStampedDataProcessingStepMessage "export of redcap data for mskimpact"
 if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
     export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics,mskimpact_timeline_radiation_ddp,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp,mskimpact_pediatrics_sample_supp,mskimpact_pediatrics_patient_supp,mskimpact_pediatrics_supp_timeline
     if [ $? -gt 0 ] ; then
@@ -707,7 +801,7 @@ fi
 
 ## HEMEPACT export
 
-echo "exporting hemepact data from redcap"
+printTimeStampedDataProcessingStepMessage "export of redcap data for hemepact"
 if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
     export_stable_id_from_redcap mskimpact_heme $MSK_HEMEPACT_DATA_HOME
     if [ $? -gt 0 ] ; then
@@ -722,7 +816,7 @@ fi
 
 ## RAINDANCE export
 
-echo "exporting raindance data from redcap"
+printTimeStampedDataProcessingStepMessage "export of redcap data for raindance"
 if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] ; then
     export_stable_id_from_redcap mskraindance $MSK_RAINDANCE_DATA_HOME
     if [ $? -gt 0 ] ; then
@@ -737,7 +831,7 @@ fi
 
 ## ARCHER export
 
-echo "exporting archer data from redcap"
+printTimeStampedDataProcessingStepMessage "export of redcap data for archer"
 if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
     export_stable_id_from_redcap mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME
     if [ $? -gt 0 ] ; then
@@ -747,6 +841,19 @@ if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
     else
         touch $MSK_ARCHER_IMPORT_TRIGGER
         cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; find . -name "*.orig" -delete ; $HG_BINARY add * ; $HG_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Clinical and Timeline"
+    fi
+fi
+
+printTimeStampedDataProcessingStepMessage "export of redcap data for access"
+if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
+    export_stable_id_from_redcap mskaccess $MSK_ACCESS_DATA_HOME
+    if [ $? -gt 0 ] ; then
+        IMPORT_STATUS_ACCESS=1
+        cd $MSK_ACCESS_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
+        sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap Export"
+    else
+        touch $MSK_ACCESS_CONSUME_TRIGGER
+        cd $MSK_ACCESS_DATA_HOME ; find . -name "*.orig" -delete ; $HG_BINARY add * ; $HG_BINARY commit -m "Latest ACCESS Dataset: Clinical and Timeline"
     fi
 fi
 
@@ -783,8 +890,8 @@ fi
 
 #--------------------------------------------------------------
 ## MERGE STUDIES FOR MIXEDPACT, MSKSOLIDHEME:
-#   (1) MSK-IMPACT, HEMEPACT, RAINDANCE, and ARCHER (MIXEDPACT)
-#   (1) MSK-IMPACT, HEMEPACT, and ARCHER (MSKSOLIDHEME)
+#   (1) MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER, and ACCESS (MIXEDPACT)
+#   (1) MSK-IMPACT, HEMEPACT, ARCHER, and ACCESS (MSKSOLIDHEME)
 
 # touch meta_SV.txt files if not already exist
 if [ ! -f $MSK_IMPACT_DATA_HOME/meta_SV.txt ] ; then
@@ -799,11 +906,9 @@ if [ ! -f $MSK_ARCHER_UNFILTERED_DATA_HOME/meta_SV.txt ] ; then
     touch $MSK_ARCHER_UNFILTERED_DATA_HOME/meta_SV.txt
 fi
 
-echo "Beginning merge of MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER data for MIXEDPACT..."
-echo $(date)
-
+printTimeStampedDataProcessingStepMessage "merge of MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER, ACCESS data for MIXEDPACT"
 # MIXEDPACT merge and check exit code
-$PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_MIXEDPACT_DATA_HOME -i mixedpact -m "true" -e $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_RAINDANCE_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME
+$PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_MIXEDPACT_DATA_HOME -i mixedpact -m "true" -e $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_RAINDANCE_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ACCESS_DATA_HOME
 if [ $? -gt 0 ] ; then
     echo "MIXEDPACT merge failed! Study will not be updated in the portal."
     echo $(date)
@@ -813,11 +918,9 @@ else
     echo $(date)
 fi
 
-echo "Beginning merge of MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER data for MSKSOLIDHEME..."
-echo $(date)
-
+printTimeStampedDataProcessingStepMessage "merge of MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER, ACCESS data for MSKSOLIDHEME"
 # MSKSOLIDHEME merge and check exit code
-$PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_SOLID_HEME_DATA_HOME -i mskimpact -m "true" -e $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME
+$PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_SOLID_HEME_DATA_HOME -i mskimpact -m "true" -e $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME
 if [ $? -gt 0 ] ; then
     echo "MSKSOLIDHEME merge failed! Study will not be updated in the portal."
     echo $(date)
@@ -874,6 +977,7 @@ fi
 
 #--------------------------------------------------------------
 # AFFILIATE COHORTS
+printTimeStampedDataProcessingStepMessage "subset of affiliate cohorts"
 
 ## Subset MIXEDPACT on INSTITUTE for institute specific impact studies
 
@@ -1070,7 +1174,7 @@ fi
 
 #--------------------------------------------------------------
 # Subset MSKIMPACT on PED_IND for MSKIMPACT_PED cohort
-
+printTimeStampedDataProcessingStepMessage "subset of mskimpact for mskimpact_ped cohort"
 # rsync mskimpact data to tmp ped data home and overwrite clinical/timeline data with redcap
 # export of mskimpact (with ped specific data and without caisis) into tmp ped data home directory for subsetting
 # NOTE: the importer uses the java_tmp_dir/study_identifier for writing temp meta and data files so we should use a different
@@ -1111,7 +1215,7 @@ else
 fi
 
 #--------------------------------------------------------------
-
+printTimeStampedDataProcessingStepMessage "subset of mskimpact for sclc cohort"
 # Subset MSKIMPACT on ONCOTREE_CODE for SCLC cohort
 
 bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=sclc_mskimpact_2017 -o=$MSK_SCLC_DATA_HOME -d=$MSK_IMPACT_DATA_HOME -f="ONCOTREE_CODE=SCLC" -s=$MSK_DMP_TMPDIR/sclc_subset.txt -c=$MSK_IMPACT_DATA_HOME/data_clinical_sample.txt
@@ -1141,7 +1245,7 @@ else
 fi
 
 #--------------------------------------------------------------
-
+printTimeStampedDataProcessingStepMessage "subset and merge of mskimpact, hemepact for lymphoma_super_cohort_fmi_msk"
 # Create lymphoma "super" cohort
 # Subset MSK-IMPACT and HEMEPACT by Cancer Type
 
@@ -1240,10 +1344,8 @@ fi
 
 #--------------------------------------------------------------
 # MERCURIAL PUSH
-
+printTimeStampedDataProcessingStepMessage "push of dmp data updates to mercurial repository"
 # check updated data back into mercurial
-echo "Pushing DMP-IMPACT updates back to dmp repository..."
-echo $(date)
 MERCURIAL_PUSH_FAIL=0
 cd $DMP_DATA_HOME ; $HG_BINARY push
 if [ $? -gt 0 ] ; then
@@ -1286,7 +1388,14 @@ EMAIL_BODY="The ARCHER study failed fetch. The original study will remain on the
 # send email if fetch fails
 if [ $IMPORT_STATUS_ARCHER -gt 0 ] ; then
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" | mail -s "archer Fetch Failure: Import" $email_list
+    echo -e "$EMAIL_BODY" | mail -s "ARCHER Fetch Failure: Import" $email_list
+fi
+
+EMAIL_BODY="The ACCESS study failed fetch. The original study will remain on the portal."
+# send email if fetch fails
+if [ $IMPORT_STATUS_ACCESS -gt 0 ] ; then
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" | mail -s "ACCESS Fetch Failure: Import" $email_list
 fi
 
 EMAIL_BODY="Failed to merge ARCHER fusion events into MSKIMPACT"

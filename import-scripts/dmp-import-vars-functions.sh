@@ -45,6 +45,12 @@ function sendImportSuccessMessageMskPipelineLogsSlack {
     curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines import success: $STUDY_ID\", \"icon_emoji\": \":tada:\"}" https://hooks.slack.com/services/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
 }
 
+function printTimeStampedDataProcessingStepMessage {
+    STEP_DESCRIPTION=$1
+    echo -e "\n\n------------------------------------------------------------------------------------"
+    echo "beginning $STEP_DESCRIPTION $(date)..."
+}
+
 # Function to generate case lists by cancer type
 function addCancerTypeCaseLists {
     STUDY_DATA_DIRECTORY=$1
@@ -231,6 +237,30 @@ function import_archer_ddp_to_redcap {
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskarcher_timeline_chemotherapy_ddp; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_radiation.txt mskarcher_timeline_radiation_ddp ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_surgery.txt mskarcher_data_timeline_surgery_ddp ; then return_value=1 ; fi
+    return $return_value
+}
+
+# Function for importing access cvr files to redcap
+function import_access_cvr_to_redcap {
+    return_value=0
+    if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt mskaccess_data_clinical ; then return_value=1 ; fi
+    return $return_value
+}
+
+# Function for importing access supp date files to redcap
+function import_access_supp_date_to_redcap {
+    return_value=0
+    if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical_supp_date.txt mskaccess_data_clinical_supp_date ; then return_value=1 ; fi
+    return $return_value
+}
+
+# Function for import access ddp files to redcap
+function import_access_ddp_to_redcap {
+    return_value=0
+    if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_ddp.txt mskaccess_data_clinical_ddp_demographics ; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskaccess_timeline_chemotherapy_ddp; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_radiation.txt mskaccess_timeline_radiation_ddp ; then return_value=1 ; fi
+    # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_surgery.txt mskaccess_data_timeline_surgery_ddp ; then return_value=1 ; fi
     return $return_value
 }
 
