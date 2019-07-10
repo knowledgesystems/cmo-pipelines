@@ -34,14 +34,14 @@ CVR_TO_ONCOTREE_LABELS = {
     "tissue_type" : "tissue",
     "generic_tumor_type" : "mainType"}
 
-def add_code_to_cvr(oncotree_codes, oncotree_code):
+def add_code_to_cvr(oncotree_codes, oncotree_code, all_oncotree_codes):
     oncotree_code_data = {
         "code": oncotree_codes[oncotree_code]["code"],
         "maintype": oncotree_codes[oncotree_code]["mainType"],
         "name": oncotree_codes[oncotree_code]["name"],
         "tissue": oncotree_codes[oncotree_code]["tissue"]
     }
-    parent_tumor_type = get_parent_tumor_type(oncotree_codes, oncotree_code)
+    parent_tumor_type = get_parent_tumor_type(all_oncotree_codes, oncotree_code)
     if parent_tumor_type:
         oncotree_code_data["parent"] = parent_tumor_type
 
@@ -51,9 +51,9 @@ def add_code_to_cvr(oncotree_codes, oncotree_code):
         print >> sys.stderr, "ERROR: %d status code adding oncotree code '%s' to CVR with URI '%s'" % (response.status_code, oncotree_code, CVR_ONCOTREE_ADD_URI)
         sys.exit(1)
 
-def get_parent_tumor_type(oncotree_codes, oncotree_code):
-    if oncotree_codes[oncotree_code]["parent"] and oncotree_codes[oncotree_code]["parent"] in oncotree_codes:
-        return oncotree_codes[oncotree_codes[oncotree_code]["parent"]]["mainType"]
+def get_parent_tumor_type(all_oncotree_codes, oncotree_code):
+    if all_oncotree_codes[oncotree_code]["parent"] and all_oncotree_codes[oncotree_code]["parent"] in all_oncotree_codes:
+        return all_oncotree_codes[all_oncotree_codes[oncotree_code]["parent"]]["mainType"]
     return None
 
 def get_cvr_oncotree_codes():
@@ -83,6 +83,7 @@ def get_cvr_oncotree_codes():
 
 def get_oncotree_codes():
     oncotree_codes = {}
+    all_oncotree_codes = {}
     response = requests.get(ONCOTREE_URI)
     if response.status_code != 200:
         print >> sys.stderr, "ERROR: %d status code getting oncotree codes with URI '%s'" % (response.status_code, ONCOTREE_URI)
@@ -91,29 +92,30 @@ def get_oncotree_codes():
     if response.json():
         for oncotree_item in response.json():
             oncotree_code = oncotree_item["code"]
-            # skip nodes at leavel 0 and 1, they are not currently included in CVR
-            if oncotree_item["level"] != 0 and oncotree_item["level"] != 1:
-                # note we are assuming there are no duplicate codes
-                oncotree_codes[oncotree_code] = {
+            all_oncotree_codes[oncotree_code] = {
                     "code" : oncotree_item["code"],
                     "name" : oncotree_item["name"],
                     "mainType" : oncotree_item["mainType"],
                     "tissue" : oncotree_item["tissue"],
                     "parent" : oncotree_item["parent"],
                     "level" : oncotree_item["level"]}
+            # skip nodes at leavel 0 and 1, they are not currently included in CVR
+            if oncotree_item["level"] != 0 and oncotree_item["level"] != 1:
+                # note we are assuming there are no duplicate codes
+                oncotree_codes[oncotree_code] = all_oncotree_codes[oncotree_code]
     else:
         print >> sys.stderr, "ERROR: no oncotree codes found in JSON response to '%s'" % (ONCOTREE_URI)
 
-    return oncotree_codes
+    return oncotree_codes, all_oncotree_codes
 
-def add_codes_and_report_diff(oncotree_codes, cvr_oncotree_codes):
+def add_codes_and_report_diff(oncotree_codes, cvr_oncotree_codes, all_oncotree_codes):
     oncotree_code_set = set(oncotree_codes.keys())
     cvr_oncotree_code_set = set(cvr_oncotree_codes.keys())
 
     # find new codes
     new_codes = oncotree_code_set - cvr_oncotree_code_set
     for new_code in new_codes:
-        add_code_to_cvr(oncotree_codes, new_code)
+        add_code_to_cvr(oncotree_codes, new_code, all_oncotree_codes)
 
     if new_codes:
         print "Added to CVR:"
@@ -155,10 +157,10 @@ def add_codes_and_report_diff(oncotree_codes, cvr_oncotree_codes):
                 print "%s\t%s\t%s\t%s\t%s" % (oncotree_code, cvr_label, oncotree_label, changes[oncotree_code][cvr_label][0], changes[oncotree_code][cvr_label][1])
 
 def main():
-    oncotree_codes = get_oncotree_codes()
+    oncotree_codes, all_oncotree_codes = get_oncotree_codes()
     cvr_oncotree_codes = get_cvr_oncotree_codes()
 
-    add_codes_and_report_diff(oncotree_codes, cvr_oncotree_codes)
+    add_codes_and_report_diff(oncotree_codes, cvr_oncotree_codes, all_oncotree_codes)
 
 if __name__ == '__main__':
     main()
