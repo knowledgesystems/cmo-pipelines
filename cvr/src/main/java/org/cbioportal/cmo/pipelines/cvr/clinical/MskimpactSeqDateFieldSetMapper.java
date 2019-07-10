@@ -33,7 +33,7 @@ package org.cbioportal.cmo.pipelines.cvr.clinical;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.cbioportal.cmo.pipelines.cvr.model.MskimpactSeqDate;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactSeqDate;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;

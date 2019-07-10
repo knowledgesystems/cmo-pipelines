@@ -29,66 +29,36 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package org.cbioportal.cmo.pipelines.cvr.model;
+
+package org.cbioportal.cmo.pipelines.cvr.model.composite;
 
 import java.util.*;
 
-/**
- *
- * @author heinsz
- */
-public class MskimpactSeqDate {
-    private String SAMPLE_ID;
-    private String PATIENT_ID;
-    private String SEQ_DATE;
+public class CompositeCnaRecord {
+    private String newCnaRecord;
+    private String allCnaRecord;
 
-    /**
-     * @return the SAMPLE_ID
-     */
-    public String getSAMPLE_ID() {
-        return SAMPLE_ID != null ? SAMPLE_ID : "";
+    public CompositeCnaRecord() {
     }
 
-    /**
-     * @param SAMPLE_ID the SAMPLE_ID to set
-     */
-    public void setSAMPLE_ID(String SAMPLE_ID) {
-        this.SAMPLE_ID = SAMPLE_ID;
+    public CompositeCnaRecord(String newCnaRecord, String allCnaRecord) {
+        this.newCnaRecord = newCnaRecord;
+        this.allCnaRecord = allCnaRecord;
     }
 
-    /**
-     * @return the PATIENT_ID
-     */
-    public String getPATIENT_ID() {
-        return PATIENT_ID != null ? PATIENT_ID : "";
+    public void setNewCnaRecord(String newCnaRecord) {
+        this.newCnaRecord = newCnaRecord;
     }
 
-    /**
-     * @param PATIENT_ID the PATIENT_ID to set
-     */
-    public void setPATIENT_ID(String PATIENT_ID) {
-        this.PATIENT_ID = PATIENT_ID;
+    public String getNewCnaRecord() {
+        return this.newCnaRecord != "" ? this.newCnaRecord : null;
     }
 
-    /**
-     * @return the SEQ_DATE
-     */
-    public String getSEQ_DATE() {
-        return SEQ_DATE != null ? SEQ_DATE : "";
+    public void setAllCnaRecord(String allCnaRecord) {
+        this.allCnaRecord = allCnaRecord;
     }
 
-    /**
-     * @param SEQ_DATE the SEQ_DATE to set
-     */
-    public void setSEQ_DATE(String SEQ_DATE) {
-        this.SEQ_DATE = SEQ_DATE;
-    }
-    
-    public static List<String> getFieldNames() {
-        List<String> fieldNames = new ArrayList<>();
-        fieldNames.add("SAMPLE_ID");
-        fieldNames.add("PATIENT_ID");
-        fieldNames.add("SEQ_DATE");
-        return fieldNames;
+    public String getAllCnaRecord() {
+        return this.allCnaRecord != "" ? this.allCnaRecord : null;
     }
 }

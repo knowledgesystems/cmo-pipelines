@@ -35,7 +35,7 @@ package org.cbioportal.cmo.pipelines.cvr.fusion;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang.StringUtils;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRFusionRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRFusionRecord;
 import org.cbioportal.cmo.pipelines.util.CVRUtils;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;

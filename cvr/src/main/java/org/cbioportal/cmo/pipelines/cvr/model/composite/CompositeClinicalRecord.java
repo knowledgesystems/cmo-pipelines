@@ -30,37 +30,46 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.cbioportal.cmo.pipelines.cvr.model;
+package org.cbioportal.cmo.pipelines.cvr.model.composite;
 
-import java.util.*;
+public class CompositeClinicalRecord {
+    private String newClinicalRecord;
+    private String oldClinicalRecord;
+    private String seqDateRecord;
 
-public class CompositeSvRecord {
-    private String newSvRecord;
-    private String oldSvRecord;
-
-    public CompositeSvRecord() {
-        this.newSvRecord = "";
-        this.oldSvRecord = "";
+    public CompositeClinicalRecord() {
+        this.newClinicalRecord = "";
+        this.oldClinicalRecord = "";
+        this.seqDateRecord = "";
     }
 
-    public CompositeSvRecord(String newSvRecord, String oldSvRecord) {
-        this.newSvRecord = newSvRecord;
-        this.oldSvRecord = oldSvRecord;
+    public CompositeClinicalRecord(String newClinicalRecord, String oldClinicalRecord, String seqDateRecord) {
+        this.newClinicalRecord = newClinicalRecord;
+        this.oldClinicalRecord = oldClinicalRecord;
+        this.seqDateRecord = seqDateRecord;
     }
 
-    public void setNewSvRecord(String newSvRecord) {
-        this.newSvRecord = newSvRecord;
+    public void setNewClinicalRecord(String newClinicalRecord) {
+        this.newClinicalRecord = newClinicalRecord;
     }
 
-    public String getNewSvRecord() {
-        return this.newSvRecord != "" ? this.newSvRecord : null;
+    public String getNewClinicalRecord() {
+        return newClinicalRecord.isEmpty() ? null : newClinicalRecord;
     }
 
-    public void setOldSvRecord(String oldSvRecord) {
-        this.oldSvRecord = oldSvRecord;
+    public void setOldClinicalRecord(String oldClinicalRecord) {
+        this.oldClinicalRecord = oldClinicalRecord;
     }
 
-    public String getOldSvRecord() {
-        return this.oldSvRecord != "" ? this.oldSvRecord : null;
+    public String getOldClinicalRecord() {
+        return oldClinicalRecord.isEmpty() ? null : oldClinicalRecord;
+    }
+    
+    public void setSeqDateRecord(String seqDateRecord) {
+        this.seqDateRecord = seqDateRecord;
+    }
+    
+    public String getSeqDateRecord() {
+        return seqDateRecord.isEmpty() ? null : seqDateRecord;
     }
 }

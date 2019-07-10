@@ -78,7 +78,10 @@ public class CvrSampleListsTasklet implements Tasklet {
         log.info("Loading master list from CVR for study: " + studyId);
         Set<String> dmpMasterList = new HashSet<>();
         try {
-            dmpMasterList = generateDmpMasterList();
+            // TODO: remove this check after mskaccess master list endpoint is set up
+            if (!studyId.equals("mskaccess")) {
+                dmpMasterList = generateDmpMasterList();
+            }
             if (dmpMasterList.size() > 0) {
                 log.info("DMP master list for " + studyId + " contains " + String.valueOf(dmpMasterList.size()) + " samples");
             }

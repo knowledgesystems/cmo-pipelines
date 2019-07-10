@@ -30,7 +30,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.cbioportal.cmo.pipelines.cvr.model;
+package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
 import java.util.*;
 

@@ -5,6 +5,7 @@
  */
 package org.cbioportal.cmo.pipelines.cvr.linkedimpactcase;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;

@@ -33,7 +33,7 @@
 package org.cbioportal.cmo.pipelines.cvr.fusion;
 
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRFusionRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRFusionRecord;
 
 import java.io.*;
 import java.util.*;

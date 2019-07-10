@@ -32,7 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr.linkedimpactcase;
 
-import org.cbioportal.cmo.pipelines.cvr.model.LinkedMskimpactCaseRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
 
 import java.util.*;
 import org.apache.log4j.Logger;

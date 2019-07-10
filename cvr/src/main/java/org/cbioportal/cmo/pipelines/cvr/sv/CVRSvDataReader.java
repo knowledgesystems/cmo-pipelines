@@ -32,6 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr.sv;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 

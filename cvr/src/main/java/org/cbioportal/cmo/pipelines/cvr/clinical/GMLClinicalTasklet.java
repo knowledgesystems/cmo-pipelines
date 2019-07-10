@@ -34,7 +34,7 @@ package org.cbioportal.cmo.pipelines.cvr.clinical;
 
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 
 import java.io.File;
 import java.util.*;

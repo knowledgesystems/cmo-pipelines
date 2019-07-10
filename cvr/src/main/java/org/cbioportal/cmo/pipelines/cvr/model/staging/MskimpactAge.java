@@ -29,36 +29,52 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-package org.cbioportal.cmo.pipelines.cvr.model;
+package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
 import java.util.*;
 
-public class CompositeCnaRecord {
-    private String newCnaRecord;
-    private String allCnaRecord;
+/**
+ *
+ * @author heinsz
+ */
+public class MskimpactAge {
+    private String PATIENT_ID;
+    private String AGE;
+    
+    public MskimpactAge() {}
 
-    public CompositeCnaRecord() {
+    /**
+     * @return the PATIENT_ID
+     */
+    public String getPATIENT_ID() {
+        return PATIENT_ID;
     }
 
-    public CompositeCnaRecord(String newCnaRecord, String allCnaRecord) {
-        this.newCnaRecord = newCnaRecord;
-        this.allCnaRecord = allCnaRecord;
+    /**
+     * @param PATIENT_ID the PATIENT_ID to set
+     */
+    public void setPATIENT_ID(String PATIENT_ID) {
+        this.PATIENT_ID = PATIENT_ID;
     }
 
-    public void setNewCnaRecord(String newCnaRecord) {
-        this.newCnaRecord = newCnaRecord;
+    /**
+     * @return the AGE
+     */
+    public String getAGE() {
+        return AGE;
     }
 
-    public String getNewCnaRecord() {
-        return this.newCnaRecord != "" ? this.newCnaRecord : null;
+    /**
+     * @param AGE the AGE to set
+     */
+    public void setAGE(String AGE) {
+        this.AGE = AGE;
     }
-
-    public void setAllCnaRecord(String allCnaRecord) {
-        this.allCnaRecord = allCnaRecord;
-    }
-
-    public String getAllCnaRecord() {
-        return this.allCnaRecord != "" ? this.allCnaRecord : null;
+    
+    public static List<String> getFieldNames() {
+        List<String> fieldNames = new ArrayList<>();
+        fieldNames.add("PATIENT_ID");
+        fieldNames.add("AGE");
+        return fieldNames;
     }
 }

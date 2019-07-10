@@ -35,7 +35,7 @@ package org.cbioportal.cmo.pipelines.cvr.fusion;
 import com.mysql.jdbc.StringUtils;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRFusionRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRFusionRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLData;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLResult;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLCnvIntragenicVariant;

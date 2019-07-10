@@ -15,6 +15,7 @@ dmp.tokens.retrieve_variants.impact=cbio_retrieve_variants
 dmp.tokens.retrieve_variants.rdts=cbio_rdts_retrieve_variants
 dmp.tokens.retrieve_variants.heme=cbio_retrieve_heme_variants
 dmp.tokens.retrieve_variants.archer=cbio_archer_retrieve_variants
+dmp.tokens.retrieve_variants.access=cbio_retrieve_access_variants
 dmp.tokens.retrieve_gml_variants=gml_cbio_retrieve_variants
 
 dmp.tokens.retrieve_segment_data=get_seg_data
@@ -29,6 +30,7 @@ dmp.tokens.retrieve_master_list.impact=impact
 dmp.tokens.retrieve_master_list.rdts=raindance
 dmp.tokens.retrieve_master_list.heme=heme
 dmp.tokens.retrieve_master_list.archer=archer
+#TODO: dmp.tokens.retrieve_master_list.access=
 
 # genome nexus
 genomenexus.hgvs=http://annotation.genomenexus.org/hgvs/

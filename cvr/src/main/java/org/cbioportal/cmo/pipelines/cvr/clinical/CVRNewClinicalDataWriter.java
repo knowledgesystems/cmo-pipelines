@@ -41,8 +41,8 @@ import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.*;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRClinicalRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.CompositeClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeClinicalRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**

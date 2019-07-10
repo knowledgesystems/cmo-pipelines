@@ -30,10 +30,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.cbioportal.cmo.pipelines.cvr.model;
+package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
 import com.mysql.jdbc.StringUtils;
 import java.util.*;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRMetaData;
+import org.cbioportal.cmo.pipelines.cvr.model.GMLMetaData;
 
 /**
  *
@@ -72,13 +74,14 @@ public class CVRClinicalRecord {
     private String mskSlideID;
 
     private final String DEFAULT_SAMPLE_CLASS = "Tumor";
+    private final String MSKACCESS_SAMPLE_CLASS = "cfDNA";
 
-    public CVRClinicalRecord(CVRMetaData metaData, String wholeSlideViewerBaseURL) {
+    public CVRClinicalRecord(CVRMetaData metaData, String wholeSlideViewerBaseURL, String studyId) {
         this.sampleId = metaData.getDmpSampleId();
         this.patientId = metaData.getDmpPatientId();
         this.cancerType = metaData.getTumorTypeName();
         this.sampleType = this.resolveSampleType(metaData.getIsMetastasis());
-        this.sampleClass = DEFAULT_SAMPLE_CLASS;
+        this.sampleClass = (studyId.equals("mskaccess")) ? MSKACCESS_SAMPLE_CLASS : DEFAULT_SAMPLE_CLASS;
         this.metastaticSite = metaData.getMetastasisSite();
         this.primarySite = metaData.getPrimarySite();
         this.cancerTypeDetailed = metaData.getTumorTypeName();

@@ -32,6 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr.cna;
 
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 

@@ -32,6 +32,16 @@
 
 package org.cbioportal.cmo.pipelines.cvr;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSvRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSegRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSegRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRGenePanelRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRFusionRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 import org.cbioportal.cmo.pipelines.cvr.clinical.*;
 import org.cbioportal.cmo.pipelines.cvr.cna.*;
 import org.cbioportal.cmo.pipelines.cvr.consume.*;

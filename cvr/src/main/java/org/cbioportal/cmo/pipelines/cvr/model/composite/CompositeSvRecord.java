@@ -29,41 +29,38 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package org.cbioportal.cmo.pipelines.cvr.model;
+
+package org.cbioportal.cmo.pipelines.cvr.model.composite;
 
 import java.util.*;
 
-/**
- *
- * @author heinsz
- */
-public class CVRGenePanelRecord {
-    private String sampleId;
-    private Map<String, String> panelMap;
+public class CompositeSvRecord {
+    private String newSvRecord;
+    private String oldSvRecord;
 
-    public CVRGenePanelRecord() {}
-
-    public CVRGenePanelRecord(CVRMetaData metaData, List<String> geneticProfiles) {
-        this.sampleId = metaData.getDmpSampleId();
-        panelMap = new LinkedHashMap<>();
-        for (String profile : geneticProfiles) {
-            panelMap.put(profile, metaData.getGenePanel());
-        }
+    public CompositeSvRecord() {
+        this.newSvRecord = "";
+        this.oldSvRecord = "";
     }
 
-    public String getSAMPLE_ID() {
-        return this.sampleId != null ? this.sampleId : "";
+    public CompositeSvRecord(String newSvRecord, String oldSvRecord) {
+        this.newSvRecord = newSvRecord;
+        this.oldSvRecord = oldSvRecord;
     }
 
-    public void setSAMPLE_ID(String sampleId) {
-        this.sampleId = sampleId;
+    public void setNewSvRecord(String newSvRecord) {
+        this.newSvRecord = newSvRecord;
     }
 
-    public Map<String, String> getPanelMap() {
-        return this.panelMap;
+    public String getNewSvRecord() {
+        return this.newSvRecord != "" ? this.newSvRecord : null;
     }
 
-    public void setPanelMap(Map<String, String> panelMap) {
-        this.panelMap = panelMap;
+    public void setOldSvRecord(String oldSvRecord) {
+        this.oldSvRecord = oldSvRecord;
+    }
+
+    public String getOldSvRecord() {
+        return this.oldSvRecord != "" ? this.oldSvRecord : null;
     }
 }

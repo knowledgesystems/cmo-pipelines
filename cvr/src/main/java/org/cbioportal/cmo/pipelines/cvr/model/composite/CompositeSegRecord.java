@@ -30,46 +30,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package org.cbioportal.cmo.pipelines.cvr.model;
+package org.cbioportal.cmo.pipelines.cvr.model.composite;
 
-public class CompositeClinicalRecord {
-    private String newClinicalRecord;
-    private String oldClinicalRecord;
-    private String seqDateRecord;
+import java.util.*;
 
-    public CompositeClinicalRecord() {
-        this.newClinicalRecord = "";
-        this.oldClinicalRecord = "";
-        this.seqDateRecord = "";
+public class CompositeSegRecord {
+    private String newSegRecord;
+    private String oldSegRecord;
+
+    public CompositeSegRecord() {
+        this.newSegRecord = "";
+        this.oldSegRecord = "";
     }
 
-    public CompositeClinicalRecord(String newClinicalRecord, String oldClinicalRecord, String seqDateRecord) {
-        this.newClinicalRecord = newClinicalRecord;
-        this.oldClinicalRecord = oldClinicalRecord;
-        this.seqDateRecord = seqDateRecord;
+    public CompositeSegRecord(String newSegRecord, String oldSegRecord) {
+        this.newSegRecord = newSegRecord;
+        this.oldSegRecord = oldSegRecord;
     }
 
-    public void setNewClinicalRecord(String newClinicalRecord) {
-        this.newClinicalRecord = newClinicalRecord;
+    public void setNewSegRecord(String newSegRecord) {
+        this.newSegRecord = newSegRecord;
     }
 
-    public String getNewClinicalRecord() {
-        return newClinicalRecord.isEmpty() ? null : newClinicalRecord;
+    public String getNewSegRecord() {
+        return this.newSegRecord != "" ? this.newSegRecord : null;
     }
 
-    public void setOldClinicalRecord(String oldClinicalRecord) {
-        this.oldClinicalRecord = oldClinicalRecord;
+    public void setOldSegRecord(String oldSegRecord) {
+        this.oldSegRecord = oldSegRecord;
     }
 
-    public String getOldClinicalRecord() {
-        return oldClinicalRecord.isEmpty() ? null : oldClinicalRecord;
-    }
-    
-    public void setSeqDateRecord(String seqDateRecord) {
-        this.seqDateRecord = seqDateRecord;
-    }
-    
-    public String getSeqDateRecord() {
-        return seqDateRecord.isEmpty() ? null : seqDateRecord;
+    public String getOldSegRecord() {
+        return this.oldSegRecord != "" ? this.oldSegRecord : null;
     }
 }

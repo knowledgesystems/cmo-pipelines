@@ -86,6 +86,9 @@ import javax.annotation.Generated;
     "tumor_ad",
     "tumor_dp",
     "tumor_vfreq",
+    "s_tumor_ad",
+    "s_tumor_dp",
+    "s_tumor_vfreq",
     "variant_class",
     "variant_class_cv_id",
     "variant_status_cv_id",
@@ -164,6 +167,12 @@ public class CVRSnp {
     private Integer tumorDp;
     @JsonProperty("tumor_vfreq")
     private Object tumorVfreq;
+    @JsonProperty("s_tumor_ad")
+    private Integer sTumorAd;
+    @JsonProperty("s_tumor_dp")
+    private Integer sTumorDp;
+    @JsonProperty("s_tumor_vfreq")
+    private Object sTumorVfreq;
     @JsonProperty("variant_class")
     private String variantClass;
     @JsonProperty("variant_class_cv_id")
@@ -184,49 +193,51 @@ public class CVRSnp {
 
     /**
      *
-     * @param soComments
-     * @param clinicalSignedOut
-     * @param mrevStatusName
-     * @param dbSNPId
      * @param aaChange
-     * @param snpIndelToolName
-     * @param isHotspot
-     * @param tumorVfreq
-     * @param mrevStatusCvId
-     * @param chromosome
-     * @param transcriptId
-     * @param mafreq1000g
+     * @param altAllele
      * @param cDNAChange
-     * @param cosmicId
-     * @param occuranceInPop
-     * @param normalDp
-     * @param geneId
-     * @param tumorAd
-     * @param startPosition
-     * @param variantClassCvId
-     * @param confidenceCvId
-     * @param dmpSampleSoId
-     * @param dmpSampleMrevId
+     * @param chromosome
+     * @param clinicalSignedOut
+     * @param comments
      * @param confidenceClass
+     * @param confidenceCvId
+     * @param cosmicId
+     * @param dbSNPId
+     * @param dmpSampleMrevId
+     * @param dmpSampleSoId
      * @param dmpVariantId
-     * @param normalVfreq
+     * @param exonNum
+     * @param geneId
+     * @param isHotspot
+     * @param mafreq1000g
+     * @param mrevComments
+     * @param mrevStatusCvId
+     * @param mrevStatusName
      * @param normalAd
-     * @param snpIndelVariantId
+     * @param normalDp
+     * @param normalVfreq
      * @param occuranceInNormal
+     * @param occuranceInPop
+     * @param refAllele
+     * @param snpIndelToolName
+     * @param snpIndelVariantId
+     * @param soComments
      * @param soStatusCvId
      * @param soStatusName
-     * @param variantStatusCvId
-     * @param mrevComments
-     * @param altAllele
-     * @param variantStatusName
-     * @param variantClass
-     * @param refAllele
+     * @param startPosition
+     * @param transcriptId
+     * @param tumorAd
      * @param tumorDp
      * @param tumorVfreq
-     * @param exonNum
-     * @param comments
+     * @param sTumorAd
+     * @param sTumorDp
+     * @param sTumorVfreq
+     * @param variantClass
+     * @param variantClassCvId
+     * @param variantStatusCvId
+     * @param variantStatusName
      */
-    public CVRSnp(String aaChange, String altAllele, String cDNAChange, String chromosome, String clinicalSignedOut, String comments, String confidenceClass, Integer confidenceCvId, String cosmicId, String dbSNPId, Integer dmpSampleMrevId, Integer dmpSampleSoId, Integer dmpVariantId, String exonNum, String geneId, Integer isHotspot, String mafreq1000g, String mrevComments, Integer mrevStatusCvId, String mrevStatusName, Integer normalAd, Integer normalDp, Object normalVfreq, String occuranceInNormal, String occuranceInPop, String refAllele, String snpIndelToolName, String snpIndelVariantId, String soComments, Integer soStatusCvId, String soStatusName, Integer startPosition, String transcriptId, Integer tumorAd, Integer tumorDp, Object tumorVfreq, String variantClass, Integer variantClassCvId, Integer variantStatusCvId, String variantStatusName) {
+    public CVRSnp(String aaChange, String altAllele, String cDNAChange, String chromosome, String clinicalSignedOut, String comments, String confidenceClass, Integer confidenceCvId, String cosmicId, String dbSNPId, Integer dmpSampleMrevId, Integer dmpSampleSoId, Integer dmpVariantId, String exonNum, String geneId, Integer isHotspot, String mafreq1000g, String mrevComments, Integer mrevStatusCvId, String mrevStatusName, Integer normalAd, Integer normalDp, Object normalVfreq, String occuranceInNormal, String occuranceInPop, String refAllele, String snpIndelToolName, String snpIndelVariantId, String soComments, Integer soStatusCvId, String soStatusName, Integer startPosition, String transcriptId, Integer tumorAd, Integer tumorDp, Object tumorVfreq, Integer sTumorAd, Integer sTumorDp, Object sTumorVfreq, String variantClass, Integer variantClassCvId, Integer variantStatusCvId, String variantStatusName) {
         this.aaChange = aaChange;
         this.altAllele = altAllele;
         this.cDNAChange = cDNAChange;
@@ -263,6 +274,9 @@ public class CVRSnp {
         this.tumorAd = tumorAd;
         this.tumorDp = tumorDp;
         this.tumorVfreq = tumorVfreq;
+        this.sTumorAd = sTumorAd;
+        this.sTumorDp = sTumorDp;
+        this.sTumorVfreq = sTumorVfreq;
         this.variantClass = variantClass;
         this.variantClassCvId = variantClassCvId;
         this.variantStatusCvId = variantStatusCvId;
@@ -915,6 +929,60 @@ public class CVRSnp {
     @JsonProperty("tumor_vfreq")
     public void setTumorVfreq(Object tumorVfreq) {
         this.tumorVfreq = tumorVfreq;
+    }
+
+    /**
+     *
+     * @return The sTumorAd
+     */
+    @JsonProperty("s_tumor_ad")
+    public Integer getSTumorAd() {
+        return sTumorAd;
+    }
+
+    /**
+     *
+     * @param sTumorAd The s_tumor_ad
+     */
+    @JsonProperty("s_tumor_ad")
+    public void setSTumorAd(Integer sTumorAd) {
+        this.sTumorAd = sTumorAd;
+    }
+
+    /**
+     *
+     * @return The sTumorDp
+     */
+    @JsonProperty("s_tumor_dp")
+    public Integer getSTumorDp() {
+        return sTumorDp;
+    }
+
+    /**
+     *
+     * @param tumorDp The tumor_dp
+     */
+    @JsonProperty("s_tumor_dp")
+    public void setSTumorDp(Integer sTumorDp) {
+        this.sTumorDp = sTumorDp;
+    }
+
+    /**
+     *
+     * @return The sTumorVfreq
+     */
+    @JsonProperty("s_tumor_vfreq")
+    public Object getSTumorVfreq() {
+        return sTumorVfreq;
+    }
+
+    /**
+     *
+     * @param sTumorVfreq The s_tumor_vfreq
+     */
+    @JsonProperty("s_tumor_vfreq")
+    public void setSTumorVfreq(Object sTumorVfreq) {
+        this.sTumorVfreq = sTumorVfreq;
     }
 
     /**

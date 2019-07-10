@@ -5,6 +5,7 @@
  */
 package org.cbioportal.cmo.pipelines.cvr.linkedimpactcase;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
 import com.google.common.base.Strings;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;

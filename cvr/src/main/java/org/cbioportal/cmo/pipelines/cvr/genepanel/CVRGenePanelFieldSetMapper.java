@@ -32,7 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr.genepanel;
 
-import org.cbioportal.cmo.pipelines.cvr.model.CVRGenePanelRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRGenePanelRecord;
 import java.util.*;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.FieldSet;

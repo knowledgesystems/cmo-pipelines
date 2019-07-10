@@ -34,8 +34,8 @@ package org.cbioportal.cmo.pipelines.cvr;
 
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.CvrTestConfiguration;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRClinicalRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.MskimpactAge;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactAge;
 
 import java.text.*;
 import java.util.*;

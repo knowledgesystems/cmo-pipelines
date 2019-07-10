@@ -34,7 +34,7 @@ package org.cbioportal.cmo.pipelines.cvr.sv;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRSvRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;

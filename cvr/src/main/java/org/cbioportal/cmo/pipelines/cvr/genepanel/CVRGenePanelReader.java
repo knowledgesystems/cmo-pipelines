@@ -32,6 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr.genepanel;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRGenePanelRecord;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 

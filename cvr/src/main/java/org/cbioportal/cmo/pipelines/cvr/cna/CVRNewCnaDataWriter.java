@@ -36,7 +36,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.CompositeCnaRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;

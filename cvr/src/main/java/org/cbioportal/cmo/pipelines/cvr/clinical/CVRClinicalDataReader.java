@@ -32,6 +32,9 @@
 
 package org.cbioportal.cmo.pipelines.cvr.clinical;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactSeqDate;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactAge;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 import com.mysql.jdbc.StringUtils;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
@@ -172,7 +175,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             throw new ItemStreamException(e);
         }
         for (CVRMergedResult result : cvrData.getResults()) {
-            CVRClinicalRecord record = new CVRClinicalRecord(result.getMetaData(), wholeSlideViewerBaseURL);
+            CVRClinicalRecord record = new CVRClinicalRecord(result.getMetaData(), wholeSlideViewerBaseURL, studyId);
             List<CVRClinicalRecord> records = patientToRecordMap.getOrDefault(record.getPATIENT_ID(), new ArrayList<CVRClinicalRecord>());
             records.add(record);
             patientToRecordMap.put(record.getPATIENT_ID(), records);

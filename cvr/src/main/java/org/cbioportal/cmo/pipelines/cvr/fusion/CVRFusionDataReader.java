@@ -32,6 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr.fusion;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRFusionRecord;
 import com.google.common.base.Strings;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;

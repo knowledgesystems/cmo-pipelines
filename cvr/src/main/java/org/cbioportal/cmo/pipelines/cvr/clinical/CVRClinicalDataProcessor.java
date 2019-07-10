@@ -32,6 +32,9 @@
 
 package org.cbioportal.cmo.pipelines.cvr.clinical;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactSeqDate;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;

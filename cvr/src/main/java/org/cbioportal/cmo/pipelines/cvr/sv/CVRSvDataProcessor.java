@@ -32,6 +32,8 @@
 
 package org.cbioportal.cmo.pipelines.cvr.sv;
 
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSvRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;

@@ -29,52 +29,42 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package org.cbioportal.cmo.pipelines.cvr.model;
+package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
 import java.util.*;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRMetaData;
 
 /**
  *
  * @author heinsz
  */
-public class MskimpactAge {
-    private String PATIENT_ID;
-    private String AGE;
-    
-    public MskimpactAge() {}
+public class CVRGenePanelRecord {
+    private String sampleId;
+    private Map<String, String> panelMap;
 
-    /**
-     * @return the PATIENT_ID
-     */
-    public String getPATIENT_ID() {
-        return PATIENT_ID;
+    public CVRGenePanelRecord() {}
+
+    public CVRGenePanelRecord(CVRMetaData metaData, List<String> geneticProfiles) {
+        this.sampleId = metaData.getDmpSampleId();
+        panelMap = new LinkedHashMap<>();
+        for (String profile : geneticProfiles) {
+            panelMap.put(profile, metaData.getGenePanel());
+        }
     }
 
-    /**
-     * @param PATIENT_ID the PATIENT_ID to set
-     */
-    public void setPATIENT_ID(String PATIENT_ID) {
-        this.PATIENT_ID = PATIENT_ID;
+    public String getSAMPLE_ID() {
+        return this.sampleId != null ? this.sampleId : "";
     }
 
-    /**
-     * @return the AGE
-     */
-    public String getAGE() {
-        return AGE;
+    public void setSAMPLE_ID(String sampleId) {
+        this.sampleId = sampleId;
     }
 
-    /**
-     * @param AGE the AGE to set
-     */
-    public void setAGE(String AGE) {
-        this.AGE = AGE;
+    public Map<String, String> getPanelMap() {
+        return this.panelMap;
     }
-    
-    public static List<String> getFieldNames() {
-        List<String> fieldNames = new ArrayList<>();
-        fieldNames.add("PATIENT_ID");
-        fieldNames.add("AGE");
-        return fieldNames;
+
+    public void setPanelMap(Map<String, String> panelMap) {
+        this.panelMap = panelMap;
     }
 }

@@ -83,6 +83,9 @@ public class SessionConfiguration {
     
     @Value("${dmp.tokens.retrieve_variants.archer}")
     private String retrieveVariantsArcher;
+
+    @Value("${dmp.tokens.retrieve_variants.access}")
+    private String retrieveVariantsAccess;
     
     @Value("${dmp.tokens.retrieve_master_list.impact}")
     private String dmpMasterListImpact;
@@ -95,6 +98,10 @@ public class SessionConfiguration {
     
     @Value("${dmp.tokens.retrieve_master_list.archer}")
     private String dmpMasterListArcher;
+
+// TODO: get master list endpoint name for access cohort
+//    @Value("${dmp.tokens.retrieve_master_list.access}")
+//    private String dmpMasterListAccess;
 
     Logger log = Logger.getLogger(SessionConfiguration.class);
 
@@ -149,6 +156,7 @@ public class SessionConfiguration {
         map.put("mskraindance", retrieveVariantsRaindance);
         map.put("mskimpact_heme", retrieveVariantsHeme);
         map.put("mskarcher", retrieveVariantsArcher);
+        map.put("mskaccess", retrieveVariantsAccess);
         
         return map;
     }
@@ -160,6 +168,7 @@ public class SessionConfiguration {
         map.put("mskraindance", dmpMasterListRaindance);
         map.put("mskimpact_heme", dmpMasterListHeme);
         map.put("mskarcher", dmpMasterListArcher);
+//        map.put("mskaccess", dmpMasterListAccess);
         
         return map;
     }

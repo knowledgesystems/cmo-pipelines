@@ -32,6 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr;
 
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.models.*;
 
@@ -102,6 +103,7 @@ public class CVRUtilities {
         map.put("mskimpact_heme", new LinkedList(Arrays.asList(new String[]{"mutations", "cna"})));
         map.put("mskarcher", new LinkedList(Arrays.asList(new String[]{"mutations"})));
         map.put("mskraindance", new LinkedList(Arrays.asList(new String[]{"mutations"})));
+        map.put("mskaccess", new LinkedList(Arrays.asList(new String[]{"mutations", "cna"})));
         return map;
     }
 
