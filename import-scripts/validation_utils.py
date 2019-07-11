@@ -57,6 +57,7 @@ def standardize_gene_matrix_file(gene_matrix_file):
         print "Specified gene matrix file (%s) does not exist, no changes made..." % (gene_matrix_file)
         return
     fill_in_blank_gene_panel_values(gene_matrix_file)
+    remove_duplicate_rows(gene_matrix_file, "SAMPLE_ID")
 
 def fill_in_blank_gene_panel_values(gene_matrix_file):
     """
@@ -100,6 +101,41 @@ def fill_in_blank_gene_panel_values(gene_matrix_file):
                 to_write.append('\t'.join(processed_data))
 
     clinicalfile_utils.write_data_list_to_file(gene_matrix_file, to_write)
+
+def remove_duplicate_rows(filename, record_identifier_column):
+    """
+        Drop and log duplicate records - where records are identified by the values under specified column (record_identifier_column)
+    """
+    header_processed = False
+    header = []
+    to_write = []
+    found_record_identifiers = set()
+    record_identifier_column_index = -1
+
+    with open(filename, "rU") as f:
+        for line in f.readlines():
+            if line.startswith('#'):
+                to_write.append(line.rstrip('\n'))
+                continue
+            data = line.rstrip('\n').split('\t')
+            if not header_processed:
+                header = data
+                record_identifier_column_index = clinicalfile_utils.get_index_for_column(header, record_identifier_column)
+                if record_identifier_column_index == -1:
+                    print "Specified column %s (unique record identifer) not found in file %s." % (record_identifier_column, filename)
+                    return
+                to_write.append(line.rstrip('\n'))
+                header_processed = True
+                continue
+            # for non-header lines, only add if record identifer has not been seen previously
+            record_identifier = data[record_identifier_column_index]
+            if record_identifier in found_record_identifiers:
+                print "Record already found with unique identifier: (%s), dropping following record: %s" % (record_identifier, '\t'.join(data))
+                continue
+            to_write.append(line.rstrip('\n'))
+            found_record_identifiers.add(record_identifier)
+
+    clinicalfile_utils.write_data_list_to_file(filename, to_write)
 
 def generate_sequenced_samples_header(clinical_file):
     """
