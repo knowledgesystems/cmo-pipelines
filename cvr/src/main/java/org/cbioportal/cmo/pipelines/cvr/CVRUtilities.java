@@ -92,6 +92,7 @@ public class CVRUtilities {
         Map<String, List<String>> map = new HashMap<>();
         map.put("mskarcher", Arrays.asList(new String[]{"mutations", "cna", "seg"}));
         map.put("mskraindance", Arrays.asList(new String[]{"cna", "seg", "sv-fusions"}));
+        map.put("mskaccess", Arrays.asList(new String[]{"cna", "seg", "sv-fusions"}));
         return map;
     }
 
