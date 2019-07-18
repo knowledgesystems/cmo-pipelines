@@ -6,8 +6,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
 
     # check lock so that script executions do not overlap
     if ! flock --nonblock --exclusive $flock_fd ; then
-        echo "Failure : could not acquire lock for $FLOCK_FILEPATH another instance of this process seems to still be running."
-        exit 1
+        exit 0
     fi
 
     # set necessary env variables with automation-environment.sh
