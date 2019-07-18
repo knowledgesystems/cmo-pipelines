@@ -115,3 +115,9 @@ export ACCESS_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskaccess
 # environment variables used in the import-pdx-data script
 #######################
 export CRDB_FETCHER_PDX_HOME=$PDX_DATA_HOME/crdb_pdx_raw_data
+
+#######################
+# add github mskcc ssh key to ssh-agent
+#######################
+eval "$(ssh-agent -s)" > /dev/null 2>&1
+ssh-add ~/.ssh/id_rsa_shahcompbio 2> /dev/null
