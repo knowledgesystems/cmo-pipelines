@@ -33,6 +33,7 @@ RETRIEVE_VARIANTS_MSKIMPMACT = 'dmp.tokens.retrieve_variants.impact'
 RETRIEVE_VARIANTS_HEMEPACT = 'dmp.tokens.retrieve_variants.heme'
 RETRIEVE_VARIANTS_RAINDANCE = 'dmp.tokens.retrieve_variants.rdts'
 RETRIEVE_VARIANTS_ARCHER = 'dmp.tokens.retrieve_variants.archer'
+RETRIEVE_VARIANTS_ACCESS = 'dmp.tokens.retrieve_variants.access'
 
 REQUIRED_PROPERTIES = [
     DMP_USER,
@@ -49,7 +50,8 @@ REQUIRED_PROPERTIES = [
     RETRIEVE_VARIANTS_MSKIMPMACT,
     RETRIEVE_VARIANTS_HEMEPACT,
     RETRIEVE_VARIANTS_RAINDANCE,
-    RETRIEVE_VARIANTS_ARCHER
+    RETRIEVE_VARIANTS_ARCHER,
+    RETRIEVE_VARIANTS_ACCESS
 ]
 
 SESSION_DATA_FILENAME = 'cvr_session_data.json'
@@ -72,7 +74,7 @@ RETRIEVE_VARIANTS_DMP_SAMPLE_ID = 'dmp_sample_id'
 
 CONSUME_AFFECTED_ROWS = 'affectedRows'
 
-DMP_STUDY_IDS = ['mskimpact', 'mskimpact_heme', 'mskraindance', 'mskarcher']
+DMP_STUDY_IDS = ['mskimpact', 'mskimpact_heme', 'mskraindance', 'mskarcher', 'mskaccess']
 DMP_SAMPLE_ID_PATTERN = re.compile('P-\d*-T\d*-[IH|TB|TS|AH|AS|IM]+\d')
 
 MASTERLIST_CHECK_ARG_DESCRIPTION = '[optional] Fetches masterlist for study and reports samples from samples file that are missing from masterlist.'
@@ -99,6 +101,7 @@ class PortalProperties(object):
         self.retrieve_variants_hemepact = properties[RETRIEVE_VARIANTS_HEMEPACT]
         self.retrieve_variants_raindance = properties[RETRIEVE_VARIANTS_RAINDANCE]
         self.retrieve_variants_archer = properties[RETRIEVE_VARIANTS_ARCHER]
+        self.retrieve_variants_access = properties[RETRIEVE_VARIANTS_ACCESS]
 
     def parse_properties(self, properties_filename):
         properties = {}
@@ -148,6 +151,8 @@ class PortalProperties(object):
             return self.retrieve_variants_raindance
         if study_id == 'mskarcher':
             return self.retrieve_variants_archer
+        if study_id == 'mskacess':
+            return self.retrieve_variants_access
 
 # ------------------------------------------------------------------------------
 # functions
@@ -222,6 +227,9 @@ def get_dmp_masterlist(portal_properties, session_data, study_id):
     '''
         Returns the master list for a given study id.
     '''
+    if study_id == 'mskaccess':
+        print >> OUTPUT_FILE, 'The CVR master list is not yet supported in the CVR web service for study mskaccess'
+        return set()
     url = '%s%s/%s/%s' % (portal_properties.dmp_server, portal_properties.masterlist_route, session_data[CREATE_SESSION_SESSION_ID], portal_properties.get_study_masterlist_endpoint(study_id))
     print >> OUTPUT_FILE, 'Fetching masterlist for study \'%s\': %s' % (study_id, url)
     response = urllib.urlopen(url)

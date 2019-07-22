@@ -356,4 +356,9 @@ function consumeSamplesAfterSolidHemeImport {
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_DATA_HOME/cvr_data.json
         rm -f $MSK_HEMEPACT_CONSUME_TRIGGER
     fi
+    if [ -f $MSK_ACCESS_CONSUME_TRIGGER ] ; then
+        echo "Consuming mskaccess samples from cvr"
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_DATA_HOME/cvr_data.json
+        rm -f $MSK_ACCESS_CONSUME_TRIGGER
+    fi
 }
