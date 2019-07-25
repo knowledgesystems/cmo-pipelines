@@ -66,6 +66,18 @@ if [ $STUDY_ID == "genie" ]; then
     cp $INPUT_DIRECTORY/ddp/ddp_naaccr.txt $OUTPUT_DIRECTORY/data_clinical_supp_patient.txt
     cut -f1,2 $CLINICAL_FILENAME | grep -v "^#" > $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt
 
+    # the contents of the cvr/seq_date.txt from IMPACT and HEMEPACT must be merged for subsetting to be done correctly by the sample date of sequencing
+    # it is assumed that the data directories of mskimpact and hemepact are known - confirm that these globals are known
+    if [[  -z "$MSK_IMPACT_DATA_HOME" || -z "$MSK_HEMEPACT_DATA_HOME" ]] ; then
+        echo "Data directories for MSKIMPACT AND HEMEPACT must be known for GENIE subset to work. Please make sure 'MSK_IMPACT_DATA_HOME' and 'MSK_HEMEPACT_DATA_HOME' exist and are valid directories in your system environment."
+        exit 2
+    fi
+    # confirm that cvr sub-directory exists in the input directory before attempting to merge contents of IMPACT and HEMEPACT seq_date.txt files
+    if [ ! -d $INPUT_DIRECTORY/cvr ] ; then
+        mkdir $INPUT_DIRECTORY/cvr
+    fi
+    head -1 $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt > $INPUT_DIRECTORY/cvr/seq_date.txt; cat $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt $MSK_HEMEPACT_DATA_HOME/cvr/seq_date.txt | grep -v SAMPLE_ID >> $INPUT_DIRECTORY/cvr/seq_date.txt
+
     # run the generate clinical subset script to generate list of sample ids to subset from impact data - subset of sample ids will be written to given $SUBSET_FILENAME
     # supp clinical sample and supp clinical patient files will be filtered to the samples/patients meeting the SEQ_DATE filter criteria
     echo "Generating subset list from $INPUT_DIRECTORY/cvr/seq_date.txt using filter criteria $FILTER_CRITERIA..."
