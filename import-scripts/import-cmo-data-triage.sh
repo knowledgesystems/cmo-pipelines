@@ -144,6 +144,18 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
         echo -e "$EMAIL_BODY" | mail -s "Data fetch failure: datahub_shahlab" $pipeline_email_list
     fi
 
+    #fetch updates in msk-extract/datahub repository msk-extract-datahub
+    echo "fetching updates from msk-extract-datahub..."
+    MSK_EXTRACT_DATAHUB_FETCH_FAIL=0
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source msk-extract-datahub --run-date latest
+    if [ $? -gt 0 ]; then
+        echo "msk-extract-datahub fetch failed!"
+        MSK_EXTRACT_DATAHUB_FETCH_FAIL=1
+        EMAIL_BODY="The msk-extract-datahub data fetch failed."
+        echo -e "Sending email $EMAIL_BODY"
+        echo -e "$EMAIL_BODY" | mail -s "Data fetch failure: msk-extract-datahub" $pipeline_email_list
+    fi
+
     # import data that requires QC into triage portal
     echo "importing cancer type updates into triage portal database..."
     $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
@@ -161,7 +173,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
     fi
 
     # if the database version is correct and ALL fetches succeed, then import
-    if [[ $DB_VERSION_FAIL -eq 0 && $CMO_FETCH_FAIL -eq 0 && $PRIVATE_FETCH_FAIL -eq 0 && $GENIE_FETCH_FAIL -eq 0 && $CMO_IMPACT_FETCH_FAIL -eq 0 && $IMPACT_MERGED_FETCH_FAIL -eq 0 && $CBIO_PORTAL_DATA_FETCH_FAIL -eq 0 && $IMMUNOTHERAPY_FETCH_FAIL -eq 0 && $DATAHUB_FETCH_FAIL -eq 0 && $DATAHUB_SHAH_LAB_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
+    if [[ $DB_VERSION_FAIL -eq 0 && $CMO_FETCH_FAIL -eq 0 && $PRIVATE_FETCH_FAIL -eq 0 && $GENIE_FETCH_FAIL -eq 0 && $CMO_IMPACT_FETCH_FAIL -eq 0 && $IMPACT_MERGED_FETCH_FAIL -eq 0 && $CBIO_PORTAL_DATA_FETCH_FAIL -eq 0 && $IMMUNOTHERAPY_FETCH_FAIL -eq 0 && $DATAHUB_FETCH_FAIL -eq 0 && $DATAHUB_SHAH_LAB_FETCH_FAIL -eq 0 && $MSK_EXTRACT_DATAHUB_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data into triage portal database..."
         IMPORT_FAIL=0
         $JAVA_BINARY -Xmx32G $JAVA_IMPORTER_ARGS --update-study-data --portal triage-portal --use-never-import --update-worksheet --notification-file "$triage_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
