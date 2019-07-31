@@ -123,7 +123,7 @@ if [ $DB_VERSION_FAIL -gt 0 ]; then
 fi
 
 echo "Cleaning up any untracked files from MSK-CMO import..."
-bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub_shahlab
+bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-extract
 
 $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
 

@@ -64,14 +64,14 @@ function determineRepositoryManager {
 
     REPO_PATH=$1
     cd $REPO_PATH
-    hg root
-    if [ $? -eq 0 ] ; then
-        eval "repository_manager=$MERCURIAL_MANAGER"
-        return
-    fi
     git rev-parse --is-inside-work-tree
     if [ $? -eq 0 ] ; then
         eval "repository_manager=$GITHUB_MANAGER"
+        return
+    fi
+    hg root
+    if [ $? -eq 0 ] ; then
+        eval "repository_manager=$MERCURIAL_MANAGER"
         return
     fi
 }
