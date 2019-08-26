@@ -18,7 +18,7 @@ JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Dspring.profiles.active=d
 msk_automation_notification_file=$(mktemp $tmp/msk-automation-portal-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 CANCERSTUDIESLOGFILENAME="$PORTAL_HOME/logs/update-studies-dashi-gdac.log"
-DATA_SOURCES_TO_BE_FETCHED="bic-mskcc private datahub_shahlab msk-extract-datahub"
+DATA_SOURCES_TO_BE_FETCHED="bic-mskcc private impact datahub_shahlab msk-extract-datahub"
 unset failed_data_source_fetches
 declare -a failed_data_source_fetches
 
