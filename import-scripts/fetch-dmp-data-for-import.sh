@@ -233,6 +233,8 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
                 echo "committing cvr data"
                 cd $MSK_IMPACT_DATA_HOME ; $HG_BINARY commit -m "Latest MSKIMPACT Dataset: CVR"
             fi
+            # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt
         fi
     fi
 
