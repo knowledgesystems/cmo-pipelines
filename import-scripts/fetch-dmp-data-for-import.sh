@@ -895,19 +895,6 @@ fi
 #   (1) MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER, and ACCESS (MIXEDPACT)
 #   (1) MSK-IMPACT, HEMEPACT, ARCHER, and ACCESS (MSKSOLIDHEME)
 
-# touch meta_SV.txt files if not already exist
-if [ ! -f $MSK_IMPACT_DATA_HOME/meta_SV.txt ] ; then
-    touch $MSK_IMPACT_DATA_HOME/meta_SV.txt
-fi
-
-if [ ! -f $MSK_HEMEPACT_DATA_HOME/meta_SV.txt ] ; then
-    touch $MSK_HEMEPACT_DATA_HOME/meta_SV.txt
-fi
-
-if [ ! -f $MSK_ARCHER_UNFILTERED_DATA_HOME/meta_SV.txt ] ; then
-    touch $MSK_ARCHER_UNFILTERED_DATA_HOME/meta_SV.txt
-fi
-
 printTimeStampedDataProcessingStepMessage "merge of MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER, ACCESS data for MIXEDPACT"
 # MIXEDPACT merge and check exit code
 $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_MIXEDPACT_DATA_HOME -i mixedpact -m "true" -e $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_RAINDANCE_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ACCESS_DATA_HOME
@@ -939,19 +926,6 @@ else
         touch $MSK_SOLID_HEME_IMPORT_TRIGGER
     fi
     addCancerTypeCaseLists $MSK_SOLID_HEME_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
-fi
-
-# check that meta_SV.txt are actually empty files before deleting from IMPACT, HEME, and ARCHER studies
-if [ $(wc -l < $MSK_IMPACT_DATA_HOME/meta_SV.txt) -eq 0 ] ; then
-    rm $MSK_IMPACT_DATA_HOME/meta_SV.txt
-fi
-
-if [ $(wc -l < $MSK_HEMEPACT_DATA_HOME/meta_SV.txt) -eq 0 ] ; then
-    rm $MSK_HEMEPACT_DATA_HOME/meta_SV.txt
-fi
-
-if [ $(wc -l < $MSK_ARCHER_UNFILTERED_DATA_HOME/meta_SV.txt) -eq 0 ] ; then
-    rm $MSK_ARCHER_UNFILTERED_DATA_HOME/meta_SV.txt
 fi
 
 # NOTE: using $HG_BINARY revert * --no-backup instead of $HG_BINARY UPDATE -C to avoid
@@ -1251,15 +1225,6 @@ printTimeStampedDataProcessingStepMessage "subset and merge of mskimpact, hemepa
 # Create lymphoma "super" cohort
 # Subset MSK-IMPACT and HEMEPACT by Cancer Type
 
-# first touch meta_SV.txt in mskimpact, hemepact if not already exists - need these to generate merged subsets
-if [ ! -f $MSK_IMPACT_DATA_HOME/meta_SV.txt ] ; then
-    touch $MSK_IMPACT_DATA_HOME/meta_SV.txt
-fi
-
-if [ ! -f $MSK_HEMEPACT_DATA_HOME/meta_SV.txt ] ; then
-    touch $MSK_HEMEPACT_DATA_HOME/meta_SV.txt
-fi
-
 # **************************************** ORDER OF SUBSET
 # now subset sample files with lymphoma cases from mskimpact and hemepact
 LYMPHOMA_FILTER_CRITERIA="CANCER_TYPE=Blastic Plasmacytoid Dendritic Cell Neoplasm,Histiocytosis,Hodgkin Lymphoma,Leukemia,Mastocytosis,Mature B-Cell Neoplasms,Mature T and NK Neoplasms,Myelodysplastic Syndromes,Myelodysplastic/Myeloproliferative Neoplasms,Myeloproliferative Neoplasms,Non-Hodgkin Lymphoma;ONCOTREE_CODE=DLBCL,BCL,SLL,TNKL,MALTL,MBCL,FL,SEZS"
@@ -1323,15 +1288,6 @@ if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 ] ; then
     fi
     # remove files we don't need for lymphoma super cohort
     rm -f $LYMPHOMA_SUPER_COHORT_DATA_HOME/*genie* $LYMPHOMA_SUPER_COHORT_DATA_HOME/seq_date.txt
-fi
-
-# check that meta_SV.txt is actually an empty file before deleting from IMPACT and HEMEPACT studies
-if [ $(wc -l < $MSK_IMPACT_DATA_HOME/meta_SV.txt) -eq 0 ] ; then
-    rm $MSK_IMPACT_DATA_HOME/meta_SV.txt
-fi
-
-if [ $(wc -l < $MSK_HEMEPACT_DATA_HOME/meta_SV.txt) -eq 0 ] ; then
-    rm $MSK_HEMEPACT_DATA_HOME/meta_SV.txt
 fi
 
 # commit or revert changes for Lymphoma super cohort
