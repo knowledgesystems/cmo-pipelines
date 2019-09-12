@@ -33,28 +33,28 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-rsync -a $LOCAL_PROPERTIES_DIRECTORY $JENKINS_SRV_HOSTNAME:$JENKINS_SRV_PROPERTIES_DIRECTORY
+rsync -a --delete $LOCAL_PROPERTIES_DIRECTORY $JENKINS_SRV_HOSTNAME:$JENKINS_SRV_PROPERTIES_DIRECTORY
 if [ $? -ne 0 ] ; then
     FAILURE_MESSAGE="Something went wrong when rsync-ing properties to jenkins machine"
     sendFailureMessageMskPipelineLogsSlack "$FAILURE_MESSAGE"
     exit 1
 fi
 
-rsync -a $LOCAL_JENKINS_DIRECTORY $JENKINS_SRV_HOSTNAME:$JENKINS_SRV_SCRIPTS_DIRECTORY
+rsync -a --delete $LOCAL_JENKINS_DIRECTORY $JENKINS_SRV_HOSTNAME:$JENKINS_SRV_SCRIPTS_DIRECTORY
 if [ $? -ne 0 ] ; then
     FAILURE_MESSAGE="Something went wrong when rsync-ing jenkins scripts to jenkins machine"
     sendFailureMessageMskPipelineLogsSlack "$FAILURE_MESSAGE"
     exit 1
 fi
 
-rsync -a $LOCAL_PIPELINES_CREDENTIALS $JENKINS_SRV_HOSTNAME:$JENKINS_SRV_PIPELINES_CREDENTIALS
+rsync -a --delete $LOCAL_PIPELINES_CREDENTIALS $JENKINS_SRV_HOSTNAME:$JENKINS_SRV_PIPELINES_CREDENTIALS
 if [ $? -ne 0 ] ; then
     FAILURE_MESSAGE="Something went wrong when rsync-ing pipelines-credentials to jenkins machine"
     sendFailureMessageMskPipelineLogsSlack "$FAILURE_MESSAGE"
     exit 1
 fi
 
-rsync -a $LOCAL_GIT_CREDENTIALS $JENKINS_SRV_HOSTNAME:$JENKINS_SRV_HOME_DIRECTORY
+rsync -a --delete $LOCAL_GIT_CREDENTIALS $JENKINS_SRV_HOSTNAME:$JENKINS_SRV_HOME_DIRECTORY
 if [ $? -ne 0 ] ; then
     FAILURE_MESSAGE="Something went wrong when rsync-ing git-credentials to jenkins machine"
     sendFailureMessageMskPipelineLogsSlack "$FAILURE_MESSAGE"
