@@ -9,13 +9,13 @@ send_email_notification() {
     echo -e "$EMAIL_BODY" | mail -s "Alert: Crontab out of sync on $HOSTNAME" cbioportal-pipelines@cbio.mskcc.org
 }
 
-if [ -z $PORTAL_HOME ] | [ -z $PORTAL_CONFIG_HOME ] ; then
+if [ -z $PORTAL_HOME ] | [ -z $PIPELINES_CONFIG_HOME ] ; then
     echo "monitor-crontab-version.sh could not be run: missing environment variables must be set using automation-environment.sh"
     exit 1
 fi
 
 GITHUB_CRONTAB_URL="https://api.github.com/repos/knowledgesystems/cmo-pipelines/contents/import-scripts/mycrontab"
-GITHUB_AUTHORIZATION=$(cat $PORTAL_CONFIG_HOME/git/git-credentials | sed 's/https:\/\///; s/@github\.com//')
+GITHUB_AUTHORIZATION=$(cat $PIPELINES_CONFIG_HOME/git/git-credentials | sed 's/https:\/\///; s/@github\.com//')
 CURRENT_CRONTAB_FILE="$PORTAL_HOME/tmp/current_crontab"
 GITHUB_CRONTAB_FILE="$PORTAL_HOME/tmp/git_crontab"
 REQUIRED_USERNAME="cbioportal_importer"

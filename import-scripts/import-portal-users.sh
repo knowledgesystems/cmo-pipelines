@@ -18,11 +18,11 @@ PURGE_DEACTIVATED_LDAP_USERS_FLOCK_FILEPATH="/data/portal-cron/cron-lock/purge_d
 
     echo "### Starting import" >> "$USERSDASHILOGFILENAME"
     date >> "$USERSDASHILOGFILENAME"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/importUsers.py --port 3306 --secrets-file $PORTAL_DATA_HOME/portal-configuration/google-docs/client_secrets.json --creds-file $PORTAL_DATA_HOME/portal-configuration/google-docs/creds.dat --properties-file $PORTAL_HOME/cbio-portal-data/portal-configuration/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true >> "$USERSDASHILOGFILENAME" 2>&1
+    $PYTHON_BINARY $PORTAL_HOME/scripts/importUsers.py --port 3306 --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true >> "$USERSDASHILOGFILENAME" 2>&1
 
     echo "### Starting import" >> "$USERSGENIELOGFILENAME"
     date >> "$USERSGENIELOGFILENAME"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/importUsers.py --port 3306 --secrets-file $PORTAL_DATA_HOME/portal-configuration/google-docs/client_secrets.json --creds-file $PORTAL_DATA_HOME/portal-configuration/google-docs/creds.dat --properties-file $PORTAL_HOME/cbio-portal-data/portal-configuration/properties/import-users/portal.properties.dashi.genie --send-email-confirm true --sender GENIE >> "$USERSGENIELOGFILENAME" 2>&1
+    $PYTHON_BINARY $PORTAL_HOME/scripts/importUsers.py --port 3306 --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.genie --send-email-confirm true --sender GENIE >> "$USERSGENIELOGFILENAME" 2>&1
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH {purge_deactivated_ldap_users_flock_fd}>$PURGE_DEACTIVATED_LDAP_USERS_FLOCK_FILEPATH
 
 exit 0

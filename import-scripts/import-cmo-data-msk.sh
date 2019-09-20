@@ -87,6 +87,6 @@ $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automat
 
 echo "### Starting import" >> "$CANCERSTUDIESLOGFILENAME"
 date >> "$CANCERSTUDIESLOGFILENAME"
-$PYTHON_BINARY $PORTAL_HOME/scripts/updateCancerStudies.py --secrets-file $PORTAL_DATA_HOME/portal-configuration/google-docs/client_secrets.json --creds-file $PORTAL_DATA_HOME/portal-configuration/google-docs/creds.dat --properties-file $PORTAL_HOME/cbio-portal-data/portal-configuration/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true >> "$CANCERSTUDIESLOGFILENAME" 2>&1
+$PYTHON_BINARY $PORTAL_HOME/scripts/updateCancerStudies.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true >> "$CANCERSTUDIESLOGFILENAME" 2>&1
 restartMSKTomcats > /dev/null 2>&1
 restartSchultzTomcats > /dev/null 2>&1
