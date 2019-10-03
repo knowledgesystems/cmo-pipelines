@@ -32,7 +32,7 @@ processor.thread.pool.size=100
 processor.thread.pool.max=100
 
 # DDP cohort IDs
-ddp.cohort.map={"mskimpact":2033,"mskimpact_ped":1852, "mskimpact_heme":2033, "mskraindance":2033, "mskarcher":2033, "mskaccess":2033}
+ddp.cohort.map={"mskimpact":2033,"mskimpact_ped":1852, "mskimpact_heme":2033, "mskraindance":2033, "mskarcher":2033, "mskaccess":2033, "mskextract":2033}
 
 # NAACCR mappings resource filenames
 naaccr.ethnicity=naaccr_ethnicity.json
