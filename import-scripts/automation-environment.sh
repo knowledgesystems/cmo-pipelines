@@ -12,6 +12,7 @@ export PYTHON_BINARY=/data/tools/python2.7/bin/python
 export PYTHON3_BINARY=/data/tools/python3.4.10/bin/python3
 export MAVEN_BINARY=/data/tools/mvn
 export HG_BINARY=/usr/bin/hg
+export GIT_BINARY=/usr/local/bin/git
 export PATH=/data/tools:/data/tools/python2.7/bin:/data/tools/python3.4.10/bin:$PATH
 
 #######################
