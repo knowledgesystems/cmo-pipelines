@@ -1,4 +1,4 @@
-#!/usr/bin/env/bash
+#!/bin/bash
 
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
