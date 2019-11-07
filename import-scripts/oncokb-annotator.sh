@@ -119,6 +119,7 @@ if [ $ONCOKB_ANNOTATION_SUCCESS -eq 0 ] ; then
 else
     echo "committing OncoKB Annotation for MSKSOLIDHEME"
     cd $MSK_SOLID_HEME_DATA_HOME ; $HG_BINARY commit -m "Latest MSKSOLIDHEME OncoKB Annotations"
+    $HG_BINARY push
 fi
 
 echo $(date)
