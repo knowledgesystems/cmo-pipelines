@@ -1,6 +1,10 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
+
+# WARNING : this script must be run with an installation of python which includes the MySQLdb module
 
 from importUsers import *
+import argparse
+import MySQLdb
 import os
 import sys
 import time
@@ -51,7 +55,8 @@ def parse_monitor_import_users_args():
     return parser
 
 def main(args):
-    portal_properties = args.portal_properties
+    portal_properties = args.portal_properties_file
+    port = args.port
     secrets_file = args.secrets_filename
     creds_file = args.credentials
 
@@ -70,7 +75,7 @@ def main(args):
     if not portal_properties:
         print >> OUTPUT_FILE, 'Error reading %s, exiting' % portal_properties
         return
-    get_latest_email(secrets_file, creds_file, portal_properties, sys.argv[0])
+    latest_email = get_latest_email(secrets_file, creds_file, portal_properties, sys.argv[0])
    
     # sleep for three minutes to allow latest email to be imported (process runs every minute)
     time.sleep(180)    
