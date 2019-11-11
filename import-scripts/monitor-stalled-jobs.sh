@@ -26,11 +26,11 @@ checked_process_list=(
 )
 
 # Stalled times
-# import_portal_users_genie.sh: 5 minutes
-# importUsers.py: 15 minutes
-# import-dmp-impact-date.sh: 10 hours
-# import-temp-study.sh: 2 hours
-max_time=(300 900 36000 7200)
+mt_users_genie=$(( 5 * 60 )) # import_portal_users_genie.sh: 5 minutes
+mt_import_users=$(( 15 * 60 )) # importUsers.py: 15 minutes
+mt_import_dmp=$(( 10 * 60 * 60 )) # import-dmp-impact-data.sh: 10 hours
+mt_import_temp_study=$(( 3 * 60 * 60 )) # import-temp-study.sh: 3 hours
+max_time=($mt_users_genie $mt_import_users $mt_import_dmp $mt_import_temp_study)
 email_times=(0 0 0 0)
 
 while :
