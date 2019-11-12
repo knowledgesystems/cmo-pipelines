@@ -2,7 +2,7 @@
 
 export CMO_EMAIL_LIST="cbioportal-cmo-importer@cbio.mskcc.org"
 export PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
-export ALL_DATA_SOURCES="bic-mskcc private genie impact impact-MERGED knowledge-systems-curated-studies immunotherapy datahub datahub_shahlab msk-extract-datahub"
+export ALL_DATA_SOURCES="bic-mskcc private impact impact-MERGED knowledge-systems-curated-studies immunotherapy datahub datahub_shahlab msk-extract-datahub"
 
 unset DATA_SOURCE_NAME_TO_START_LOG_MESSAGE
 declare -Ax DATA_SOURCE_NAME_TO_START_LOG_MESSAGE
