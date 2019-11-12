@@ -29,6 +29,44 @@ FILTER_EMPTY_COLUMNS_KEEP_COLUMN_LIST="PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE,PARTA_
 # -----------------------------------------------------------------------------------------------------------
 ## FUNCTIONS
 
+# Function to extract property settings from a simple properties file
+# usage : extractPropertiesFromFile sourcefile.properties propertyname1 propertyname2 propertyname3 ...
+# caller must 'declare -Ax extracted_properties' before calling this function
+function extractPropertiesFromFile() {
+    if [ $# -lt 1 ] ; then
+        return 1 # error -- insufficient arguments
+    fi
+    PROPERTIES_FILENAME=$1
+    shift 1
+    if [ ! -r $PROPERTIES_FILENAME ] ; then
+        return 2 # error -- cannot read file 
+    fi
+    # test and reset return array
+    if ! declare -A | grep " extracted_properties=" > /dev/null 2>&1 ; then
+        return 3 # error -- caller did not declare extracted_properties associative array
+    fi
+    for prop in "${!extracted_properties[@]}" ; do
+        unset extracted_properties[$prop]
+    done
+    # initialize keys in return array (reads arguments in positions 2, 3, ...)
+    for property_name ; do
+        extracted_properties[$property_name]=""
+    done
+    comment_prefix="#";
+    while IFS="" read -r line ; do
+        if ! [[ $line == $comment_prefix* ]] ; then
+            for prop in "${!extracted_properties[@]}" ; do
+                if [[ $line =~ ^[[:space:]]*$prop[[:space:]]*=(.*) ]] ; then
+                    value=${BASH_REMATCH[1]}
+                    trimmed_value="$(echo -e "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+                    extracted_properties[$prop]="$trimmed_value"
+                fi
+            done
+        fi
+    done < $PROPERTIES_FILENAME
+    return 0
+}
+
 # Function for alerting slack channel of any failures
 function sendPreImportFailureMessageMskPipelineLogsSlack {
     MESSAGE=$1

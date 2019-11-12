@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# associative array for extracting properties from importer.properties
+declare -Ax extracted_properties
 
 # localize global variables / jar names and functions
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
@@ -18,6 +20,17 @@ if [ -z $JAVA_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; th
     sendImportFailureMessageMskPipelineLogsSlack "${message}"
     exit 2
 fi
+
+MSK_DMP_IMPORT_PROPERTIES_FILE="$PIPELINES_CONFIG_HOME/properties/import-dmp/importer.properties"
+extractPropertiesFromFile "$MSK_DMP_IMPORT_PROPERTIES_FILE" db.user db.password db.host db.portal_db_name
+if [ $? -ne 0 ] ; then
+    echo "warning : could not read database properties from property file $MSK_DMP_IMPORT_PROPERTIES_FILE"
+    echo "    archer import is likely to fail because adjustment of mutations will not be possible"
+fi
+DMP_DB_HOST=${extracted_properties[db.host]}
+DMP_DB_USER=${extracted_properties[db.user]}
+DMP_DB_PASSWORD=${extracted_properties[db.password]}
+DMP_DB_DATABASE_NAME=${extracted_properties[db.portal_db_name]}
 
 if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
     # refresh cdd and oncotree cache - by default this script will attempt to
@@ -176,10 +189,15 @@ else
 fi
 
 # TEMP STUDY IMPORT: MSKARCHER
+mysql --host="$DMP_DB_HOST" --user="$DMP_DB_USER" --password="$DMP_DB_PASSWORD" "$DMP_DB_DATABASE_NAME" -e "update genetic_profile set genetic_alteration_type = 'FUSION' where genetic_alteration_type = 'MUTATION_EXTENDED' and stable_id = 'mskarcher_mutations'"
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_ARCHER_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for mskarcher"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="mskarcher" --temp-study-id="temporary_mskarcher" --backup-study-id="yesterday_mskarcher" --portal-name="mskarcher-portal" --study-path="$MSK_ARCHER_DATA_HOME" --notification-file="$mskarcher_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
+        # Fusions are imported by ImportFusionData which is called when the genetic_alteration_type is "FUSION" in the meta_fusions.txt file (see logic in ImportProfileData)
+        # However, if a study does not have an existing genetic profile with genetic_alteration_type = "MUTATION_EXTENDED" then the study view mutations table does not show up.
+        # This is a temporary quick and dirty fix to override the genetic_alteration_type for mskarcher_mutations to "MTATION_EXTENDED" (which is imported with genetic_alteration_type = "FUSION")
+        mysql --host="$DMP_DB_HOST" --user="$DMP_DB_USER" --password="$DMP_DB_PASSWORD" "$DMP_DB_DATABASE_NAME" -e "update genetic_profile set genetic_alteration_type = 'MUTATION_EXTENDED' where genetic_alteration_type = 'FUSION' and stable_id = 'mskarcher_mutations'"
         RESTART_AFTER_DMP_PIPELINES_IMPORT=1
         IMPORT_FAIL_ARCHER=0
     fi
