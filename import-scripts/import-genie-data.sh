@@ -8,7 +8,7 @@ if [[ -d "$tmp" && "$tmp" != "/" ]]; then
 fi
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
 now=$(date "+%Y-%m-%d-%H-%M-%S")
-IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/genie-importer.jar"
+IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/genie-aws-importer.jar"
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27186"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 genie_portal_notification_file=$(mktemp $tmp/genie-portal-update-notification.$now.XXXXXX)
