@@ -152,7 +152,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
 
     if [ $TOMCAT_SERVER_SHOULD_BE_RESTARTED -ne 0 ] ; then
         echo "requesting redeployment of public portal tomcat pods..."
-        bash $PORTAL_HOME/scripts/restart-public-portal.sh
+        bash $PORTAL_HOME/scripts/restart-portal-pods.sh public
         RESTART_EXIT_STATUS=$?
         if [ $RESTART_EXIT_STATUS -ne 0 ] ; then
             EMAIL_BODY="Attempt to trigger a redeployment of the public portal tomcat pods failed"
