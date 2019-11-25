@@ -126,4 +126,5 @@ export CRDB_FETCHER_PDX_HOME=$PDX_DATA_HOME/crdb_pdx_raw_data
 # environment variables used for oncokb annotator script
 #######################
 export ONCOKB_URL="http://oncokb.org"
+export ONCOKB_TOKEN_FILE=$PORTAL_HOME/pipelines-credentials/oncokb.token
 export CANCER_HOTSPOTS_URL="http://www.cancerhotspots.org"

@@ -4,12 +4,33 @@ source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
 ONCOKB_ANNOTATION_SUCCESS=1
 
+function send_failure_messages () {
+    email_message=$1
+    email_subject=$2
+    slack_message=$3
+    echo $email_message
+    echo -e "$email_message" |  mail -s "$email_subject" $PIPELINES_EMAIL_LIST
+    sendPreImportFailureMessageMskPipelineLogsSlack "$slack_message"
+}
+
 # Make sure necessary environment variables are set before running
-if [ -z $PYTHON_BINARY ] | [ -z $HG_BINARY ] | [ -z $ONCOKB_ANNOTATOR_HOME ] | [ -z $DMP_DATA_HOME ] | [ -z $MSK_SOLID_HEME_DATA_HOME ] | [ -z $ONCOKB_URL ] | [ -z $CANCER_HOTSPOTS_URL ] ; then
-    message="could not run oncokb annotation script: automation-environment.sh script must be run in order to set needed environment variables."
-    echo $message
-    echo -e "$message" |  mail -s "oncokb-annotator failed to run." $PIPELINES_EMAIL_LIST
-    sendPreImportFailureMessageMskPipelineLogsSlack "$message"
+if [ -z $PYTHON_BINARY ] | [ -z $HG_BINARY ] | [ -z $ONCOKB_ANNOTATOR_HOME ] | [ -z $DMP_DATA_HOME ] | [ -z $MSK_SOLID_HEME_DATA_HOME ] | [ -z $ONCOKB_URL ] | [ -z $CANCER_HOTSPOTS_URL ] | [ -z $ONCOKB_TOKEN_FILE ]; then
+    message="Could not run oncokb annotation script: automation-environment.sh script must be run in order to set needed environment variables."
+    send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
+    exit 2
+fi
+
+if [ ! -r $ONCOKB_TOKEN_FILE ]; then
+    message="Could not run oncokb annotation script: token file '$ONCOKB_TOKEN_FILE' does not exist or is not readable."
+    send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
+    exit 2
+fi
+
+ONCOKB_TOKEN=`cat $ONCOKB_TOKEN_FILE`
+
+if [ -z $ONCOKB_TOKEN ]; then
+    message="Could not run oncokb annotation script: token file '$ONCOKB_TOKEN_FILE' is empty."
+    send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
     exit 2
 fi
 
@@ -28,7 +49,7 @@ if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
         PREVIOUS_ANNOTATED_MAF_ARGS="-p $PREVIOUS_ANNOTATED_MAF_NAME"
     fi
 
-    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/MafAnnotator.py -i $MSK_SOLID_HEME_DATA_HOME/data_mutations_extended.txt -o $MSK_SOLID_HEME_DATA_HOME/oncokb/data_mutations_extended.oncokb.txt -c $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -u $ONCOKB_URL -v $CANCER_HOTSPOTS_URL $PREVIOUS_ANNOTATED_MAF_ARGS
+    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/MafAnnotator.py -b $ONCOKB_TOKEN -i $MSK_SOLID_HEME_DATA_HOME/data_mutations_extended.txt -o $MSK_SOLID_HEME_DATA_HOME/oncokb/data_mutations_extended.oncokb.txt -c $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -u $ONCOKB_URL -v $CANCER_HOTSPOTS_URL $PREVIOUS_ANNOTATED_MAF_ARGS
     if [ $? -ne 0 ] ; then
         echo "Failed to annotate MAF, exiting..."
         ONCOKB_ANNOTATION_SUCCESS=0
@@ -44,7 +65,7 @@ fi
 echo $(date)
 echo "Beginning fusions annotation..."
 if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
-    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/FusionAnnotator.py -i $MSK_SOLID_HEME_DATA_HOME/data_fusions.txt -o $MSK_SOLID_HEME_DATA_HOME/oncokb/data_fusions.oncokb.txt -c $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -u $ONCOKB_URL
+    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/FusionAnnotator.py -b $ONCOKB_TOKEN -i $MSK_SOLID_HEME_DATA_HOME/data_fusions.txt -o $MSK_SOLID_HEME_DATA_HOME/oncokb/data_fusions.oncokb.txt -c $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -u $ONCOKB_URL
     if [ $? -ne 0 ] ; then
         echo "Failed to annotate fusion file, exiting..."
         ONCOKB_ANNOTATION_SUCCESS=0
@@ -55,7 +76,7 @@ fi
 echo $(date)
 echo "Beginning CNA annotation..."
 if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
-    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/CnaAnnotator.py -i $MSK_SOLID_HEME_DATA_HOME/data_CNA.txt -o $MSK_SOLID_HEME_DATA_HOME/oncokb/data_CNA.oncokb.txt -c $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -u $ONCOKB_URL
+    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/CnaAnnotator.py -b $ONCOKB_TOKEN -i $MSK_SOLID_HEME_DATA_HOME/data_CNA.txt -o $MSK_SOLID_HEME_DATA_HOME/oncokb/data_CNA.oncokb.txt -c $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -u $ONCOKB_URL
     if [ $? -ne 0 ] ; then
         echo "Failed to annotate CNA file, exiting..."
         ONCOKB_ANNOTATION_SUCCESS=0
@@ -109,13 +130,22 @@ if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
     fi
 fi
 
+# Generating README
+echo $(date)
+echo "Beginning README generation..."
+if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
+    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/GenarateReadMe.py -o $MSK_SOLID_HEME_DATA_HOME/oncokb/README -u $ONCOKB_URL
+    if [ $? -ne 0 ] ; then
+        echo "Failed to generate README, exiting..."
+        ONCOKB_ANNOTATION_SUCCESS=0
+    fi
+fi
+
 # Only commit if all steps succeeded
 if [ $ONCOKB_ANNOTATION_SUCCESS -eq 0 ] ; then
     cd $MSK_SOLID_HEME_DATA_HOME ; $HG_BINARY update -C ; find . -name "*.orig" -delete
     message="OncoKB Annotation failed for MSKSOLIDHEME. Check logs for more details."
-    echo $message
-    echo -e "$message" |  mail -s "MSKSOLIDHEME OncoKB Annotation Failure" $PIPELINES_EMAIL_LIST
-    sendPreImportFailureMessageMskPipelineLogsSlack "MSKSOLIDHEME OncoKB Annotation"
+    send_failure_messages "$message" "MSKSOLIDHEME OncoKB Annotation Failure" "MSKSOLIDHEME OncoKB Annotation"
 else
     echo "committing OncoKB Annotation for MSKSOLIDHEME"
     cd $MSK_SOLID_HEME_DATA_HOME ; $HG_BINARY commit -m "Latest MSKSOLIDHEME OncoKB Annotations"
