@@ -134,7 +134,7 @@ fi
 echo $(date)
 echo "Beginning README generation..."
 if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
-    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/GenarateReadMe.py -o $MSK_SOLID_HEME_DATA_HOME/oncokb/README -u $ONCOKB_URL
+    $PYTHON_BINARY $ONCOKB_ANNOTATOR_HOME/GenerateReadMe.py -o $MSK_SOLID_HEME_DATA_HOME/oncokb/README -u $ONCOKB_URL
     if [ $? -ne 0 ] ; then
         echo "Failed to generate README, exiting..."
         ONCOKB_ANNOTATION_SUCCESS=0
