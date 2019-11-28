@@ -6,7 +6,7 @@ if [[ -z $PORTAL_HOME || -z $JAVA_BINARY ]] ; then
     exit 1
 fi
 
-if [[ ! -f $AWS_GDAC_SSL_TRUSTSTORE || ! -f $AWS_GDAC_SSL_TRUSTSTORE_PASSWORD_FILE ]] ; then
+if [[ ! -f $AWS_SSL_TRUSTSTORE || ! -f $AWS_SSL_TRUSTSTORE_PASSWORD_FILE ]] ; then
     echo "Error: cannot find SSL truststore and/or truststore password file."
     exit 1
 fi
@@ -17,10 +17,11 @@ if [[ -d "$tmp" && "$tmp" != "/" ]]; then
 fi
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
 now=$(date "+%Y-%m-%d-%H-%M-%S")
-TRUSTSTORE_PASSWORD=`cat $AWS_GDAC_SSL_TRUSTSTORE_PASSWORD_FILE`
+TRUSTSTORE_PASSWORD=`cat $AWS_SSL_TRUSTSTORE_PASSWORD_FILE`
 IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/genie-aws-importer.jar"
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27186"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Djavax.net.ssl.trustStore=$AWS_GDAC_SSL_TRUSTSTORE -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 genie_portal_notification_file=$(mktemp $tmp/genie-portal-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_2018_06_01
 WEB_APPLICATION_SHOULD_BE_RESTARTED=0 # 0 = skip the restart, non-0 = do the restart
@@ -93,12 +94,16 @@ if [[ $DB_VERSION_FAIL -eq 0 && $GENIE_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE
     if [ $WEB_APPLICATION_SHOULD_BE_RESTARTED -ne 0 ] ; then
         echo "requesting redeployment of genie portal pods..."
         bash $PORTAL_HOME/scripts/restart-portal-pods.sh genie
-        RESTART_EXIT_STATUS=$?
-        if [ $RESTART_EXIT_STATUS -ne 0 ] ; then
-            EMAIL_BODY="Attempt to trigger a redeployment of the genie portal pods failed"
+        GENIE_RESTART_EXIT_STATUS=$?
+        bash $PORTAL_HOME/scripts/restart-portal-pods.sh genie-private
+        GENIE_PRIVATE_RESTART_EXIT_STATUS=$?
+        if [[ $GENIE_RESTART_EXIT_STATUS -ne 0 || $GENIE_PRIVATE_RESTART_EXIT_STATUS -ne 0 ]] ; then
+            EMAIL_BODY="Attempt to trigger a redeployment of all genie and genie-private portal pods failed"
             echo -e "Sending email $EMAIL_BODY"
             echo -e "$EMAIL_BODY" | mail -s "Genie Portal Pod Redeployment Error : unable to trigger redeployment" $PIPELINES_EMAIL_LIST
         fi
+    else
+        echo "No studies have been updated, skipping redeployment of genie portal pods"
     fi
 fi
 

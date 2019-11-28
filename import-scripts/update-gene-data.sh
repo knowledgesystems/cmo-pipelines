@@ -5,9 +5,10 @@ if [[ -d "$tmp" && "$tmp" != "/" ]]; then
     rm -rf "$tmp"/*
 fi
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+TRUSTSTORE_PASSWORD=`cat $AWS_SSL_TRUSTSTORE_PASSWORD_FILE`
 GENE_DATA_UPDATER_JAR_FILENAME="$PORTAL_HOME/lib/gene_data_updater.jar"
 JAVA_GENE_DATA_UPDATER_ARGS="$JAVA_PROXY_ARGS -jar $GENE_DATA_UPDATER_JAR_FILENAME"
-JAVA_SSL_TRUSTORE_ARGS="-Djavax.net.ssl.trustStore=$AWS_GDAC_SSL_TRUSTSTORE -Djavax.net.ssl.turstStorePassword=$TRUSTSTORE_PASSWORD"
+JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD"
 
 function attempt_wget_file {
     target_file_url=$1
@@ -70,7 +71,7 @@ function runGeneUpdatePipeline {
     JAVA_EXTRA_ARGS=""
     if [[ ! -z "$USE_SSL" && "$USE_SSL" == "true" ]] ; then
         echo "Using secure connection to database $DATABASE_NAME"
-        JAVA_EXTRA_ARGS=$JAVA_SSL_TRUSTORE_ARGS
+        JAVA_EXTRA_ARGS=$JAVA_SSL_ARGS
     fi
 
     echo "Starting gene data update job on database: $DATABASE_NAME"

@@ -6,7 +6,7 @@ if [[ -z $PORTAL_HOME || -z $JAVA_BINARY ]] ; then
     exit 1
 fi
 
-if [[ ! -f $AWS_GDAC_SSL_TRUSTSTORE || ! -f $AWS_GDAC_SSL_TRUSTSTORE_PASSWORD_FILE ]] ; then
+if [[ ! -f $AWS_SSL_TRUSTSTORE || ! -f $AWS_SSL_TRUSTSTORE_PASSWORD_FILE ]] ; then
     echo "Error: cannot find SSL truststore and/or truststore password file."
     exit 1
 fi
@@ -17,14 +17,15 @@ if [[ -d "$tmp" && "$tmp" != "/" ]]; then
 fi
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
 now=$(date "+%Y-%m-%d-%H-%M-%S")
-TRUSTSTORE_PASSWORD=`cat $AWS_GDAC_SSL_TRUSTSTORE_PASSWORD_FILE`
+TRUSTSTORE_PASSWORD=`cat $AWS_SSL_TRUSTSTORE_PASSWORD_FILE`
 ENABLE_DEBUGGING=0
 JAVA_DEBUG_ARGS=""
 if [ $ENABLE_DEBUGGING != "0" ] ; then
     JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185"
 fi
 IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/aws-gdac-importer.jar"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Djavax.net.ssl.trustStore=$AWS_GDAC_SSL_TRUSTSTORE -Djavax.net.ssl.turstStorePassword=$TRUSTSTORE_PASSWORD -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 static_gdac_aws_notification_file=$(mktemp $tmp/static-aws-gdac-update-notification.$now.XXXXXX)
 gdac_aws_notification_file=$(mktemp $tmp/aws-gdac-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
@@ -75,7 +76,17 @@ if [[ $DB_VERSION_FAIL -eq 0 ]]; then
     echo "'$num_studies_updated' studies have been updated"
 fi
 
-# no restart of aws tomcat yet
+# restart pods
+if [ $WEB_APPLICATION_SHOULD_BE_RESTARTED -ne 0 ] ; then
+    echo "requesting redeployment of msk portal pods..."
+    bash $PORTAL_HOME/scripts/restart-portal-pods.sh msk
+    MSK_RESTART_EXIT_STATUS=$?
+    if [[ $MSK_RESTART_EXIT_STATUS -ne 0 ]] ; then
+        EMAIL_BODY="Attempt to trigger a redeployment of msk portal pods failed"
+        echo -e "Sending email $EMAIL_BODY"
+        echo -e "$EMAIL_BODY" | mail -s "Msk Portal Pod Redeployment Error : unable to trigger redeployment" $PIPELINES_EMAIL_LIST
+    fi
+fi
 
 EMAIL_BODY="The aws gdac database version is incompatible. Imports will be skipped until database is updated."
 # send email if db version isn't compatible
