@@ -10,7 +10,7 @@ fi
 
 declare -A portal_to_deployment_map
 portal_to_deployment_map["public"]="cbioportal-spring-boot"
-portal_to_deployment_map["genie"]="cbioportal-backend-genie"
+portal_to_deployment_map["genie-public"]="cbioportal-backend-genie-public"
 portal_to_deployment_map["genie-private"]="cbioportal-backend-genie-private"
 ## TODO : uncomment the following line when we have defined a kubernetes cbioportal-backend-msk deployment
 # portal_to_deployment_map["msk"]="cbioportal-backend-msk"

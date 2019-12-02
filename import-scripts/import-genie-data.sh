@@ -93,11 +93,11 @@ if [[ $DB_VERSION_FAIL -eq 0 && $GENIE_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE
     # restart pods
     if [ $WEB_APPLICATION_SHOULD_BE_RESTARTED -ne 0 ] ; then
         echo "requesting redeployment of genie portal pods..."
-        bash $PORTAL_HOME/scripts/restart-portal-pods.sh genie
-        GENIE_RESTART_EXIT_STATUS=$?
+        bash $PORTAL_HOME/scripts/restart-portal-pods.sh genie-public
+        GENIE_PUBLIC_RESTART_EXIT_STATUS=$?
         bash $PORTAL_HOME/scripts/restart-portal-pods.sh genie-private
         GENIE_PRIVATE_RESTART_EXIT_STATUS=$?
-        if [[ $GENIE_RESTART_EXIT_STATUS -ne 0 || $GENIE_PRIVATE_RESTART_EXIT_STATUS -ne 0 ]] ; then
+        if [[ $GENIE_PUBLIC_RESTART_EXIT_STATUS -ne 0 || $GENIE_PRIVATE_RESTART_EXIT_STATUS -ne 0 ]] ; then
             EMAIL_BODY="Attempt to trigger a redeployment of all genie and genie-private portal pods failed"
             echo -e "Sending email $EMAIL_BODY"
             echo -e "$EMAIL_BODY" | mail -s "Genie Portal Pod Redeployment Error : unable to trigger redeployment" $PIPELINES_EMAIL_LIST
