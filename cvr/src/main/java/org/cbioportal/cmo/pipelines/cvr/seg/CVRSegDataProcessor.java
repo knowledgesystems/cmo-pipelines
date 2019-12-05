@@ -36,9 +36,8 @@ import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSegRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSegRecord;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
-import org.cbioportal.cmo.pipelines.cvr.model.*;
-import org.cbioportal.cmo.pipelines.util.CVRUtils;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -49,7 +48,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class CVRSegDataProcessor implements ItemProcessor<CVRSegRecord, CompositeSegRecord> {
 
     @Autowired
-    private CVRUtils cvrUtils;
+    private CVRUtilities cvrUtilities;
 
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
@@ -58,7 +57,7 @@ public class CVRSegDataProcessor implements ItemProcessor<CVRSegRecord, Composit
     public CompositeSegRecord process(CVRSegRecord i) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : i.getFieldNames()) {
-            record.add(cvrUtils.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString()));
+            record.add(cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString()));
         }
         CompositeSegRecord compRecord = new CompositeSegRecord();
         if (cvrSampleListUtil.getNewDmpSamples().contains(i.getID())) {

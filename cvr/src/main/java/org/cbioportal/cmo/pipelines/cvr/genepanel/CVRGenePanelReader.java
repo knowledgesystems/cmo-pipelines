@@ -38,10 +38,8 @@ import org.cbioportal.cmo.pipelines.cvr.model.*;
 
 import java.io.*;
 import java.util.*;
-import java.util.logging.Level;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
-import org.cbioportal.cmo.pipelines.util.CVRUtils;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
@@ -62,9 +60,6 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
 
     @Autowired
     public CVRUtilities cvrUtilities;
-
-    @Autowired
-    private CVRUtils cvrUtils;
 
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
@@ -142,7 +137,7 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
     private String[] getGenePanelMatrixHeader(File genePanelMatrixFile) {
         String[] header;
         try {
-            header = cvrUtils.getFileHeader(genePanelMatrixFile);
+            header = cvrUtilities.getFileHeader(genePanelMatrixFile);
             for (String profile : geneticProfiles) {
                 if (!Arrays.asList(header).contains(profile)) {
                     String message = "File '" + genePanelMatrixFile.getName() +

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2019 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -33,6 +33,7 @@
 package org.cbioportal.cmo.pipelines.cvr.mutation;
 
 import org.cbioportal.annotator.*;
+import org.cbioportal.annotator.internal.AnnotationSummaryStatistics;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.models.*;
@@ -46,7 +47,6 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.web.client.HttpServerErrorException;
 
 /**
  *
@@ -59,6 +59,9 @@ public class CVRUnfilteredMutationDataReader implements ItemStreamReader<Annotat
 
     @Value("#{jobParameters[forceAnnotation]}")
     private boolean forceAnnotation;
+
+    @Value("${genomenexus.post_interval_size}")
+    private Integer postIntervalSize;
 
     @Autowired
     public CVRUtilities cvrUtilities;
@@ -74,11 +77,13 @@ public class CVRUnfilteredMutationDataReader implements ItemStreamReader<Annotat
     private Map<String, List<AnnotatedRecord>> mutationMap = new HashMap<>();
     private Set<String> additionalPropertyKeys = new LinkedHashSet<>();
     Set<String> header = new LinkedHashSet<>();
+    private AnnotationSummaryStatistics summaryStatistics;
 
     Logger log = Logger.getLogger(CVRUnfilteredMutationDataReader.class);
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
+        this.summaryStatistics = new AnnotationSummaryStatistics(annotator);
         CVRData cvrData = new CVRData();
         // load cvr data from cvr_data.json file
         File cvrFile = new File(stagingDirectory, CVRUtilities.CVR_FILE);
@@ -110,42 +115,26 @@ public class CVRUnfilteredMutationDataReader implements ItemStreamReader<Annotat
         // add header and filename to write to for writer
         ec.put("mutationHeader", new ArrayList(header));
         ec.put("mafFilename", CVRUtilities.UNFILTERED_MUTATION_FILE);
+        summaryStatistics.printSummaryStatistics();
     }
 
     private void loadMutationRecordsFromJson(CVRData cvrData) {
-        int snpsToAnnotateCount = 0;
-        int annotatedSnpsCount = 0;
-        // this loop is just to get the snpsToAnnotateCount
-        for (CVRMergedResult result : cvrData.getResults()) {
-            snpsToAnnotateCount += result.getAllCvrSnps().size();
-        }
-        log.info(String.valueOf(snpsToAnnotateCount) + " records to annotate");
+        List<MutationRecord> recordsToAnnotate = new ArrayList<>();
         for (CVRMergedResult result : cvrData.getResults()) {
             String sampleId = result.getMetaData().getDmpSampleId();
             int sampleSNPCount = result.getAllCvrSnps().size();
             String somaticStatus = result.getMetaData().getSomaticStatus() != null ? result.getMetaData().getSomaticStatus() : "N/A";
             for (CVRSnp snp : result.getAllCvrSnps()) {
-                annotatedSnpsCount++;
-                if (annotatedSnpsCount % 500 == 0) {
-                    log.info("\tOn record " + String.valueOf(annotatedSnpsCount) + " out of " + String.valueOf(snpsToAnnotateCount) + ", annotation " + String.valueOf((int)(((annotatedSnpsCount * 1.0)/snpsToAnnotateCount) * 100)) + "% complete");
-                }
-                MutationRecord record = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
-                AnnotatedRecord annotatedRecord;
-                try {
-                    annotatedRecord = annotator.annotateRecord(record, true, "mskcc", true);
-                } catch (HttpServerErrorException e) {
-                    log.warn("Failed to annotate a record from json! Sample: " + sampleId + " Variant: " + cvrUtilities.getVariantAsHgvs(record));
-                    annotatedRecord = cvrUtilities.buildCVRAnnotatedRecord(record);
-                } catch (GenomeNexusAnnotationFailureException e) {
-                    log.warn("Failed to annotate a record from json! Sample: " + sampleId + " Variant: " + cvrUtilities.getVariantAsHgvs(record) + " : " + e.getMessage());
-                    annotatedRecord = cvrUtilities.buildCVRAnnotatedRecord(record);
-                }
-                mutationRecords.add(annotatedRecord);
-                header.addAll(annotatedRecord.getHeaderWithAdditionalFields());
-                additionalPropertyKeys.addAll(annotatedRecord.getAdditionalProperties().keySet());
-                mutationMap.getOrDefault(annotatedRecord.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(annotatedRecord);
+                recordsToAnnotate.add(cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus));
             }
             cvrSampleListUtil.updateUnfilteredSampleSnpCount(sampleId, sampleSNPCount);
+        }
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from JSON");
+        try {
+            annotateRecordsWithPOST(recordsToAnnotate);
+        } catch (Exception e) {
+            log.error("Error annotating with POSTs", e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -167,7 +156,7 @@ public class CVRUnfilteredMutationDataReader implements ItemStreamReader<Annotat
             }
         });
         reader.open(new ExecutionContext());
-
+        List<MutationRecord> recordsToAnnotate = new ArrayList<>();
         MutationRecord to_add;
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
             // skip if new sample or if mutation record for sample seen already
@@ -175,24 +164,41 @@ public class CVRUnfilteredMutationDataReader implements ItemStreamReader<Annotat
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
                 continue;
             }
-            AnnotatedRecord to_add_annotated;
-            try {
-                to_add_annotated = annotator.annotateRecord(to_add, true, "mskcc", forceAnnotation);
-            } catch (HttpServerErrorException e) {
-                log.warn("Failed to annotate a record from existing file! Sample: " + to_add.getTUMOR_SAMPLE_BARCODE() + " Variant: " + cvrUtilities.getVariantAsHgvs(to_add));
-                to_add_annotated = cvrUtilities.buildCVRAnnotatedRecord(to_add);
-            } catch (GenomeNexusAnnotationFailureException e) {
-                log.warn("Failed to annotate a record from existing file! Sample: " + to_add.getTUMOR_SAMPLE_BARCODE() + " Variant: " + cvrUtilities.getVariantAsHgvs(to_add) + " : " + e.getMessage());
-                to_add_annotated = cvrUtilities.buildCVRAnnotatedRecord(to_add);
-            }
-            cvrSampleListUtil.updateUnfilteredSampleSnpCount(to_add.getTUMOR_SAMPLE_BARCODE(), 1);
-            mutationRecords.add(to_add_annotated);
-            mutationMap.getOrDefault(to_add_annotated.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(to_add_annotated);
-            header.addAll(to_add_annotated.getHeaderWithAdditionalFields());
-            additionalPropertyKeys.addAll(to_add_annotated.getAdditionalProperties().keySet());
+            cvrSampleListUtil.updateSignedoutSampleSnpCounts(to_add.getTUMOR_SAMPLE_BARCODE(), 1);
+            recordsToAnnotate.add(to_add);
         }
         reader.close();
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
+        annotateRecordsWithPOST(recordsToAnnotate);
     }
+
+    private List<AnnotatedRecord> annotateRecordsWithPOST(List<MutationRecord> records) throws Exception {
+        List<AnnotatedRecord> annotatedRecordsList = new ArrayList<>();
+        List<List<MutationRecord>> partitionedMutationRecordsList = cvrUtilities.partitionMutationRecordsListForPOST(records, postIntervalSize);
+        int totalVariantsToAnnotateCount = records.size();
+        int annotatedVariantsCount = 0;
+        for (List<MutationRecord> partitionedList : partitionedMutationRecordsList) {
+            List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, partitionedList, "mskcc", forceAnnotation);
+            // TODO figure out how to default annotated record to cvrUtilities.buildCVRAnnotatedRecord(record) if any annotation failures occur
+            for (AnnotatedRecord ar : annotatedRecords) {
+                logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
+                mutationRecords.add(ar);
+                mutationMap.getOrDefault(ar.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(ar);
+                additionalPropertyKeys.addAll(ar.getAdditionalProperties().keySet());
+                header.addAll(ar.getHeaderWithAdditionalFields());
+            }
+            annotatedRecordsList.addAll(annotatedRecords);
+        }
+        return annotatedRecordsList;
+    }
+
+    private void logAnnotationProgress(Integer annotatedVariantsCount, Integer totalVariantsToAnnotateCount, Integer intervalSize) {
+        if (annotatedVariantsCount % intervalSize == 0 || Objects.equals(annotatedVariantsCount, totalVariantsToAnnotateCount)) {
+            log.info("\tOn record " + String.valueOf(annotatedVariantsCount) + " out of " + String.valueOf(totalVariantsToAnnotateCount) +
+                    ", annotation " + String.valueOf((int)(((annotatedVariantsCount * 1.0)/totalVariantsToAnnotateCount) * 100)) + "% complete");
+        }
+    }
+
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
     }

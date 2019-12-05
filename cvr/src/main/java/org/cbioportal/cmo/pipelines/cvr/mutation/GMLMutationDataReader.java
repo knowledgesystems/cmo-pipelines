@@ -33,6 +33,7 @@
 package org.cbioportal.cmo.pipelines.cvr.mutation;
 
 import org.cbioportal.annotator.*;
+import org.cbioportal.annotator.internal.AnnotationSummaryStatistics;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.models.*;
@@ -47,7 +48,6 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.web.client.HttpServerErrorException;
 
 /**
  *
@@ -58,14 +58,17 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
 
-    @Autowired
-    public CvrSampleListUtil cvrSampleListUtil;
-
     @Value("#{jobParameters[forceAnnotation]}")
     private boolean forceAnnotation;
 
+    @Value("${genomenexus.post_interval_size}")
+    private Integer postIntervalSize;
+
     @Autowired
     public CVRUtilities cvrUtilities;
+
+    @Autowired
+    public CvrSampleListUtil cvrSampleListUtil;
 
     @Autowired
     private Annotator annotator;
@@ -76,11 +79,13 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
     private Set<String> additionalPropertyKeys = new LinkedHashSet<>();
     private Set<String> header = new LinkedHashSet<>();
     private Set<String> germlineSamples = new HashSet<>();
+    private AnnotationSummaryStatistics summaryStatistics;
 
     Logger log = Logger.getLogger(GMLMutationDataReader.class);
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
+        this.summaryStatistics = new AnnotationSummaryStatistics(annotator);
         GMLData gmlData = new GMLData();
         // load gml cvr data from cvr_gml_data.json file
         File cvrGmlFile =  new File(stagingDirectory, CVRUtilities.GML_FILE);
@@ -112,23 +117,11 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         // add header and filename to write to for writer
         ec.put("mutationHeader", new ArrayList(header));
         ec.put("mafFilename", CVRUtilities.MUTATION_FILE);
+        summaryStatistics.printSummaryStatistics();
     }
 
     private void loadMutationRecordsFromJson(GMLData gmlData) {
-        int snpsToAnnotateCount = 0;
-        int annotatedSnpsCount = 0;
-        // this loop is just to get the snpsToAnnotateCount
-        for (GMLResult result : gmlData.getResults()) {
-            String patientId = result.getMetaData().getDmpPatientId();
-            List<String> samples = cvrSampleListUtil.getGmlPatientSampleMap().get(patientId);
-            List<GMLSnp> snps = result.getAllSignedoutGmlSnps();
-            if (samples != null && snps != null) {
-                for (GMLSnp snp : snps) {
-                    snpsToAnnotateCount += samples.size();
-                }
-            }
-        }
-        log.info(String.valueOf(snpsToAnnotateCount) + " germline records to annotate");
+        List<MutationRecord> recordsToAnnotate = new ArrayList<>();
         for (GMLResult result : gmlData.getResults()) {
             String patientId = result.getMetaData().getDmpPatientId();
             List<String> samples = cvrSampleListUtil.getGmlPatientSampleMap().get(patientId);
@@ -136,30 +129,18 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             if (samples != null && !snps.isEmpty()) {
                 for (GMLSnp snp : snps) {
                     for (String sampleId : samples) {
-                        annotatedSnpsCount++;
-                        if (annotatedSnpsCount % 500 == 0) {
-                            log.info("\tOn record " + String.valueOf(annotatedSnpsCount) + " out of " + String.valueOf(snpsToAnnotateCount) + ", annotation " + String.valueOf((int)(((annotatedSnpsCount * 1.0)/snpsToAnnotateCount) * 100)) + "% complete");
-                        }
-                        MutationRecord record = cvrUtilities.buildGMLMutationRecord(snp, sampleId);
-                        AnnotatedRecord annotatedRecord;
-                        try {
-                            annotatedRecord = annotator.annotateRecord(record, true, "mskcc", true);
-                        }
-                        catch (HttpServerErrorException e) {
-                            log.warn("Failed to annotate a record from json! Sample: " + sampleId + " Variant: " + cvrUtilities.getVariantAsHgvs(record));
-                            annotatedRecord = cvrUtilities.buildCVRAnnotatedRecord(record);
-                        } catch (GenomeNexusAnnotationFailureException e) {
-                            log.warn("Failed to annotate a record from json! Sample: " + sampleId + " Variant: " + cvrUtilities.getVariantAsHgvs(record) + " : " + e.getMessage());
-                            annotatedRecord = cvrUtilities.buildCVRAnnotatedRecord(record);
-                        }
-                        mutationRecords.add(annotatedRecord);
-                        header.addAll(record.getHeaderWithAdditionalFields());
-                        additionalPropertyKeys.addAll(record.getAdditionalProperties().keySet());
-                        mutationMap.getOrDefault(annotatedRecord.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(annotatedRecord);
+                        recordsToAnnotate.add(cvrUtilities.buildGMLMutationRecord(snp, sampleId));
                         germlineSamples.add(sampleId);
                     }
                 }
             }
+        }
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from GML JSON");
+        try {
+            annotateRecordsWithPOST(recordsToAnnotate);
+        } catch (Exception e) {
+            log.error("Error annotating with POSTs", e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -181,6 +162,7 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             }
         });
         reader.open(new ExecutionContext());
+        List<MutationRecord> recordsToAnnotate = new ArrayList<>();
         MutationRecord to_add;
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
             // skip if record already seen or if current record is a germline sample and record is a GERMLINE variant
@@ -188,23 +170,40 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
                     (germlineSamples.contains(to_add.getTUMOR_SAMPLE_BARCODE()) && to_add.getMUTATION_STATUS().equals("GERMLINE"))) {
                 continue;
             }
-            AnnotatedRecord to_add_annotated;
-            try {
-                to_add_annotated = annotator.annotateRecord(to_add, true, "mskcc", forceAnnotation);
-            } catch (HttpServerErrorException e) {
-                log.warn("Failed to annotate a record from existing file! Sample: " + to_add.getTUMOR_SAMPLE_BARCODE() + " Variant: " + cvrUtilities.getVariantAsHgvs(to_add));
-                to_add_annotated = cvrUtilities.buildCVRAnnotatedRecord(to_add);
-            } catch (GenomeNexusAnnotationFailureException e) {
-                log.warn("Failed to annotate a record from existing file! Sample: " + to_add.getTUMOR_SAMPLE_BARCODE() + " Variant: " + cvrUtilities.getVariantAsHgvs(to_add) + " : " + e.getMessage());
-                to_add_annotated = cvrUtilities.buildCVRAnnotatedRecord(to_add);
-            }
-            mutationRecords.add(to_add_annotated);
-            header.addAll(to_add_annotated.getHeaderWithAdditionalFields());
-            additionalPropertyKeys.addAll(to_add_annotated.getAdditionalProperties().keySet());
-            mutationMap.getOrDefault(to_add_annotated.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(to_add_annotated);
+            recordsToAnnotate.add(to_add);
         }
         reader.close();
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
+        annotateRecordsWithPOST(recordsToAnnotate);
     }
+
+    private List<AnnotatedRecord> annotateRecordsWithPOST(List<MutationRecord> records) throws Exception {
+        List<AnnotatedRecord> annotatedRecordsList = new ArrayList<>();
+        List<List<MutationRecord>> partitionedMutationRecordsList = cvrUtilities.partitionMutationRecordsListForPOST(records, postIntervalSize);
+        int totalVariantsToAnnotateCount = records.size();
+        int annotatedVariantsCount = 0;
+        for (List<MutationRecord> partitionedList : partitionedMutationRecordsList) {
+            List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, partitionedList, "mskcc", forceAnnotation);
+            // TODO figure out how to default annotated record to cvrUtilities.buildCVRAnnotatedRecord(record) if any annotation failures occur
+            for (AnnotatedRecord ar : annotatedRecords) {
+                logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
+                mutationRecords.add(ar);
+                mutationMap.getOrDefault(ar.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(ar);
+                additionalPropertyKeys.addAll(ar.getAdditionalProperties().keySet());
+                header.addAll(ar.getHeaderWithAdditionalFields());
+            }
+            annotatedRecordsList.addAll(annotatedRecords);
+        }
+        return annotatedRecordsList;
+    }
+
+    private void logAnnotationProgress(Integer annotatedVariantsCount, Integer totalVariantsToAnnotateCount, Integer intervalSize) {
+        if (annotatedVariantsCount % intervalSize == 0 || Objects.equals(annotatedVariantsCount, totalVariantsToAnnotateCount)) {
+            log.info("\tOn record " + String.valueOf(annotatedVariantsCount) + " out of " + String.valueOf(totalVariantsToAnnotateCount) +
+                    ", annotation " + String.valueOf((int)(((annotatedVariantsCount * 1.0)/totalVariantsToAnnotateCount) * 100)) + "% complete");
+        }
+    }
+
     @Override
     public void update(ExecutionContext ec) throws ItemStreamException {
     }

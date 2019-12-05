@@ -35,8 +35,8 @@ package org.cbioportal.cmo.pipelines.cvr.fusion;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang.StringUtils;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRFusionRecord;
-import org.cbioportal.cmo.pipelines.util.CVRUtils;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,13 +51,13 @@ public class CVRFusionDataProcessor implements ItemProcessor<CVRFusionRecord, St
     private List<String> header;
 
     @Autowired
-    private CVRUtils cvrUtils;
+    private CVRUtilities cvrUtilities;
 
     @Override
     public String process(CVRFusionRecord i) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : header) {
-            record.add(cvrUtils.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString()));
+            record.add(cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString()));
         }
         return StringUtils.join(record, "\t");
     }

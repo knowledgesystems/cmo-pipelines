@@ -34,8 +34,8 @@ package org.cbioportal.cmo.pipelines.cvr.mutation;
 
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.models.AnnotatedRecord;
-import org.cbioportal.cmo.pipelines.util.CVRUtils;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,7 +50,7 @@ public class CVRMutationDataProcessor implements ItemProcessor<AnnotatedRecord, 
     private List<String> header;
 
     @Autowired
-    private CVRUtils cvrUtils;
+    private CVRUtilities cvrUtilities;
 
     private final String REFERENCE_ALLELE_COLUMN = "REFERENCE_ALLELE";
     private final String TUMOR_SEQ_ALLELE1_COLUMN = "TUMOR_SEQ_ALLELE1";
@@ -65,9 +65,9 @@ public class CVRMutationDataProcessor implements ItemProcessor<AnnotatedRecord, 
                 field = REFERENCE_ALLELE_COLUMN;
             }
             try {
-                record.add(cvrUtils.convertWhitespace(i.getClass().getMethod("get" + field.toUpperCase()).invoke(i).toString()));
+                record.add(cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + field.toUpperCase()).invoke(i).toString()));
             } catch (Exception e) {
-                record.add(cvrUtils.convertWhitespace(i.getAdditionalProperties().getOrDefault(field, "")));
+                record.add(cvrUtilities.convertWhitespace(i.getAdditionalProperties().getOrDefault(field, "")));
             }
         }
         return StringUtils.join(record, "\t");

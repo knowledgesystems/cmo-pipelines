@@ -34,10 +34,10 @@ dmp.tokens.retrieve_master_list.archer=archer
 #TODO: dmp.tokens.retrieve_master_list.access=
 
 # genome nexus
-genomenexus.hgvs=http://annotation.genomenexus.org/hgvs/
-genomenexus.xrefs=http://annotation.genomenexus.org/xrefs/
+genomenexus.base=http://annotation.genomenexus.org/
 genomenexus.isoform_query_parameter=isoformOverrideSource
 genomenexus.enrichment_fields=hotspots,mutation_assessor
+genomenexus.post_interval_size=1000
 
 # email properties
 email.server=localhost

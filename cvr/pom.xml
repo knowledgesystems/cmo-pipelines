@@ -65,9 +65,9 @@
     used in the pipelines importer always matches the version used by the Genome
     Nexus annotation pipeline. -->
     <dependency>
-      <groupId>com.github.genome-nexus</groupId>
+      <groupId>com.github.ao508</groupId>
       <artifactId>genome-nexus-annotation-pipeline</artifactId>
-      <version>cc7a0aadb23d83264a2dc0fac0a671c34aa32af7</version>
+      <version>4f0c9246ee898d5314d4fc524606abac123a86e2</version>
     </dependency>
     <dependency>
       <groupId>javax.mail</groupId>
