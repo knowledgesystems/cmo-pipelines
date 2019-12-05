@@ -35,8 +35,7 @@ package org.cbioportal.cmo.pipelines.cvr.linkedimpactcase;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
-import org.cbioportal.cmo.pipelines.cvr.model.*;
-import org.cbioportal.cmo.pipelines.util.CVRUtils;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -47,13 +46,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class LinkedMskimpactCaseProcessor implements ItemProcessor<LinkedMskimpactCaseRecord, String> {
 
     @Autowired
-    private CVRUtils cvrUtils;
+    private CVRUtilities cvrUtilities;
 
     @Override
     public String process(LinkedMskimpactCaseRecord i) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : LinkedMskimpactCaseRecord.getFieldNames()) {
-            String value = cvrUtils.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString());
+            String value = cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString());
             if (value.equals("NA") || value.isEmpty()) {
                 return null;
             }

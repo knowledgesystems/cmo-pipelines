@@ -49,6 +49,9 @@ import org.apache.log4j.Logger;
  */
 
 public class CVRUtilities {
+    private String METADATA_PREFIX = "#";
+    private String DELIMITER = "\t";
+
     // pipeline filenames
     public static final String CVR_FILE = "cvr_data.json";
     public static final String MUTATION_FILE = "data_mutations_extended.txt";
@@ -431,6 +434,50 @@ public class CVRUtilities {
                 record.setAGE_AT_SEQ_REPORT("NA");
             }
         }
+    }
+
+    public String convertWhitespace(String s) {
+        return s.replaceAll("^[\\t|\\n|\\r]+", "").replaceAll("[\\t|\\n|\\r]+$", "").replaceAll("[\\t|\\n|\\r]+", " ");
+    }
+
+    public String[] getFileHeader(File dataFile) throws IOException {
+        String[] columnNames;
+
+        try (FileReader reader = new FileReader(dataFile)) {
+            BufferedReader buff = new BufferedReader(reader);
+            String line = buff.readLine();
+
+            // keep reading until line does not start with meta data prefix
+            while (line.startsWith(METADATA_PREFIX)) {
+                line = buff.readLine();
+            }
+            // extract the maf file header
+            columnNames = splitDataFields(line);
+            reader.close();
+        }
+
+        return columnNames;
+    }
+
+    private String[] splitDataFields(String line) {
+        line = line.replaceAll("^" + METADATA_PREFIX + "+", "");
+        String[] fields = line.split(DELIMITER, -1);
+        return fields;
+    }
+
+    public List<List<MutationRecord>> partitionMutationRecordsListForPOST(List<MutationRecord> mutationRecords, Integer postIntervalSize) {
+        int start = 0;
+        int end = postIntervalSize;
+        List<List<MutationRecord>> mutationRecordPartionedLists = new ArrayList<>();
+        while(end <= mutationRecords.size()) {
+            mutationRecordPartionedLists.add(mutationRecords.subList(start, end));
+            start = end;
+            end = start + postIntervalSize;
+        }
+        if (end > mutationRecords.size()) {
+            mutationRecordPartionedLists.add(mutationRecords.subList(start, mutationRecords.size()));
+        }
+        return mutationRecordPartionedLists;
     }
 
 }

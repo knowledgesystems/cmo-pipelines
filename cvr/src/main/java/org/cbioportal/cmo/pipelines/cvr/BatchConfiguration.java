@@ -56,7 +56,6 @@ import org.cbioportal.cmo.pipelines.cvr.seg.*;
 import org.cbioportal.cmo.pipelines.cvr.sv.*;
 import org.cbioportal.cmo.pipelines.cvr.variants.*;
 import org.cbioportal.cmo.pipelines.cvr.whitelist.ZeroVariantWhitelistTasklet;
-import org.cbioportal.cmo.pipelines.util.CVRUtils;
 import org.cbioportal.models.*;
 
 import java.util.*;
@@ -95,10 +94,6 @@ public class BatchConfiguration {
     private int chunkInterval;
     
     private final Logger log = Logger.getLogger(BatchConfiguration.class);
-    
-    @Bean CVRUtils cvrUtils() {
-        return new CVRUtils();
-    }
 
     @Bean
     public CVRUtilities cvrUtilities() {

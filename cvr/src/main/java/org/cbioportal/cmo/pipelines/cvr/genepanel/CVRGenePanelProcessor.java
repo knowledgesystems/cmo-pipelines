@@ -35,8 +35,7 @@ package org.cbioportal.cmo.pipelines.cvr.genepanel;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRGenePanelRecord;
 import java.util.*;
 import org.apache.commons.lang.StringUtils;
-import org.cbioportal.cmo.pipelines.cvr.model.*;
-import org.cbioportal.cmo.pipelines.util.CVRUtils;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,7 +47,7 @@ import org.springframework.beans.factory.annotation.Value;
 public class CVRGenePanelProcessor implements ItemProcessor<CVRGenePanelRecord, String> {
 
     @Autowired
-    private CVRUtils cvrUtils;
+    private CVRUtilities cvrUtilities;
 
     @Value("#{stepExecutionContext['geneticProfiles']}")
     private List<String> geneticProfiles;
@@ -56,9 +55,9 @@ public class CVRGenePanelProcessor implements ItemProcessor<CVRGenePanelRecord, 
     @Override
     public String process(CVRGenePanelRecord i) throws Exception {
         List<String> record = new ArrayList<>();
-        record.add(cvrUtils.convertWhitespace(i.getSAMPLE_ID()));
+        record.add(cvrUtilities.convertWhitespace(i.getSAMPLE_ID()));
         for (String profile : geneticProfiles) {
-            record.add(cvrUtils.convertWhitespace(i.getPanelMap().get(profile)));
+            record.add(cvrUtilities.convertWhitespace(i.getPanelMap().get(profile)));
         }
         return StringUtils.join(record, "\t");
     }
