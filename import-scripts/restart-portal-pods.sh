@@ -29,7 +29,7 @@ if [ -z $portal_id ] ; then
     exit 1
 fi
 deployment_id=${portal_to_deployment_map[$portal_id]}
-if [ -z $deployment_id ] ; then
+if [ -z "$deployment_id" ] ; then
     echo "invalid portal_id : $portal_id"
     print_portal_id_values
 fi
