@@ -48,7 +48,7 @@ fi
 function sendFailureMessageSlackEmail {
     MESSAGE_BODY=$1
     SUBJECT_MESSAGE=$2
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines recache process status: $MESSAGE_BODY\", \"icon_emoji\": \":fire:\"}" https://hooks.slack.com/services/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
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines recache process status: $MESSAGE_BODY\", \"icon_emoji\": \":fire:\"}" https://hooks.slack.com/services/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
     echo -e "$MESSAGE_BODY" | mail -s "$SUBJECT_MESSAGE" $EMAIL_LIST
 }
 
@@ -56,7 +56,7 @@ function sendFailureMessageSlackEmail {
 function sendSuccessMessageSlackEmail {
     MESSAGE_BODY=$1
     SUBJECT_MESSAGE=$2
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines recache process status: $MESSAGE_BODY\", \"icon_emoji\": \":arrows_counterclockwise:\"}" https://hooks.slack.com/services/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
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines recache process status: $MESSAGE_BODY\", \"icon_emoji\": \":arrows_counterclockwise:\"}" https://hooks.slack.com/services/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
     echo -e "$MESSAGE_BODY" | mail -s "$SUBJECT_MESSAGE" $EMAIL_LIST
 }
 

@@ -24,7 +24,7 @@ fi
 # Function for alerting slack channel of any failures
 function sendRedisRestartNotification {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"redis server monitor script : $MESSAGE\", \"icon_emoji\": \":flushed:\"}" https://hooks.slack.com/services/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
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"redis server monitor script : $MESSAGE\", \"icon_emoji\": \":flushed:\"}" https://hooks.slack.com/services/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
 }
 #" this comment "fixes" the syntax coloring in vi
 
