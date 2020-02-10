@@ -1,10 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
 source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
 
-ONCOKB_ANNOTATION_SUCCESS=1
+# Make sure necessary environment variables are set before running
+if [ -z $PYTHON_BINARY ] || [ -z $GIT_BINARY ] || [ -z $ONCOKB_ANNOTATOR_HOME ] || [ -z $DMP_DATA_HOME ] || [ -z $MSK_SOLID_HEME_DATA_HOME ] || [ -z $ONCOKB_URL ] || [ -z $CANCER_HOTSPOTS_URL ] || [ -z $ONCOKB_TOKEN_FILE ] || [ -z $PORTAL_HOME ] ; then
+    message="Could not run oncokb annotation script: automation-environment.sh script must be run in order to set needed environment variables."
+    send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
+    exit 2
+fi
 
 function send_failure_messages () {
     email_message=$1
@@ -15,12 +20,22 @@ function send_failure_messages () {
     sendPreImportFailureMessageMskPipelineLogsSlack "$slack_message"
 }
 
-# Make sure necessary environment variables are set before running
-if [ -z $PYTHON_BINARY ] | [ -z $GIT_BINARY ] | [ -z $ONCOKB_ANNOTATOR_HOME ] | [ -z $DMP_DATA_HOME ] | [ -z $MSK_SOLID_HEME_DATA_HOME ] | [ -z $ONCOKB_URL ] | [ -z $CANCER_HOTSPOTS_URL ] | [ -z $ONCOKB_TOKEN_FILE ]; then
-    message="Could not run oncokb annotation script: automation-environment.sh script must be run in order to set needed environment variables."
-    send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
-    exit 2
-fi
+function rsync_oncokb_annotated_files () {
+    SOURCE_DIR="/data/portal-cron/cbio-portal-data/dmp/msk_solid_heme/oncokb"
+    TMP_DIR="/data/portal-cron/tmp/rsync_oncokb"
+    INDEX_FILE="$TMP_DIR/index.html"
+    TITLE_STRING="oncokb-annotation-msk-impact"
+    BASE_URL="http://download.cbioportal.org/oncokb-annotated-msk-impact"
+    REMOTE_HOST="ramen.cbio.mskcc.org"
+    REMOTE_DIR="/data/public/oncokb-annotated-msk-impact"
+    RSYNC_TARGET="$REMOTE_HOST:$REMOTE_DIR"
+    RSYNC_IDENTITY_FILE="/home/cbioportal_importer/.ssh/id_rsa_restful_login_counter_key"
+    RSYNC_RSH="--rsh=ssh -i $RSYNC_IDENTITY_FILE"
+    $PORTAL_HOME/scripts/create_web_directory_index_file.sh "$SOURCE_DIR" "$TMP_DIR" "$BASE_URL" "$TITLE_STRING"
+    rsync -a --rsh="ssh -i $RSYNC_IDENTITY_FILE" "$SOURCE_DIR/" "$RSYNC_TARGET"
+    rsync -a --rsh="ssh -i $RSYNC_IDENTITY_FILE" "$INDEX_FILE" "$RSYNC_TARGET"
+    rm -f "$INDEX_FILE"
+}
 
 if [ ! -r $ONCOKB_TOKEN_FILE ]; then
     message="Could not run oncokb annotation script: token file '$ONCOKB_TOKEN_FILE' does not exist or is not readable."
@@ -35,6 +50,8 @@ if [ -z $ONCOKB_TOKEN ]; then
     send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
     exit 2
 fi
+
+ONCOKB_ANNOTATION_SUCCESS=1
 
 # Update DMP repo before running annotations
 fetch_updates_in_data_sources dmp
@@ -149,9 +166,8 @@ if [ $ONCOKB_ANNOTATION_SUCCESS -eq 0 ] ; then
     message="OncoKB Annotation failed for MSKSOLIDHEME. Check logs for more details."
     send_failure_messages "$message" "MSKSOLIDHEME OncoKB Annotation Failure" "MSKSOLIDHEME OncoKB Annotation"
 else
-    echo "committing OncoKB Annotation for MSKSOLIDHEME"
-    cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME OncoKB Annotations"
-    $GIT_BINARY push origin
+    echo "Running rsync to download.cbioportal.org for OncoKB Annotation for MSKSOLIDHEME"
+    rsync_oncokb_annotated_files 
 fi
 
 echo $(date)
