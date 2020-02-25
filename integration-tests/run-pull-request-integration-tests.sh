@@ -20,6 +20,10 @@ CVR_JAR=$CMO_CVR_DIRECTORY/target/cvr_fetcher.jar
 CRDB_JAR=$CMO_CRDB_DIRECTORY/target/crdb_fetcher.jar
 DDP_JAR=$CMO_DDP_DIRECTORY/ddp_pipeline/target/ddp_fetcher.jar
 DARWIN_JAR=$CMO_DARWIN_DIRECTORY/target/darwin_fetcher.jar
+JENKINS_USER_HOME_DIRECTORY=/var/lib/jenkins
+JENKINS_PIPELINES_CREDENTIALS=$JENKINS_USER_HOME_DIRECTORY/pipelines-credentials
+SSL_TRUSTSTORE=$JENKINS_PIPELINES_CREDENTIALS/AwsSsl.truststore
+SSL_TRUSTSTORE_PASSWORD=`cat $JENKINS_PIPELINES_CREDENTIALS/AwsSsl.truststore.password` 
 TEST_SUCCESS=0
 
 mkdir -p $REDCAP_EXPORTS_DIRECTORY $FETCHED_FILES_DIRECTORY $LIB_DIRECTORY
@@ -40,7 +44,7 @@ if [[ -n "$GIT_BRANCH" ]] ; then
     if [[ "$GIT_BRANCH" =~ ^origin/pull/([0-9]+)/head$ ]] ; then
         PR_NUMBER=${BASH_REMATCH[1]}
         echo "getting tags for pull-request $PR_NUMBER"
-        python fetch_and_compare_to_redcap_schema.py -r $REDCAP_EXPORTS_DIRECTORY -f $FETCHED_FILES_DIRECTORY -g /var/lib/jenkins/git-credentials -n $PR_NUMBER -l $LIB_DIRECTORY
+        python fetch_and_compare_to_redcap_schema.py -r $REDCAP_EXPORTS_DIRECTORY -f $FETCHED_FILES_DIRECTORY -g /var/lib/jenkins/git-credentials -n $PR_NUMBER -l $LIB_DIRECTORY -s $SSL_TRUSTSTORE -p $SSL_TRUSTSTORE_PASSWORD
         if [ $? -eq 0 ] ; then
             echo "Data schema matches in data fetch and redcap project"
             TEST_SUCCESS=1

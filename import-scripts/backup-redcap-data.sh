@@ -57,7 +57,7 @@ function validateRedcapExportForStudy {
 # -----------------------------------------------------------------------------------------------------------
 # REDCAP EXPORTS
 REDCAP_JAR_FILENAME="$PORTAL_HOME/lib/redcap_pipeline.jar"
-JAVA_REDCAP_PIPELINE_ARGS="-jar $REDCAP_JAR_FILENAME"
+JAVA_REDCAP_PIPELINE_ARGS="$JAVA_SSL_ARGS -jar $REDCAP_JAR_FILENAME"
 # update mercurial repo with latest changes
 $HG_BINARY pull -u
 

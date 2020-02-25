@@ -6,21 +6,14 @@ if [[ -z $PORTAL_HOME || -z $JAVA_BINARY ]] ; then
     exit 1
 fi
 
-if [[ ! -f $AWS_SSL_TRUSTSTORE || ! -f $AWS_SSL_TRUSTSTORE_PASSWORD_FILE ]] ; then
-    echo "Error: cannot find SSL truststore and/or truststore password file."
-    exit 1
-fi
-
 tmp=$PORTAL_HOME/tmp/import-cron-genie
 if [[ -d "$tmp" && "$tmp" != "/" ]]; then
     rm -rf "$tmp"/*
 fi
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
 now=$(date "+%Y-%m-%d-%H-%M-%S")
-TRUSTSTORE_PASSWORD=`cat $AWS_SSL_TRUSTSTORE_PASSWORD_FILE`
 IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/genie-aws-importer.jar"
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27186"
-JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 genie_portal_notification_file=$(mktemp $tmp/genie-portal-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_2018_06_01

@@ -178,7 +178,7 @@ importer_notification_file=$(mktemp $CRDB_PDX_TMPDIR/importer-update-notificatio
 SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=$IMPORTER_DEBUG_PORT"
 JAVA_CRDB_FETCHER_ARGS="-jar $CRDB_FETCHER_JAR_FILENAME"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CRDB_PDX_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CRDB_PDX_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 SUBSET_AND_MERGE_WARNINGS_FILENAME="subset_and_merge_pdx_studies_warnings.txt"
 # status flags (set to 1 when each stage is successfully completed)
 CRDB_PDX_FETCH_SUCCESS=0

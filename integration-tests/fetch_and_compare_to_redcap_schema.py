@@ -92,12 +92,12 @@ def get_labels_on_pull_request(username, password, pull_request_number):
 
 # exports all required redcap projects that need to be compared
 # looks p project names inside secondary map of exported file name to redcap project
-def export_redcap_projects(fetchers_to_test, fetched_file_to_redcap_file_mappings, redcap_file_to_redcap_project_mappings, redcap_directory, lib):
+def export_redcap_projects(fetchers_to_test, fetched_file_to_redcap_file_mappings, redcap_file_to_redcap_project_mappings, redcap_directory, lib, truststore, truststore_password):
     for fetcher in fetchers_to_test:
         print "testing fetcher: " + fetcher
         for fetched_file, matching_redcap_exports in fetched_file_to_redcap_file_mappings[fetcher].items():
             for redcap_export in matching_redcap_exports:
-                redcap_request = "java -jar " + os.path.join(lib, "redcap_pipeline.jar") + " -e -r -p " + redcap_file_to_redcap_project_mappings[redcap_export] + " -d " + redcap_directory
+                redcap_request = "java -Djavax.net.ssl.trustStore=" + truststore + "  -Djavax.net.ssl.trustStorePassword=" + truststore_password + " -jar " + os.path.join(lib, "redcap_pipeline.jar") + " -e -r -p " + redcap_file_to_redcap_project_mappings[redcap_export] + " -d " + redcap_directory
                 redcap_status = subprocess.call(redcap_request, shell = True)
                 if redcap_status > 0:
                     print "Redcap request: '" + redcap_request + "' returned a non-zero exit status"
@@ -111,8 +111,8 @@ def crdb_fetch(lib, fetch_directory):
 def darwin_fetch(lib, fetch_directory):
     return "java -jar " + os.path.join(lib, "darwin_fetcher.jar") + " -d " + fetch_directory + " -s mskimpact_heme -c 0"
 
-def cvr_fetch(lib, fetch_directory):
-    redcap_request = "java -jar " + os.path.join(lib, "redcap_pipeline.jar") + " -e -r -p hemepact_data_clinical -d " + fetch_directory
+def cvr_fetch(lib, fetch_directory, truststore, truststore_password):
+    redcap_request = "java -Djavax.net.ssl.trustStore=" + truststore + "  -Djavax.net.ssl.trustStorePassword=" + truststore_password + " -jar " + os.path.join(lib, "redcap_pipeline.jar") + " -e -r -p hemepact_data_clinical -d " + fetch_directory
     redcap_status = subprocess.call(redcap_request, shell = True)
     if redcap_status > 0:
         print "Redcap request: '" + redcap_request + "' returned a non-zero exit status"
@@ -134,7 +134,7 @@ def ddp_pediatrics_fetch(lib, fetch_directory):
     return "java -Dddp.clinical_filename=data_clinical_ddp_pediatrics.txt -Demail.subject=\"[TEST] DDP Pipeline errors\" -jar " + os.path.join(lib, "ddp_fetcher.jar") + " -f survival,diagnosis,radiation,chemotherapy,surgery -o " + fetch_directory + " -p " + os.path.join(fetch_directory, "test_patient_list.txt")
 
 # dictionary/switch-like function that calls fetch-function based on which fetchers are included in github tags
-def fetch_data_source_files(fetchers_to_test, fetch_directory, lib):
+def fetch_data_source_files(fetchers_to_test, fetch_directory, lib, truststore, truststore_password):
     datasource_fetches = {
         "crdb_fetcher" : [crdb_fetch],
         "cvr_fetcher" : [cvr_fetch],
@@ -142,7 +142,7 @@ def fetch_data_source_files(fetchers_to_test, fetch_directory, lib):
         "ddp_fetcher" : [ddp_fetch, ddp_pediatrics_fetch]
     }
     for fetcher in fetchers_to_test:
-        fetcher_commands = [fetcher_command(lib, fetch_directory) for fetcher_command in datasource_fetches.get(fetcher, lambda: "Invalid fetcher key: " + fetcher)]
+        fetcher_commands = [fetcher_command(lib, fetch_directory, truststore, truststore_password) if fetcher == "cvr_fetcher" else fetcher_command(lib, fetch_directory) for fetcher_command in datasource_fetches.get(fetcher, lambda: "Invalid fetcher key: " + fetcher)]
         for fetcher_command in fetcher_commands:
             print "calling: " +  fetcher_command
             fetcher_status = subprocess.call(fetcher_command, shell = True)
@@ -183,6 +183,8 @@ def main():
     parser.add_argument("-l", "--lib", help = "Path to directory where built jars were saved", required = True)
     parser.add_argument("-n", "--number", help = "PR number", required = True)
     parser.add_argument("-r", "--redcap-directory", help = "Path to directory where exported redcap projects were saved", required = True)
+    parser.add_argument("-s", "--truststore", help = "Keystore with SSL certs", required = True)
+    parser.add_argument("-p", "--truststore-password", help = "password for truststore", required = True)
     args = parser.parse_args()
 
     credentials_file = args.credentials_file
@@ -190,6 +192,8 @@ def main():
     lib = args.lib
     pull_request_number = str(args.number)
     redcap_directory = args.redcap_directory
+    truststore = args.truststore
+    truststore_password = args.truststore_password
 
     # initialize fetched file to redcap exported file mappings for testing
     # which fetcher test to run will be determined by returned tags
@@ -207,8 +211,8 @@ def main():
         fetchers_to_test = LABEL_TO_TEST_MAPPING.values()
     # run tests if no skip-integration-tests label on PR
     if len(fetchers_to_test) > 0 and SKIP_INTEGRATION_TESTS_LABEL not in pull_request_labels:
-        export_redcap_projects(fetchers_to_test, fetched_file_to_redcap_file_mappings, redcap_file_to_redcap_project_mappings, redcap_directory, lib)
-        fetch_data_source_files(fetchers_to_test, fetch_directory, lib)
+        export_redcap_projects(fetchers_to_test, fetched_file_to_redcap_file_mappings, redcap_file_to_redcap_project_mappings, redcap_directory, lib, truststore, truststore_password)
+        fetch_data_source_files(fetchers_to_test, fetch_directory, lib, truststore, truststore_password)
         verify_data_schema(fetchers_to_test, fetched_file_to_redcap_file_mappings)
     print "Test passed successfuly for all tagged fetchers"
     sys.exit(0)

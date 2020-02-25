@@ -15,6 +15,8 @@ CMO_REDCAP_DIRECTORY=$CMO_PIPELINES_DIRECTORY/redcap
 CMO_INTEGRATION_TESTS_DIRECTORY=$CMO_PIPELINES_DIRECTORY/integration-tests
 REDCAP_JAR=$CMO_REDCAP_DIRECTORY/redcap_pipeline/target/redcap_pipeline.jar
 SLACK_PIPELINES_MONITOR_URL=`cat $JENKINS_PIPELINES_CREDENTIALS/slack.url`
+SSL_TRUSTSTORE=$JENKINS_PIPELINES_CREDENTIALS/AwsSsl.truststore
+SSL_TRUSTSTORE_PASSWORD=`cat $JENKINS_PIPELINES_CREDENTIALS/AwsSsl.truststore.password` 
 TEST_SUCCESS=0
 
 # Function for alerting slack channel of any failures
@@ -31,7 +33,8 @@ echo "Building jars and copying into lib directory"
 cd $CMO_REDCAP_DIRECTORY ; mvn install -DskipTests=true; mv $REDCAP_JAR $LIB_DIRECTORY
 
 cd $CMO_INTEGRATION_TESTS_DIRECTORY
-python scan-for-expected-redcap-projects.py -e expected_study_project_list.txt -t $REDCAP_EXPORTS_DIRECTORY -j $LIB_DIRECTORY/redcap_pipeline.jar
+python scan-for-expected-redcap-projects.py -e expected_study_project_list.txt -t $REDCAP_EXPORTS_DIRECTORY -j $LIB_DIRECTORY/redcap_pipeline.jar -s $SSL_TRUSTSTORE -p $SSL_TRUSTSTORE_PASSWORD
+
 if [ $? -gt 0 ] ; then
     echo "Test failed - ID mappings project in redcap differs from expected"
     sendFailureMessageMskPipelineLogsSlack

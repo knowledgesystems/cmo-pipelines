@@ -39,6 +39,11 @@ export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSs
 export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
 
 #######################
+# SSL args (for AWS + redcap)
+#######################
+export JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net.ssl.trustStorePassword=`cat $AWS_SSL_TRUSTSTORE_PASSWORD_FILE`"
+
+#######################
 # environment variables for configuration / properties files
 #######################
 export PORTAL_CONFIG_HOME=$PORTAL_DATA_HOME/portal-configuration
