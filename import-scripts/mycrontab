@@ -24,7 +24,7 @@ MAILTO=cbioportal-pipelines@cbio.mskcc.org
 # make sure we can execute all scripts, execute daily at midnight
 55 23 * * * chmod u+x /data/portal-cron/scripts/*.sh /data/portal-cron/scripts/*.py || echo "Failure in crontab: chmod exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
 # delete slow terminating pods
-* * * * * . /data/portal-cron/scripts/delete_slow_to_terminate_pods_test.sh >> /data/portal-cron/logs/delete_slow_to_terminate_pods.log 2>&1 || echo "Failure in crontab: delete_slow_to_terminate_pods.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+* * * * * . /data/portal-cron/scripts/delete_slow_to_terminate_pods.sh >> /data/portal-cron/logs/delete_slow_to_terminate_pods.log 2>&1 || echo "Failure in crontab: delete_slow_to_terminate_pods.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
 # REDCap Cron Job (runs every minute)
 * * * * * /usr/bin/php /srv/www/html/redcap/cron.php > /dev/null 2>/dev/null
 # CDD cache is scheduled to reset at 12:15, 12:30, and 12:45 - if all fail, by 1pm the cache would be null and the site will return a 503 error.
