@@ -520,51 +520,55 @@ fi
 if [ $IMPORT_STATUS_IMPACT -eq 0 ] && [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
     addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
     cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Case Lists"
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     if [ $EXPORT_SUPP_DATE_IMPACT_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_IMPACT_DATA_HOME "data_clinical_mskimpact_data_clinical_cvr.txt" "data_clinical_mskimpact_supp_date_cbioportal_added.txt"
+        cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add data_clinical_mskimpact_supp_date_cbioportal_added.txt ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: SUPP DATE ADDED"
     fi
+    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
 
 # add "DATE ADDED" info to clinical data for HEMEPACT
 if [ $IMPORT_STATUS_HEME -eq 0 ] && [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
     addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
     cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: Case Lists"
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     if [ $EXPORT_SUPP_DATE_HEME_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_HEMEPACT_DATA_HOME "data_clinical_hemepact_data_clinical.txt" "data_clinical_hemepact_data_clinical_supp_date.txt"
+        cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add data_clinical_hemepact_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: SUPP DATE ADDED"
     fi
+    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
 
 # add "DATE ADDED" info to clinical data for ARCHER
 if [[ $IMPORT_STATUS_ARCHER -eq 0 && $FETCH_CVR_ARCHER_FAIL -eq 0 ]] ; then
     addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher" "data_clinical_mskarcher_data_clinical.txt"
     cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Case Lists"
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     if [ $EXPORT_SUPP_DATE_ARCHER_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_ARCHER_UNFILTERED_DATA_HOME "data_clinical_mskarcher_data_clinical.txt" "data_clinical_mskarcher_data_clinical_supp_date.txt"
+        cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add data_clinical_mskarcher_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: SUPP DATE ADDED"
     fi
-
+    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
 
 # generate case lists by cancer type and add "DATE ADDED" info to clinical data for RAINDANCE
 if [ $IMPORT_STATUS_RAINDANCE -eq 0 ] && [ $FETCH_CVR_RAINDANCE_FAIL -eq 0 ] ; then
     addCancerTypeCaseLists $MSK_RAINDANCE_DATA_HOME "mskraindance" "data_clinical_mskraindance_data_clinical.txt"
     cd $MSK_RAINDANCE_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest RAINDANCE Dataset: Case Lists"
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     if [ $EXPORT_SUPP_DATE_RAINDANCE_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_RAINDANCE_DATA_HOME "data_clinical_mskraindance_data_clinical.txt" "data_clinical_mskraindance_data_clinical_supp_date.txt"
+        cd $MSK_RAINDANCE_DATA_HOME ; $GIT_BINARY add data_clinical_mskraindance_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest RAINDANCE Dataset: SUPP DATE ADDED"
     fi
+    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
 
 # generate case lists by cancer type and add "DATE ADDED" info to clinical data for ACCESS
 if [ $IMPORT_STATUS_ACCESS -eq 0 ] && [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
     addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_mskaccess_data_clinical.txt"
     cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ACCESS Dataset: Case Lists"
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     if [ $EXPORT_SUPP_DATE_ACCESS_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_ACCESS_DATA_HOME "data_clinical_mskaccess_data_clinical.txt" "data_clinical_mskaccess_data_clinical_supp_date.txt"
+        cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add data_clinical_mskaccess_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ACCESS Dataset: SUPP DATE ADDED"
     fi
+    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
 
 # -----------------------------------------------------------------------------------------------------------
