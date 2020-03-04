@@ -1,6 +1,5 @@
 spring.batch.job.enabled=false
 
-tmpdir=
 chunk=
 
 # dmp
