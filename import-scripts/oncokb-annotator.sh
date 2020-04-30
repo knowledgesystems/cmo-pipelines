@@ -30,7 +30,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     function git_clone_is_up_to_date () {
         clone_dir=$1
         git -C "$clone_dir" fetch
-        diff_output=$(git -C "$clone_dir" origin/master | head -n 1)
+        diff_output=$(git -C "$clone_dir" diff origin/master | head -n 1)
         if [ -z "$diff_output" ] ; then
             return 0
         fi
