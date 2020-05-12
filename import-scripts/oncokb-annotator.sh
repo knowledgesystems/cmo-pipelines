@@ -11,13 +11,6 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
 
     source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
 
-    # Make sure necessary environment variables are set before running
-    if [ -z $PYTHON_BINARY ] || [ -z $GIT_BINARY ] || [ -z $ONCOKB_ANNOTATOR_HOME ] || [ -z $DMP_DATA_HOME ] || [ -z $MSK_SOLID_HEME_DATA_HOME ] || [ -z $ONCOKB_URL ] || [ -z $CANCER_HOTSPOTS_URL ] || [ -z $ONCOKB_TOKEN_FILE ] || [ -z $PORTAL_HOME ] ; then
-        message="Could not run oncokb annotation script: automation-environment.sh script must be run in order to set needed environment variables."
-        send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
-        exit 2
-    fi
-
     function send_failure_messages () {
         email_message=$1
         email_subject=$2
@@ -35,6 +28,14 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
             return 0
         fi
         return 1
+    }
+
+    function gzip_oncokb_annotated_files () {
+        if ! gzip -7 --force $ONCOKB_OUT_DIR/data*.txt ; then
+            message="Error during attempt to gzip $ONCOKB_OUT_DIR data files"
+            send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
+            exit 1
+        fi
     }
 
     function rsync_oncokb_annotated_files () {
@@ -112,6 +113,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     SOURCE_MAF_FILE="$MSK_SOLID_HEME_DATA_HOME/data_mutations_extended.txt"
     STAGING_MAF_FILE="$STAGING_DIR/data_mutations_extended.txt"
     ONCOKB_MAF_FILE="$ONCOKB_OUT_DIR/data_mutations_extended.oncokb.txt"
+    ONCOKB_MAF_FILE_ZIPPED="${ONCOKB_MAF_FILE}.gz"
     ONCOKB_PREVIOUS_MAF_FILE="$ONCOKB_OUT_DIR/data_mutations_extended.oncokb.previous.txt"
     ONCOKB_SOMATIC_MAF_FILE="$ONCOKB_OUT_DIR/data_mutations_extended_somatic.oncokb.txt"
 
@@ -128,6 +130,13 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     ONCOKB_SOMATIC_PDF_FILE="$ONCOKB_OUT_DIR/data_clinical_sample_somatic.oncokb.pdf"
 
     ONCOKB_README_FILE="$ONCOKB_OUT_DIR/README"
+
+    # Make sure necessary environment variables are set before running
+    if [ -z $PYTHON_BINARY ] || [ -z $GIT_BINARY ] || [ -z $ONCOKB_ANNOTATOR_HOME ] || [ -z $DMP_DATA_HOME ] || [ -z $MSK_SOLID_HEME_DATA_HOME ] || [ -z $ONCOKB_URL ] || [ -z $CANCER_HOTSPOTS_URL ] || [ -z $ONCOKB_TOKEN_FILE ] || [ -z $PORTAL_HOME ] ; then
+        message="Could not run oncokb annotation script: automation-environment.sh script must be run in order to set needed environment variables."
+        send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
+        exit 2
+    fi
 
     REANNOTATE_MUTATIONS="false"
     # parse input arguments
@@ -194,9 +203,14 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
         echo "Beginning MAF annotation..."
         # if an oncokb annotated maf already exists then create a copy that can be used to speed up the annotation process
         PREVIOUS_ANNOTATED_MAF_ARGS=""
-        if [ $REANNOTATE_MUTATIONS == "true" ] && [ -f "$ONCOKB_MAF_FILE" ] ; then
-            mv $ONCOKB_MAF_FILE $ONCOKB_PREVIOUS_MAF_FILE
-            PREVIOUS_ANNOTATED_MAF_ARGS="-p $ONCOKB_PREVIOUS_MAF_FILE"
+        if [ $REANNOTATE_MUTATIONS == "false" ] && [ -f "$ONCOKB_MAF_FILE_ZIPPED" ] ; then
+            echo "Unzipping previously annotated MAF..."
+            if gunzip --force "$ONCOKB_MAF_FILE_ZIPPED" ; then
+                mv $ONCOKB_MAF_FILE $ONCOKB_PREVIOUS_MAF_FILE
+                PREVIOUS_ANNOTATED_MAF_ARGS="-p $ONCOKB_PREVIOUS_MAF_FILE"
+            else
+                echo "WARNING : unable to unzip previously oncokb annotated maf ... reannotating all records"
+            fi
         fi
 
         $PYTHON_BINARY $MAF_ANNOTATOR_SCRIPT -b $ONCOKB_TOKEN -i $STAGING_MAF_FILE -o $ONCOKB_MAF_FILE -c $STAGING_SAMPLE_FILE -u $ONCOKB_URL -v $CANCER_HOTSPOTS_URL $PREVIOUS_ANNOTATED_MAF_ARGS
@@ -292,6 +306,9 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
 
     # Only commit if all steps succeeded
     if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
+        echo $(date)
+        echo "Gzipping data files for OncoKB Annotation for MSKSOLIDHEME"
+        gzip_oncokb_annotated_files
         echo $(date)
         echo "Running rsync to download.cbioportal.org for OncoKB Annotation for MSKSOLIDHEME"
         rsync_oncokb_annotated_files
