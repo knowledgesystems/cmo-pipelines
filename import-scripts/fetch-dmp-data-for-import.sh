@@ -419,7 +419,7 @@ if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
     # fetch new/updated archer samples using CVR Web service (must come after git fetching).
     printTimeStampedDataProcessingStepMessage "CVR fetch for archer"
     # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b $CVR_TEST_MODE_ARGS
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR Archer fetch failed!"
         echo "This will not affect importing of mskimpact"
@@ -468,7 +468,7 @@ if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
     # fetch new/updated access samples using CVR Web service (must come after git fetching).
     printTimeStampedDataProcessingStepMessage "CVR fetch for access"
     # access has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b $CVR_TEST_MODE_ARGS
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS
     if [ $? -gt 0 ] ; then
         echo "CVR ACCESS fetch failed!"
         echo "This will not affect importing of mskimpact"
