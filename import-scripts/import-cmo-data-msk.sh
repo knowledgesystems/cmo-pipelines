@@ -18,7 +18,7 @@ JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.pr
 msk_automation_notification_file=$(mktemp $tmp/msk-automation-portal-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 CANCERSTUDIESLOGFILENAME="$PORTAL_HOME/logs/update-studies-dashi-gdac.log"
-DATA_SOURCES_TO_BE_FETCHED="bic-mskcc private impact datahub_shahlab msk-extract-datahub"
+DATA_SOURCES_TO_BE_FETCHED="bic-mskcc private impact datahub_shahlab msk-mind-datahub"
 unset failed_data_source_fetches
 declare -a failed_data_source_fetches
 
@@ -81,7 +81,7 @@ if [ $DB_VERSION_FAIL -gt 0 ]; then
 fi
 
 echo "Cleaning up any untracked files from MSK-CMO import..."
-bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-extract
+bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind
 
 $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
 
