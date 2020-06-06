@@ -67,7 +67,7 @@
     <dependency>
       <groupId>com.github.genome-nexus</groupId>
       <artifactId>genome-nexus-annotation-pipeline</artifactId>
-      <version>ccdd60daa4dec62704e40d59a2b47184c8f5cbde</version>
+      <version>bc0c632c74f3f41789d4f0a878afa3c3ad7dbb5c</version>
     </dependency>
     <dependency>
       <groupId>javax.mail</groupId>
