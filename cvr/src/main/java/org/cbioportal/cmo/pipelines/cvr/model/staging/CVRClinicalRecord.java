@@ -80,7 +80,7 @@ public class CVRClinicalRecord {
         this.sampleId = metaData.getDmpSampleId();
         this.patientId = metaData.getDmpPatientId();
         this.cancerType = metaData.getTumorTypeName();
-        this.sampleType = this.resolveSampleType(metaData.getIsMetastasis());
+        this.sampleType = resolveSampleType(metaData.getIsMetastasis());
         this.sampleClass = (studyId.equals("mskaccess")) ? MSKACCESS_SAMPLE_CLASS : DEFAULT_SAMPLE_CLASS;
         this.metastaticSite = metaData.getMetastasisSite();
         this.primarySite = metaData.getPrimarySite();
@@ -321,14 +321,14 @@ public class CVRClinicalRecord {
     public void setAGE_AT_SEQ_REPORT(String ageAtSeqReport) {
         this.ageAtSeqReport = ageAtSeqReport;
     }
-    
+
     public String getARCHER() {
         return archer != null ? archer : "NO";
     }
 
     public void setARCHER(String archer) {
         this.archer = archer;
-    }    
+    }
 
     public String getCVR_TMB_COHORT_PERCENTILE() {
         return cvrTmbCohortPercentile;
@@ -370,11 +370,22 @@ public class CVRClinicalRecord {
         this.mskSlideID = mskSlideID;
     }
 
-    private String resolveSampleType(Integer isMetastasis) {
-        if (isMetastasis != null)
-            return isMetastasis == 0 ? "Primary" : "Metastasis";
+    public String resolveSampleType(Integer isMetastasis) {
+        if (isMetastasis != null) {
+            switch(isMetastasis) {
+                case 0:
+                    return "Primary";
+                case 1:
+                    return "Metastasis";
+                case 2:
+                    return "Local Recurrence";
+                case 127:
+                    return "Unknown";
+                default:
+                    return "";
+            }
+        }
         return "";
-
     }
 
     private boolean wholeSlideViewerIdIsValid(String wholeSlideViewerId) {
@@ -413,7 +424,7 @@ public class CVRClinicalRecord {
         fieldNames.add("MSK_SLIDE_ID");
         return fieldNames;
     }
-    
+
     public static List<String> getSeqDateFieldNames() {
         List<String> fieldNames = new ArrayList<String>();
         fieldNames.add("SAMPLE_ID");
