@@ -104,6 +104,9 @@ ERROR_EMAIL_BODY_GENIE = "Thank you for your interest in the AACR Project GENIE 
 ERROR_EMAIL_SUBJECT_CMO = "cBioPortal User Registration - Failed to register"
 ERROR_EMAIL_BODY_CMO = "Thank you for your interest in the cBioPortal. There was a problem creating an account for you. Please check that you have a valid email account and try to register again. If the problem persists please send an email to " + MESSAGE_FROM_CMO +"."
 
+# hacks for genie-archive special case
+GENIE_ARCHIVE_DB_NAME = genie_archive
+GENIE_ARCHIVE_APP_NAME = genie-archive
 # ------------------------------------------------------------------------------
 # class definitions
 
@@ -626,11 +629,16 @@ def main():
             worksheet_feed = get_worksheet_feed(client, google_spreadsheet,
                                                 portal_properties.google_worksheet)
 
+            app_name = GENIE_ARCHIVE_APP_NAME if portal_properties.cgds_database_name == GENIE_ARCHIVE_DB_NAME else portal_name_map[google_spreadsheet]
             # the 'guts' of the script
-            new_user_map, emails_to_remove = manage_users(client, google_spreadsheet, cursor, worksheet_feed, portal_name_map[google_spreadsheet], mskcc_user_spreadsheet)
+            # special case genie-archive because
+            # original script depended on one to one mapping of spreadsheet to app name - and lookup was by spreadsheet
+            # with genie-archive we want to do one to many mapping (one spreadsheet to multiple apps)
+            # to fit this logic would have to rework how we specify properties or introduce new column (db name) as index but might have other effects
+            new_user_map, emails_to_remove = manage_users(client, google_spreadsheet, cursor, worksheet_feed, app_name, mskcc_user_spreadsheet)
 
             # update user authorities
-            update_user_authorities(google_spreadsheet, cursor, worksheet_feed, portal_name_map[google_spreadsheet], mskcc_user_spreadsheet)
+            update_user_authorities(google_spreadsheet, cursor, worksheet_feed, app_name, mskcc_user_spreadsheet)
 
             # sending emails
             if new_user_map is not None:
