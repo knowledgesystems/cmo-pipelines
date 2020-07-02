@@ -108,24 +108,24 @@ public class CalculateAgeAtSeqReportForPatientTest {
         int failCount = 0;
 
         for (MskimpactAge mskimpactAgeRecord : mskimpactAgeRecords) {
-            cvrUtilities.calculateAgeAtSeqReportForPatient(referenceCalculationDate,
+            cvrUtilities.calculateAgeAtSeqReportedYearsForPatient(referenceCalculationDate,
                     cvrPatientToRecordMap.get(mskimpactAgeRecord.getPATIENT_ID()), mskimpactAgeRecord.getAGE());
             for (CVRClinicalRecord cvrClinicalRecord : cvrPatientToRecordMap.get(mskimpactAgeRecord.getPATIENT_ID())) {
-                if (cvrClinicalRecord.getAGE_AT_SEQ_REPORT() == null) {
+                if (cvrClinicalRecord.getAGE_AT_SEQ_REPORTED_YEARS() == null) {
                     failCount += 1;
-                    errorMessage.append("testAgeAtSeqReportByFileCreationDate(),  AGE_SEQ_REPORT is null for record '")
+                    errorMessage.append("testAgeAtSeqReportByFileCreationDate(),  AGE_SEQ_REPORTED_YEARS is null for record '")
                             .append(cvrClinicalRecord.getSAMPLE_ID())
                             .append("' + \n");
                     continue;
                 }
-                if (!cvrClinicalRecord.getAGE_AT_SEQ_REPORT().equals(expectedValues.get(cvrClinicalRecord.getSAMPLE_ID()))) {
+                if (!cvrClinicalRecord.getAGE_AT_SEQ_REPORTED_YEARS().equals(expectedValues.get(cvrClinicalRecord.getSAMPLE_ID()))) {
                     failCount += 1;
-                    errorMessage.append("testAgeAtSeqReportByFileCreationDate(),  AGE_SEQ_REPORT value mismatch for record '")
+                    errorMessage.append("testAgeAtSeqReportByFileCreationDate(),  AGE_SEQ_REPORTED_YEARS value mismatch for record '")
                             .append(cvrClinicalRecord.getSAMPLE_ID())
                             .append("'. Expected '")
                             .append(expectedValues.get(cvrClinicalRecord.getSAMPLE_ID()))
                             .append("' and got '")
-                            .append(cvrClinicalRecord.getAGE_AT_SEQ_REPORT())
+                            .append(cvrClinicalRecord.getAGE_AT_SEQ_REPORTED_YEARS())
                             .append("' \n");
                 }
             }

@@ -65,7 +65,7 @@ public class CVRClinicalRecord {
     private String institute;
     private String somaticStatus;
     private String seqDate;
-    private String ageAtSeqReport;
+    private String ageAtSeqReportedYears;
     private String archer;
     private String cvrTmbCohortPercentile;
     private String cvrTmbScore;
@@ -99,7 +99,7 @@ public class CVRClinicalRecord {
         this.institute = metaData.getOutsideInstitute();
         this.somaticStatus = metaData.getSomaticStatus();
         this.seqDate = metaData.getDateTumorSequencing();
-        this.ageAtSeqReport = "NA";
+        this.ageAtSeqReportedYears = "NA";
         this.archer = "NO";
         this.cvrTmbCohortPercentile = (metaData.getTmbCohortPercentile()!= null) ? String.valueOf(metaData.getTmbCohortPercentile()) : "NA";
         this.cvrTmbScore = (metaData.getTmbScore()!= null) ? String.valueOf(metaData.getTmbScore()) : "NA";
@@ -314,12 +314,12 @@ public class CVRClinicalRecord {
         this.seqDate = seqDate;
     }
 
-    public String getAGE_AT_SEQ_REPORT() {
-        return ageAtSeqReport != null ? ageAtSeqReport : "NA";
+    public String getAGE_AT_SEQ_REPORTED_YEARS() {
+        return ageAtSeqReportedYears != null ? ageAtSeqReportedYears : "NA";
     }
 
-    public void setAGE_AT_SEQ_REPORT(String ageAtSeqReport) {
-        this.ageAtSeqReport = ageAtSeqReport;
+    public void setAGE_AT_SEQ_REPORTED_YEARS(String ageAtSeqReportedYears) {
+        this.ageAtSeqReportedYears = ageAtSeqReportedYears;
     }
 
     public String getARCHER() {
@@ -415,7 +415,7 @@ public class CVRClinicalRecord {
         fieldNames.add("MSI_TYPE");
         fieldNames.add("INSTITUTE");
         fieldNames.add("SOMATIC_STATUS");
-        fieldNames.add("AGE_AT_SEQ_REPORT");
+        fieldNames.add("AGE_AT_SEQ_REPORTED_YEARS");
         fieldNames.add("ARCHER");
         fieldNames.add("CVR_TMB_COHORT_PERCENTILE");
         fieldNames.add("CVR_TMB_SCORE");

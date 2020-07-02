@@ -217,7 +217,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             MskimpactAge mskimpactAge;
             while ((mskimpactAge = reader.read()) != null) {
                 if (patientToRecordMap.keySet().contains(mskimpactAge.getPATIENT_ID())) {
-                    cvrUtilities.calculateAgeAtSeqReportForPatient(fileCreationDate,
+                    cvrUtilities.calculateAgeAtSeqReportedYearsForPatient(fileCreationDate,
                             patientToRecordMap.get(mskimpactAge.getPATIENT_ID()), mskimpactAge.getAGE());
                 }
             }

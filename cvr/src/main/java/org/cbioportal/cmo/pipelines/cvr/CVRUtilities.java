@@ -414,7 +414,7 @@ public class CVRUtilities {
      * @param patientAge
      * @throws ParseException
      */
-    public void calculateAgeAtSeqReportForPatient(Date referenceCalculationDate, List<CVRClinicalRecord> records, String patientAge) throws ParseException {
+    public void calculateAgeAtSeqReportedYearsForPatient(Date referenceCalculationDate, List<CVRClinicalRecord> records, String patientAge) throws ParseException {
         for (CVRClinicalRecord record : records) {
             if (record.getSEQ_DATE() != null && !record.getSEQ_DATE().isEmpty() && !record.getSEQ_DATE().equals("NA")) {
                 Date cvrDateSequenced = CVR_DATE_FORMAT.parse(record.getSEQ_DATE());
@@ -425,13 +425,13 @@ public class CVRUtilities {
                 Double diffYears = (referenceCalculationDate.getTime() - cvrDateSequenced.getTime()) / 1000L / 60L / 60L / 24L / 365.2422;
                 Double ageAtSeqReport = Math.ceil(Integer.parseInt(patientAge) - diffYears);
                 if (ageAtSeqReport > 90) {
-                    record.setAGE_AT_SEQ_REPORT(">90");
+                    record.setAGE_AT_SEQ_REPORTED_YEARS(">90");
                 } else {
-                    record.setAGE_AT_SEQ_REPORT(String.valueOf(ageAtSeqReport.intValue()));
+                    record.setAGE_AT_SEQ_REPORTED_YEARS(String.valueOf(ageAtSeqReport.intValue()));
                 }
             }
             else {
-                record.setAGE_AT_SEQ_REPORT("NA");
+                record.setAGE_AT_SEQ_REPORTED_YEARS("NA");
             }
         }
     }
