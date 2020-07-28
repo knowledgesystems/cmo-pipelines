@@ -63,8 +63,8 @@ def get_cbio_url(deployment):
     return "http://www.cbioportal.org" if deployment == "cbioportal-backend-master" else "http://www.%s.cbioportal.org" % (DEPLOYMENT_TO_URL_MAP[deployment])
 
 # get DAT for submitting requests for private portal
-def get_authorization_header(deployment):
-    if deployment not in PROTECTED_PORTALS:
+def get_authorization_header(deployments):
+    if all([deployment not in PROTECTED_PORTAL for deployment in deployments]):
         return None 
     if "DATA_ACCESS_TOKEN" not in os.environ:
         print "No value set for environment variable DATA_ACCESS_TOKEN. Unable to submit requests, exiting..."
@@ -113,7 +113,7 @@ def main():
         print "Invalid deployments supplied, exiting..."
         sys.exit(1)
 
-    authorization_header = get_authorization_header(deployment)
+    authorization_header = get_authorization_header(deployments)
     # run check and precache for every cbio deployment (e.g genie, genie-private,...)
     for deployment in deployments:
         cbio_url = get_cbio_url(deployment) 
