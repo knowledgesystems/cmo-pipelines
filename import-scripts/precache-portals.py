@@ -133,7 +133,7 @@ def main():
             # wait until pod has started up...
             # max time to wait is three minutes
             for attempt_count in range(MAX_NUMBER_OF_ATTEMPTS):
-                if (request.get("%s/api/info" % cbio_url, headers = authorization_header).status != 200):
+                if (requests.get("%s/api/info" % cbio_url, headers = authorization_header).status != 200):
                     time.sleep(10)
                 else:
                     break
