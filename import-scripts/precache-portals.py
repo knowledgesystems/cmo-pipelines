@@ -60,11 +60,11 @@ def is_valid_deployments(deployments):
 
 # get base url depending on deployment 
 def get_cbio_url(deployment):
-    return "http://www.cbioportal.org" if deployment == "cbioportal-backend-master" else "http://www.%s.cbioportal.org" % (DEPLOYMENT_TO_URL_MAP[deployment])
+    return "http://www.cbioportal.org" if deployment == "cbioportal-backend-master" else "http://%s.cbioportal.org" % (DEPLOYMENT_TO_URL_MAP[deployment])
 
 # get DAT for submitting requests for private portal
 def get_authorization_header(deployments):
-    if all([deployment not in PROTECTED_PORTAL for deployment in deployments]):
+    if all([deployment not in PROTECTED_PORTALS for deployment in deployments]):
         return None 
     if "DATA_ACCESS_TOKEN" not in os.environ:
         print "No value set for environment variable DATA_ACCESS_TOKEN. Unable to submit requests, exiting..."
@@ -133,10 +133,13 @@ def main():
             # wait until pod has started up...
             # max time to wait is three minutes
             for attempt_count in range(MAX_NUMBER_OF_ATTEMPTS):
-                if (requests.get("%s/api/info" % cbio_url, headers = authorization_header).status != 200):
-                    time.sleep(10)
-                else:
-                    break
+                try:
+                    if (requests.get("%s/api/info" % cbio_url, headers = authorization_header).status_code == requests.codes.ok):
+                        break
+                except requests.exceptions.ConnectionError:
+                    # if there is a failure to get a connection, continue in the retry loop
+                    pass
+                time.sleep(10)
             cancer_study_ids = get_cancer_studies(cbio_url, authorization_header)
             for cancer_study in cancer_study_ids:
                 post_body = construct_sample_list_post_body(cbio_url, cancer_study, authorization_header)
