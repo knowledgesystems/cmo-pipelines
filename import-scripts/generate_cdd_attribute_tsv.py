@@ -63,6 +63,8 @@ import json
 import re
 import requests
 import sys
+#this program requires "pip install unidecode"
+from unidecode import unidecode
 
 GITHUB_URI_MAPPINGS_FILE_URL = "https://api.github.com/repos/cBioPortal/clinical-data-dictionary/contents/docs/resource_uri_to_clinical_attribute_mapping.txt"
 HEADERS = {"Accept": "application/vnd.github.v4.raw"}
@@ -81,7 +83,9 @@ NEW_CDD_ATTRIBUTE_TSV = "new_cdd_attributes.tsv"
 
 # Extracts credentials for later use
 def get_github_credentials(credentials_file):
-    credentials_line = open(credentials_file,"rb").read().rstrip()
+    print("start func")
+    credentials_line = open(credentials_file,"r").read().rstrip()
+    print("printing" + credentials_line)
     credentials_line = credentials_line.replace("https://", "") 
     credentials_line = credentials_line.replace("@github.com", "")
     credentials = credentials_line.split(":")
@@ -97,6 +101,8 @@ def create_uri_dictionary(uri_mapping_file):
             uri_dictionary[data[0].rstrip()] = data[1].rstrip()
     return uri_dictionary
 
+
+    
 # Given a tab delimited file - generate a list of dictionaries where
 # each dictionary is an attribute {NORMALIZED_COLUMN_HEADER: normalized_column_header, DESCRIPTION: description, ...}
 # also adds URI under CONCEPT_ID key
@@ -105,10 +111,11 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
     try:
         normalized_column_header_position = header.index(NORMALIZED_COLUMN_HEADER_KEY)
     except:
-        print >> sys.stderr, "Error: file does not have normalized column header defined... aborting"
+        print (sys.stderr, "Error: file does not have normalized column header defined... aborting")
         sys.exit(2) 
     new_cdd_attributes = []
     invalid_attributes = []
+    non_ascii_values = []
     last_known_uri_number = get_last_known_uri_number(uri_dictionary)
     with open(new_attributes_file, "r") as f:
         # skip first line
@@ -122,14 +129,23 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
                 invalid_attributes.append(data[normalized_column_header_position])
             for position in range(len(header)):
                 try:
-                    new_attribute[header[position]] = insert_value(header[position], data[position], data[normalized_column_header_position])
+                    if (data[position].isascii()):
+                        new_attribute[header[position]] = insert_value(header[position], data[position], data[normalized_column_header_position])
+                    else:
+                        non_ascii_values.append([data[position], unidecode(data[position])])
                 except:
                     new_attribute[header[position]] = insert_value(header[position], "", data[normalized_column_header_position])
             new_attribute[CONCEPT_ID_KEY] = get_next_uri(last_known_uri_number)
             new_cdd_attributes.append(new_attribute)
             last_known_uri_number += 1
+    
     if len(invalid_attributes) > 0:
-        print >> sys.stderr, "Invalid attributes (already exists/invalid name) in added: " + "\t".join(invalid_attributes) + "... aborting"
+        print (sys.stderr, "Invalid attributes (already exists/invalid name) in added: " + "\t".join(invalid_attributes) + "... aborting")
+        sys.exit(2)
+        
+    if len(non_ascii_values) > 0:
+        print (sys.stderr, "Non-ASCII characters present: ")
+        for i in non_ascii_values: print (i[0] + ":" + i[1])
         sys.exit(2)
     return new_cdd_attributes 
 
@@ -153,7 +169,7 @@ def insert_value(key, value, normalized_column_header_name):
         elif key == PRIORITY_KEY:
             return "1"
         else: 
-            print >> sys.stderr, "No name is defined in normalized column header column... aborting"
+            print ( sys.stderr, "No name is defined in normalized column header column... aborting")
             sys.exit(2)
     else:
         return value
@@ -207,10 +223,11 @@ def update_github_uri_mappings(uri_dictionary, output_directory, github_file_url
     session.auth = (username, password)
     response = session.put(github_file_url, data = json.dumps(data))
     if response.status_code != 200:
-        print >> sys.stderr, "Error encountered when pushing new mappings into github, returned status code: " + str(response.status_code) + "... aborting"
-        sys.exit(2)
-    print "Finished updating uri mapping files in github"
+        print ( sys.stderr, "Error encountered when pushing new mappings into github, returned status code: " + str(response.status_code) + "... aborting")
+        sys.exit(2)  
+    print ("Finished updating uri mapping files in github")
     os.remove(new_uri_mapping_file_path)
+
 
 # Writes out list of attributes into a tab-delimited file (with concept-ids)
 def write_cdd_attribute_tsv(new_cdd_attributes, output_directory, new_attributes_file):
@@ -223,7 +240,7 @@ def write_cdd_attribute_tsv(new_cdd_attributes, output_directory, new_attributes
     for attribute in new_cdd_attributes:
         new_cdd_attributes_tsv.write("\t".join([attribute[property] for property in sorted(new_cdd_attributes[0].keys())]) + "\n")
     new_cdd_attributes_tsv.close() 
-    print "Finished writing file to: " + new_cdd_attributes_tsv_path
+    print ("Finished writing file to: " + new_cdd_attributes_tsv_path)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -237,23 +254,23 @@ def main():
     output_directory = args.output_directory
    
     if not os.path.isfile(new_attributes_file):
-        print >> sys.stderr, "Error: attributes file " + new_attributes_file + " does not exist... aborting"
+        print (sys.stderr, "Error: attributes file " + new_attributes_file + " does not exist... aborting")
         sys.exit(2)
     if not os.path.isfile(credentials_file): 
-        print >> sys.stderr, "Error: credentials file " + credentials_file + " does not exist... aborting"
+        print (sys.stderr, "Error: credentials file " + credentials_file + " does not exist... aborting")
         sys.exit(2) 
     if not os.path.isdir(output_directory):
-        print >> sys.stderr, "Error: specified directory " + output_directory + " does not exist... aborting"
+        print (sys.stderr, "Error: specified directory " + output_directory + " does not exist... aborting")
         sys.exit(2)
 
     username, password = get_github_credentials(credentials_file)
     try:
         urifile = requests.get(GITHUB_URI_MAPPINGS_FILE_URL, auth = (username, password), headers = HEADERS)
     except requests.exceptions.SSLError:
-        print >> sys.stderr, "OpenSSL version is outdated -- try running 'pip install 'requests[security]' or updating openssl version."
+        print (sys.stderr, "OpenSSL version is outdated -- try running 'pip install 'requests[security]' or updating openssl version.")
         sys.exit(2)
     if urifile.status_code != 200:
-        print >> sys.stderr, "Error while retrieving existing URI mappings with returned status code: " + urifile.status_code + "... aborting"
+        print ( sys.stderr, "Error while retrieving existing URI mappings with returned status code: " + urifile.status_code + "... aborting")
         sys.exit(2)
     uri_dictionary = create_uri_dictionary(urifile)
     
