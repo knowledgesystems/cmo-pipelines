@@ -36,6 +36,7 @@ checked_process_list=(
     'importUsers.py'
     'import-dmp-impact-data.sh'
     'import-temp-study.sh'
+    'oncokb-annotator.sh'
 )
 
 # Stalled times
@@ -43,8 +44,9 @@ mt_users_genie=$(( 5 * 60 )) # import_portal_users_genie.sh: 5 minutes
 mt_import_users=$(( 15 * 60 )) # importUsers.py: 15 minutes
 mt_import_dmp=$(( 10 * 60 * 60 )) # import-dmp-impact-data.sh: 10 hours
 mt_import_temp_study=$(( 3 * 60 * 60 )) # import-temp-study.sh: 3 hours
-max_time=($mt_users_genie $mt_import_users $mt_import_dmp $mt_import_temp_study)
-email_times=(0 0 0 0)
+mt_oncokb_annotator=$(( 4 * 60 * 60 )) # oncokb-annotator.sh: 4 hours
+max_time=($mt_users_genie $mt_import_users $mt_import_dmp $mt_import_temp_study $mt_oncokb_annotator)
+email_times=(0 0 0 0 0)
 
 while :
 do
