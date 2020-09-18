@@ -63,8 +63,8 @@ import json
 import re
 import requests
 import sys
-#this program requires "pip install unidecode"
 from unidecode import unidecode
+#this program requires "pip install unidecode"
 
 GITHUB_URI_MAPPINGS_FILE_URL = "https://api.github.com/repos/cBioPortal/clinical-data-dictionary/contents/docs/resource_uri_to_clinical_attribute_mapping.txt"
 HEADERS = {"Accept": "application/vnd.github.v4.raw"}
@@ -98,7 +98,16 @@ def create_uri_dictionary(uri_mapping_file):
             data = uri_mapping.split("\t")
             uri_dictionary[data[0].rstrip()] = data[1].rstrip()
     return uri_dictionary
-  
+
+# Looks for non-ASCII characters
+# Uses 'isascii()' attribute for Java 3.7 and over
+def is_ASCII(s):
+    if(hasattr(s, 'isascii')): return s.isascii()
+    for c in s:
+        if (ord(c) > 128): return False
+    return True
+
+    
 # Given a tab delimited file - generate a list of dictionaries where
 # each dictionary is an attribute {NORMALIZED_COLUMN_HEADER: normalized_column_header, DESCRIPTION: description, ...}
 # also adds URI under CONCEPT_ID key
@@ -111,7 +120,7 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
         sys.exit(2) 
     new_cdd_attributes = []
     invalid_attributes = []
-    non_ascii_values = []
+    non_ascii_characters = []
     last_known_uri_number = get_last_known_uri_number(uri_dictionary)
     with open(new_attributes_file, "r") as f:
         # skip first line
@@ -125,22 +134,21 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
                 invalid_attributes.append(data[normalized_column_header_position])
             for position in range(len(header)):
                 try:
-                    if (data[position].isascii()):
+                    if (is_ASCII(data[position])):
                         new_attribute[header[position]] = insert_value(header[position], data[position], data[normalized_column_header_position])
                     else:
-                        non_ascii_values.append([data[4],data[position], unidecode(data[position])])
+                        non_ascii_characters.append([data[4], data[position], unidecode(data[position])])
                 except:
                     new_attribute[header[position]] = insert_value(header[position], "", data[normalized_column_header_position])
             new_attribute[CONCEPT_ID_KEY] = get_next_uri(last_known_uri_number)
             new_cdd_attributes.append(new_attribute)
             last_known_uri_number += 1
-            
-     if len(invalid_attributes) > 0:
+    if len(invalid_attributes) > 0:
         print (sys.stderr, "Invalid attributes (already exists/invalid name) in added: " + "\t".join(invalid_attributes) + "... aborting")
         sys.exit(2)
-    if len(non_ascii_values) > 0:
-        print (sys.stderr, "Non-ASCII characters present: ")
-        for i in non_ascii_values: print (i[0] + "," + i[1] + ":" + i[2])
+    if len(non_ascii_characters) > 0:
+        print (sys.stderr, "Non-ASCII characters found in the following: ")
+        for i in non_ascii_characters: print(i[0] + ", " + i[1] + ": " + i[2])
         sys.exit(2)
     return new_cdd_attributes 
 
@@ -164,7 +172,7 @@ def insert_value(key, value, normalized_column_header_name):
         elif key == PRIORITY_KEY:
             return "1"
         else: 
-            print ( sys.stderr, "No name is defined in normalized column header column... aborting")
+            print (sys.stderr, "No name is defined in normalized column header column... aborting")
             sys.exit(2)
     else:
         return value
@@ -218,11 +226,10 @@ def update_github_uri_mappings(uri_dictionary, output_directory, github_file_url
     session.auth = (username, password)
     response = session.put(github_file_url, data = json.dumps(data))
     if response.status_code != 200:
-        print ( sys.stderr, "Error encountered when pushing new mappings into github, returned status code: " + str(response.status_code) + "... aborting")
-        sys.exit(2)  
+        print (sys.stderr, "Error encountered when pushing new mappings into github, returned status code: " + str(response.status_code) + "... aborting")
+        sys.exit(2)
     print ("Finished updating uri mapping files in github")
     os.remove(new_uri_mapping_file_path)
-
 
 # Writes out list of attributes into a tab-delimited file (with concept-ids)
 def write_cdd_attribute_tsv(new_cdd_attributes, output_directory, new_attributes_file):
@@ -236,7 +243,6 @@ def write_cdd_attribute_tsv(new_cdd_attributes, output_directory, new_attributes
         new_cdd_attributes_tsv.write("\t".join([attribute[property] for property in sorted(new_cdd_attributes[0].keys())]) + "\n")
     new_cdd_attributes_tsv.close() 
     print ("Finished writing file to: " + new_cdd_attributes_tsv_path)
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--attributes-file', action = 'store', dest = 'new_attributes_file', required = True, help = 'Tab delimited file containing new attributes for CDD"')
@@ -265,7 +271,7 @@ def main():
         print (sys.stderr, "OpenSSL version is outdated -- try running 'pip install 'requests[security]' or updating openssl version.")
         sys.exit(2)
     if urifile.status_code != 200:
-        print ( sys.stderr, "Error while retrieving existing URI mappings with returned status code: " + urifile.status_code + "... aborting")
+        print (sys.stderr, "Error while retrieving existing URI mappings with returned status code: " + urifile.status_code + "... aborting")
         sys.exit(2)
     uri_dictionary = create_uri_dictionary(urifile)
     
