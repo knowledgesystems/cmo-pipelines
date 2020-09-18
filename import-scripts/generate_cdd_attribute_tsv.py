@@ -83,9 +83,7 @@ NEW_CDD_ATTRIBUTE_TSV = "new_cdd_attributes.tsv"
 
 # Extracts credentials for later use
 def get_github_credentials(credentials_file):
-    print("start func")
     credentials_line = open(credentials_file,"r").read().rstrip()
-    print("printing" + credentials_line)
     credentials_line = credentials_line.replace("https://", "") 
     credentials_line = credentials_line.replace("@github.com", "")
     credentials = credentials_line.split(":")
@@ -100,9 +98,7 @@ def create_uri_dictionary(uri_mapping_file):
             data = uri_mapping.split("\t")
             uri_dictionary[data[0].rstrip()] = data[1].rstrip()
     return uri_dictionary
-
-
-    
+  
 # Given a tab delimited file - generate a list of dictionaries where
 # each dictionary is an attribute {NORMALIZED_COLUMN_HEADER: normalized_column_header, DESCRIPTION: description, ...}
 # also adds URI under CONCEPT_ID key
@@ -132,20 +128,19 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
                     if (data[position].isascii()):
                         new_attribute[header[position]] = insert_value(header[position], data[position], data[normalized_column_header_position])
                     else:
-                        non_ascii_values.append([data[position], unidecode(data[position])])
+                        non_ascii_values.append([data[4],data[position], unidecode(data[position])])
                 except:
                     new_attribute[header[position]] = insert_value(header[position], "", data[normalized_column_header_position])
             new_attribute[CONCEPT_ID_KEY] = get_next_uri(last_known_uri_number)
             new_cdd_attributes.append(new_attribute)
             last_known_uri_number += 1
-    
-    if len(invalid_attributes) > 0:
+            
+     if len(invalid_attributes) > 0:
         print (sys.stderr, "Invalid attributes (already exists/invalid name) in added: " + "\t".join(invalid_attributes) + "... aborting")
         sys.exit(2)
-        
     if len(non_ascii_values) > 0:
         print (sys.stderr, "Non-ASCII characters present: ")
-        for i in non_ascii_values: print (i[0] + ":" + i[1])
+        for i in non_ascii_values: print (i[0] + "," + i[1] + ":" + i[2])
         sys.exit(2)
     return new_cdd_attributes 
 
