@@ -54,7 +54,6 @@
 #
 # Authors: Avery Wang
 # ------------------------------------------------------------------------------
-
 from clinicalfile_utils import *
 import argparse
 import base64
@@ -102,12 +101,13 @@ def create_uri_dictionary(uri_mapping_file):
 # Looks for non-ASCII characters
 # Uses 'isascii()' attribute for Java 3.7 and over
 def is_ASCII(s):
-    if(hasattr(s, 'isascii')): return s.isascii()
+    if(hasattr(s, 'isascii')): 
+        return s.isascii()
     for c in s:
-        if (ord(c) > 128): return False
+        if (ord(c) > 128): 
+            return False
     return True
-
-    
+ 
 # Given a tab delimited file - generate a list of dictionaries where
 # each dictionary is an attribute {NORMALIZED_COLUMN_HEADER: normalized_column_header, DESCRIPTION: description, ...}
 # also adds URI under CONCEPT_ID key
@@ -148,7 +148,8 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
         sys.exit(2)
     if len(non_ascii_characters) > 0:
         print (sys.stderr, "Non-ASCII characters found in the following: ")
-        for i in non_ascii_characters: print(i[0] + ", " + i[1] + ": " + i[2])
+        for i in non_ascii_characters:
+          print(i[0] + ", " + i[1] + ": " + i[2])
         sys.exit(2)
     return new_cdd_attributes 
 
@@ -220,7 +221,6 @@ def update_github_uri_mappings(uri_dictionary, output_directory, github_file_url
     for uri in sorted(uri_dictionary.keys()):
         new_uri_mapping_file.write(uri + "\t" + uri_dictionary[uri] + "\n")
     new_uri_mapping_file.close()
-    
     data = create_data(new_uri_mapping_file_path, github_file_url)
     session = requests.Session()
     session.auth = (username, password)
@@ -243,6 +243,7 @@ def write_cdd_attribute_tsv(new_cdd_attributes, output_directory, new_attributes
         new_cdd_attributes_tsv.write("\t".join([attribute[property] for property in sorted(new_cdd_attributes[0].keys())]) + "\n")
     new_cdd_attributes_tsv.close() 
     print ("Finished writing file to: " + new_cdd_attributes_tsv_path)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--attributes-file', action = 'store', dest = 'new_attributes_file', required = True, help = 'Tab delimited file containing new attributes for CDD"')
@@ -279,5 +280,5 @@ def main():
     insert_new_uris(uri_dictionary, new_cdd_attributes)
     update_github_uri_mappings(uri_dictionary, output_directory, GITHUB_URI_MAPPINGS_FILE_URL, username, password)
     write_cdd_attribute_tsv(new_cdd_attributes, output_directory, NEW_CDD_ATTRIBUTE_TSV)
-
-main()
+if __name__ == "__main__":
+    main()
