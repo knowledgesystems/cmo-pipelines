@@ -280,5 +280,6 @@ def main():
     insert_new_uris(uri_dictionary, new_cdd_attributes)
     update_github_uri_mappings(uri_dictionary, output_directory, GITHUB_URI_MAPPINGS_FILE_URL, username, password)
     write_cdd_attribute_tsv(new_cdd_attributes, output_directory, NEW_CDD_ATTRIBUTE_TSV)
+
 if __name__ == "__main__":
     main()
