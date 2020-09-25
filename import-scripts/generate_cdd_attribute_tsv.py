@@ -63,7 +63,6 @@ import re
 import requests
 import sys
 from unidecode import unidecode
-#this program requires "pip install unidecode"
 
 GITHUB_URI_MAPPINGS_FILE_URL = "https://api.github.com/repos/cBioPortal/clinical-data-dictionary/contents/docs/resource_uri_to_clinical_attribute_mapping.txt"
 HEADERS = {"Accept": "application/vnd.github.v4.raw"}

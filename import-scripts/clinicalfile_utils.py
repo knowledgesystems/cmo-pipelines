@@ -187,12 +187,12 @@ def get_ordered_metadata_and_add_new_attribute(clinical_file, new_attribute):
     return ordered_metadata_lines
 
 def write_metadata_headers(metadata_lines, clinical_filename):
-    print ('\t'.join(metadata_lines[DISPLAY_NAME]).replace('\n', ''))
-    print ('\t'.join(metadata_lines[DESCRIPTION]).replace('\n', ''))
-    print ('\t'.join(metadata_lines[DATATYPE]).replace('\n', ''))
+    print('\t'.join(metadata_lines[DISPLAY_NAME]).replace('\n', ''))
+    print('\t'.join(metadata_lines[DESCRIPTION]).replace('\n', ''))
+    print('\t'.join(metadata_lines[DATATYPE]).replace('\n', ''))
     if has_legacy_clinical_metadata_headers(clinical_filename):
-        print ('\t'.join(metadata_lines[ATTRIBUTE_TYPE]).replace('\n', ''))
-    print ('\t'.join(metadata_lines[PRIORITY]).replace('\n', ''))
+        print('\t'.join(metadata_lines[ATTRIBUTE_TYPE]).replace('\n', ''))
+    print('\t'.join(metadata_lines[PRIORITY]).replace('\n', ''))
 
 def write_header_line(line, output_file):
     os.write(output_file, '#')
