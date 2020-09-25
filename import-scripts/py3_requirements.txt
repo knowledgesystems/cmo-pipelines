@@ -1,0 +1,2 @@
+certifi==2020.6.20
+Unidecode==1.1.1
