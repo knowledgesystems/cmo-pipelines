@@ -100,7 +100,7 @@ def create_uri_dictionary(uri_mapping_file):
 # Looks for non-ASCII characters
 # Uses 'isascii()' attribute for Java 3.7 and over
 def is_ASCII(s):
-    if(hasattr(s, 'isascii')): 
+    if (hasattr(s, 'isascii')):
         return s.isascii()
     for c in s:
         if (ord(c) > 128): 
@@ -115,7 +115,7 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
     try:
         normalized_column_header_position = header.index(NORMALIZED_COLUMN_HEADER_KEY)
     except:
-        print (sys.stderr, "Error: file does not have normalized column header defined... aborting")
+        print(sys.stderr, "Error: file does not have normalized column header defined... aborting")
         sys.exit(2) 
     new_cdd_attributes = []
     invalid_attributes = []
@@ -143,10 +143,10 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
             new_cdd_attributes.append(new_attribute)
             last_known_uri_number += 1
     if len(invalid_attributes) > 0:
-        print (sys.stderr, "Invalid attributes (already exists/invalid name) in added: " + "\t".join(invalid_attributes) + "... aborting")
+        print(sys.stderr, "Invalid attributes (already exists/invalid name) in added: " + "\t".join(invalid_attributes) + "... aborting")
         sys.exit(2)
     if len(non_ascii_characters) > 0:
-        print (sys.stderr, "Non-ASCII characters found in the following: ")
+        print(sys.stderr, "Non-ASCII characters found in the following: ")
         for i in non_ascii_characters:
           print(i[0] + ", " + i[1] + ": " + i[2])
         sys.exit(2)
