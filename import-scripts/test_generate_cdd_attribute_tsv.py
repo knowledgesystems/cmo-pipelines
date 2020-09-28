@@ -1,6 +1,5 @@
+# -*- coding: utf-8 -*-
 import unittest
-import requests
-import os
 
 from generate_cdd_attribute_tsv import *
 

@@ -62,7 +62,6 @@ import json
 import re
 import requests
 import sys
-from unidecode import unidecode
 
 GITHUB_URI_MAPPINGS_FILE_URL = "https://api.github.com/repos/cBioPortal/clinical-data-dictionary/contents/docs/resource_uri_to_clinical_attribute_mapping.txt"
 HEADERS = {"Accept": "application/vnd.github.v4.raw"}
@@ -136,7 +135,7 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
                     if (is_ASCII(data[position])):
                         new_attribute[header[position]] = insert_value(header[position], data[position], data[normalized_column_header_position])
                     else:
-                        non_ascii_characters.append([data[4], data[position], unidecode(data[position])])
+                        non_ascii_characters.append([data[4], data[position]])
                 except:
                     new_attribute[header[position]] = insert_value(header[position], "", data[normalized_column_header_position])
             new_attribute[CONCEPT_ID_KEY] = get_next_uri(last_known_uri_number)
@@ -148,7 +147,7 @@ def load_new_cdd_attributes(new_attributes_file, uri_dictionary):
     if len(non_ascii_characters) > 0:
         print(sys.stderr, "Non-ASCII characters found in the following: ")
         for i in non_ascii_characters:
-          print(i[0] + ", " + i[1] + ": " + i[2])
+          print(i[0] + " --> " + i[1] )
         sys.exit(2)
     return new_cdd_attributes 
 
