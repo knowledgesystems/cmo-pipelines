@@ -20,8 +20,12 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
     fi
     now=$(date "+%Y-%m-%d-%H-%M-%S")
     IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/triage-cmo-importer.jar"
-    JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183"
-    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    java_debug_args=""
+    ENABLE_DEBUGGING=0
+    if [ $ENABLE_DEBUGGING != "0" ] ; then
+        java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183"
+    fi
+    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     triage_notification_file=$(mktemp $tmp/triage-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
     DATA_SOURCES_TO_BE_FETCHED="bic-mskcc private impact impact-MERGED knowledge-systems-curated-studies immunotherapy datahub datahub_shahlab msk-mind-datahub pipelines-testing"

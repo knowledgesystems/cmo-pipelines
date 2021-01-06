@@ -22,8 +22,12 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
     now=$(date "+%Y-%m-%d-%H-%M-%S")
     IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/genie-aws-importer.jar"
-    JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27186"
-    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    ENABLE_DEBUGGING=0
+    java_debug_args=""
+    if [ $ENABLE_DEBUGGING != "0" ] ; then
+        java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27186"
+    fi
+    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     genie_portal_notification_file=$(mktemp $tmp/genie-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_2018_06_01
     WEB_APPLICATION_SHOULD_BE_RESTARTED=0 # 0 = skip the restart, non-0 = do the restart

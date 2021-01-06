@@ -19,13 +19,13 @@ PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
 now=$(date "+%Y-%m-%d-%H-%M-%S")
 TRUSTSTORE_PASSWORD=`cat $AWS_SSL_TRUSTSTORE_PASSWORD_FILE`
 ENABLE_DEBUGGING=0
-JAVA_DEBUG_ARGS=""
+java_debug_args=""
 if [ $ENABLE_DEBUGGING != "0" ] ; then
-    JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185"
+    java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27185"
 fi
 IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/aws-gdac-importer.jar"
 JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 static_gdac_aws_notification_file=$(mktemp $tmp/static-aws-gdac-update-notification.$now.XXXXXX)
 gdac_aws_notification_file=$(mktemp $tmp/aws-gdac-update-notification.$now.XXXXXX)
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release

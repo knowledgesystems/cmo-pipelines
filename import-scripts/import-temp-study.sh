@@ -121,8 +121,12 @@ if [[ -z $CANCER_STUDY_IDENTIFIER || -z $TEMP_CANCER_STUDY_IDENTIFIER || -z $BAC
     exit 1
 fi
 
-JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$TMP_DIRECTORY -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+ENABLE_DEBUGGING=0
+java_debug_args=""
+if [ $ENABLE_DEBUGGING != "0" ] ; then
+    java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
+fi
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$TMP_DIRECTORY -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 GROUP_FOR_HIDING_BACKUP_STUDIES="KSBACKUP"
 SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 

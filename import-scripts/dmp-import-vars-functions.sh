@@ -17,8 +17,12 @@ JAVA_CVR_FETCHER_ARGS="-jar $CVR_FETCHER_JAR_FILENAME"
 JAVA_DARWIN_FETCHER_ARGS="-jar $DARWIN_FETCHER_JAR_FILENAME"
 JAVA_DDP_FETCHER_ARGS="-jar $DDP_FETCHER_JAR_FILENAME"
 JAVA_REDCAP_PIPELINE_ARGS="$JAVA_SSL_ARGS -jar $REDCAP_PIPELINE_JAR_FILENAME"
-JAVA_DEBUG_ARGS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_DEBUG_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+java_debug_args=""
+ENABLE_DEBUGGING=0
+if [ $ENABLE_DEBUGGING != "0" ] ; then
+    java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
+fi
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
 SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 
