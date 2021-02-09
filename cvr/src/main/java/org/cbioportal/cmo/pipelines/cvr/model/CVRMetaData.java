@@ -40,16 +40,17 @@ package org.cbioportal.cmo.pipelines.cvr.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.mysql.jdbc.StringUtils;
+import com.google.common.base.Strings;
 import java.util.*;
 import javax.annotation.Generated;
-import org.springframework.beans.factory.annotation.Value;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Generated("org.jsonschema2pojo")
+@JsonIgnoreProperties({"mrev_comments"})
 @JsonPropertyOrder({
     "alys2sample_id",
     "cbx_patient_id",
@@ -67,7 +68,6 @@ import org.springframework.beans.factory.annotation.Value;
     "legacy_patient_id",
     "legacy_sample_id",
     "metastasis_site",
-    "mrev_comments",
     "msi-comment",
     "msi-score",
     "msi-type",
@@ -122,8 +122,6 @@ public class CVRMetaData {
     private String legacySampleId;
     @JsonProperty("metastasis_site")
     private String metastasisSite;
-    @JsonProperty("mrev_comments")
-    private String mrevComments;
     @JsonProperty("msi-comment")
     private String msiComment;
     @JsonProperty("msi-score")
@@ -190,7 +188,6 @@ public class CVRMetaData {
      * @param legacyPatientId
      * @param legacySampleId
      * @param metastasisSite
-     * @param mrevComments
      * @param msiComment
      * @param msiScore
      * @param msiType
@@ -213,7 +210,7 @@ public class CVRMetaData {
      */
     public CVRMetaData(Integer alys2sampleId, Integer cbxPatientId, Integer cbxSampleId, String dateTumorSequencing, String linkedMskimpactCase,
             Integer dmpAlysTaskId, String dmpAlysTaskName, String dmpPatientId, String dmpSampleId, Integer dmpSampleSoId, Integer gender,
-            String genePanel, Integer isMetastasis, String legacyPatientId, String legacySampleId, String metastasisSite, String mrevComments,
+            String genePanel, Integer isMetastasis, String legacyPatientId, String legacySampleId, String metastasisSite,
             String msiComment, String msiScore, String msiType, String outsideInstitute, String primarySite, Integer retrieveStatus,
             Integer sampleCoverage, String soComments, String soStatusName, String somaticStatus,Double tmbCohortPercentile,
             Double tmbScore, Double tmbTtPercentile, String tumorPurity, String tumorTypeCode, String tumorTypeName,
@@ -233,7 +230,6 @@ public class CVRMetaData {
         this.legacyPatientId = legacyPatientId;
         this.legacySampleId = legacySampleId;
         this.metastasisSite = metastasisSite;
-        this.mrevComments = mrevComments;
         this.msiComment = msiComment;
         this.msiScore = msiScore;
         this.msiType = msiType;
@@ -589,26 +585,6 @@ public class CVRMetaData {
     /**
     *
     * @return
-    * The mrevComments
-    */
-    @JsonProperty("mrev_comments")
-    public String getMrevComments() {
-        return mrevComments;
-    }
-
-    /**
-    *
-    * @param mrevComments
-    * The mrev_comments
-    */
-    @JsonProperty("mrev_comments")
-    public void setMrevComments(String mrevComments) {
-        this.mrevComments = mrevComments;
-    }
-
-    /**
-    *
-    * @return
     * The msiComment
     */
     @JsonProperty("msi-comment")
@@ -913,7 +889,7 @@ public class CVRMetaData {
      */
     @JsonProperty("consent-parta")
     public String getConsentPartA() {
-        if (!StringUtils.isNullOrEmpty(consentPartA)) {
+        if (!Strings.isNullOrEmpty(consentPartA)) {
             return (consentPartA.equalsIgnoreCase("true") || consentPartA.equalsIgnoreCase("yes")) ? "YES" : "NO";
         }
         return "";
@@ -936,7 +912,7 @@ public class CVRMetaData {
      */
     @JsonProperty("consent-partc")
     public String getConsentPartC() {
-        if (!StringUtils.isNullOrEmpty(consentPartC)) {
+        if (!Strings.isNullOrEmpty(consentPartC)) {
             return (consentPartC.equalsIgnoreCase("true") || consentPartC.equalsIgnoreCase("yes")) ? "YES" : "NO";
         }
         return "";

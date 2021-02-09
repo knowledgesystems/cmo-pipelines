@@ -40,6 +40,7 @@ package org.cbioportal.cmo.pipelines.cvr.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -49,6 +50,7 @@ import javax.annotation.Generated;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Generated("org.jsonschema2pojo")
+@JsonIgnoreProperties({"mrev_comments"})
 @JsonPropertyOrder({
     "aa_change",
     "alt_allele",
@@ -67,7 +69,6 @@ import javax.annotation.Generated;
     "gene_id",
     "is_hotspot",
     "mafreq_1000g",
-    "mrev_comments",
     "mrev_status_cv_id",
     "mrev_status_name",
     "normal_ad",
@@ -129,8 +130,6 @@ public class CVRSnp {
     private Integer isHotspot;
     @JsonProperty("mafreq_1000g")
     private String mafreq1000g;
-    @JsonProperty("mrev_comments")
-    private String mrevComments;
     @JsonProperty("mrev_status_cv_id")
     private Integer mrevStatusCvId;
     @JsonProperty("mrev_status_name")
@@ -210,7 +209,6 @@ public class CVRSnp {
      * @param geneId
      * @param isHotspot
      * @param mafreq1000g
-     * @param mrevComments
      * @param mrevStatusCvId
      * @param mrevStatusName
      * @param normalAd
@@ -237,7 +235,7 @@ public class CVRSnp {
      * @param variantStatusCvId
      * @param variantStatusName
      */
-    public CVRSnp(String aaChange, String altAllele, String cDNAChange, String chromosome, String clinicalSignedOut, String comments, String confidenceClass, Integer confidenceCvId, String cosmicId, String dbSNPId, Integer dmpSampleMrevId, Integer dmpSampleSoId, Integer dmpVariantId, String exonNum, String geneId, Integer isHotspot, String mafreq1000g, String mrevComments, Integer mrevStatusCvId, String mrevStatusName, Integer normalAd, Integer normalDp, Object normalVfreq, String occuranceInNormal, String occuranceInPop, String refAllele, String snpIndelToolName, String snpIndelVariantId, String soComments, Integer soStatusCvId, String soStatusName, Integer startPosition, String transcriptId, Integer tumorAd, Integer tumorDp, Object tumorVfreq, Integer sTumorAd, Integer sTumorDp, Object sTumorVfreq, String variantClass, Integer variantClassCvId, Integer variantStatusCvId, String variantStatusName) {
+    public CVRSnp(String aaChange, String altAllele, String cDNAChange, String chromosome, String clinicalSignedOut, String comments, String confidenceClass, Integer confidenceCvId, String cosmicId, String dbSNPId, Integer dmpSampleMrevId, Integer dmpSampleSoId, Integer dmpVariantId, String exonNum, String geneId, Integer isHotspot, String mafreq1000g, Integer mrevStatusCvId, String mrevStatusName, Integer normalAd, Integer normalDp, Object normalVfreq, String occuranceInNormal, String occuranceInPop, String refAllele, String snpIndelToolName, String snpIndelVariantId, String soComments, Integer soStatusCvId, String soStatusName, Integer startPosition, String transcriptId, Integer tumorAd, Integer tumorDp, Object tumorVfreq, Integer sTumorAd, Integer sTumorDp, Object sTumorVfreq, String variantClass, Integer variantClassCvId, Integer variantStatusCvId, String variantStatusName) {
         this.aaChange = aaChange;
         this.altAllele = altAllele;
         this.cDNAChange = cDNAChange;
@@ -255,7 +253,6 @@ public class CVRSnp {
         this.geneId = geneId;
         this.isHotspot = isHotspot;
         this.mafreq1000g = mafreq1000g;
-        this.mrevComments = mrevComments;
         this.mrevStatusCvId = mrevStatusCvId;
         this.mrevStatusName = mrevStatusName;
         this.normalAd = normalAd;
@@ -587,24 +584,6 @@ public class CVRSnp {
     @JsonProperty("mafreq_1000g")
     public void setMafreq1000g(String mafreq1000g) {
         this.mafreq1000g = mafreq1000g;
-    }
-
-    /**
-     *
-     * @return The mrevComments
-     */
-    @JsonProperty("mrev_comments")
-    public String getMrevComments() {
-        return mrevComments;
-    }
-
-    /**
-     *
-     * @param mrevComments The mrev_comments
-     */
-    @JsonProperty("mrev_comments")
-    public void setMrevComments(String mrevComments) {
-        this.mrevComments = mrevComments;
     }
 
     /**
