@@ -121,8 +121,9 @@ if [ $STUDY_ID == "genie" ]; then
             MERGE_SCRIPT_FAILURE=1
         else
             # remove germline mutations from maf
-            grep -v 'GERMLINE' $OUTPUT_DIRECTORY/data_mutations_extended.txt > $OUTPUT_DIRECTORY/data_mutations_extended.txt.tmp
-            mv $OUTPUT_DIRECTORY/data_mutations_extended.txt.tmp $OUTPUT_DIRECTORY/data_mutations_extended.txt
+            grep -v "GERMLINE" $OUTPUT_DIRECTORY/data_mutations_extended.txt > $OUTPUT_DIRECTORY/data_mutations_extended.txt.tmp
+            grep "^Hugo_Symbol" $OUTPUT_DIRECTORY/data_mutations_extended.txt.tmp > $OUTPUT_DIRECTORY/data_mutations_extended.txt
+            grep -E -v "^#|^Hugo_Symbol" $OUTPUT_DIRECTORY/data_mutations_extended.txt.tmp | sort | uniq >> $OUTPUT_DIRECTORY/data_mutations_extended.txt
         fi
     fi
 else
