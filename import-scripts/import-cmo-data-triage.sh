@@ -11,9 +11,11 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
 
     # set necessary env variables with automation-environment.sh
 
+    # we need this file for the tomcat restart funcions
+    source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
     # set data source env variables
     source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
-    
+
     tmp=$PORTAL_HOME/tmp/import-cron-cmo-triage
     if [[ -d "$tmp" && "$tmp" != "/" ]]; then
         rm -rf "$tmp"/*
@@ -78,15 +80,12 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
         num_studies_updated=`cat $tmp/num_studies_updated.txt`
 
         # redeploy war
+
+    # redeploy war
         if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
-            TOMCAT_SERVER_PRETTY_DISPLAY_NAME="Triage Tomcat"
-            TOMCAT_SERVER_DISPLAY_NAME="triage-tomcat"
-            echo "'$num_studies_updated' studies have been updated.  Restarting triage-tomcat server..."
-            if ! /usr/bin/sudo /etc/init.d/triage-tomcat restart ; then
-                EMAIL_BODY="Attempt to trigger a restart of the $TOMCAT_SERVER_DISPLAY_NAME server failed"
-                echo -e "Sending email $EMAIL_BODY"
-                echo -e "$EMAIL_BODY" | mail -s "$TOMCAT_SERVER_PRETTY_DISPLAY_NAME Restart Error : unable to trigger restart" $PIPELINES_EMAIL_LIST
-            fi
+            echo "'$num_studies_updated' studies have been updated, requesting redeployment of triage portal war..."
+            restartTriageTomcats
+            echo "'$num_studies_updated' studies have been updated (no longer need to restart $TOMCAT_SERVER_DISPLAY_NAME server...)"
         else
             echo "No studies have been updated, skipping restart of triage-tomcat server..."
         fi
