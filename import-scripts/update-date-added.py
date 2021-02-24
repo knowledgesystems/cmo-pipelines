@@ -63,7 +63,17 @@ def generate_todays_date_added_data():
 	now = datetime.now()
 	date_added = datetime.strftime(now, '%Y/%m/%d')
 	month_added = datetime.strftime(now, '%Y/%m')
-	week_added = str(now.year) + ', Wk. ' + date(now.year, now.month, now.day).strftime('%V')
+
+	# handle special cases where samples added to the portal in late december or early
+	# january fall into week #53 territory
+	week_number = date(now.year, now.month, now.day).strftime('%V')
+	if int(week_number) == 53:
+		if now.month == 12:
+			week_added = str(now.year) + ', Wk. 52'
+		elif now.month == 1:
+			week_added = str(now.year) + ', Wk. 01'
+	else:
+		week_added = str(now.year) + ', Wk. ' + date(now.year, now.month, now.day).strftime('%V')
 	DATE_ADDED_DATA.update({'DATE_ADDED':date_added, 'MONTH_ADDED':month_added, 'WEEK_ADDED':week_added})
 
 def usage():
