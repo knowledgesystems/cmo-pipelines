@@ -72,6 +72,7 @@ CREATE_SESSION_SESSION_ID = 'session_id'
 CREATE_SESSION_TIME_CREATED = 'time_created'
 CREATE_SESSION_TIME_EXPIRED = 'time_expired'
 CREATE_SESSION_EXPECTED_TIME_EXPIRED_TEXT = '3 hours from time created'
+CREATE_GML_SESSION_ID = 'gml_session_id'
 
 MASTERLIST_SIGNEDOUT_CASES = 'signedout-cases'
 MASTERLIST_DMP_ID = 'dmp_assay_lbl'
@@ -200,13 +201,23 @@ class PortalProperties(object):
 
 # ------------------------------------------------------------------------------
 # functions
+def fetch_gml_session_data(portal_properties):
+    url = '%s%s/%s/%s/0' % (portal_properties.dmp_gml_server, portal_properties.create_gml_session, portal_properties.dmp_user, portal_properties.dmp_password)
+    response = urllib.urlopen(url, urllib.urlencode({}))
+    data = json.loads(response.read())
+    return data
+
+def fetch_somatic_session_data(portal_properties):
+    url = '%s%s/%s/%s/0' % (portal_properties.dmp_server, portal_properties.create_session, portal_properties.dmp_user, portal_properties.dmp_password)
+    response = urllib.urlopen(url, urllib.urlencode({}))
+    data = json.loads(response.read())
+    return data
+
 def create_and_store_session_data(portal_properties, session_data_file):
     '''
         Creates a CVR session.
     '''
-    url = '%s%s/%s/%s/0' % (portal_properties.get_dmp_server(), portal_properties.get_dmp_session(), portal_properties.dmp_user, portal_properties.dmp_password)
-    response = urllib.urlopen(url, urllib.urlencode({}))
-    data = json.loads(response.read())
+    data = fetch_somatic_session_data(portal_properties)
 
     # confirm that the 'time_expired' text matches expected text for this field
     # if it does not match then notify user and exit
@@ -224,6 +235,11 @@ def create_and_store_session_data(portal_properties, session_data_file):
         CREATE_SESSION_TIME_CREATED:str(time_created),
         CREATE_SESSION_TIME_EXPIRED:str(time_expired)
     }
+
+    if portal_properties.is_germline_mode:
+        gml_data = fetch_gml_session_data(portal_properties)
+        session_data[CREATE_GML_SESSION_ID] = gml_data[CREATE_SESSION_SESSION_ID]
+
     with open(session_data_file, 'w') as json_file:
         json.dump(session_data, json_file, indent = 4)
         print >> OUTPUT_FILE, 'CVR session data saved to: %s' % (session_data_file)
@@ -296,7 +312,8 @@ def requeue_sample(portal_properties, session_data, sample_id):
     '''
         Requeues sample and returns requeue status.
     '''
-    url = '%s%s/%s/%s' % (portal_properties.get_dmp_server(), portal_properties.get_dmp_requeue(), session_data[CREATE_SESSION_SESSION_ID], sample_id)
+    session_id = session_data[CREATE_SESSION_SESSION_ID] if not portal_properties.is_germline_mode else session_data[CREATE_GML_SESSION_ID]
+    url = '%s%s/%s/%s' % (portal_properties.get_dmp_server(), portal_properties.get_dmp_requeue(), session_id, sample_id)
     response = urllib.urlopen(url)
     data = json.loads(response.read())
     return (int(data[REQUEUE_RESULT]) == 1)
@@ -305,7 +322,8 @@ def retrieve_study_variants_queue(portal_properties, session_data, study_id):
     '''
         Retrieves variants for given study and returns data plus list of all samples in current queue.
     '''
-    url = '%s%s/%s/0' % (portal_properties.get_dmp_server(), portal_properties.get_study_retrieve_variants_endpoint(study_id), session_data[CREATE_SESSION_SESSION_ID])
+    session_id = session_data[CREATE_SESSION_SESSION_ID] if not portal_properties.is_germline_mode else session_data[CREATE_GML_SESSION_ID]
+    url = '%s%s/%s/0' % (portal_properties.get_dmp_server(), portal_properties.get_study_retrieve_variants_endpoint(study_id), session_id)
     response = urllib.urlopen(url)
     data = json.loads(response.read())
 
@@ -334,7 +352,8 @@ def consume_sample(portal_properties, session_data, sample_id):
     '''
         Consumes given sample and returns bool indicating whether sample consumed successfully.
     '''
-    url = '%s%s/%s/%s' % (portal_properties.get_dmp_server(), portal_properties.get_dmp_consume(), session_data[CREATE_SESSION_SESSION_ID], sample_id)
+    session_id = session_data[CREATE_SESSION_SESSION_ID] if not portal_properties.is_germline_mode else session_data[CREATE_GML_SESSION_ID]
+    url = '%s%s/%s/%s' % (portal_properties.get_dmp_server(), portal_properties.get_dmp_consume(), session_id, sample_id)
     response = urllib.urlopen(url)
     data = json.loads(response.read())
     return (int(data.get(CONSUME_AFFECTED_ROWS, '0')) == 1)
@@ -399,7 +418,9 @@ def run_requeue_samples_mode(portal_properties, session_data, study_id, study_ma
         # these samples should be reported to the CVR team
         samples_missing_from_masterlist = get_samples_missing_from_masterlist(study_masterlist, requeue_failure_samples)
         if len(samples_missing_from_masterlist) > 0:
-            print >> ERROR_FILE, 'The following sample(s) failed to requeue and are missing from the study masterlist:\n\t%s\n\n\t--> Please report to CVR team!' % ('\n\t'.join(samples_missing_from_masterlist))
+            masterlist_check_msg = 'and are missing_from the study masterlist' if not portal_properties.is_germline_mode else ''
+            message = 'The following sample(s) failed to requeue%s:\n\t%s\n\n\t--> Please report to CVR team!' % (masterlist_check_msg, '\n\t'.join(samples_missing_from_masterlist))
+            print >> ERROR_FILE, message
             for sample_id in samples_missing_from_masterlist:
                 requeue_failure_samples.remove(sample_id)
 
