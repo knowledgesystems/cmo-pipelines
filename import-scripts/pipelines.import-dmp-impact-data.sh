@@ -133,7 +133,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SOLID_HEME_IMPORT_TRIGGER ] ; then
     # this usage is a little different -- we are comparing the backup-study-id "yesterday_mskimpact" because we will be renaming this imported study to mskimpact after a successful import
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="mskimpact" --temp-study-id="temporary_mskimpact" --backup-study-id="yesterday_mskimpact" --portal-name="msk-solid-heme-portal" --study-path="$MSK_SOLID_HEME_DATA_HOME" --notification-file="$msk_solid_heme_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        #consumeSamplesAfterSolidHemeImport
+        consumeSamplesAfterSolidHemeImport
         RESTART_AFTER_IMPACT_IMPORT=1
         IMPORT_FAIL_MSKSOLIDHEME=0
     fi
@@ -174,7 +174,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_ARCHER_IMPORT_TRIGGER ] ; then
         # However, if a study does not have an existing genetic profile with genetic_alteration_type = "MUTATION_EXTENDED" then the study view mutations table does not show up.
         # This is a temporary quick and dirty fix to override the genetic_alteration_type for mskarcher_mutations to "MTATION_EXTENDED" (which is imported with genetic_alteration_type = "FUSION")
         mysql --host="$DMP_DB_HOST" --user="$DMP_DB_USER" --password="$DMP_DB_PASSWORD" "$DMP_DB_DATABASE_NAME" -e "update genetic_profile set genetic_alteration_type = 'MUTATION_EXTENDED' where genetic_alteration_type = 'FUSION' and stable_id = 'mskarcher_mutations'"
-        #consumeSamplesAfterArcherImport
+        consumeSamplesAfterArcherImport
         RESTART_AFTER_DMP_PIPELINES_IMPORT=1
         IMPORT_FAIL_ARCHER=0
     fi
