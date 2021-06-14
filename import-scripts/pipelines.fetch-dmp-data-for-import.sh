@@ -4,7 +4,6 @@
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
 ## STATUS FLAGS
-SKIP_CVR=0
 
 # Flags indicating whether a study can be updated
 IMPORT_STATUS_IMPACT=0
@@ -183,73 +182,71 @@ if [ $? -gt 0 ] ; then
 else
     FETCH_DARWIN_CAISIS_FAIL=0
     echo "committing darwin caisis data"
-    #cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Darwin CAISIS"
+    cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Darwin CAISIS"
 fi
 
-if [ $SKIP_CVR -eq 1 ] ; then
-    if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
-        # fetch new/updated IMPACT samples using CVR Web service   (must come after git fetching)
-        printTimeStampedDataProcessingStepMessage "CVR fetch for mskimpact"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS
+if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
+    # fetch new/updated IMPACT samples using CVR Web service   (must come after git fetching)
+    printTimeStampedDataProcessingStepMessage "CVR fetch for mskimpact"
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS
+    if [ $? -gt 0 ] ; then
+        echo "CVR fetch failed!"
+        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Fetch"
+        IMPORT_STATUS_IMPACT=1
+    else
+        # sanity check for empty allele counts
+        bash $PORTAL_HOME/scripts/test_if_impact_has_lost_allele_count.sh
         if [ $? -gt 0 ] ; then
-            echo "CVR fetch failed!"
+            echo "Empty allele count sanity check failed! MSK-IMPACT will not be imported!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Fetch"
+            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT empty allele count sanity check"
             IMPORT_STATUS_IMPACT=1
         else
-            # sanity check for empty allele counts
-            bash $PORTAL_HOME/scripts/test_if_impact_has_lost_allele_count.sh
+            # check for PHI
+            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_data.json
             if [ $? -gt 0 ] ; then
-                echo "Empty allele count sanity check failed! MSK-IMPACT will not be imported!"
+                echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_data.json! MSK-IMPACT will not be imported!"
                 cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT empty allele count sanity check"
+                sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_data.json"
                 IMPORT_STATUS_IMPACT=1
             else
-                # check for PHI
-                $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_data.json
-                if [ $? -gt 0 ] ; then
-                    echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_data.json! MSK-IMPACT will not be imported!"
-                    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_data.json"
-                    IMPORT_STATUS_IMPACT=1
-                else
-                    FETCH_CVR_IMPACT_FAIL=0
-                    echo "committing cvr data"
-                    #cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR"
-                fi
-                # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
-                $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt -m $MSK_IMPACT_DATA_HOME/data_mutations_extended.txt
+                FETCH_CVR_IMPACT_FAIL=0
+                echo "committing cvr data"
+                cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR"
             fi
+            # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt -m $MSK_IMPACT_DATA_HOME/data_mutations_extended.txt
         fi
-    
-        # fetch new/updated IMPACT germline samples using CVR Web service   (must come after normal cvr fetching)
-        printTimeStampedDataProcessingStepMessage "CVR germline fetch for mskimpact"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS
+    fi
+
+    # fetch new/updated IMPACT germline samples using CVR Web service   (must come after normal cvr fetching)
+    printTimeStampedDataProcessingStepMessage "CVR germline fetch for mskimpact"
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS
+    if [ $? -gt 0 ] ; then
+        echo "CVR Germline fetch failed!"
+        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Germline Fetch"
+        IMPORT_STATUS_IMPACT=1
+        #override the success of the tumor sample cvr fetch with a failed status
+        FETCH_CVR_IMPACT_FAIL=1
+    else
+        # check for PHI
+        $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_gml_data.json
         if [ $? -gt 0 ] ; then
-            echo "CVR Germline fetch failed!"
+            echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_gml_data.json! MSK-IMPACT will not be imported!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Germline Fetch"
+            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_gml_data.json"
             IMPORT_STATUS_IMPACT=1
             #override the success of the tumor sample cvr fetch with a failed status
             FETCH_CVR_IMPACT_FAIL=1
         else
-            # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_gml_data.json
-            if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_gml_data.json! MSK-IMPACT will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_gml_data.json"
-                IMPORT_STATUS_IMPACT=1
-                #override the success of the tumor sample cvr fetch with a failed status
-                FETCH_CVR_IMPACT_FAIL=1
-            else
-                echo "committing CVR germline data"
-                #cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR Germline"
-            fi
+            echo "committing CVR germline data"
+            cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR Germline"
         fi
     fi
 fi
-    
+
 # fetch ddp demographics data
 printTimeStampedDataProcessingStepMessage "DDP demographics fetch for mskimpact"
 mskimpact_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_patient_list.txt
@@ -266,7 +263,7 @@ if [ $? -gt 0 ] ; then
 else
     FETCH_DDP_IMPACT_FAIL=0
     echo "committing ddp data"
-    #cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: DDP Demographics"
+    cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: DDP Demographics"
 fi
 
 # fetch ddp data for pediatric cohort
@@ -281,7 +278,7 @@ if [ $FETCH_DDP_IMPACT_FAIL -eq 0 ] ; then
     else
         FETCH_DDP_IMPACT_FAIL=0
         echo "committing Pediatric DDP data"
-        #cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Pediatric DDP demographics/timeline"
+        cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Pediatric DDP demographics/timeline"
     fi
 fi
 
@@ -303,55 +300,53 @@ fi
 # HEMEPACT DATA FETCHES
 printTimeStampedDataProcessingStepMessage "HEMEPACT data processing"
 
-if [ $SKIP_CVR -eq 1 ] ; then
-    if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
-        # fetch new/updated heme samples using CVR Web service (must come after git fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
-        printTimeStampedDataProcessingStepMessage "CVR fetch for hemepact"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS
+if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
+    # fetch new/updated heme samples using CVR Web service (must come after git fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
+    printTimeStampedDataProcessingStepMessage "CVR fetch for hemepact"
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS
+    if [ $? -gt 0 ] ; then
+        echo "CVR heme fetch failed!"
+        echo "This will not affect importing of mskimpact"
+        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Fetch"
+        IMPORT_STATUS_HEME=1
+    else
+        # check for PHI
+        $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_DATA_HOME/cvr_data.json
         if [ $? -gt 0 ] ; then
-            echo "CVR heme fetch failed!"
-            echo "This will not affect importing of mskimpact"
+            echo "PHI attributes found in $MSK_HEMEPACT_DATA_HOME/cvr_data.json! HEMEPACT will not be imported!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Fetch"
+            sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_DATA_HOME/cvr_data.json"
             IMPORT_STATUS_HEME=1
         else
-            # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_DATA_HOME/cvr_data.json
-            if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_HEMEPACT_DATA_HOME/cvr_data.json! HEMEPACT will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_DATA_HOME/cvr_data.json"
-                IMPORT_STATUS_HEME=1
-            else
-                FETCH_CVR_HEME_FAIL=0
-                echo "committing cvr data for heme"
-                #cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT dataset"
-            fi
+            FETCH_CVR_HEME_FAIL=0
+            echo "committing cvr data for heme"
+            cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT dataset"
         fi
-        # fetch new/updated HEMEPACT germline samples using CVR Web service   (must come after normal cvr fetching)
-        printTimeStampedDataProcessingStepMessage "CVR germline fetch for hemepact"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS
+    fi
+    # fetch new/updated HEMEPACT germline samples using CVR Web service   (must come after normal cvr fetching)
+    printTimeStampedDataProcessingStepMessage "CVR germline fetch for hemepact"
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS
+    if [ $? -gt 0 ] ; then
+        echo "CVR Germline fetch failed!"
+        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Germline Fetch"
+        IMPORT_STATUS_HEME=1
+        #override the success of the tumor sample cvr fetch with a failed status
+        FETCH_CVR_HEME_FAIL=1
+    else
+        # check for PHI
+        $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json
         if [ $? -gt 0 ] ; then
-            echo "CVR Germline fetch failed!"
+            echo "PHI attributes found in $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json! HEMEPACT will not be imported!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Germline Fetch"
+            sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json"
             IMPORT_STATUS_HEME=1
             #override the success of the tumor sample cvr fetch with a failed status
             FETCH_CVR_HEME_FAIL=1
         else
-            # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json
-            if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json! HEMEPACT will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json"
-                IMPORT_STATUS_HEME=1
-                #override the success of the tumor sample cvr fetch with a failed status
-                FETCH_CVR_HEME_FAIL=1
-            else
-                echo "committing CVR germline data"
-                #cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: CVR Germline"
-            fi
+            echo "committing CVR germline data"
+            cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: CVR Germline"
         fi
     fi
 fi
@@ -372,37 +367,35 @@ if [ $? -gt 0 ] ; then
 else
     FETCH_DDP_HEME_FAIL=0
     echo "committing ddp data"
-    #cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: DDP Demographics"
+    cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: DDP Demographics"
 fi
 
 # -----------------------------------------------------------------------------------------------------------
 # ARCHER DATA FETCHES
 printTimeStampedDataProcessingStepMessage "ARCHER data processing"
 
-if [ $SKIP_CVR -eq 1 ] ; then
-    if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
-        # fetch new/updated archer samples using CVR Web service (must come after git fetching).
-        printTimeStampedDataProcessingStepMessage "CVR fetch for archer"
-        # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS
+if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
+    # fetch new/updated archer samples using CVR Web service (must come after git fetching).
+    printTimeStampedDataProcessingStepMessage "CVR fetch for archer"
+    # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS
+    if [ $? -gt 0 ] ; then
+        echo "CVR Archer fetch failed!"
+        echo "This will not affect importing of mskimpact"
+        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED CVR Fetch"
+        IMPORT_STATUS_ARCHER=1
+    else
+        # check for PHI
+        $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json
         if [ $? -gt 0 ] ; then
-            echo "CVR Archer fetch failed!"
-            echo "This will not affect importing of mskimpact"
+            echo "PHI attributes found in $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json! UNLINKED_ARCHER will not be imported!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED CVR Fetch"
+            sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER PHI attributes scan failed on $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json"
             IMPORT_STATUS_ARCHER=1
         else
-            # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json
-            if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json! UNLINKED_ARCHER will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER PHI attributes scan failed on $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json"
-                IMPORT_STATUS_ARCHER=1
-            else
-                FETCH_CVR_ARCHER_FAIL=0
-                #cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED dataset"
-            fi
+            FETCH_CVR_ARCHER_FAIL=0
+            cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED dataset"
         fi
     fi
 fi
@@ -423,37 +416,35 @@ if [ $? -gt 0 ] ; then
 else
     FETCH_DDP_ARCHER_FAIL=0
     echo "committing ddp data"
-    #cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: DDP Demographics"
+    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: DDP Demographics"
 fi
 
 # -----------------------------------------------------------------------------------------------------------
 # ACCESS DATA FETCHES
 printTimeStampedDataProcessingStepMessage "ACCESS data processing"
 
-if [ $SKIP_CVR -eq 1 ] ; then
-    if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
-        # fetch new/updated access samples using CVR Web service (must come after git fetching).
-        printTimeStampedDataProcessingStepMessage "CVR fetch for access"
-        # access has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS
+if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
+    # fetch new/updated access samples using CVR Web service (must come after git fetching).
+    printTimeStampedDataProcessingStepMessage "CVR fetch for access"
+    # access has -b option to block warnings for samples with zero variants (all samples will have zero variants)
+    $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS
+    if [ $? -gt 0 ] ; then
+        echo "CVR ACCESS fetch failed!"
+        echo "This will not affect importing of mskimpact"
+        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS CVR Fetch"
+        IMPORT_STATUS_ACCESS=1
+    else
+        # check for PHI
+        $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ACCESS_DATA_HOME/cvr_data.json
         if [ $? -gt 0 ] ; then
-            echo "CVR ACCESS fetch failed!"
-            echo "This will not affect importing of mskimpact"
+            echo "PHI attributes found in $MSK_ACCESS_DATA_HOME/cvr_data.json! ACCESS will not be imported!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS CVR Fetch"
+            sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS PHI attributes scan failed on $MSK_ACCESS_DATA_HOME/cvr_data.json"
             IMPORT_STATUS_ACCESS=1
         else
-            # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ACCESS_DATA_HOME/cvr_data.json
-            if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_ACCESS_DATA_HOME/cvr_data.json! ACCESS will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS PHI attributes scan failed on $MSK_ACCESS_DATA_HOME/cvr_data.json"
-                IMPORT_STATUS_ACCESS=1
-            else
-                FETCH_CVR_ACCESS_FAIL=0
-                #cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS dataset"
-            fi
+            FETCH_CVR_ACCESS_FAIL=0
+            cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS dataset"
         fi
     fi
 fi
@@ -474,7 +465,7 @@ if [ $? -gt 0 ] ; then
 else
     FETCH_DDP_ACCESS_FAIL=0
     echo "committing ddp data"
-    #cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS Dataset: DDP Demographics"
+    cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS Dataset: DDP Demographics"
 fi
 
 # -----------------------------------------------------------------------------------------------------------
@@ -487,10 +478,10 @@ fi
 # add "DATE ADDED" info to clinical data for MSK-IMPACT
 if [ $IMPORT_STATUS_IMPACT -eq 0 ] && [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
     addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
-    #cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Case Lists"
+    cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Case Lists"
     if [ $EXPORT_SUPP_DATE_IMPACT_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_IMPACT_DATA_HOME "data_clinical_mskimpact_data_clinical_cvr.txt" "data_clinical_mskimpact_supp_date_cbioportal_added.txt"
-        #cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add data_clinical_mskimpact_supp_date_cbioportal_added.txt ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: SUPP DATE ADDED"
+        cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add data_clinical_mskimpact_supp_date_cbioportal_added.txt ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: SUPP DATE ADDED"
     fi
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
@@ -498,10 +489,10 @@ fi
 # add "DATE ADDED" info to clinical data for HEMEPACT
 if [ $IMPORT_STATUS_HEME -eq 0 ] && [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
     addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
-    #cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: Case Lists"
+    cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: Case Lists"
     if [ $EXPORT_SUPP_DATE_HEME_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_HEMEPACT_DATA_HOME "data_clinical_hemepact_data_clinical.txt" "data_clinical_hemepact_data_clinical_supp_date.txt"
-        #cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add data_clinical_hemepact_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: SUPP DATE ADDED"
+        cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add data_clinical_hemepact_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: SUPP DATE ADDED"
     fi
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
@@ -509,10 +500,10 @@ fi
 # add "DATE ADDED" info to clinical data for ARCHER
 if [[ $IMPORT_STATUS_ARCHER -eq 0 && $FETCH_CVR_ARCHER_FAIL -eq 0 ]] ; then
     addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher" "data_clinical_mskarcher_data_clinical.txt"
-    #cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Case Lists"
+    cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Case Lists"
     if [ $EXPORT_SUPP_DATE_ARCHER_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_ARCHER_UNFILTERED_DATA_HOME "data_clinical_mskarcher_data_clinical.txt" "data_clinical_mskarcher_data_clinical_supp_date.txt"
-        #cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add data_clinical_mskarcher_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: SUPP DATE ADDED"
+        cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add data_clinical_mskarcher_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: SUPP DATE ADDED"
     fi
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
@@ -520,10 +511,10 @@ fi
 # generate case lists by cancer type and add "DATE ADDED" info to clinical data for ACCESS
 if [ $IMPORT_STATUS_ACCESS -eq 0 ] && [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
     addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_mskaccess_data_clinical.txt"
-    #cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ACCESS Dataset: Case Lists"
+    cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ACCESS Dataset: Case Lists"
     if [ $EXPORT_SUPP_DATE_ACCESS_FAIL -eq 0 ] ; then
         addDateAddedData $MSK_ACCESS_DATA_HOME "data_clinical_mskaccess_data_clinical.txt" "data_clinical_mskaccess_data_clinical_supp_date.txt"
-        #cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add data_clinical_mskaccess_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ACCESS Dataset: SUPP DATE ADDED"
+        cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add data_clinical_mskaccess_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ACCESS Dataset: SUPP DATE ADDED"
     fi
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 fi
@@ -544,7 +535,7 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] && [ $FETCH_CVR_ARCHER_FAIL -eq 0 ] && [ $FET
         ARCHER_MERGE_IMPACT_FAIL=1
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     else
-        #$GIT_BINARY add $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_IMPACT_DATA_HOME ; $GIT_BINARY commit -m "Adding ARCHER_UNFILTERED fusions to MSKIMPACT"
+        $GIT_BINARY add $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_IMPACT_DATA_HOME ; $GIT_BINARY commit -m "Adding ARCHER_UNFILTERED fusions to MSKIMPACT"
     fi
 fi
 
@@ -556,7 +547,7 @@ if [ $IMPORT_STATUS_HEME -eq 0 ] && [ $FETCH_CVR_ARCHER_FAIL -eq 0 ] && [ $FETCH
         ARCHER_MERGE_HEME_FAIL=1
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     else
-        #$GIT_BINARY add $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY commit -m "Adding ARCHER_UNFILTERED fusions to HEMEPACT"
+        $GIT_BINARY add $MAPPED_ARCHER_FUSION_SAMPLES_FILE $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY commit -m "Adding ARCHER_UNFILTERED fusions to HEMEPACT"
     fi
 fi
 
@@ -580,7 +571,7 @@ printTimeStampedDataProcessingStepMessage "redcap import for all cohorts"
 
 # imports mskimpact crdb data into redcap
 if [ $PERFORM_CRDB_FETCH -gt 0 ] && [ $FETCH_CRDB_IMPACT_FAIL -eq 0 ] ; then
-    #import_crdb_to_redcap
+    import_crdb_to_redcap
     if [ $? -gt 0 ] ; then
         #NOTE: we have decided to allow import of mskimpact project to proceed even when CRDB data has been lost from redcap (not setting IMPORT_STATUS_IMPACT)
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CRDB Redcap Import - Recovery Of Redcap Project Needed!"
@@ -589,7 +580,7 @@ fi
 
 # imports mskimpact darwin data into redcap
 if [ $FETCH_DARWIN_CAISIS_FAIL -eq 0 ] ; then
-    #import_mskimpact_darwin_caisis_to_redcap
+    import_mskimpact_darwin_caisis_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_IMPACT=1
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Darwin CAISIS Redcap Import"
@@ -598,7 +589,7 @@ fi
 
 # imports mskimpact ddp data into redcap
 if [ $FETCH_DDP_IMPACT_FAIL -eq 0 ] ; then
-    #import_mskimpact_ddp_to_redcap
+    import_mskimpact_ddp_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_IMPACT=1
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Redcap Import"
@@ -607,13 +598,13 @@ fi
 
 # imports mskimpact cvr data into redcap
 if [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
-    #import_mskimpact_cvr_to_redcap
+    import_mskimpact_cvr_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_IMPACT=1
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Redcap Import"
     fi
     if [ $EXPORT_SUPP_DATE_IMPACT_FAIL -eq 0 ] ; then
-        #import_mskimpact_supp_date_to_redcap
+        import_mskimpact_supp_date_to_redcap
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Supp Date Redcap Import. Project is now empty, data restoration required"
         fi
@@ -623,7 +614,7 @@ fi
 ## HEMEPACT imports
 
 if [ $FETCH_DDP_HEME_FAIL -eq 0 ] ; then
-   #import_hemepact_ddp_to_redcap
+   import_hemepact_ddp_to_redcap
    if [ $? -gt 0 ] ; then
        IMPORT_STATUS_HEME=1
        sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Redcap Import"
@@ -632,13 +623,13 @@ fi
 
 # imports hemepact cvr data into redcap
 if [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
-    #import_hemepact_cvr_to_redcap
+    import_hemepact_cvr_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_HEME=1
         sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Redcap Import"
     fi
     if [ $EXPORT_SUPP_DATE_HEME_FAIL -eq 0 ] ; then
-        #import_hemepact_supp_date_to_redcap
+        import_hemepact_supp_date_to_redcap
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT Supp Date Redcap Import. Project is now empty, data restoration required"
         fi
@@ -648,7 +639,7 @@ fi
 ## ARCHER imports
 
 if [ $FETCH_DDP_ARCHER_FAIL -eq 0 ] ; then
-   #import_archer_ddp_to_redcap
+   import_archer_ddp_to_redcap
    if [ $? -gt 0 ] ; then
        IMPORT_STATUS_ARCHER=1
        sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Redcap Import"
@@ -657,13 +648,13 @@ fi
 
 # imports archer cvr data into redcap
 if [ $FETCH_CVR_ARCHER_FAIL -eq 0 ] ; then
-    #import_archer_cvr_to_redcap
+    import_archer_cvr_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_ARCHER=1
         sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED CVR Redcap Import"
     fi
     if [ $EXPORT_SUPP_DATE_ARCHER_FAIL -eq 0 ] ; then
-        #import_archer_supp_date_to_redcap
+        import_archer_supp_date_to_redcap
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED Supp Date Redcap Import. Project is now empty, data restoration required"
         fi
@@ -673,7 +664,7 @@ fi
 ## ACCESS imports
 
 if [ $FETCH_DDP_ACCESS_FAIL -eq 0 ] ; then
-   #import_access_ddp_to_redcap
+   import_access_ddp_to_redcap
    if [$? -gt 0 ] ; then
        IMPORT_STATUS_ACCESS=1
        sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS DDP Redcap Import"
@@ -682,13 +673,13 @@ fi
 
 # imports access cvr data into redcap
 if [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
-    #import_access_cvr_to_redcap
+    import_access_cvr_to_redcap
     if [ $? -gt 0 ] ; then
         IMPORT_STATUS_ACCESS=1
         sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS CVR Redcap Import"
     fi
     if [ $EXPORT_SUPP_DATE_ACCESS_FAIL -eq 0 ] ; then
-        #import_access_supp_date_to_redcap
+        import_access_supp_date_to_redcap
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Supp Date Redcap Import. Project is now empty, data restoration required"
         fi
@@ -735,10 +726,10 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
             if [ $? -gt 0 ] ; then
                 cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
             else
-                #cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Clinical and Timeline"
+                cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Clinical and Timeline"
             fi
         fi
-        #touch $MSK_IMPACT_CONSUME_TRIGGER
+        touch $MSK_IMPACT_CONSUME_TRIGGER
     fi
 fi
 
@@ -752,8 +743,8 @@ if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
         sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT Redcap Export"
     else
-        #touch $MSK_HEMEPACT_CONSUME_TRIGGER
-        #cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: Clinical and Timeline"
+        touch $MSK_HEMEPACT_CONSUME_TRIGGER
+        cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: Clinical and Timeline"
     fi
 fi
 
@@ -774,8 +765,8 @@ if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
             mv $archer_data_clinical_tmp_file $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_sample.txt
         fi
         touch $MSK_ARCHER_IMPORT_TRIGGER
-        #touch $MSK_ARCHER_CONSUME_TRIGGER
-        #cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Clinical and Timeline"
+        touch $MSK_ARCHER_CONSUME_TRIGGER
+        cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Clinical and Timeline"
     fi
 fi
 
@@ -789,8 +780,8 @@ if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
         sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap Export"
     else
-        #touch $MSK_ACCESS_CONSUME_TRIGGER
-        #cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest ACCESS Dataset: Clinical and Timeline"
+        touch $MSK_ACCESS_CONSUME_TRIGGER
+        cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest ACCESS Dataset: Clinical and Timeline"
     fi
 fi
 
@@ -822,9 +813,9 @@ if [ $PROCESS_UNLINKED_ARCHER_STUDY -eq 1 ] ; then
                 IMPORT_STATUS_ARCHER=1
             else
                 # commit updates and generated case lists
-                #cd $MSK_ARCHER_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest UNLINKED_ARCHER Dataset"
+                cd $MSK_ARCHER_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest UNLINKED_ARCHER Dataset"
                 addCancerTypeCaseLists $MSK_ARCHER_DATA_HOME "mskarcher" "data_clinical_sample.txt" "data_clinical_patient.txt"
-                #cd $MSK_ARCHER_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest UNLINKED_ARCHER Dataset: Case Lists"
+                cd $MSK_ARCHER_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest UNLINKED_ARCHER Dataset: Case Lists"
                 cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
             fi
         fi
@@ -908,7 +899,7 @@ if [ $MIXEDPACT_MERGE_FAIL -gt 0 ] ; then
     cd $MSK_MIXEDPACT_DATA_HOME ; $GIT_BINARY checkout -- .
 else
     echo "Committing MIXEDPACT data"
-    #cd $MSK_MIXEDPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MIXEDPACT dataset"
+    cd $MSK_MIXEDPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MIXEDPACT dataset"
 fi
 
 # commit or revert changes for MSKSOLIDHEME
@@ -918,7 +909,7 @@ if [ $MSK_SOLID_HEME_MERGE_FAIL -gt 0 ] ; then
     cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY checkout -- .
 else
     echo "Committing MSKSOLIDHEME data"
-    #cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset"
+    cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset"
 fi
 
 cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
@@ -955,7 +946,7 @@ if [ $MSK_KINGS_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing KINGSCOUNTY data"
-    #cd $MSK_KINGS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest KINGSCOUNTY dataset"
+    cd $MSK_KINGS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest KINGSCOUNTY dataset"
 fi
 
 # LEHIGHVALLEY subset
@@ -982,7 +973,7 @@ if [ $MSK_LEHIGH_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing LEHIGHVALLEY data"
-    #cd $MSK_LEHIGH_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest LEHIGHVALLEY dataset"
+    cd $MSK_LEHIGH_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest LEHIGHVALLEY dataset"
 fi
 
 # QUEENSCANCERCENTER subset
@@ -1009,7 +1000,7 @@ if [ $MSK_QUEENS_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing QUEENSCANCERCENTER data"
-    #cd $MSK_QUEENS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest QUEENSCANCERCENTER dataset"
+    cd $MSK_QUEENS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest QUEENSCANCERCENTER dataset"
 fi
 
 # MIAMICANCERINSTITUTE subset
@@ -1036,7 +1027,7 @@ if [ $MSK_MCI_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing MIAMICANCERINSTITUTE data"
-    #cd $MSK_MCI_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MIAMICANCERINSTITUTE dataset"
+    cd $MSK_MCI_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MIAMICANCERINSTITUTE dataset"
 fi
 
 # HARTFORDHEALTHCARE subset
@@ -1063,7 +1054,7 @@ if [ $MSK_HARTFORD_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing HARTFORDHEALTHCARE data"
-    #cd $MSK_HARTFORD_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest HARTFORDHEALTHCARE dataset"
+    cd $MSK_HARTFORD_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest HARTFORDHEALTHCARE dataset"
 fi
 
 # RALPHLAUREN subset
@@ -1090,7 +1081,7 @@ if [ $MSK_RALPHLAUREN_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing RALPHLAUREN data"
-    #cd $MSK_RALPHLAUREN_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest RALPHLAUREN dataset"
+    cd $MSK_RALPHLAUREN_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest RALPHLAUREN dataset"
 fi
 
 # RIKENGENESISJAPAN subset
@@ -1117,7 +1108,7 @@ if [ $MSK_RIKENGENESISJAPAN_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing RIKENGENESISJAPAN data"
-    #cd $MSK_RIKENGENESISJAPAN_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest RIKENGENESISJAPAN dataset"
+    cd $MSK_RIKENGENESISJAPAN_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest RIKENGENESISJAPAN dataset"
 fi
 
 #--------------------------------------------------------------
@@ -1158,7 +1149,7 @@ else
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     else
         echo "Committing MSKIMPACT_PED data"
-        #cd $MSKIMPACT_PED_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKIMPACT_PED dataset"
+        cd $MSKIMPACT_PED_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKIMPACT_PED dataset"
     fi
 fi
 
@@ -1189,7 +1180,7 @@ if [ $SCLC_MSKIMPACT_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing SCLCMSKIMPACT data"
-    #cd $MSK_SCLC_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest SCLCMSKIMPACT dataset"
+    cd $MSK_SCLC_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest SCLCMSKIMPACT dataset"
 fi
 
 #--------------------------------------------------------------
@@ -1287,7 +1278,7 @@ if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 else
     echo "Committing Lymphoma super cohort data"
-    #cd $LYMPHOMA_SUPER_COHORT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest Lymphoma Super Cohort dataset"
+    cd $LYMPHOMA_SUPER_COHORT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest Lymphoma Super Cohort dataset"
 fi
 
 #--------------------------------------------------------------
@@ -1295,11 +1286,11 @@ fi
 printTimeStampedDataProcessingStepMessage "push of dmp data updates to git repository"
 # check updated data back into git
 GIT_PUSH_FAIL=0
-#cd $DMP_DATA_HOME ; $GIT_BINARY push origin
-#if [ $? -gt 0 ] ; then
-#    GIT_PUSH_FAIL=1
-#    sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH :fire: - address ASAP!"
-#fi
+cd $DMP_DATA_HOME ; $GIT_BINARY push origin
+if [ $? -gt 0 ] ; then
+    GIT_PUSH_FAIL=1
+    sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH :fire: - address ASAP!"
+fi
 
 #--------------------------------------------------------------
 # Emails for failed processes
