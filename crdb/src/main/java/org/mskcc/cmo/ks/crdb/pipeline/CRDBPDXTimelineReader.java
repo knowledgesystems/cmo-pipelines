@@ -64,7 +64,7 @@ public class CRDBPDXTimelineReader implements ItemStreamReader<CRDBPDXTimelineDa
     private CRDBUtils crdbUtils;
 
     private List<CRDBPDXTimelineDataset> crdbTimelineDatasetResults;
-    private List<CRDBPDXTimelineDataset> nullStartDateTimelinePatients = new ArrayList<>();
+    private List<String> nullStartDateTimelinePatients = new ArrayList<>();
     private final Logger LOG = Logger.getLogger(CRDBPDXTimelineReader.class);
 
     @Override
@@ -106,13 +106,12 @@ public class CRDBPDXTimelineReader implements ItemStreamReader<CRDBPDXTimelineDa
         List<CRDBPDXTimelineDataset> filteredCrdbTimelineDatasetResults = new ArrayList<>();
         for (CRDBPDXTimelineDataset record : crdbTimelineDatasetResults) {
             if (Strings.isNullOrEmpty(record.getSTART_DATE()) || record.getSTART_DATE().equals("NA")) {
-                nullStartDateTimelinePatients.add(record);
-            } else {
-                filteredCrdbTimelineDatasetResults.add(record);
+                nullStartDateTimelinePatients.add(record.getPATIENT_ID());
             }
+            filteredCrdbTimelineDatasetResults.add(record);
         }
         if (nullStartDateTimelinePatients.size() > 0) {
-            LOG.warn("Found " + String.valueOf(nullStartDateTimelinePatients.size()) + " CRDB PDX timeline records with null 'START_DATE' - these records will be filtered from restults.");
+            LOG.warn("Found " + String.valueOf(nullStartDateTimelinePatients.size()) + " CRDB PDX timeline records with null 'START_DATE'. The following patients are missing required 'START_DATE' value:\n" + String.join("\n\t", nullStartDateTimelinePatients));
         }
 
         return filteredCrdbTimelineDatasetResults;
