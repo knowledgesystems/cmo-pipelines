@@ -44,7 +44,7 @@ function extractPropertiesFromFile() {
     PROPERTIES_FILENAME=$1
     shift 1
     if [ ! -r $PROPERTIES_FILENAME ] ; then
-        return 2 # error -- cannot read file 
+        return 2 # error -- cannot read file
     fi
     # test and reset return array
     if ! declare -A | grep " extracted_properties=" > /dev/null 2>&1 ; then
