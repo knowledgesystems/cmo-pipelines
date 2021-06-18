@@ -6,7 +6,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     # check lock so that executions of this script not overlap
     if ! flock --nonblock --exclusive $my_flock_fd ; then
-        echo "Failure : could not acquire lock for $MY_FLOCK_FILEPATH -- either the fetch or the import from yesterday is still running."
+        echo "Failure : could not acquire lock for $MY_FLOCK_FILEPATH -- the fetch from yesterday is still running."
         exit 1
     fi
 
