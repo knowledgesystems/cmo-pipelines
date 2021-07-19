@@ -55,6 +55,23 @@ if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
 fi
 echo -e "\tPORTAL_SCRIPTS_DIRECTORY="$PORTAL_SCRIPTS_DIRECTORY
 
+# check for presence of new filename pattens (not yet supported) and fail if present
+
+$PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/study_directory_uses_updated_filenames.py $INPUT_DIRECTORY
+if [ $? -eq 0 ] ; then
+    echo "unsupported filenames present - skipping subset" >&2
+    exit 1
+fi
+
+PYTHON_FILENAME_CHECK_CALL="import sys
+import updated_filename_for_datatype_test
+sys.exit(updated_filename_for_datatype_test.directory_uses_updated_filenames(\"$INPUT_DIRECTORY\"))
+"
+if ! python -c "$PYTHON_FILENAME_CHECK_CALL" ; then
+    echo "unsupported filenames present - skipping subset" >&2
+    exit 1
+fi
+
 # status flags
 GEN_SUBSET_LIST_FAILURE=0
 MERGE_SCRIPT_FAILURE=0
