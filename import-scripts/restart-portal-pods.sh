@@ -9,6 +9,7 @@ if ! which $KUBECTL_BINARY > /dev/null 2>&1 ; then
 fi
 
 unset portal_to_deployment_map
+
 declare -A portal_to_deployment_map
 portal_to_deployment_map["public"]="cbioportal-spring-boot"
 portal_to_deployment_map["genie-public"]="cbioportal-backend-genie-public"
@@ -49,6 +50,8 @@ if [ -z "$deployment_id" ] ; then
     echo "invalid portal_id : $portal_id"
     print_portal_id_values
 fi
+
+/data/portal-cron/scripts/authenticate_service_account.sh 
 $KUBECTL_BINARY set env deployment $deployment_id --env="LAST_RESTART=$(date)"
 
 if [ -z "$preserve_cache_flag" ] ; then

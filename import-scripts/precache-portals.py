@@ -28,6 +28,13 @@ MAX_NUMBER_OF_ATTEMPTS = 18
 # ----------------------------------------------------------
 # Functions wrapping k8s/timing checks
 
+def authenticate_service_account():
+    try:
+        subprocess.check_output(["/data/portal-cron/scripts/authenticate_service_account.sh"])
+    except:
+        print "Attempt to authenticate to k8s cluster failed with non-zero exit status, exiting..."
+        sys.exit(1)
+
 # get pods associated with deployment
 def get_deployed_pods(deployment_name):
     deployed_pods = subprocess.check_output(["/bin/bash", "-c", "kubectl get pods | grep %s | sed 's/\s\s*/\t/g' | cut -f1" % (deployment_name)]).rstrip().split("\n")

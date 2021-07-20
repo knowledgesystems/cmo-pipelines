@@ -183,6 +183,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/delete_slow_to_terminate_pods.loc
         mv $temp_file $POD_TERMINATING_TIMESTAMP_FILE
     }
 
+    /data/portal-cron/scripts/authenticate_service_account.sh 
     check_for_dependencies
     now=$(date +%s)
     make_work_dir_if_necessary
