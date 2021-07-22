@@ -30,9 +30,9 @@ def expand_clinical_data_main(clinical_filename, fields, impact_data_only, ident
 			continue
 		# update line with supplemental sample clinical data and format data as string for output file
 		line.update(SUPPLEMENTAL_CLINICAL_DATA.get(line[identifier_column_name].strip(), {}))
-		data = map(lambda v: line.get(v,''), header)
+		data = map(lambda v: line.get(v,'Unknown'), header)
 		output_data.append('\t'.join(data))
-	data_file.close()	
+	data_file.close()
 
 	# write data to output file
 	output_file = open(clinical_filename, 'w')
@@ -49,6 +49,9 @@ def load_supplemental_clinical_data(supplemental_clinical_filename, supplemental
 		line = dict(zip(header, map(str.strip, line.split('\t'))))
 		if study_id == 'genie' and identifier_column_name == 'SAMPLE_ID':
 			normalize_genie_sample_type(line)
+			add_gene_panel_prefix(line)
+		elif study_id == 'genie' and identifier_column_name == 'PATIENT_ID':
+			line = dict((k,('Unknown' if v=='NA' else v)) for k,v in line.items())
 		SUPPLEMENTAL_CLINICAL_DATA[line[identifier_column_name].strip()] = dict({(k,v) for k,v in line.items() if k in supplemental_fields})
 	data_file.close()
 
@@ -60,6 +63,13 @@ def normalize_genie_sample_type(data):
 			data['SAMPLE_TYPE'] = '1'
 	except KeyError:
 		print >> ERROR_FILE, "No SAMPLE_TYPE column detected, cannot normalize genie sample type"
+	return data
+	
+def add_gene_panel_prefix(data):
+	try:
+		data['GENE_PANEL'] = 'MSK-'+data['GENE_PANEL']
+	except KeyError:
+		print >> ERROR_FILE, "No GENE_PANEL column detected, cannot add prefix to genie gene panel"
 	return data
 
 def is_impact_sample_or_patient(case_identifier):
