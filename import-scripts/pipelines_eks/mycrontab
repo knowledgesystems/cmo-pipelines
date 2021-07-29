@@ -1,0 +1,25 @@
+MAILTO=cbioportal-pipelines@cbio.mskcc.org
+
+########################## 
+# Import Scripts (Comment these out when upgrading)
+########################## 
+0 12,13,14,15,16,17,18,19,20,21,22 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-cmo-data-triage.sh >> /data/portal-cron/logs/import-cmo-data-triage.log 2>&1 || echo "Failure in crontab: import-cmo-data-triage.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+0 20 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/fetch-and-import-dmp-data-wrapper.sh >> /data/portal-cron/logs/fetch-and-import-dmp-impact-data.log 2>&1 || echo "Failure in crontab: fetch-and-import-dmp-data-wrapper.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+
+########################## 
+# Monitors
+########################## 
+*/5 * * * * . /data/portal-cron/scripts/automation-environment.sh; . /data/portal-cron/pipelines-credentials/precache.dat; $PYTHON_BINARY /data/portal-cron/scripts/precache-portals.py -d cbioportal-backend-genie-public,cbioportal-backend-genie-private,cbioportal-backend-genie-archive >> /data/portal-cron/logs/precache-portals.log 2>&1 || echo "Failure in crontab: precache portals script exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+*/3 * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-redis-and-restart.sh >> /data/portal-cron/logs/monitor-redis-and-restart.log 2>&1 || echo "Failure in crontab: monitor-redis-and-restart.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+0 0 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-stalled-jobs.sh >> /data/portal-cron/logs/monitor-stalled-jobs.log 2>&1 || echo "Failure in crontab: monitor-stalled-jobs.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+0 0 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-crontab-version.sh >> /data/portal-cron/logs/monitor-crontab-version.log 2>&1 || echo "Failure in crontab: monitor-crontab-version.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+# delete slow terminating pods
+* * * * * . /data/portal-cron/scripts/delete_slow_to_terminate_pods.sh >> /data/portal-cron/logs/delete_slow_to_terminate_pods.log 2>&1 || echo "Failure in crontab: delete_slow_to_terminate_pods.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+
+########################## 
+# Miscellaneous 
+########################## 
+0 0 * * * /usr/sbin/logrotate -f -s /data/portal-cron/logrotate.status /data/portal-cron/portal-cron-logrotate
+# make sure we can execute all scripts, execute daily at midnight
+55 23 * * * chmod u+x /data/portal-cron/scripts/*.sh /data/portal-cron/scripts/*.py || echo "Failure in crontab: chmod exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
+0 19 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/backup-redcap-data.sh >> /data/portal-cron/logs/redcap-data-snapshot.log 2>&1 || echo "Failure in crontab: backup-redcap-data.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbio.mskcc.org" -s "Failure in crontab" cbioportal-pipelines@cbio.mskcc.org
