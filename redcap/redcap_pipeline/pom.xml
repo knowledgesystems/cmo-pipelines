@@ -24,17 +24,4 @@
     </dependency>
   </dependencies>
 
-  <build>
-    <finalName>redcap_pipeline</finalName>
-    <plugins>
-     <plugin>
-        <!-- required to build an executable jar -->
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <mainClass>org.mskcc.cmo.ks.redcap.RedcapPipeline</mainClass>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 </project>
