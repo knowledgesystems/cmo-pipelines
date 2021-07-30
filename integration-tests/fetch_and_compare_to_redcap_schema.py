@@ -22,7 +22,8 @@ import subprocess
 REDCAP_EXPORTED_FILENAME = "redcap_exported_filename"
 DATASOURCE_FETCHED_FILENAME = "fetched_filename"
 HEADERS = {"Accept": "application/vnd.github.v4.raw"}
-GITHUB_ISSUES_BASE_URL = "https://api.github.com/repos/knowledgesystems/cmo-pipelines/issues"
+HTTPS_STARTER = "https://"
+GITHUB_ISSUES_BASE_URL = "api.github.com/repos/knowledgesystems/cmo-pipelines/issues"
 GITHUB_LABELS_ENDPOINT = "/labels"
 LABELS_ID_KEY = "id"
 SKIP_INTEGRATION_TESTS_LABEL = "1383619983"
@@ -82,17 +83,16 @@ def get_github_credentials(credentials_file):
     credentials = credentials_line.split(":")
     return (credentials[0], credentials[1])
 
-# given a pull request number - return the associated tag-names/ids
-def get_labels_on_pull_request(username, password, pull_request_number):
-    url = GITHUB_ISSUES_BASE_URL + "/" + pull_request_number + GITHUB_LABELS_ENDPOINT
-    github_json_response = requests.get(url, auth = (username, password))
-    github_response = json.loads(github_json_response.text)
+def get_github_pat(personal_access_token_file):
+    token = open(personal_access_token_file, "r").read().rstrip()
+    return token
 
-    print "\n\n\n\n"
-    print github_response
+# given a pull request number - return the associated tag-names/ids
+def get_labels_on_pull_request(username, password, token, pull_request_number):
+    url = HTTPS_STARTER + username + ":" + token + "@" + GITHUB_ISSUES_BASE_URL + "/" + pull_request_number + GITHUB_LABELS_ENDPOINT
+    github_json_response = requests.get(url)
+    github_response = json.loads(github_json_response.text)
     label_ids = [str(label[LABELS_ID_KEY]) for label in github_response if LABELS_ID_KEY in label]
-    print "\n\n\n LABEL IDS \n\n\n"
-    print label_ids
     return label_ids
 
 # exports all required redcap projects that need to be compared
@@ -190,6 +190,7 @@ def main():
     parser.add_argument("-r", "--redcap-directory", help = "Path to directory where exported redcap projects were saved", required = True)
     parser.add_argument("-s", "--truststore", help = "Keystore with SSL certs", required = True)
     parser.add_argument("-p", "--truststore-password", help = "password for truststore", required = True)
+    parser.add_argument("-t", "--git-token", help = "File containing git PAT", required = True)
     args = parser.parse_args()
 
     credentials_file = args.credentials_file
@@ -199,6 +200,7 @@ def main():
     redcap_directory = args.redcap_directory
     truststore = args.truststore
     truststore_password = args.truststore_password
+    personal_access_token_file = args.git_token
 
     # initialize fetched file to redcap exported file mappings for testing
     # which fetcher test to run will be determined by returned tags
@@ -207,7 +209,8 @@ def main():
 
     # get the labels for a pull request from github (may include non-test related tags)
     username,password = get_github_credentials(credentials_file)
-    pull_request_labels = get_labels_on_pull_request(username, password, pull_request_number)
+    git_token = get_github_pat(personal_access_token_file)
+    pull_request_labels = get_labels_on_pull_request(username, password, git_token, pull_request_number)
     # returned github pull requests filtered to only include integration test tags (ddp, cvr, crdb)
 
     fetchers_to_test = [LABEL_TO_TEST_MAPPING[label] for label in pull_request_labels if label in LABEL_TO_TEST_MAPPING]

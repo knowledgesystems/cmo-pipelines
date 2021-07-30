@@ -44,7 +44,7 @@ if [[ -n "$GIT_BRANCH" ]] ; then
     if [[ "$GIT_BRANCH" =~ ^origin/pull/([0-9]+)/head$ ]] ; then
         PR_NUMBER=${BASH_REMATCH[1]}
         echo "getting tags for pull-request $PR_NUMBER"
-        python fetch_and_compare_to_redcap_schema.py -r $REDCAP_EXPORTS_DIRECTORY -f $FETCHED_FILES_DIRECTORY -g /var/lib/jenkins/git-credentials -n $PR_NUMBER -l $LIB_DIRECTORY -s $SSL_TRUSTSTORE -p $SSL_TRUSTSTORE_PASSWORD
+        python fetch_and_compare_to_redcap_schema.py -r $REDCAP_EXPORTS_DIRECTORY -f $FETCHED_FILES_DIRECTORY -g /var/lib/jenkins/git-credentials -n $PR_NUMBER -l $LIB_DIRECTORY -s $SSL_TRUSTSTORE -p $SSL_TRUSTSTORE_PASSWORD -t /var/lib/jenkins/git-token
         if [ $? -eq 0 ] ; then
             echo "Data schema matches in data fetch and redcap project"
             TEST_SUCCESS=1
