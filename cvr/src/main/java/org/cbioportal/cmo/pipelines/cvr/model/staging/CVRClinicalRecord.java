@@ -32,7 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
-import com.mysql.jdbc.StringUtils;
+import com.google.common.base.Strings;
 import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRMetaData;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLMetaData;
@@ -355,7 +355,7 @@ public class CVRClinicalRecord {
     }
 
     public String getPATH_SLIDE_EXISTS() {
-        return !StringUtils.isNullOrEmpty(this.pathSlideExists) ? this.pathSlideExists : "NO";
+        return !Strings.isNullOrEmpty(this.pathSlideExists) ? this.pathSlideExists : "NO";
     }
 
     public void setPATH_SLIDE_EXISTS(String pathSlideExists) {
@@ -363,7 +363,7 @@ public class CVRClinicalRecord {
     }
 
     public String getMSK_SLIDE_ID() {
-        return !StringUtils.isNullOrEmpty(this.mskSlideID) ? this.mskSlideID : "NA";
+        return !Strings.isNullOrEmpty(this.mskSlideID) ? this.mskSlideID : "NA";
     }
 
     public void setMSK_SLIDE_ID(String mskSlideID) {
@@ -389,7 +389,7 @@ public class CVRClinicalRecord {
     }
 
     private boolean wholeSlideViewerIdIsValid(String wholeSlideViewerId) {
-            return (!StringUtils.isNullOrEmpty(wholeSlideViewerId) && !wholeSlideViewerId.equalsIgnoreCase("NA"));
+            return (!Strings.isNullOrEmpty(wholeSlideViewerId) && !wholeSlideViewerId.equalsIgnoreCase("NA"));
     }
 
     public static List<String> getFieldNames() {

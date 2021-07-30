@@ -43,6 +43,7 @@ import org.apache.log4j.Logger;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -89,6 +90,7 @@ public class CVRPipeline {
             log.warn("CvrPipelineJob running in PRODUCTION MODE - samples will be requeued.");
         }
         SpringApplication app = new SpringApplication(CVRPipeline.class);
+        app.setWebApplicationType(WebApplicationType.NONE);
         ConfigurableApplicationContext ctx= app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
 

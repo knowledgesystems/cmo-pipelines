@@ -36,7 +36,6 @@ import java.util.*;
 import java.io.*;
 
 import org.apache.commons.logging.*;
-import org.hsqldb.types.Charset;
 import org.mskcc.cmo.ks.gene.model.Gene;
 import org.springframework.batch.core.*;
 import org.springframework.batch.item.ItemStreamException;

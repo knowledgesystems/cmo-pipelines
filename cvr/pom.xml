@@ -67,7 +67,7 @@
     <dependency>
       <groupId>com.github.genome-nexus</groupId>
       <artifactId>genome-nexus-annotation-pipeline</artifactId>
-      <version>3e1c8c8dbca54b6f0d28665dbd7148ff14292b98</version>
+      <version>db1aa89c1f08f56e713822e4fe55e0c2ed1e91ea</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.logging.log4j</groupId>
@@ -97,6 +97,11 @@
       <version>19.0</version>
       <type>jar</type>
     </dependency>
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <version>2.9.4</version>
+    </dependency>
   </dependencies>
 
   <repositories>
@@ -110,13 +115,11 @@
     <finalName>cvr_fetcher</finalName>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.6.1</version>
+        <!-- required to build an executable jar -->
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <source>${maven.compiler.version}</source>
-          <target>${maven.compiler.version}</target>
-          <compilerArgument>-Xlint:deprecation</compilerArgument>
+          <mainClass>org.cbioportal.cmo.pipelines.CVRPipeline</mainClass>
         </configuration>
       </plugin>
     </plugins>

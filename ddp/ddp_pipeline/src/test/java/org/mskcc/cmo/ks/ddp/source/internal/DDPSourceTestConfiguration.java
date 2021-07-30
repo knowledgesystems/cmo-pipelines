@@ -32,12 +32,11 @@
 
 package org.mskcc.cmo.ks.ddp.source.internal;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 import org.mskcc.cmo.ks.ddp.source.model.*;
 import org.mskcc.cmo.ks.ddp.source.util.DDPResponseUtil;
 import org.mskcc.cmo.ks.ddp.source.util.AuthenticationUtil;
-
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Strings;
 import java.io.*;
 import java.util.*;

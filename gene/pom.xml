@@ -5,9 +5,9 @@
   <description>Gene Data Pipeline</description>
   <artifactId>gene</artifactId>
   <version>0.1.0</version>
-  
+
   <packaging>jar</packaging>
-  
+
   <parent>
       <groupId>org.mskcc.cmo.ks</groupId>
       <artifactId>master</artifactId>
@@ -18,7 +18,7 @@
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
-    </dependency>   
+    </dependency>
     <dependency>
       <groupId>commons-lang</groupId>
       <artifactId>commons-lang</artifactId>
@@ -32,9 +32,10 @@
     <dependency>
       <groupId>commons-collections</groupId>
       <artifactId>commons-collections</artifactId>
+      <version>3.2.1</version>
       <type>jar</type>
     </dependency>
-    <!-- for Spring JDBC, BasicDataSource usage -->   
+    <!-- for Spring JDBC, BasicDataSource usage -->
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-jdbc</artifactId>
@@ -43,6 +44,7 @@
     <dependency>
       <groupId>commons-dbcp</groupId>
       <artifactId>commons-dbcp</artifactId>
+      <version>1.4</version>
       <type>jar</type>
     </dependency>
     <dependency>
@@ -67,16 +69,13 @@
     <finalName>gene_data_updater</finalName>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.6.1</version>
+        <!-- required to build an executable jar -->
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <source>${maven.compiler.version}</source>
-          <target>${maven.compiler.version}</target>
-          <compilerArgument>-Xlint:deprecation</compilerArgument>
+          <mainClass>org.mskcc.cmo.ks.GeneDataPipeline</mainClass>
         </configuration>
       </plugin>
     </plugins>
   </build>
-
 </project>

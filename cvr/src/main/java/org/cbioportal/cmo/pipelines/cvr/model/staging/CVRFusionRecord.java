@@ -32,10 +32,9 @@
 
 package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
-import com.mysql.jdbc.StringUtils;
+import com.google.common.base.Strings;
 import java.util.ArrayList;
 import java.util.List;
-import joptsimple.internal.Strings;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRSvVariant;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLCnvIntragenicVariant;
 
@@ -98,7 +97,7 @@ public class CVRFusionRecord {
         this.method = "NA";
         this.frame = "unknown";
         // comments do not get imported into db so length of this field won't throw a MysqlDataTruncation exception
-        this.comments = (!StringUtils.isNullOrEmpty(variant.getInterpretation())) ? variant.getInterpretation().replaceAll("[\\t\\n\\r]+"," ") : "";
+        this.comments = (!Strings.isNullOrEmpty(variant.getInterpretation())) ? variant.getInterpretation().replaceAll("[\\t\\n\\r]+"," ") : "";
         this.fusionStatus = "GERMLINE";
     }
 

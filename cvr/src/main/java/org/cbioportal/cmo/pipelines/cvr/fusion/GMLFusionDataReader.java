@@ -32,7 +32,7 @@
 
 package org.cbioportal.cmo.pipelines.cvr.fusion;
 
-import com.mysql.jdbc.StringUtils;
+import com.google.common.base.Strings;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRFusionRecord;
@@ -143,7 +143,7 @@ public class GMLFusionDataReader implements ItemStreamReader<CVRFusionRecord> {
                 String patientId = cvrSampleListUtil.getSamplePatientId(to_add.getTumor_Sample_Barcode());
                 // check that matching patient id can be found from patient-sample mapping
                 // and whether patient is in new dmp germline patients (to prevent duplicates)
-                if (!StringUtils.isNullOrEmpty(patientId) && !cvrSampleListUtil.getNewDmpGmlPatients().contains(patientId)) {
+                if (!Strings.isNullOrEmpty(patientId) && !cvrSampleListUtil.getNewDmpGmlPatients().contains(patientId)) {
                     String fusion = getGmlFusionKey(to_add);
                     if (gmlFusionsSeen.add(fusion)) {
                         gmlFusionRecords.add(to_add);
@@ -181,5 +181,5 @@ public class GMLFusionDataReader implements ItemStreamReader<CVRFusionRecord> {
         }
         return null;
     }
-    
+
 }

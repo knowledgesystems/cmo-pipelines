@@ -49,6 +49,7 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
@@ -376,7 +377,7 @@ public class RedcapPipeline {
             help(options, 1);
         }
         SpringApplication app = new SpringApplication(RedcapPipeline.class);
-        app.setWebEnvironment(false);
+        app.setWebApplicationType(WebApplicationType.NONE);
         ConfigurableApplicationContext ctx = app.run(args);
         // get necessary beans from context
         clinicalDataSource = ctx.getBean(ClinicalDataSource.class);

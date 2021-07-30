@@ -87,23 +87,22 @@
       <groupId>org.mskcc.cmo.ks.redcap.source</groupId>
       <artifactId>redcap_source</artifactId>
       <version>0.1.0</version>
+      <type>jar</type>
     </dependency>
   </dependencies>
 
   <build>
     <finalName>darwin_fetcher</finalName>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.6.1</version>
+     <plugin>
+        <!-- required to build an executable jar -->
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <source>${maven.compiler.version}</source>
-          <target>${maven.compiler.version}</target>
-          <compilerArgument>-Xlint:deprecation</compilerArgument>
+          <mainClass>org.mskcc.cmo.ks.darwin.DarwinPipeline</mainClass>
         </configuration>
       </plugin>
     </plugins>
   </build>
-  
+
 </project>

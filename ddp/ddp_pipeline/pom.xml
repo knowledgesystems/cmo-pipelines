@@ -35,13 +35,11 @@
     <finalName>ddp_fetcher</finalName>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.6.1</version>
+        <!-- required to build an executable jar -->
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <source>${maven.compiler.version}</source>
-          <target>${maven.compiler.version}</target>
-          <compilerArgument>-Xlint:deprecation,unchecked</compilerArgument>
+          <mainClass>org.mskcc.cmo.ks.ddp.DDPPipeline</mainClass>
         </configuration>
       </plugin>
     </plugins>

@@ -87,7 +87,12 @@ def get_labels_on_pull_request(username, password, pull_request_number):
     url = GITHUB_ISSUES_BASE_URL + "/" + pull_request_number + GITHUB_LABELS_ENDPOINT
     github_json_response = requests.get(url, auth = (username, password))
     github_response = json.loads(github_json_response.text)
+
+    print "\n\n\n\n"
+    print github_response
     label_ids = [str(label[LABELS_ID_KEY]) for label in github_response if LABELS_ID_KEY in label]
+    print "\n\n\n LABEL IDS \n\n\n"
+    print label_ids
     return label_ids
 
 # exports all required redcap projects that need to be compared

@@ -40,13 +40,13 @@ import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.darwin.pipeline.model.Skcm_mskcc_2015_chantClinicalRecord;
 import org.mskcc.cmo.ks.darwin.pipeline.model.Skcm_mskcc_2015_chantNormalizedClinicalRecord;
 import org.mskcc.cmo.ks.darwin.pipeline.mskimpactdemographics.MskimpactPatientDemographicsReader;
-import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 import org.mskcc.cmo.ks.redcap.source.MetadataManager;
 import org.springframework.batch.item.*;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import static com.querydsl.core.alias.Alias.*;
 import static com.querydsl.core.alias.Alias.alias;
+import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
 
 /**
  *

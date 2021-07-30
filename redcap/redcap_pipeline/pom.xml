@@ -10,11 +10,6 @@
     <artifactId>redcap</artifactId>
     <version>0.1.0</version>
   </parent>
-
-  <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
@@ -25,23 +20,21 @@
       <groupId>org.mskcc.cmo.ks.redcap.source</groupId>
       <artifactId>redcap_source</artifactId>
       <version>0.1.0</version>
+      <type>jar</type>
     </dependency>
   </dependencies>
 
   <build>
     <finalName>redcap_pipeline</finalName>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.6.1</version>
+     <plugin>
+        <!-- required to build an executable jar -->
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <source>${maven.compiler.version}</source>
-          <target>${maven.compiler.version}</target>
-          <compilerArgument>-Xlint:deprecation,unchecked</compilerArgument>
+          <mainClass>org.mskcc.cmo.ks.redcap.RedcapPipeline</mainClass>
         </configuration>
       </plugin>
     </plugins>
   </build>
-
 </project>

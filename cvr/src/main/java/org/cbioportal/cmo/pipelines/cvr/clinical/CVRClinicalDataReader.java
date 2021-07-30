@@ -35,7 +35,7 @@ package org.cbioportal.cmo.pipelines.cvr.clinical;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactSeqDate;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactAge;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
-import com.mysql.jdbc.StringUtils;
+import com.google.common.base.Strings;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 
@@ -82,7 +82,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         // validate url
-        if (StringUtils.isNullOrEmpty(wholeSlideViewerBaseURL) || !wholeSlideViewerBaseURL.contains("IMAGE_ID")) {
+        if (Strings.isNullOrEmpty(wholeSlideViewerBaseURL) || !wholeSlideViewerBaseURL.contains("IMAGE_ID")) {
             String message = "wholeSlideViewerBaseURL is empty or does not contain 'IMAGE_ID'  - please check value of 'comppath.wsv.baseurl' in application.properties: " + wholeSlideViewerBaseURL;
             log.error(message);
             throw new RuntimeException(message);

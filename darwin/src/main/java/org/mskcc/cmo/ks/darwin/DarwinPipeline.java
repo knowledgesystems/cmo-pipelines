@@ -40,7 +40,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.apache.log4j.Logger;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
+import org.springframework.boot.WebApplicationType;
 /**
  *
  * @author jake
@@ -68,7 +68,7 @@ public class DarwinPipeline {
 
     private static void launchJob(String[] args, String outputDirectory, String studyID, String currentDemographicsRecCount) throws Exception{
         SpringApplication app = new SpringApplication(DarwinPipeline.class);
-        app.setWebEnvironment(false);
+        app.setWebApplicationType(WebApplicationType.NONE);
         ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
 
@@ -99,7 +99,7 @@ public class DarwinPipeline {
 
     private static void launchCaisisJob(String[] args, String outputDirectory, String studyID) throws Exception {
         SpringApplication app = new SpringApplication(DarwinPipeline.class);
-        app.setWebEnvironment(false);
+        app.setWebApplicationType(WebApplicationType.NONE);
         ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
 
