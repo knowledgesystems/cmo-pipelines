@@ -29,10 +29,10 @@ LABELS_ID_KEY = "id"
 SKIP_INTEGRATION_TESTS_LABEL = "1383619983"
 
 LABEL_TO_TEST_MAPPING = {
-    '984868388' : "crdb_fetcher",
+#   '984868388' : "crdb_fetcher",
 #   '984867863' : "cvr_fetcher",
 #   '984872074' : "darwin_fetcher",
-    '984872969' : "ddp_fetcher"
+   '984872969' : "ddp_fetcher"
 }
 
 # generates a mapping for fetchers to fetched and redcap-exported filenames
