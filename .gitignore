@@ -11,3 +11,5 @@
 import-scripts/clinicalfile_utils.pyc
 target
 **/src/main/resources/naaccr*.json
+**/repository.sqlite
+**/dependency-reduced-pom.xml

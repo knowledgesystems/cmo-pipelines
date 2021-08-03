@@ -39,8 +39,7 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 import javax.annotation.Resource;
-import org.apache.commons.logging.*;
-
+import org.apache.log4j.Logger;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.mapping.*;
@@ -84,7 +83,7 @@ public class GeneDataReader implements ItemStreamReader<Gene> {
     private  Map<Integer, Integer> geneLengthDataMap = new HashMap<>();
     private List<Gene> geneRecords = new ArrayList();
 
-    private final static Log LOG = LogFactory.getLog(GeneDataReader.class);
+    private final static Logger LOG = Logger.getLogger(GeneDataReader.class);
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {

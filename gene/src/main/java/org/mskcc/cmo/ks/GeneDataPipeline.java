@@ -35,7 +35,7 @@ package org.mskcc.cmo.ks;
 import org.mskcc.cmo.ks.gene.config.BatchConfiguration;
 
 import org.apache.commons.cli.*;
-import org.apache.commons.logging.*;
+import org.apache.log4j.Logger;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.boot.SpringApplication;
@@ -49,14 +49,14 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 @SpringBootApplication
 public class GeneDataPipeline {
-    
-    private static final Log LOG = LogFactory.getLog(GeneDataPipeline.class);
-    
+
+    private final static Logger LOG = Logger.getLogger(GeneDataPipeline.class);
+
     private static void launchGeneDataJob(String[] args, String geneDataFileName, String geneLengthDataFileName, String notificationFileName) throws Exception {
         SpringApplication app = new SpringApplication(GeneDataPipeline.class);
         ConfigurableApplicationContext ctx = app.run(args);
         JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
-        
+
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("geneDataFileName", geneDataFileName)
                 .addString("geneLengthDataFileName", geneLengthDataFileName)
@@ -69,7 +69,7 @@ public class GeneDataPipeline {
             System.exit(1);
         }
     }
-    
+
     private static Options getOptions(String[] args) {
         Options options = new Options();
         options.addOption("h", "help", false, "shows this help document and quits.")
@@ -78,13 +78,13 @@ public class GeneDataPipeline {
             .addOption("n", "notification-filename", true, "The notification filename to write results from update [optional]");
         return options;
     }
-    
+
     private static void help(Options options, int exitStatus) {
         HelpFormatter helpFormatter = new HelpFormatter();
         helpFormatter.printHelp("GeneDataPipeline", options);
         System.exit(exitStatus);
     }
-    
+
     public static void main(String[] args) throws Exception {
         Options options = GeneDataPipeline.getOptions(args);
         CommandLineParser parser = new DefaultParser();

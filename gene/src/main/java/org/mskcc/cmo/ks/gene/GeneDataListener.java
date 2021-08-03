@@ -34,8 +34,7 @@ package org.mskcc.cmo.ks.gene;
 
 import java.util.*;
 import java.io.*;
-
-import org.apache.commons.logging.*;
+import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.gene.model.Gene;
 import org.springframework.batch.core.*;
 import org.springframework.batch.item.ItemStreamException;
@@ -50,7 +49,7 @@ public class GeneDataListener implements StepExecutionListener {
     @Value("${DATABASE_NAME}")
     private String DATABASE_NAME;
 
-    private static final Log LOG = LogFactory.getLog(GeneDataListener.class);
+    private static final Logger LOG = Logger.getLogger(GeneDataListener.class);
 
     @Override
     public void beforeStep(StepExecution stepExecution) {}

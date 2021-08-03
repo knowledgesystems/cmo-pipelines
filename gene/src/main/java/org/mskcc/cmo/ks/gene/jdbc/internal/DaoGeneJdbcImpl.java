@@ -39,8 +39,6 @@ import org.mskcc.cmo.ks.gene.model.GeneAlias;
 import java.sql.*;
 import java.util.*;
 import javax.annotation.Resource;
-import org.apache.commons.logging.*;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cglib.beans.BeanMap;
 import org.springframework.dao.*;
@@ -58,8 +56,6 @@ public class DaoGeneJdbcImpl implements DaoGeneJdbc {
 
     @Resource(name="namedParameterJdbcTemplate")
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-
-    private static final Log LOG = LogFactory.getLog(DaoGeneJdbc.class);
 
     @Autowired
     public DaoGeneJdbcImpl(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {

@@ -44,13 +44,14 @@ import org.springframework.beans.factory.annotation.*;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.junit4.SpringRunner;
 
 @TestPropertySource(
     properties = { "redcap.batch.size=2"
     },
     inheritLocations = false
 )
-@RunWith(SpringJUnit4ClassRunner.class)
+@RunWith(SpringRunner.class)
 @ContextConfiguration(classes=RedcapSourceTestConfiguration.class)
 public class RedcapRepositoryTest {
 
@@ -144,7 +145,7 @@ public class RedcapRepositoryTest {
         Set<String> expectedSetForChangedDeletionWithRecordIdAsRecordNameField = createExpectedSetForChangedDeletionWithRecordIdAsRecordNameField();
         Set<String> expectedSetForChangedDeletionWithKeepExisting = new HashSet<>(); // no deletion when keeping existing
         Set<String> expectedSetForDeletionWithExcessRecords = createExpectedSetForDeletionWithExcessRecords();
-        
+
         StringBuilder errorMessage = new StringBuilder();
 
         redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
@@ -186,7 +187,7 @@ public class RedcapRepositoryTest {
         redcapSourceTestConfiguration.resetRedcapSessionManagerHistory();
         redcapRepository.importClinicalData(RECORD_ID_ABSENT_TOKEN, excessRecordFileForImport, DROP_EXISTING_RECORDS);
         errorMessage.append(compareRecordsForDeletionAndImport(expectedSetForDeletionWithExcessRecords, expectedRecordsForExcessImport));
-        
+
         String errorString = errorMessage.toString();
         if (!errorString.isEmpty()) {
             Assert.fail(errorString);
@@ -288,7 +289,7 @@ public class RedcapRepositoryTest {
         returnValue.add("P-0000008	P-0000008-T08	YES	Caucasian");
         return returnValue;
     }
- 
+
     private Set<String> createExpectedRecordsForNewImportWithRecordIdAsRecordNameField() {
         Set<String> returnStringSet = new HashSet<>();
         returnStringSet.add("\nrecord_id,patient_id,sample_id,necrosis,ethnicity"
