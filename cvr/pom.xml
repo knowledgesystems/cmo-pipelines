@@ -62,7 +62,7 @@
     <dependency>
       <groupId>com.github.genome-nexus</groupId>
       <artifactId>genome-nexus-annotation-pipeline</artifactId>
-      <version>db1aa89c1f08f56e713822e4fe55e0c2ed1e91ea</version>
+      <version>1dbdec3d33153bb399a351f3ca912615bbf7c326</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.logging.log4j</groupId>
