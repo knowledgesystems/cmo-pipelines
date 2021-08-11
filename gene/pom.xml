@@ -5,16 +5,20 @@
   <description>Gene Data Pipeline</description>
   <artifactId>gene</artifactId>
   <version>0.1.0</version>
-
   <packaging>jar</packaging>
 
   <parent>
-      <groupId>org.mskcc.cmo.ks</groupId>
-      <artifactId>master</artifactId>
-      <version>0.1.0</version>
+    <groupId>org.mskcc.cmo.ks</groupId>
+    <artifactId>master</artifactId>
+    <version>0.1.0</version>
   </parent>
 
   <dependencies>
+    <dependency>
+      <groupId>org.mskcc.cmo.ks</groupId>
+      <artifactId>common</artifactId>
+      <version>0.1.0</version>
+    </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
