@@ -16,9 +16,13 @@ class TestScriptsCompile(unittest.TestCase):
 
     # file_pattern should be a string like "*.sh" or "*.py"
     # compile_cmd should be a string like "bash -n %s" or "python -m py_compile %s"
-    def check_for_compile_errors(self, file_pattern, compile_cmd):
+    def check_for_compile_errors(self, file_pattern, compile_cmd, excluded_pattern = None):
         script_pattern = os.path.join(self.scripts_dir, file_pattern)
-        files = glob.glob(script_pattern)
+        matched_files = glob.glob(script_pattern)
+        if (excluded_pattern):
+            files = [file for file in matched_files if excluded_pattern not in file]
+        else:
+            files = matched_files
         # check there is at least one file
         self.assertTrue(files, "Expected at least one shell script, but '" + script_pattern + "' only found: '" + ",".join(files) + "'")
         compile_errors = {}
@@ -38,8 +42,14 @@ class TestScriptsCompile(unittest.TestCase):
         if error_message:
             self.fail(error_message)
 
-    def test_python_scripts_compile(self):
-        error_message = self.check_for_compile_errors("*.py", "python -m py_compile %s")
+    #TODO: we can remove this hardcoded filename pattern once we fully migrate scripts over to python3
+    def test_python2_scripts_compile(self):
+        error_message = self.check_for_compile_errors("*.py", "python -m py_compile %s", "py3")
+        if error_message:
+            self.fail(error_message)
+
+    def test_python3_scripts_compile(self):
+        error_message = self.check_for_compile_errors("*py3*.py", "python3 -m py_compile %s")
         if error_message:
             self.fail(error_message)
 

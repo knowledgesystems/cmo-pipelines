@@ -37,11 +37,11 @@ from oauth2client.file import Storage
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.tools import run_flow, argparser
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEBase import MIMEBase
-from email.MIMEText import MIMEText
-from email.Utils import COMMASPACE, formatdate
-from email import Encoders
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email.utils import COMMASPACE, formatdate
+from email import encoders
 
 from googleapiclient.discovery import build
 # ------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ def get_sheet_records(client, ss, ws):
                         new_record[header[index]] = None
                 sheet_records.append(new_record)
     except Exception as e:
-        print >> ERROR_FILE, "There was an error connecting to google."
+        print("There was an error connecting to google.", file = ERROR_FILE)
         exit(0)
  
     return sheet_records
@@ -220,7 +220,7 @@ def get_spreadsheet_title(client, ss):
         data = response.get('properties', {})
         spreadsheet_title = data["title"]
     except Exception as e:
-        print >> ERROR_FILE, "There was an error connecting to google."
+        print("There was an error connecting to google.", file = ERROR_FILE)
         exit(0)
 
     return spreadsheet_title
@@ -231,7 +231,7 @@ def insert_new_users(cursor, new_user_list):
     # list of emails for users which returned an error when inserting into database
     emails_to_remove = []
     for user in new_user_list:
-        print >> OUTPUT_FILE, "new user: %s" % user.google_email;
+        print("new user: %s" % user.google_email, file = OUTPUT_FILE);
         try:
             user_name = user.name
             if isinstance(user_name, unicode):
@@ -241,10 +241,10 @@ def insert_new_users(cursor, new_user_list):
             # authorities is semicolon delimited
             authorities = user.authorities
             cursor.executemany("insert into authorities values(%s, %s)", [(user_email_escaped, authority) for authority in authorities])
-        except MySQLdb.Error, msg:
-            print >> OUTPUT_FILE, msg
-            print >> OUTPUT_FILE, "Removing user: %s" % user_name
-            print >> ERROR_FILE, msg
+        except MySQLdb.Error as  e:
+            print(e, file = OUTPUT_FILE)
+            print("Removing user: %s" % user_name, file = OUTPUT_FILE)
+            print(msg, file = ERROR_FILE)
             emails_to_remove.append(user.google_email.lower())
     return emails_to_remove
 
@@ -263,8 +263,8 @@ def get_current_user_map(cursor):
         cursor.execute('select * from users')
         for row in cursor.fetchall():
             to_return[row[0].lower()] = User(row[0].lower(), row[0].lower(), row[1], row[2], 'not_used_here')
-    except MySQLdb.Error, msg:
-        print >> ERROR_FILE, msg
+    except MySQLdb.Error as e:
+        print(e, file = ERROR_FILE)
         return None
 
     return to_return
@@ -283,8 +283,8 @@ def get_user_authorities(cursor, google_email):
                 cursor.execute('select * from authorities where email = (%s)', [google_email])
                 for row in cursor.fetchall():
                         to_return.append(row[1])
-        except MySQLdb.Error, msg:
-                print >> ERROR_FILE, msg
+        except MySQLdb.Error as e:
+                print(e, file = ERROR_FILE)
                 return None
 
         return to_return
@@ -347,8 +347,8 @@ def get_db_connection(portal_properties, port, ssl_ca_filename=None):
                                      user=portal_properties.cgds_database_user,
                                      passwd=portal_properties.cgds_database_pw,
                                      db=portal_properties.cgds_database_name)
-    except MySQLdb.Error, msg:
-        print >> ERROR_FILE, msg
+    except MySQLdb.Error as e:
+        print(e, file = ERROR_FILE)
         return None
 
     return connection
@@ -372,7 +372,7 @@ def get_portal_properties(portal_properties_filename):
         if line.startswith(CGDS_USERS_SPREADSHEET):
             property = [property[0], line[line.index('=')+1:len(line)]]
         if (len(property) != 2):
-            print >> ERROR_FILE, 'Skipping invalid entry in property file: ' + line
+            print('Skipping invalid entry in property file: ' + line, file = ERROR_FILE)
             continue
         properties[property[0]] = property[1].strip()
     portal_properties_file.close()
@@ -387,7 +387,7 @@ def get_portal_properties(portal_properties_filename):
         CGDS_USERS_SPREADSHEET not in properties or len(properties[CGDS_USERS_SPREADSHEET]) == 0 or
         CGDS_USERS_WORKSHEET not in properties or len(properties[CGDS_USERS_WORKSHEET]) == 0 or
         IMPORTER_SPREADSHEET not in properties or len(properties[IMPORTER_SPREADSHEET]) == 0):
-        print >> ERROR_FILE, 'Missing one or more required properties, please check property file'
+        print('Missing one or more required properties, please check property file', file = ERROR_FILE)
         return None
 
     # return an instance of PortalProperties
@@ -408,23 +408,23 @@ def get_portal_properties(portal_properties_filename):
 def manage_users(client, spreadsheet, cursor, sheet_records, portal_name):
 
     # get map of current portal users
-    print >> OUTPUT_FILE, 'Getting list of current portal users'
+    print('Getting list of current portal users', file = OUTPUT_FILE)
     current_user_map = get_current_user_map(cursor)
     if current_user_map is not None:
-        print >> OUTPUT_FILE, 'We have found %s current portal users' % len(current_user_map)
+        print('We have found %s current portal users' % len(current_user_map), file = OUTPUT_FILE)
     else:
-        print >> OUTPUT_FILE, 'Error reading user table'
+        print('Error reading user table', file = OUTPUT_FILE)
         return None, None
 
     # get list of new users and insert
-    print >> OUTPUT_FILE, 'Checking for new users'
+    print('Checking for new users', file = OUTPUT_FILE)
     new_user_map = get_new_user_map(spreadsheet, sheet_records, current_user_map, portal_name)
     if (len(new_user_map) > 0):
-        print >> OUTPUT_FILE, 'We have %s new user(s) to add' % len(new_user_map)
+        print('We have %s new user(s) to add' % len(new_user_map), file = OUTPUT_FILE)  
         emails_to_remove = insert_new_users(cursor, new_user_map.values())
         return new_user_map, emails_to_remove
     else:
-        print >> OUTPUT_FILE, 'No new users to insert, exiting'
+        print('No new users to insert, exiting', file = OUTPUT_FILE)
         return None, None
 
 # ------------------------------------------------------------------------------
@@ -433,19 +433,19 @@ def manage_users(client, spreadsheet, cursor, sheet_records, portal_name):
 def update_user_authorities(spreadsheet, cursor, sheet_records, portal_name):
 
         # get map of current portal users
-        print >> OUTPUT_FILE, 'Getting list of current portal users from spreadsheet'
+        print('Getting list of current portal users from spreadsheet', file = OUTPUT_FILE)
         all_user_map = get_new_user_map(spreadsheet, sheet_records, {}, portal_name)
         if all_user_map is None:
                 return None;
-        print >> OUTPUT_FILE, 'Updating authorities for each user in current portal user list'
+        print('Updating authorities for each user in current portal user list', file = OUTPUT_FILE)
         for user in all_user_map.values():
                 sheet_authorities = set(user.authorities)
                 db_authorities = set(get_user_authorities(cursor, user.google_email))
                 try:
                         cursor.executemany("insert into authorities values(%s, %s)",
                                            [(user.google_email, authority) for authority in sheet_authorities - db_authorities])
-                except MySQLdb.Error, msg:
-                        print >> ERROR_FILE, msg
+                except MySQLdb.Error as e:
+                        print(e, file = ERROR_FILE)
 
 # ------------------------------------------------------------------------------
 # gets email parameters from google spreadsheet
@@ -453,7 +453,7 @@ def update_user_authorities(spreadsheet, cursor, sheet_records, portal_name):
 def get_email_parameters(google_spreadsheet,client):
     subject = ''
     body = ''
-    print >> OUTPUT_FILE, 'Getting email parameters from google spreadsheet'
+    print('Getting email parameters from google spreadsheet', file = OUTPUT_FILE)
     email_sheet_records = get_sheet_records(client, google_spreadsheet, IMPORTER_WORKSHEET)
     for record in email_sheet_records:
         if record[SUBJECT_KEY] is not None and record[BODY_KEY] is not None:
@@ -463,7 +463,7 @@ def get_email_parameters(google_spreadsheet,client):
 
 def get_portal_name_map(google_spreadsheet,client):
     portal_name = {}
-    print >> OUTPUT_FILE, 'Getting access control parameter from google spreadsheet'
+    print('Getting access control parameter from google spreadsheet', file = OUTPUT_FILE)
     access_control_sheet = get_sheet_records(client,google_spreadsheet,ACCESS_CONTROL_WORKSHEET)
     for row in access_control_sheet: 
         if row[PORTAL_NAME_KEY] is not None and row[SPREADSHEET_NAME_KEY] is not None:
@@ -473,12 +473,12 @@ def get_portal_name_map(google_spreadsheet,client):
 
 def establish_new_db_connection(portal_properties, port, ssl_ca_filename):
     # get db connection & create cursor
-    print >> OUTPUT_FILE, 'Connecting to database: ' + portal_properties.cgds_database_name
+    print('Connecting to database: ' + portal_properties.cgds_database_name, file = OUTPUT_FILE)  
     connection = get_db_connection(portal_properties, port, ssl_ca_filename)
     if connection is not None:
         cursor = connection.cursor()
     else:
-        print >> OUTPUT_FILE, 'Error connecting to database, exiting'
+        print('Error connecting to database, exiting', file = OUTPUT_FILE)
         sys.exit(2)
     return (connection, cursor)
 
@@ -487,7 +487,7 @@ def establish_new_db_connection(portal_properties, port, ssl_ca_filename):
 # displays program usage (invalid args)
 
 def usage():
-    print >> OUTPUT_FILE, 'importUsers.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --port [mysql port number] --sender [sender identifier - optional] --ssl-ca [ssl certificate file - optional]'
+    print('importUsers.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --port [mysql port number] --sender [sender identifier - optional] --ssl-ca [ssl certificate file - optional]', file = OUTPUT_FILE)
 
 # ------------------------------------------------------------------------------
 # the big deal main.
@@ -497,8 +497,8 @@ def main():
     # parse command line options
     try:
         opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'ssl-ca=', 'send-email-confirm=', 'use-institutional-id=', 'port=', 'sender='])
-    except getopt.error, msg:
-        print >> ERROR_FILE, msg
+    except getopt.error as msg:
+        print(msg, file = ERROR_FILE)
         usage()
         sys.exit(2)
 
@@ -534,14 +534,14 @@ def main():
 
     # check existence of file
     if not os.path.exists(properties_filename):
-        print >> ERROR_FILE, 'properties file cannot be found: ' + properties_filename
+        print('properties file cannot be found: ' + properties_filename, file = ERROR_FILE)
         sys.exit(2)
 
     # parse/get relevant portal properties
-    print >> OUTPUT_FILE, 'Reading portal properties file: ' + properties_filename
+    print('Reading portal properties file: ' + properties_filename, file = OUTPUT_FILE)
     portal_properties = get_portal_properties(properties_filename)
     if not portal_properties:
-        print >> OUTPUT_FILE, 'Error reading %s, exiting' % properties_filename
+        print('Error reading %s, exiting' % properties_filename, file = OUTPUT_FILE)
         return
 
     # create client for interacting with google sheets api
@@ -558,7 +558,7 @@ def main():
                                                 portal_properties.google_worksheet)
             spreadsheet_title = get_spreadsheet_title(client, google_spreadsheet)
            
-            print >> OUTPUT_FILE, 'Importing ' + spreadsheet_title + ' ...'
+            print('Importing ' + spreadsheet_title + ' ...', file = OUTPUT_FILE)
             app_name = GENIE_ARCHIVE_APP_NAME if portal_properties.cgds_database_name == GENIE_ARCHIVE_DB_NAME else portal_name_map[spreadsheet_title]
             
             # the 'guts' of the script
@@ -587,8 +587,8 @@ def main():
                             error_subject = ERROR_EMAIL_SUBJECT_GENIE
                             error_body = ERROR_EMAIL_BODY_GENIE
                         if new_user_key not in emails_to_remove:
-                            print >> OUTPUT_FILE, ('Sending confirmation email to new user: %s at %s' %
-                                               (new_user.name, new_user.inst_email))
+                            print(('Sending confirmation email to new user: %s at %s' %
+                                               (new_user.name, new_user.inst_email)), file = OUTPUT_FILE)
 
                             send_mail([new_user.inst_email],subject,body, sender = from_field, bcc = bcc_field)
                         else:

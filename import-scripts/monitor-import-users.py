@@ -15,7 +15,7 @@ Gets last timestamped email from google spreadsheet (GENIE Public)
 and queries for it inside the database.
 Exceptions will be caught by crontab and result in an email to pipelines
 ''' 
-GENIE_USERS_WORKSHEET = 'Request Access to the Public cBio GENIE Cancer Genomics Portal'
+GENIE_USERS_WORKSHEET = '1M0qLo4BeBDAxZArWzwBlVc2V3jQoaob8NqSrYpOaY9s'
 
 def check_if_user_in_db(cursor, email):
     '''
@@ -36,11 +36,11 @@ def get_latest_email(secrets_file, creds_file, portal_properties, appname):
         Will return the last timestamped email
     '''
     client = google_login(secrets_file, creds_file, portal_properties.google_id, portal_properties.google_pw, appname)
-    worksheet_feed = get_worksheet_feed(client, GENIE_USERS_WORKSHEET, portal_properties.google_worksheet) 
+    sheet_records = get_sheet_records(client, GENIE_USERS_WORKSHEET, portal_properties.google_worksheet) 
     latest_email = ''
-    for entry in worksheet_feed.entry:
-        if entry.custom[TIMESTAMP_KEY].text:
-            latest_email = entry.custom[OPENID_EMAIL_KEY].text.strip().lower()
+    for record in sheet_records:
+        if record[TIMESTAMP_KEY]:
+            latest_email = record[OPENID_EMAIL_KEY].strip().lower()
     if latest_email:
         return latest_email
     print >> OUTPUT_FILE, 'Unable to retrieve email from google spreadsheet, spreadsheet may be corrupted.'
