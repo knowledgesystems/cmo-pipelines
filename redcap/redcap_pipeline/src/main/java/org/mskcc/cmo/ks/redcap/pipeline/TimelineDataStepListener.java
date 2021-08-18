@@ -51,10 +51,10 @@ public class TimelineDataStepListener implements StepExecutionListener {
 
     @Autowired
     public ClinicalDataSource clinicalDataSource;
-    
-    private final List<String> standardTimelineDataFields = Arrays.asList(new String[] { "PATIENT_ID", "START_DATE", "STOP_DATE", "EVENT_TYPE"});    
+
+    private final List<String> standardTimelineDataFields = new ArrayList<String>(Arrays.asList("PATIENT_ID", "START_DATE", "STOP_DATE", "EVENT_TYPE"));
     private final Logger log = Logger.getLogger(TimelineDataStepListener.class);
-    
+
     @Override
     public void beforeStep(StepExecution se) {
         se.getExecutionContext().put("standardTimelineDataFields", standardTimelineDataFields);
