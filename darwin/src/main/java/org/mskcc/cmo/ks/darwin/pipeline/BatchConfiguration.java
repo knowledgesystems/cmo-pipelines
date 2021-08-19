@@ -204,13 +204,13 @@ public class BatchConfiguration {
     @Bean
     public Step mskimpactEmailStep() {
         return stepBuilderFactory.get("mskimpactEmailStep")
-        .tasklet(darwinEmailTasklet())
+        .tasklet(darwinFetchEmailTasklet())
         .build();
     }
 
     @Bean
     @StepScope
-    public Tasklet darwinEmailTasklet() {
+    public Tasklet darwinFetchEmailTasklet() {
         return new DarwinEmailTasklet();
     }
 
