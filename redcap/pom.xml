@@ -38,6 +38,14 @@
                   <mainClass>org.mskcc.cmo.ks.redcap.RedcapPipeline</mainClass>
                 </transformer>
               </transformers>
+              <filters>
+                <filter>
+                    <artifact>*:*</artifact>
+                    <excludes>
+                        <exclude>**/Log4j2Plugins.data</exclude>
+                    </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
         </executions>
