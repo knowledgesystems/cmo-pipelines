@@ -88,7 +88,7 @@ FUSIONS_GML_FILE_PATTERN = 'data_fusions_gml.txt'
 FUSIONS_GML_META_PATTERN = 'meta_fusions_gml.txt'
 
 # we do not want to copy over or merge json files or meta_study.txt files
-FILE_PATTERN_FILTERS = ['.json', 'meta_study.txt', '.orig', '.merge', 'ignore', 'data_gene_panel']
+FILE_PATTERN_FILTERS = ['.sqlite', '.json', 'meta_study.txt', '.orig', '.merge', 'ignore', 'data_gene_panel']
 
 NON_CASE_IDS = [
     'MIRNA',
