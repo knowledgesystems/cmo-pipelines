@@ -30,7 +30,7 @@ echo "Copying application.properties from jenkins holding area to cmo-pipelines"
 sh $CMO_INTEGRATION_TESTS_DIRECTORY/set_application_properties.sh
 
 echo "Building jars and copying into lib directory"
-cd $CMO_REDCAP_DIRECTORY ; mvn install -DskipTests=true; mv $REDCAP_JAR $LIB_DIRECTORY
+cd $CMO_REDCAP_DIRECTORY ; mvn clean install -DskipTests=true; mv $REDCAP_JAR $LIB_DIRECTORY
 
 cd $CMO_INTEGRATION_TESTS_DIRECTORY
 python scan-for-expected-redcap-projects.py -e expected_study_project_list.txt -t $REDCAP_EXPORTS_DIRECTORY -j $LIB_DIRECTORY/redcap_pipeline.jar -s $SSL_TRUSTSTORE -p $SSL_TRUSTSTORE_PASSWORD
