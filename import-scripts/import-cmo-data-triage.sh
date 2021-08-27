@@ -53,8 +53,6 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
     echo "importing cancer type updates into triage portal database..."
     $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
 
-    $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --apply-overrides --portal triage-portal
-
     DB_VERSION_FAIL=0
     # check database version before importing anything
     echo "Checking if database version is compatible"
