@@ -23,7 +23,7 @@ portal_to_cache_service_list["public"]="cbioportal-public-persistence-redis-mast
 portal_to_cache_service_list["genie-public"]="cbioportal-persistence-redis-genie-master cbioportal-persistence-redis-genie-slave"
 portal_to_cache_service_list["genie-private"]="cbioportal-persistence-redis-genie-master cbioportal-persistence-redis-genie-slave"
 portal_to_cache_service_list["genie-archive"]=""
-portal_to_cache_service_list["triage"]="cbioportal-persistence-redis-master"
+portal_to_cache_service_list["triage"]="cbioportal-persistence-redis-master cbioportal-persistence-redis-replicas"
 # portal_to_cache_service_list["msk"]="LIST_OF_REDIS_SERVICES_GOES_HERE"
 
 function print_portal_id_values() {
