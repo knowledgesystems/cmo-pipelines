@@ -17,14 +17,16 @@ portal_to_deployment_map["genie-private"]="cbioportal-backend-genie-private"
 portal_to_deployment_map["genie-archive"]="cbioportal-backend-genie-archive"
 portal_to_deployment_map["triage"]="eks-triage"
 # portal_to_deployment_map["msk"]="MSK_PORTAL_DEPLOYMENT_NAME_GOES_HERE"
-unset portal_to_cache_service_list
-declare -A portal_to_cache_service_list
-portal_to_cache_service_list["public"]="cbioportal-public-persistence-redis-master cbioportal-public-persistence-redis-slave"
-portal_to_cache_service_list["genie-public"]="cbioportal-persistence-redis-genie-master cbioportal-persistence-redis-genie-slave"
-portal_to_cache_service_list["genie-private"]="cbioportal-persistence-redis-genie-master cbioportal-persistence-redis-genie-slave"
-portal_to_cache_service_list["genie-archive"]=""
-portal_to_cache_service_list["triage"]="cbioportal-persistence-redis-master cbioportal-persistence-redis-replicas"
-# portal_to_cache_service_list["msk"]="LIST_OF_REDIS_SERVICES_GOES_HERE"
+unset portal_to_url
+declare -A portal_to_url
+portal_to_url["public"]="https://cbioportal.org"
+portal_to_url["genie-public"]="https://genie.cbioportal.org"
+portal_to_url["genie-private"]="https://genie-private.cbioportal.org"
+portal_to_url["genie-archive"]=""
+portal_to_url["triage"]="https://triage.cbioportal.mskcc.org"
+# portal_to_url["msk"]="LIST_OF_REDIS_SERVICES_GOES_HERE"
+
+CACHE_API_KEY=`cat $CACHE_API_KEY_FILE`
 
 function print_portal_id_values() {
     echo "valid portal ids:"
@@ -57,10 +59,8 @@ fi
 $KUBECTL_BINARY set env deployment $deployment_id --env="LAST_RESTART=$(date)"
 
 if [ -z "$preserve_cache_flag" ] ; then
-    cache_service_list=${portal_to_cache_service_list[$portal_id]}
-    if [ -n "$cache_service_list" ] ; then
-        for cache_service in $cache_service_list ; do
-            $KUBECTL_BINARY set env statefulset $cache_service --env="LAST_RESTART=$(date)"
-        done
+    portal_url=${portal_to_url[$portal_id]}
+    if [ -n "$portal_url" ] ; then
+        curl -X DELETE "$portal_url/api/cache?springManagedCache=true" -H "accept: text/plain" -H "X-API-KEY: $CACHE_API_KEY"
     fi
 fi
