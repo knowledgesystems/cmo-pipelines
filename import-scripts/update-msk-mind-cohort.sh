@@ -57,13 +57,14 @@ else
     num_studies_updated=0
 fi
 
-# redeploy war
+# clear persistence cache
 if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
-    echo "'$num_studies_updated' studies have been updated, requesting redeployment of msk portal war..."
-    restartMSKTomcats
-    echo "'$num_studies_updated' studies have been updated (no longer need to restart $TOMCAT_SERVER_DISPLAY_NAME server...)"
+    echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portals..."
+    if ! clearPersistenceCachesForMskPortals ; then
+        sendClearCacheFailureMessage msk update-msk-mind-cohort.sh
+    fi
 else
-    echo "No studies have been updated, skipping redeploy of msk portal war..."
+    echo "No studies have been updated, not clearing persistence cache for msk portals..."
 fi
 
 # clean up msk-mind repo and send notification file

@@ -30,7 +30,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     genie_archive_portal_notification_file=$(mktemp $tmp/genie-archive-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_2018_06_01
-    WEB_APPLICATION_SHOULD_BE_RESTARTED=0 # 0 = skip the restart, non-0 = do the restart
+    CLEAR_PERSISTENCE_CACHE=0 # 0 = do not clear cache, non-0 = clear cache
 
     echo $now : starting import
     CDD_ONCOTREE_RECACHE_FAIL=0
@@ -86,28 +86,24 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         fi
         if [ -z $num_studies_updated ] ; then
             echo "could not determine the number of studies that have been updated"
-            # if import fails [presumed to have failed if num_studies_updated.txt is missing or empty], some checked-off studies still may have been successfully imported, so restart tomcat
-            WEB_APPLICATION_SHOULD_BE_RESTARTED=1
+            # if import fails [presumed to have failed if num_studies_updated.txt is missing or empty], some checked-off studies still may have been successfully imported, so clear the persistence caches
+            CLEAR_PERSISTENCE_CACHE=1
         else
             echo "'$num_studies_updated' studies have been updated"
             if [[ $num_studies_updated != "0" ]]; then
-                # if at least 1 study was imported, restart tomcat
-                WEB_APPLICATION_SHOULD_BE_RESTARTED=1
+                # if at least 1 study was imported, clear the persistence cache
+                CLEAR_PERSISTENCE_CACHE=1
             fi
         fi
 
-        # restart pods
-        if [ $WEB_APPLICATION_SHOULD_BE_RESTARTED -ne 0 ] ; then
-            echo "requesting redeployment of genie portal pods..."
-            bash $PORTAL_HOME/scripts/restart-portal-pods.sh genie-archive
-            GENIE_ARCHIVE_RESTART_EXIT_STATUS=$?
-            if [ $GENIE_ARCHIVE_RESTART_EXIT_STATUS -ne 0 ] ; then
-                EMAIL_BODY="Attempt to trigger a redeployment of genie archive portal pods failed"
-                echo -e "Sending email $EMAIL_BODY"
-                echo -e "$EMAIL_BODY" | mail -s "Genie Archive Portal Pod Redeployment Error : unable to trigger redeployment" $PIPELINES_EMAIL_LIST
+        # clear persistence cache
+        if [ $CLEAR_PERSISTENCE_CACHE -ne 0 ] ; then
+            echo "clearing persistence cache for genie archive portal ..."
+            if ! clearPersistenceCachesForGenieArchivePortals ; then
+                sendClearCacheFailureMessage genie-archive import-genie-archive.sh
             fi
         else
-            echo "No studies have been updated, skipping redeployment of genie archive portal pods"
+            echo "No studies have been updated, not clearing persistence cache for genie archive portal"
         fi
     fi
 

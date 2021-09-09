@@ -32,10 +32,6 @@ SKIP_DMP_IMPORT_BEFORE_HHMM=2000
     date
     echo "executing import-pdx-data.sh"
     /data/portal-cron/scripts/import-pdx-data.sh
-    #TODO: fix import into AWS GDAC - speed up import time
-    #date
-    #echo "executing import-gdac-aws-data.sh"
-    #/data/portal-cron/scripts/import-gdac-aws-data.sh
     date
     echo "executing update-msk-mind-cohort.sh"
     /data/portal-cron/scripts/update-msk-mind-cohort.sh

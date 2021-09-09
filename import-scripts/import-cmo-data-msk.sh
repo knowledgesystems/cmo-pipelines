@@ -12,7 +12,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         exit 1
     fi
 
-    # we need this file for the tomcat restart funcions
+    # we need this file for the clear persistence cache functions
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
     # set data source env variables
     source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
@@ -77,13 +77,14 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
 
         num_studies_updated=`cat $tmp/num_studies_updated.txt`
 
-        # redeploy war
+        # clear persistence cache
         if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
-            echo "'$num_studies_updated' studies have been updated, requesting redeployment of msk portal war..."
-            restartMSKTomcats
-            echo "'$num_studies_updated' studies have been updated (no longer need to restart $TOMCAT_SERVER_DISPLAY_NAME server...)"
+            echo "'$num_studies_updated' studies have been updated, clearing persistence cache of msk portal..."
+            if ! clearPersistenceCachesForMskPortals ; then
+                sendClearCacheFailureMessage msk import-cmo-data-msk.sh
+            fi
         else
-            echo "No studies have been updated, skipping redeploy of msk portal war..."
+            echo "No studies have been updated, not clearing persistence cache of msk portal..."
         fi
     fi
 
@@ -102,6 +103,11 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     echo "### Starting import" >> "$CANCERSTUDIESLOGFILENAME"
     date >> "$CANCERSTUDIESLOGFILENAME"
     $PYTHON_BINARY $PORTAL_HOME/scripts/updateCancerStudies.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true >> "$CANCERSTUDIESLOGFILENAME" 2>&1
-    restartMSKTomcats > /dev/null 2>&1
-    restartSchultzTomcats > /dev/null 2>&1
+    if ! clearPersistenceCachesForMskPortals ; then
+        sendClearCacheFailureMessage msk import-cmo-data-msk.sh
+    fi
+    if ! clearPersistenceCachesForExternalPortals ; then
+        sendClearCacheFailureMessage external import-cmo-data-msk.sh
+    fi
+    
 ) {flock_fd}>$FLOCK_FILEPATH

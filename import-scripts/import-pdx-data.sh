@@ -3,15 +3,7 @@
 echo $(date)
 
 PATH_TO_AUTOMATION_SCRIPT=/data/portal-cron/scripts/automation-environment.sh
-# variables for restarting tomcats
-TOMCAT_HOST_LIST=(dashi.cbio.mskcc.org dashi2.cbio.mskcc.org)
-TOMCAT_HOST_USERNAME=cbioportal_importer
-TOMCAT_HOST_SSH_KEY_FILE=${HOME}/.ssh/id_rsa_msk_tomcat_restarts_key
-TOMCAT_SERVER_RESTART_PATH=/srv/data/portal-cron/msk-tomcat-restart
-TOMCAT_SERVER_PRETTY_DISPLAY_NAME="MSK Tomcat" # e.g. Public Tomcat
-TOMCAT_SERVER_DISPLAY_NAME="msk-tomcat" # e.g. schultz-tomcat
-SSH_OPTIONS="-i ${TOMCAT_HOST_SSH_KEY_FILE} -o BATCHMODE=yes -o ConnectTimeout=3"
-# PIPELINES_EMAIL_LIST receives low level emails (fail to recache oncotree, fail to restart a tomcat, ...)
+# PIPELINES_EMAIL_LIST receives low level emails (fail to recache oncotree, fail to clear persistence cache, ...)
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
 # PDX_EMAIL_LIST receives a daily summary email of import statistics and problems
 PDX_EMAIL_LIST="cbioportal-pdx-importer@cbio.mskcc.org"
@@ -193,7 +185,7 @@ PDX_HG_FETCH_SUCCESS=0
 DATAHUB_GIT_FETCH_SUCCESS=0
 ALL_HG_FETCH_SUCCESS=0
 IMPORT_SUCCESS=0
-TOMCAT_SERVER_RESTART_SUCCESS=0
+CLEAR_PERSISTENCE_CACHE_SUCCESS=0
 
 CDD_ONCOTREE_RECACHE_FAIL=0
 if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
@@ -323,27 +315,17 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
             IMPORT_SUCCESS=1
         fi
         num_studies_updated=`cat $CRDB_PDX_TMPDIR/num_studies_updated.txt`
-        # redeploy war
+        # clear persistence cache (note : this script is constructing studies for the msk portal, including mskimpact sample data - that is why the msk portal cache is cleared)
         if [[ $IMPORT_SUCCESS -ne 0 && $num_studies_updated -gt 0 ]]; then
-            echo "'$num_studies_updated' studies have been updated, requesting redeployment of $TOMCAT_SERVER_DISPLAY_NAME..."
-            declare -a failed_restart_server_list
-            for server in ${TOMCAT_HOST_LIST[@]}; do
-                if ! ssh ${SSH_OPTIONS} ${TOMCAT_HOST_USERNAME}@${server} touch ${TOMCAT_SERVER_RESTART_PATH} ; then
-                    failed_restart_server_list[${#failed_restart_server_list[*]}]=${server}
-                fi
-            done
-            if [ ${#failed_restart_server_list[*]} -ne 0 ] ; then
-                EMAIL_BODY="Attempt to trigger a restart of the $TOMCAT_SERVER_DISPLAY_NAME server failed"
-                echo -e "Sending email $EMAIL_BODY"
-                echo -e "$EMAIL_BODY" | mail -s "$TOMCAT_SERVER_PRETTY_DISPLAY_NAME Restart Error : unable to trigger restart" $PIPELINES_EMAIL_LIST
-                sendFailureMessageMskPipelineLogsSlack "CRDB PDX Tomcat Restart Failure"
+            echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portal ..."
+            if ! clearPersistenceCachesForMskPortals ; then
+                sendClearCacheFailureMessage msk import-pdx-data.sh
             else
-                TOMCAT_SERVER_RESTART_SUCCESS=1
-                echo "'$num_studies_updated' studies have been updated"
+                CLEAR_PERSISTENCE_CACHE_SUCCESS=1
             fi
         else
-            echo "No studies have been updated, skipping redeploy of $TOMCAT_SERVER_DISPLAY_NAME..."
-            TOMCAT_SERVER_RESTART_SUCCESS=1
+            echo "No studies have been updated, not clearing persistence cache for msk portal..."
+            CLEAR_PERSISTENCE_CACHE_SUCCESS=1
         fi
     fi
 fi
@@ -365,8 +347,8 @@ else
             if [ $IMPORT_SUCCESS -eq 0 ] ; then
                 echo -e "The import of CRDB PDX studies was attempted but failed during the importing process." >> "$EMAIL_MESSAGE_FILE"
             else
-                if [ $TOMCAT_SERVER_RESTART_SUCCESS -eq 0 ] ; then
-                    echo -e "The import of CRDB PDX studies completed successfully, however there was a problem restarting the webserver and so the display of the imported data may be delayed while we perform a manual restart of the webserver." >> "$EMAIL_MESSAGE_FILE"
+                if [ $CLEAR_PERSISTENCE_CACHE_SUCCESS -eq 0 ] ; then
+                    echo -e "The import of CRDB PDX studies completed successfully, however due to a technical problem the website may not display the latest data." >> "$EMAIL_MESSAGE_FILE"
                 else
                     echo -e "The import of CRDB PDX studies completed successfully." >> "$EMAIL_MESSAGE_FILE"
                     EMAIL_SUBJECT="CRDB PDX cBioPortal nightly import status"

@@ -11,7 +11,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
 
     # set necessary env variables with automation-environment.sh
 
-    # we need this file for the tomcat restart funcions
+    # we need this file for the clear persistence cache functions
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
     # set data source env variables
     source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
@@ -77,18 +77,14 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
         fi
         num_studies_updated=`cat $tmp/num_studies_updated.txt`
 
-        # redeploy war
+        # clear persistence cache
         if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
-            echo "'$num_studies_updated' studies have been updated, requesting redeployment of triage portal pods..."
-            bash $PORTAL_HOME/scripts/restart-portal-pods.sh triage
-            RESTART_EXIT_STATUS=$?
-            if [ $RESTART_EXIT_STATUS -ne 0 ] ; then
-                EMAIL_BODY="Attempt to trigger a redeployment of the triage portal tomcat pods failed"
-                echo -e "Sending email $EMAIL_BODY"
-                echo -e "$EMAIL_BODY" | mail -s "Triage Portal Tomcat Pod Redeployment Error : unable to trigger redeployment" $PIPELINES_EMAIL_LIST
+            echo "'$num_studies_updated' studies have been updated, clearing persistence cache for triage portal..."
+            if ! clearPersistenceCachesForTriagePortals ; then
+                sendClearCacheFailureMessage triage import-cmo-data-triage.sh
             fi
         else
-            echo "No studies have been updated, skipping restart of triage-tomcat server..."
+            echo "No studies have been updated, not clearing persitsence cache for triage portal..."
         fi
 
         # import ran and either failed or succeeded

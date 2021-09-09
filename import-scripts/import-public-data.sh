@@ -48,7 +48,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
     JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     public_portal_notification_file=$(mktemp $tmp/public-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_latest_stable
-    TOMCAT_SERVER_SHOULD_BE_RESTARTED=0 # 0 = skip the restart, non-0 = do the restart
+    CLEAR_PERSISTENCE_CACHE=0 # 0 = do not clear cache, non-0 = clear cache
 
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
     CDD_ONCOTREE_RECACHE_FAIL=0
@@ -139,25 +139,21 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
         fi
         if [ -z $num_studies_updated ] ; then
             echo "could not determine the number of studies that have been updated"
-            # if import fails [presumed to have failed if num_studies_updated.txt is missing or empty], some checked-off studies still may have been successfully imported, so restart tomcat
-            TOMCAT_SERVER_SHOULD_BE_RESTARTED=1
+            # if import fails [presumed to have failed if num_studies_updated.txt is missing or empty], some checked-off studies still may have been successfully imported, so clear the persistence caches
+            CLEAR_PERSISTENCE_CACHE=1
         else
             echo "'$num_studies_updated' studies have been updated"
             if [[ $num_studies_updated != "0" ]]; then
-                # if at least 1 study was imported, restart tomcat
-                TOMCAT_SERVER_SHOULD_BE_RESTARTED=1
+                # if at least 1 study was imported, clear the persistence cache
+                CLEAR_PERSISTENCE_CACHE=1
             fi
         fi
     fi
 
-    if [ $TOMCAT_SERVER_SHOULD_BE_RESTARTED -ne 0 ] ; then
-        echo "requesting redeployment of public portal tomcat pods..."
-        bash $PORTAL_HOME/scripts/restart-portal-pods.sh public
-        RESTART_EXIT_STATUS=$?
-        if [ $RESTART_EXIT_STATUS -ne 0 ] ; then
-            EMAIL_BODY="Attempt to trigger a redeployment of the public portal tomcat pods failed"
-            echo -e "Sending email $EMAIL_BODY"
-            echo -e "$EMAIL_BODY" | mail -s "Public Portal Tomcat Pod Redeployment Error : unable to trigger redeployment" $PIPELINES_EMAIL_LIST
+    if [ $CLEAR_PERSISTENCE_CACHE -ne 0 ] ; then
+        echo "clearing persistence cache for public portal ..."
+        if ! clearPersistenceCachesForPublicPortals ; then
+            sendClearCacheFailureMessage public import-public-data.sh
         fi
     fi
 

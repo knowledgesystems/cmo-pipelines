@@ -126,7 +126,7 @@ fi
 # (10): importer jar
 # (11): transcript overrides source [ uniprot | mskcc ]
 
-RESTART_AFTER_IMPACT_IMPORT=0
+CLEAR_CACHES_AFTER_IMPACT_IMPORT=0
 # TEMP STUDY IMPORT: MSKSOLIDHEME
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SOLID_HEME_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import of MSKSOLIDHEME (will be renamed MSKIMPACT) study"
@@ -134,7 +134,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SOLID_HEME_IMPORT_TRIGGER ] ; then
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="mskimpact" --temp-study-id="temporary_mskimpact" --backup-study-id="yesterday_mskimpact" --portal-name="msk-solid-heme-portal" --study-path="$MSK_SOLID_HEME_DATA_HOME" --notification-file="$msk_solid_heme_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
         consumeSamplesAfterSolidHemeImport
-        RESTART_AFTER_IMPACT_IMPORT=1
+        CLEAR_CACHES_AFTER_IMPACT_IMPORT=1
         IMPORT_FAIL_MSKSOLIDHEME=0
     fi
     rm $MSK_SOLID_HEME_IMPORT_TRIGGER
@@ -152,17 +152,18 @@ else
 fi
 
 
-## TOMCAT RESTART
-# restart tomcat only if the MSKSOLIDHEME update was succesful
-if [ $RESTART_AFTER_IMPACT_IMPORT -eq 0 ] ; then
-    echo "Failed to update MSKSOLIDHEME - next tomcat restart will execute after successful updates to other MSK clinical pipelines and/or MSK affiliate studies..."
+# clear persistence cache only if the MSKSOLIDHEME update was succesful
+if [ $CLEAR_CACHES_AFTER_IMPACT_IMPORT -eq 0 ] ; then
+    echo "Failed to update MSKSOLIDHEME - we will clear the persistence cache after successful updates to MSK affiliate studies..."
     echo $(date)
 else
-    restartMSKTomcats
+    if ! clearPersistenceCachesForMskPortals ; then
+        sendClearCacheFailureMessage msk import-dmp-impact-data.sh
+    fi
 fi
 
-# set 'RESTART_AFTER_DMP_PIPELINES_IMPORT' flag to 1 if ARCHER succesfully updates
-RESTART_AFTER_DMP_PIPELINES_IMPORT=0
+# set 'CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT' flag to 1 if ARCHER succesfully updates
+CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT=0
 
 # TEMP STUDY IMPORT: MSKARCHER
 mysql --host="$DMP_DB_HOST" --user="$DMP_DB_USER" --password="$DMP_DB_PASSWORD" "$DMP_DB_DATABASE_NAME" -e "update genetic_profile set genetic_alteration_type = 'FUSION' where genetic_alteration_type = 'MUTATION_EXTENDED' and stable_id = 'mskarcher_mutations'"
@@ -175,7 +176,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_ARCHER_IMPORT_TRIGGER ] ; then
         # This is a temporary quick and dirty fix to override the genetic_alteration_type for mskarcher_mutations to "MTATION_EXTENDED" (which is imported with genetic_alteration_type = "FUSION")
         mysql --host="$DMP_DB_HOST" --user="$DMP_DB_USER" --password="$DMP_DB_PASSWORD" "$DMP_DB_DATABASE_NAME" -e "update genetic_profile set genetic_alteration_type = 'MUTATION_EXTENDED' where genetic_alteration_type = 'FUSION' and stable_id = 'mskarcher_mutations'"
         consumeSamplesAfterArcherImport
-        RESTART_AFTER_DMP_PIPELINES_IMPORT=1
+        CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT=1
         IMPORT_FAIL_ARCHER=0
     fi
     rm $MSK_ARCHER_IMPORT_TRIGGER
@@ -192,28 +193,28 @@ else
     sendImportSuccessMessageMskPipelineLogsSlack "ARCHER"
 fi
 
-## TOMCAT RESTART
-# Restart will only execute if at least one of these studies succesfully updated.
-#   MSKARCHER
-if [ $RESTART_AFTER_DMP_PIPELINES_IMPORT -eq 0 ] ; then
-    echo "Failed to update ARCHER - next tomcat restart will execute after successful updates to MSK affiliate studies..."
+# clear persistence cache only if MSKARCHER update was successful
+if [ $CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT -eq 0 ] ; then
+    echo "Failed to update ARCHER - we will clear the persistence cache after successful updates to MSK affiliate studies..."
     echo $(date)
 else
-    restartMSKTomcats
+    if ! clearPersistenceCachesForMskPortals ; then
+        sendClearCacheFailureMessage msk import-dmp-impact-data.sh
+    fi
 fi
 
 ## END MSK DMP cohorts imports
 
 #-------------------------------------------------------------------------------------------------------------------------------------
-# set 'RESTART_AFTER_MSK_AFFILIATE_IMPORT' flag to 1 if Kings County, Lehigh Valley, Queens Cancer Center, Miami Cancer Institute, MSKIMPACT Ped, or Lymphoma super cohort succesfully update
-RESTART_AFTER_MSK_AFFILIATE_IMPORT=0
+# set 'CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT' flag to 1 if Kings County, Lehigh Valley, Queens Cancer Center, Miami Cancer Institute, MSKIMPACT Ped, or Lymphoma super cohort succesfully update
+CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=0
 
 # TEMP STUDY IMPORT: KINGSCOUNTY
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_KINGS_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for msk_kingscounty"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_kingscounty" --temp-study-id="temporary_msk_kingscounty" --backup-study-id="yesterday_msk_kingscounty" --portal-name="msk-kingscounty-portal" --study-path="$MSK_KINGS_DATA_HOME" --notification-file="$kingscounty_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_KINGS=0
     fi
     rm $MSK_KINGS_IMPORT_TRIGGER
@@ -235,7 +236,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_LEHIGH_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for msk_lehighvalley"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_lehighvalley" --temp-study-id="temporary_msk_lehighvalley" --backup-study-id="yesterday_msk_lehighvalley" --portal-name="msk-lehighvalley-portal" --study-path="$MSK_LEHIGH_DATA_HOME" --notification-file="$lehighvalley_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_LEHIGH=0
     fi
     rm $MSK_LEHIGH_IMPORT_TRIGGER
@@ -257,7 +258,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_QUEENS_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for msk_queenscancercenter"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_queenscancercenter" --temp-study-id="temporary_msk_queenscancercenter" --backup-study-id="yesterday_msk_queenscancercenter" --portal-name="msk-queenscancercenter-portal" --study-path="$MSK_QUEENS_DATA_HOME" --notification-file="$queenscancercenter_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_QUEENS=0
     fi
     rm $MSK_QUEENS_IMPORT_TRIGGER
@@ -279,7 +280,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_MCI_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for msk_miamicancerinstitute"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_miamicancerinstitute" --temp-study-id="temporary_msk_miamicancerinstitute" --backup-study-id="yesterday_msk_miamicancerinstitute" --portal-name="msk-mci-portal" --study-path="$MSK_MCI_DATA_HOME" --notification-file="$miamicancerinstitute_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_MCI=0
     fi
     rm $MSK_MCI_IMPORT_TRIGGER
@@ -301,7 +302,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_HARTFORD_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for msk_hartfordhealthcare"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_hartfordhealthcare" --temp-study-id="temporary_msk_hartfordhealthcare" --backup-study-id="yesterday_msk_hartfordhealthcare" --portal-name="msk-hartford-portal" --study-path="$MSK_HARTFORD_DATA_HOME" --notification-file="$hartfordhealthcare_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_HARTFORD=0
     fi
     rm $MSK_HARTFORD_IMPORT_TRIGGER
@@ -323,7 +324,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RALPHLAUREN_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for msk_ralphlauren"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_ralphlauren" --temp-study-id="temporary_msk_ralphlauren" --backup-study-id="yesterday_msk_ralphlauren" --portal-name="msk-ralphlauren-portal" --study-path="$MSK_RALPHLAUREN_DATA_HOME" --notification-file="$ralphlauren_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_RALPHLAUREN=0
     fi
     rm $MSK_RALPHLAUREN_IMPORT_TRIGGER
@@ -345,7 +346,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER ] ; 
     printTimeStampedDataProcessingStepMessage "import for msk_rikengenesisjapan"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_rikengenesisjapan" --temp-study-id="temporary_msk_rikengenesisjapan" --backup-study-id="yesterday_msk_rikengenesisjapan" --portal-name="msk-tailormedjapan-portal" --study-path="$MSK_RIKENGENESISJAPAN_DATA_HOME" --notification-file="$rikengenesisjapan_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_RIKENGENESISJAPAN=0
     fi
     rm $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER
@@ -370,7 +371,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSKIMPACT_PED_IMPORT_TRIGGER ]; then
     printTimeStampedDataProcessingStepMessage "import for mskimpact_ped study"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="mskimpact_ped" --temp-study-id="temporary_mskimpact_ped" --backup-study-id="yesterday_mskimpact_ped" --portal-name="msk-ped-portal" --study-path="$MSKIMPACT_PED_DATA_HOME" --notification-file="$mskimpact_ped_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ]; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_MSKIMPACT_PED=0
     fi
     rm $MSKIMPACT_PED_IMPORT_TRIGGER
@@ -390,13 +391,13 @@ fi
 ## END MSKIMPACT_PED import
 
 #-------------------------------------------------------------------------------------------------------------------------------------
-RESTART_AFTER_SCLC_IMPORT=0
+CLEAR_CACHES_AFTER_SCLC_IMPORT=0
 # TEMP STUDY IMPORT: SCLCMSKIMPACT
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SCLC_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for sclc_mskimpact_2017 study"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="sclc_mskimpact_2017" --temp-study-id="temporary_sclc_mskimpact_2017" --backup-study-id="yesterday_sclc_mskimpact_2017" --portal-name="msk-sclc-portal" --study-path="$MSK_SCLC_DATA_HOME" --notification-file="$sclc_mskimpact_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_SCLC_IMPORT=1
+        CLEAR_CACHES_AFTER_SCLC_IMPORT=1
         IMPORT_FAIL_SCLC_MSKIMPACT=0
     fi
     rm $MSK_SCLC_IMPORT_TRIGGER
@@ -421,7 +422,7 @@ if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER ] ; 
     printTimeStampedDataProcessingStepMessage "import for lymphoma_super_cohort_fmi_msk study"
     bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="lymphoma_super_cohort_fmi_msk" --temp-study-id="temporary_lymphoma_super_cohort_fmi_msk" --backup-study-id="yesterday_lymphoma_super_cohort_fmi_msk" --portal-name="msk-fmi-lymphoma-portal" --study-path="$LYMPHOMA_SUPER_COHORT_DATA_HOME" --notification-file="$lymphoma_super_cohort_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
     if [ $? -eq 0 ] ; then
-        RESTART_AFTER_MSK_AFFILIATE_IMPORT=1
+        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
         IMPORT_FAIL_LYMPHOMA=0
     fi
     rm $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER
@@ -438,8 +439,7 @@ else
     sendImportSuccessMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT"
 fi
 
-## TOMCAT RESTART
-# Restart will only execute if at least one of these studies succesfully updated.
+# clear persistence cache only if at least one of these studies succesfully updated.
 #   MSK_KINGSCOUNTY
 #   MSK_LEHIGHVALLEY
 #   MSK_QUEENSCANCERCENTER
@@ -448,26 +448,27 @@ fi
 #   MSK_RALPHLAUREN
 #   LYMPHOMASUPERCOHORT
 #   SCLCMSKIMPACT
-
-if [ $RESTART_AFTER_MSK_AFFILIATE_IMPORT -eq 0 ] ; then
+if [ $CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT -eq 0 ] ; then
     echo "Failed to update all MSK affiliate studies"
 else
-    restartMSKTomcats
+    if ! clearPersistenceCachesForMskPortals ; then
+        sendClearCacheFailureMessage msk import-dmp-impact-data.sh
+    fi
 fi
 
-## SCHULTZ TOMCAT RESTART
-# Restart only if sclc_mskimpact_2017 import succeeded
-if [ $RESTART_AFTER_SCLC_IMPORT -eq 0 ] ; then
+# clear persistence cache only if sclc_mskimpact_2017 update was successful
+if [ $CLEAR_CACHES_AFTER_SCLC_IMPORT -eq 0 ] ; then
     echo "Failed to update SCLC MSKIMPCAT cohort"
 else
-    restartSchultzTomcats
+    if ! clearPersistenceCachesForExternalPortals ; then
+        sendClearCacheFailureMessage external import-dmp-impact-data.sh
+    fi
 fi
 
 ### FAILURE EMAIL ###
-
-EMAIL_BODY="The MSKIMPACT database version is incompatible. Imports will be skipped until database is updated."
 # send email if db version isn't compatible
 if [ $DB_VERSION_FAIL -gt 0 ] ; then
+    EMAIL_BODY="The MSKIMPACT database version is incompatible. Imports will be skipped until database is updated."
     echo -e "Sending email $EMAIL_BODY"
     echo -e "$EMAIL_BODY" | mail -s "MSKIMPACT Update Failure: DB version is incompatible" $PIPELINES_EMAIL_LIST
 fi

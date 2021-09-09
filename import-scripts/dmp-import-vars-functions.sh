@@ -73,21 +73,30 @@ function extractPropertiesFromFile() {
 }
 
 # Function for alerting slack channel of any failures
-function sendPreImportFailureMessageMskPipelineLogsSlack {
+function sendPreImportFailureMessageMskPipelineLogsSlack() {
     MESSAGE=$1
     curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines pre-import process failed: $MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
 }
 
 # Function for alerting slack channel of any failures
-function sendImportFailureMessageMskPipelineLogsSlack {
+function sendImportFailureMessageMskPipelineLogsSlack() {
     MESSAGE=$1
     curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines import process failed: $MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
 }
 
 # Function for alerting slack channel of successful imports
-function sendImportSuccessMessageMskPipelineLogsSlack {
+function sendImportSuccessMessageMskPipelineLogsSlack() {
     STUDY_ID=$1
     curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines import success: $STUDY_ID\", \"icon_emoji\": \":tada:\"}" $SLACK_PIPELINES_MONITOR_URL
+}
+
+# Function for alerting slack channel of clear cache failures
+function sendClearCacheFailureMessage() {
+    EMAIL_RECIPIENT="cbioportal-pipelines@cbio.mskcc.org"
+    EMAIL_SUBJECT="import failure resetting cache $CACHE_GROUP_NAME"
+    EMAIL_BODY="Imported studies may not be visible in one or more of the $CACHE_GROUP_NAME portals.\n\nImport script '$SOURCE_SCRIPT_NAME' attempted to clear/reset the persistence cache for $CACHE_GROUP_NAME portals and a failure was reported. Until a successful cache clearing occurs for these portals, studies which were successfully imported may not yet be visible.\n"
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" | mail -s "$EMAIL_SUBJECT" "$EMAIL_RECIPIENT"
 }
 
 function printTimeStampedDataProcessingStepMessage {
@@ -312,82 +321,46 @@ function filter_derived_clinical_data {
     $PYTHON_BINARY $PORTAL_HOME/scripts/filter_empty_columns.py --file $STUDY_DIRECTORY/data_clinical_sample.txt --keep-column-list $FILTER_EMPTY_COLUMNS_KEEP_COLUMN_LIST
 }
 
-# Function for restarting MSK tomcats
-# TODO obviously restartMSKTomcats and restartSchultzTomcats should really be one function ...
-function restartMSKTomcats {
-    # redeploy war
-    echo "Requesting redeployment of msk portal war..."
-    echo $(date)
-    TOMCAT_HOST_LIST=(dashi.cbio.mskcc.org dashi2.cbio.mskcc.org)
-    TOMCAT_HOST_USERNAME=cbioportal_importer
-    TOMCAT_HOST_SSH_KEY_FILE=${HOME}/.ssh/id_rsa_msk_tomcat_restarts_key
-    TOMCAT_SERVER_RESTART_PATH=/srv/data/portal-cron/msk-tomcat-restart
-    TOMCAT_SERVER_PRETTY_DISPLAY_NAME="MSK Tomcat" # e.g. Public Tomcat
-    TOMCAT_SERVER_DISPLAY_NAME="msk-tomcat" # e.g. schultz-tomcat
-    SSH_OPTIONS="-i ${TOMCAT_HOST_SSH_KEY_FILE} -o BATCHMODE=yes -o ConnectTimeout=3"
-    declare -a failed_restart_server_list
-    for server in ${TOMCAT_HOST_LIST[@]} ; do
-        if ! ssh ${SSH_OPTIONS} ${TOMCAT_HOST_USERNAME}@${server} touch ${TOMCAT_SERVER_RESTART_PATH} ; then
-            failed_restart_server_list[${#failed_restart_server_list[*]}]=${server}
+# returns the number of portals for which cache reset failed (0 = all succeeded)
+function clearPersistenceCachesForPortals() {
+    portal_list=$1
+    exit_status=0
+    for portal in $portal_list; do
+        if ! $PORTAL_HOME/scripts/clear_cbioportal_persistence_cache.sh $portal ; then
+            exit_status=$(($exit_status + 1))
         fi
     done
-    if [ ${#failed_restart_server_list[*]} -ne 0 ] ; then
-        EMAIL_BODY="Attempt to trigger a restart of the $TOMCAT_SERVER_DISPLAY_NAME server on the following hosts failed: ${failed_restart_server_list[*]}"
-        echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "$TOMCAT_SERVER_PRETTY_DISPLAY_NAME Restart Error : unable to trigger restart" $PIPELINES_EMAIL_LIST
-    fi
+    return $exit_status
 }
 
-# Function for restarting Schultz tomcats
-# TODO obviously restartMSKTomcats and restartSchultzTomcats should really be one function ...
-function restartSchultzTomcats {
-    # redeploy war
-    echo "Requesting redeployment of schultz portal war..."
-    echo $(date)
-    TOMCAT_HOST_LIST=(dashi.cbio.mskcc.org dashi2.cbio.mskcc.org)
-    TOMCAT_HOST_USERNAME=cbioportal_importer
-    TOMCAT_HOST_SSH_KEY_FILE=${HOME}/.ssh/id_rsa_schultz_tomcat_restarts_key
-    TOMCAT_SERVER_RESTART_PATH=/srv/data/portal-cron/schultz-tomcat-restart
-    TOMCAT_SERVER_PRETTY_DISPLAY_NAME="Schultz Tomcat" # e.g. Public Tomcat
-    TOMCAT_SERVER_DISPLAY_NAME="schultz-tomcat" # e.g. schultz-tomcat
-    SSH_OPTIONS="-i ${TOMCAT_HOST_SSH_KEY_FILE} -o BATCHMODE=yes -o ConnectTimeout=3"
-    declare -a failed_restart_server_list
-    for server in ${TOMCAT_HOST_LIST[@]} ; do
-        if ! ssh ${SSH_OPTIONS} ${TOMCAT_HOST_USERNAME}@${server} touch ${TOMCAT_SERVER_RESTART_PATH} ; then
-            failed_restart_server_list[${#failed_restart_server_list[*]}]=${server}
-        fi
-    done
-    if [ ${#failed_restart_server_list[*]} -ne 0 ] ; then
-        EMAIL_BODY="Attempt to trigger a restart of the $TOMCAT_SERVER_DISPLAY_NAME server on the following hosts failed: ${failed_restart_server_list[*]}"
-        echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "$TOMCAT_SERVER_PRETTY_DISPLAY_NAME Restart Error : unable to trigger restart" $PIPELINES_EMAIL_LIST
-    fi
+function clearPersistenceCachesForMskPortals() {
+    all_msk_portals="msk msk-beta"
+    clearPersistenceCachesForPortals "$all_msk_portals"
 }
 
-# Function for restarting Triage tomcats
-# TODO obviously restartMSKTomcats and restartSchultzTomcats and restartTriageTomcats should really be one function ...
-function restartTriageTomcats {
-    # redeploy war
-    echo "Requesting redeployment of triage portal war..."
-    echo $(date)
-    TOMCAT_HOST_LIST=(dashi.cbio.mskcc.org dashi2.cbio.mskcc.org)
-    TOMCAT_HOST_USERNAME=cbioportal_importer
-    TOMCAT_HOST_SSH_KEY_FILE=${HOME}/.ssh/id_rsa_triage_tomcat_restarts_key
-    TOMCAT_SERVER_RESTART_PATH=/srv/data/portal-cron/restart-trigger/triage-tomcat-restart
-    TOMCAT_SERVER_PRETTY_DISPLAY_NAME="Triage Tomcat" # e.g. Public Tomcat
-    TOMCAT_SERVER_DISPLAY_NAME="triage-tomcat" # e.g. triage-tomcat
-    SSH_OPTIONS="-i ${TOMCAT_HOST_SSH_KEY_FILE} -o BATCHMODE=yes -o ConnectTimeout=3"
-    declare -a failed_restart_server_list
-    for server in ${TOMCAT_HOST_LIST[@]} ; do
-        if ! ssh ${SSH_OPTIONS} ${TOMCAT_HOST_USERNAME}@${server} "umask 000 ; touch ${TOMCAT_SERVER_RESTART_PATH}" ; then
-            failed_restart_server_list[${#failed_restart_server_list[*]}]=${server}
-        fi
-    done
-    if [ ${#failed_restart_server_list[*]} -ne 0 ] ; then
-        EMAIL_BODY="Attempt to trigger a restart of the $TOMCAT_SERVER_DISPLAY_NAME server on the following hosts failed: ${failed_restart_server_list[*]}"
-        echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "$TOMCAT_SERVER_PRETTY_DISPLAY_NAME Restart Error : unable to trigger restart" $PIPELINES_EMAIL_LIST
-    fi
+function clearPersistenceCachesForExternalPortals() {
+    all_external_portals="acc glioma immunotherapy kras pdx poetic private prostate sclc su2c target"
+    clearPersistenceCachesForPortals "$all_external_portals"
+}
+
+function clearPersistenceCachesForTriagePortals() {
+    all_triage_portals="triage"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}
+
+function clearPersistenceCachesForPublicPortals() {
+    all_public_portals="public"
+    clearPersistenceCachesForPortals "$all_public_portals"
+}
+
+function clearPersistenceCachesForGeniePortals() {
+    all_genie_portals="genie-public genie-private"
+    clearPersistenceCachesForPortals "$all_genie_portals"
+}
+
+function clearPersistenceCachesForGenieArchivePortals() {
+    all_genie_archive_portals="genie-archive"
+    clearPersistenceCachesForPortals "$all_genie_archive_portals"
 }
 
 # Function for consuming fetched samples after successful import
