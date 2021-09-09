@@ -55,7 +55,7 @@ if [ -z "$deployment_id" ] ; then
     print_portal_id_values
 fi
 
-/data/portal-cron/scripts/authenticate_service_account.sh 
+/data/portal-cron/scripts/authenticate_service_account.sh
 $KUBECTL_BINARY set env deployment $deployment_id --env="LAST_RESTART=$(date)"
 
 if [ -z "$preserve_cache_flag" ] ; then
