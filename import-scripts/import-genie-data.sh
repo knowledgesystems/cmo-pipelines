@@ -37,6 +37,9 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     fi
     CLEAR_PERSISTENCE_CACHE=0 # 0 = do not clear cache, non-0 = clear cache
     
+    # we need this file for the clear persistence cache functions
+    source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
+
     echo $now : starting import
     CDD_ONCOTREE_RECACHE_FAIL=0
     if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then

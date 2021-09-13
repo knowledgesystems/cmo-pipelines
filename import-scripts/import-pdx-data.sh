@@ -138,7 +138,10 @@ if ! [ -f $PATH_TO_AUTOMATION_SCRIPT ] ; then
     exit 2
 fi
 
-. $PATH_TO_AUTOMATION_SCRIPT
+source $PATH_TO_AUTOMATION_SCRIPT
+# we need this file for the clear persistence cache functions
+source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
+
 
 if [ -z $BIC_DATA_HOME ] | [ -z $PRIVATE_DATA_HOME ] | [ -z $PDX_DATA_HOME ] | [ -z $HG_BINARY ] | [ -z $PYTHON_BINARY ] | [ -z $DATAHUB_DATA_HOME ] | [ -z $ANNOTATOR_JAR ] | [ -z $CASE_LIST_CONFIG_FILE  ]; then
     message="could not run import-pdx-data.sh: automation-environment.sh script must be run in order to set needed environment variables (like BIC_DATA_HOME, PDX_DATA_HOME, ANNOTATOR_JAR, CASE_LIST_CONFIG_FILE,...)"
