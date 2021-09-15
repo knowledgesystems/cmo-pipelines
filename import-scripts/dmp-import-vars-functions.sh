@@ -339,7 +339,7 @@ function clearPersistenceCachesForMskPortals() {
 }
 
 function clearPersistenceCachesForExternalPortals() {
-    all_external_portals="acc glioma immunotherapy kras pdx poetic private prostate sclc su2c target"
+    all_external_portals="private sclc"
     clearPersistenceCachesForPortals "$all_external_portals"
 }
 

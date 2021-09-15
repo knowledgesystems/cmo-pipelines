@@ -11,7 +11,7 @@ export PYTHON3_BINARY=/usr/bin/python3
 export MAVEN_BINARY=/opt/apache-maven-3.8.1/bin/mvn
 export HG_BINARY=/usr/bin/hg
 export GIT_BINARY=/usr/bin/git
-export PATH=/opt:/usr/bin:/data/tools/python2.7/bin:/data/tools/python3.4.10/bin:$PATH
+export PATH=$(bash --login -c 'echo $PATH')
 
 #######################
 # environment variables for top-level data repositories / code bases
@@ -32,7 +32,6 @@ export ONCO_HOME=$PORTAL_GIT_HOME/oncotree
 export ONCOKB_ANNOTATOR_HOME=$PORTAL_GIT_HOME/oncokb-annotator
 export CDD_HOME=$PORTAL_GIT_HOME/clinical-data-dictionary
 export DDP_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/application-secure.properties
-export CACHE_API_KEY_FILE=$PORTAL_HOME/pipelines-credentials/cache.api.key
 export AWS_SSL_TRUSTSTORE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore
 export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore.password
 export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url

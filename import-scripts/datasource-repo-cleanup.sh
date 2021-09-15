@@ -6,6 +6,8 @@
 # user input repository list
 REPOSITORIES="$@"
 
+source /data/portal-cron/scripts/automation-environment.sh
+
 # -----------------------------------------------------------------------------------------------------------
 # GLOBALS
 
