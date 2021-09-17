@@ -675,7 +675,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $FETCH_DDP_ACCESS_FAIL -eq 0 ] ; then
        import_access_ddp_to_redcap
-       if [$? -gt 0 ] ; then
+       if [ $? -gt 0 ] ; then
            IMPORT_STATUS_ACCESS=1
            sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS DDP Redcap Import"
        fi
