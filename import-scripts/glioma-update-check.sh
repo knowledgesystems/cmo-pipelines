@@ -29,5 +29,5 @@ then
     echo -e "\n" >> $email_body
     echo -e "foundation/gbm/mskcc/foundation sample list:\n" >> $email_body
     cut -f1 $FOUNDATION_DATA_HOME/gbm/mskcc/foundation/data_clinical.txt | grep -P "^TRF.*" | sort -u >> $email_body
-    mail -s "impact/MERGED/mixed/gbm/mellinghoff_impact needs updating" < $email_body cbioportal-pipelines@cbio.mskcc.org
+    mail -s "impact/MERGED/mixed/gbm/mellinghoff_impact needs updating" < $email_body cbioportal-pipelines@cbioportal.org
 fi

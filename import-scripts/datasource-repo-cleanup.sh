@@ -11,7 +11,7 @@ source /data/portal-cron/scripts/automation-environment.sh
 # -----------------------------------------------------------------------------------------------------------
 # GLOBALS
 
-EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 MERCURIAL_MANAGER="mercurial"
 GITHUB_MANAGER="github"
 DEFAULT_REPOSITORY_MANAGER="UNKNOWN"

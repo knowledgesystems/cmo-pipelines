@@ -2,7 +2,7 @@
 
 # take snapshot of REDCap projects for MSKIMPACT, HEMEPACT, ARCHER
 echo $(date)
-PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 
 # flags for REDCap export status

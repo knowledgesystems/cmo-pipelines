@@ -59,7 +59,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     GENERATE_MASTERLIST_FAIL=0
 
-    PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+    PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 
     # -----------------------------------------------------------------------------------------------------------
     # START DMP DATA FETCHING

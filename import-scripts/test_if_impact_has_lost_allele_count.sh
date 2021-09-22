@@ -1,5 +1,5 @@
 #!/bin/bash
-PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 export tab=$'\t'
 tmp=$PORTAL_HOME/tmp/import-cron-dmp-msk
 sourcefilename=$MSK_IMPACT_DATA_HOME/data_mutations_extended.txt

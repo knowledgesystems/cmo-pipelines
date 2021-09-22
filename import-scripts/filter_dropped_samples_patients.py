@@ -24,9 +24,9 @@ SMTP_SERVER = "cbio.mskcc.org"
 DROPPED_SAMPLE_FILENAME = "dropped_samples.txt"
 DROPPED_PATIENT_FILENAME = "dropped_patients.txt"
 DROPPED_TIMELINE_FILENAME = "dropped_timeline.txt"
-MESSAGE_RECIPIENTS = ["cbioportal-pipelines@cbio.mskcc.org"]
+MESSAGE_RECIPIENTS = ["cbioportal-pipelines@cbioportal.org"]
 DROPPED_SAMPLES_PATIENTS_SUBJECT = "Dropped Samples/Patients Report"
-MESSAGE_SENDER = "cbioportal@cbio.mskcc.org"
+MESSAGE_SENDER = "cbioportal@cbioportal.org"
 
 # Returns a set containing sample ids from masterlist
 # adds "SAMPLE_ID" so header gets written out

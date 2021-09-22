@@ -89,11 +89,11 @@ DEFAULT_AUTHORITIES = "PUBLIC;EXTENDED;MSKPUB"
 MSKCC_EMAIL_SUFFIX = "@mskcc.org"
 SKI_EMAIL_SUFFIX = "@sloankettering.edu"
 SMTP_SERVER = "cbio.mskcc.org"
-MESSAGE_FROM_CMO = "cbioportal-access@cbio.mskcc.org"
-MESSAGE_BCC_CMO = ["cbioportal-access@cbio.mskcc.org"]
+MESSAGE_FROM_CMO = "cbioportal-access@cbioportal.org"
+MESSAGE_BCC_CMO = ["cbioportal-access@cbioportal.org"]
 
-MESSAGE_FROM_GENIE = "genie-cbioportal-access@cbio.mskcc.org"
-MESSAGE_BCC_GENIE = ["genie-cbioportal-access@cbio.mskcc.org"]
+MESSAGE_FROM_GENIE = "genie-cbioportal-access@cbioportal.org"
+MESSAGE_BCC_GENIE = ["genie-cbioportal-access@cbioportal.org"]
 AACR_GENIE_EMAIL = "info@aacrgenie.org"
 
 ERROR_EMAIL_SUBJECT_GENIE = "AACR Project GENIE cBioPortal - Failed to register"

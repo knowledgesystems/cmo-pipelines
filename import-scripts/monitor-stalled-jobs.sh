@@ -21,7 +21,7 @@ function send_email_notification () {
     ### FAILURE EMAIL ###
     EMAIL_BODY="Following processes appear to be stalled.\nHostname: ${hostname}\ndate: ${now}\nrunning processes: see below\n\nCMD\tPID\tSTART_TIME\tETIME\n${process_name}\n"
     echo -e "Sending email\n$EMAIL_BODY"
-    echo -e "$EMAIL_BODY" | mail -s "Alert: Import jobs stalled on ${hostname}" cbioportal-pipelines@cbio.mskcc.org
+    echo -e "$EMAIL_BODY" | mail -s "Alert: Import jobs stalled on ${hostname}" cbioportal-pipelines@cbioportal.org
 }
 
 # Function for alerting slack channel of stalled jobs

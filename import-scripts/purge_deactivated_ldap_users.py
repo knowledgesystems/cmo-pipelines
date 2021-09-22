@@ -68,7 +68,7 @@ MSKCC_APP_NAME = 'mskcc-portal'
 MYSQL_PORT = 3306
 SPREADSHEET_USERS_REMOVED_FILENAME = 'ldap_spreadsheet_users_removed.txt'
 DB_USERS_REMOVED_FILENAME = 'ldap_db_users_removed.txt'
-PIPELINES_EMAIL = 'cbioportal-pipelines@cbio.mskcc.org'
+PIPELINES_EMAIL = 'cbioportal-pipelines@cbioportal.org'
 MESSAGE_SUBJECT = 'LDAP user removal summary'
 SMTP_SERVER = 'cbio.mskcc.org'
 

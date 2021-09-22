@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 MAX_ATTEMPTS=5
 

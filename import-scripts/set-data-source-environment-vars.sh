@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-export CMO_EMAIL_LIST="cbioportal-cmo-importer@cbio.mskcc.org"
-export PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+export CMO_EMAIL_LIST="cbioportal-cmo-importer@cbioportal.org"
+export PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 export ALL_DATA_SOURCES="bic-mskcc private impact impact-MERGED knowledge-systems-curated-studies immunotherapy datahub datahub_shahlab msk-mind-datahub dmp pipelines-testing"
 
 unset DATA_SOURCE_NAME_TO_START_LOG_MESSAGE

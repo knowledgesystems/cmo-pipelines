@@ -23,7 +23,7 @@ if [ $ENABLE_DEBUGGING != "0" ] ; then
     java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 fi
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
-PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 
 DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT=2
@@ -92,7 +92,7 @@ function sendImportSuccessMessageMskPipelineLogsSlack() {
 
 # Function for alerting slack channel of clear cache failures
 function sendClearCacheFailureMessage() {
-    EMAIL_RECIPIENT="cbioportal-pipelines@cbio.mskcc.org"
+    EMAIL_RECIPIENT="cbioportal-pipelines@cbioportal.org"
     EMAIL_SUBJECT="import failure resetting cache $CACHE_GROUP_NAME"
     EMAIL_BODY="Imported studies may not be visible in one or more of the $CACHE_GROUP_NAME portals.\n\nImport script '$SOURCE_SCRIPT_NAME' attempted to clear/reset the persistence cache for $CACHE_GROUP_NAME portals and a failure was reported. Until a successful cache clearing occurs for these portals, studies which were successfully imported may not yet be visible.\n"
     echo -e "Sending email $EMAIL_BODY"

@@ -3,10 +3,10 @@
 echo $(date)
 
 PATH_TO_AUTOMATION_SCRIPT=/data/portal-cron/scripts/automation-environment.sh
-# PIPELINES_EMAIL_LIST receives low level emails (fail to recache oncotree, fail to clear persistence cache, ...)
-PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+# PIPELINES_EMAIL_LIST receives low level emails (fail to recache oncotree, fail to restart a tomcat, ...)
+PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 # PDX_EMAIL_LIST receives a daily summary email of import statistics and problems
-PDX_EMAIL_LIST="cbioportal-pdx-importer@cbio.mskcc.org"
+PDX_EMAIL_LIST="cbioportal-pdx-importer@cbioportal.org"
 CRDB_PDX_TMPDIR=/data/portal-cron/tmp/import-cron-pdx-msk
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 hg_rootdir="uninitialized"

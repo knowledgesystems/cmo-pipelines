@@ -16,8 +16,8 @@ ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
 
 SMTP_SERVER = "cbio.mskcc.org"
-MESSAGE_RECIPIENTS = ["cbioportal-importer-dmp-recipients@cbio.mskcc.org", "cbioportal-pipelines@cbio.mskcc.org"]
-MESSAGE_SENDER = "cbioportal@cbio.mskcc.org"
+MESSAGE_RECIPIENTS = ["cbioportal-dmp-operations@cbioportal.org", "cbioportal-pipelines@cbioportal.org"]
+MESSAGE_SENDER = "cbioportal@cbioportal.org"
 
 ## remove from mixedpact so as to not double count
 KNOWN_SAMPLE_MASTERLIST = set()

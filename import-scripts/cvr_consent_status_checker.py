@@ -16,9 +16,9 @@ PARTC_CONSENTED_URL = 'http://draco.mskcc.org:9890/get_12245_list_partc'
 PARTA_FIELD_NAME = 'PARTA_CONSENTED_12_245'
 PARTC_FIELD_NAME = 'PARTC_CONSENTED_12_245'
 
-MESSAGE_SENDER = 'cbioportal@cbio.mskcc.org'
+MESSAGE_SENDER = 'cbioportal@cbioportal.org'
 SMTP_SERVER = 'cbio.mskcc.org'
-MESSAGE_RECIPIENTS = ['cbioportal-pipelines@cbio.mskcc.org']
+MESSAGE_RECIPIENTS = ['cbioportal-pipelines@cbioportal.org']
 CONSENT_STATUS_EMAIL_SUBJECT = 'CVR Part A & C Consent Status Updates'
 
 MUTATION_STATUS_COLUMN = "Mutation_Status"

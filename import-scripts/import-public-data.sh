@@ -59,7 +59,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
     # we need this file for the clear persistence cache functions
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
-    PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+    PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
     CDD_ONCOTREE_RECACHE_FAIL=0
     if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
         # refresh cdd and oncotree cache

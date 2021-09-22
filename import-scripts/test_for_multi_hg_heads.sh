@@ -5,7 +5,7 @@ HG_SUB_REPO_LIST=". bic-mouse bic-mskcc brlo_tcga gdac_provisional_tcga genie gr
 HG_ERROR_CODE=1
 NO_HEAD_FOUND_CODE=255
 
-PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 
 if [ -z ${PORTAL_DATA_HOME} ] || [ -z ${HG_BINARY} ] ; then
 	message="test could not run: automation-environment.sh script must be run in order to set PORTAL_DATA_HOME and HG_BINARY environment variables"

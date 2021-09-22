@@ -25,7 +25,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     if [[ -d "$tmp" && "$tmp" != "/" ]]; then
         rm -rf "$tmp"/*
     fi
-    PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+    PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
     now=$(date "+%Y-%m-%d-%H-%M-%S")
     IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/genie-aws-importer.jar"
     ENABLE_DEBUGGING=0

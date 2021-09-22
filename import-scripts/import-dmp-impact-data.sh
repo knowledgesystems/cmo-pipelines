@@ -11,7 +11,7 @@ source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
 echo $(date)
 
-PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbio.mskcc.org"
+PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 
 if [ -z $JAVA_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
     message="test could not run import-dmp-impact.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
