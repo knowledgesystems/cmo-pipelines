@@ -19,7 +19,7 @@ function send_email_notification() {
     ### FAILURE EMAIL ###
     EMAIL_BODY="The current (pipelines) crontab is out of sync with the crontab in github.\n\n $diff_report"
     echo -e "Sending email\n$EMAIL_BODY"
-    echo -e "$EMAIL_BODY" | mail -s "Alert: Crontab out of sync on $HOSTNAME" cbioportal-pipelines@cbio.mskcc.org
+    echo -e "$EMAIL_BODY" | mail -s "Alert: Crontab out of sync on $HOSTNAME" cbioportal-pipelines@cbioportal.org
 }
 
 if [ "$USER" != "$REQUIRED_USERNAME" ] ; then

@@ -136,7 +136,7 @@ class User(object):
 #
 # Uses smtplib to send email.
 #
-def send_mail(to, subject, body, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, server=SMTP_SERVER, gmail_username, gmail_password):
+def send_mail(to, subject, body, gmail_username, gmail_password, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, server=SMTP_SERVER):
 
     assert type(to)==list
     assert type(bcc)==list
@@ -598,9 +598,9 @@ def main():
                             print >> OUTPUT_FILE, ('Sending confirmation email to new user: %s at %s' %
                                                (new_user.name, new_user.inst_email))
 
-                            send_mail([new_user.inst_email],subject,body, sender = from_field, bcc = bcc_field, gmail_username, gmail_password)
+                            send_mail([new_user.inst_email],subject,body, gmail_username, gmail_password, sender = from_field, bcc = bcc_field)
                         else:
-                            send_mail([new_user_key], error_subject, error_body, sender = from_field, bcc = bcc_field, gmail_username, gmail_password)
+                            send_mail([new_user_key], error_subject, error_body, gmail_username, gmail_password, sender = from_field, bcc = bcc_field)
 
             # commit changes before moving on to next spreadsheet
             cursor.close()

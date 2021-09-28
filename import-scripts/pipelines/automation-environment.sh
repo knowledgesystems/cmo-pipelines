@@ -38,6 +38,7 @@ export EKS_ACCOUNT_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/eks-accou
 export AWS_SSL_TRUSTSTORE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore
 export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore.password
 export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
+export GMAIL_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/gmail.credentials
 
 #######################
 # SSL args (for AWS + redcap)

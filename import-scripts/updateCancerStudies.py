@@ -108,7 +108,7 @@ class CancerStudy(object):
 # ------------------------------------------------------------------------------
 # Uses smtplib to send email.
 
-def send_mail(to, subject, body, server=SMTP_SERVER, gmail_username, gmail_password):
+def send_mail(to, subject, body, gmail_username, gmail_password, server=SMTP_SERVER):
 
     assert type(to)==list
 
@@ -449,7 +449,7 @@ def main():
     # sending emails
     if send_email_confirm == 'true':
         if message_body is MESSAGE_BODY_ERROR:
-            send_mail(MESSAGE_RECIPIENTS_ON_ERROR, MESSAGE_SUBJECT + " ERROR", message_body)
+            send_mail(MESSAGE_RECIPIENTS_ON_ERROR, MESSAGE_SUBJECT + " ERROR", message_body, gmail_username, gmail_password)
         elif message_body is MESSAGE_BODY_SUCCESS:
             for cancer_study in cancer_studies_updated_map.values():
                 message_body += "%s [%s]\n" % (cancer_study.cancer_study_stable_id, cancer_study.groups)

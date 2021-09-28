@@ -15,7 +15,7 @@ from email.mime.text import MIMEText
 ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
 
-SMTP_SERVER = "cbio.mskcc.org"
+SMTP_SERVER = "smtp.google.com"
 MESSAGE_RECIPIENTS = ["cbioportal-dmp-operations@cbioportal.org", "cbioportal-pipelines@cbioportal.org"]
 MESSAGE_SENDER = "cbioportal@cbioportal.org"
 
@@ -173,8 +173,8 @@ def send_samples_missing_clinical_data_report(study_id, clinical_filename, gmail
 	print >> OUTPUT_FILE, "Sending email..."
 	# send email
 	s = smtplib.SMTP_SSL(SMTP_SERVER, 465)
-	s.login(gmail_username, gmail_password))
-        s.sendmail(MESSAGE_SENDER, MESSAGE_RECIPIENTS, msg.as_string())
+	s.login(gmail_username, gmail_password)
+	s.sendmail(MESSAGE_SENDER, MESSAGE_RECIPIENTS, msg.as_string())
 	s.quit()
 
 def merge_fusions(archer_fusions_filename, fusions_filename, linked_cases_filename, clinical_filename, mapped_archer_samples_filename, study_id, gmail_username, gmail_password):
@@ -219,7 +219,7 @@ def main():
 	parser.add_argument('-m', '--mapped-archer-samples-filename', action = 'store', dest = 'mapped_archer_samples_filename', required = True, help = 'Output file storing the archer ids that need to be removed from the mixedpact study')
 	parser.add_argument('-i', '--study-id', action = 'store', dest = 'study_id', required = True, help = 'Cancer study identifier [mskimpact | mskimpact_heme]')
 	parser.add_argument('-p', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
-        parser.add_argument('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
+	parser.add_argument('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
 
 	args = parser.parse_args()
 
@@ -229,8 +229,8 @@ def main():
 	clinical_filename = args.clinical_filename
 	mapped_archer_samples_filename = args.mapped_archer_samples_filename
 	study_id = args.study_id
-        gmail_username = args.gmail_username
-        gmail_password = args.gmail_password
+	gmail_username = args.gmail_username
+	gmail_password = args.gmail_password
 
 	if not os.path.exists(archer_fusions_filename):
 		print 'Archer fusions file cannot be found ' + archer_fusions_filename

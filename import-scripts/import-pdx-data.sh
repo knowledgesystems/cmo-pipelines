@@ -3,7 +3,7 @@
 echo $(date)
 
 PATH_TO_AUTOMATION_SCRIPT=/data/portal-cron/scripts/automation-environment.sh
-# PIPELINES_EMAIL_LIST receives low level emails (fail to recache oncotree, fail to restart a tomcat, ...)
+# PIPELINES_EMAIL_LIST receives low level emails (fail to recache oncotree, fail to clear persistence cache, ...)
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 # PDX_EMAIL_LIST receives a daily summary email of import statistics and problems
 PDX_EMAIL_LIST="cbioportal-pdx-importer@cbioportal.org"
