@@ -146,7 +146,7 @@ def update_mapped_archer_samples_file(mapped_archer_samples_filename):
 	with open(mapped_archer_samples_filename, 'w') as mapped_archer_samples_file:
 		mapped_archer_samples_file.write('\n'.join(compiled_archer_samples_set) + '\n')
 
-def send_samples_missing_clinical_data_report(study_id, clinical_filename):
+def send_samples_missing_clinical_data_report(study_id, clinical_filename, gmail_username, gmail_password):
 	""" Send email reporting ARCHER-linked cases that are missing from the clinical data. """
 
 	# construct message body
@@ -172,11 +172,12 @@ def send_samples_missing_clinical_data_report(study_id, clinical_filename):
 
 	print >> OUTPUT_FILE, "Sending email..."
 	# send email
-	s = smtplib.SMTP(SMTP_SERVER)
-	s.sendmail(MESSAGE_SENDER, MESSAGE_RECIPIENTS, msg.as_string())
+	s = smtplib.SMTP_SSL(SMTP_SERVER, 465)
+	s.login(gmail_username, gmail_password))
+        s.sendmail(MESSAGE_SENDER, MESSAGE_RECIPIENTS, msg.as_string())
 	s.quit()
 
-def merge_fusions(archer_fusions_filename, fusions_filename, linked_cases_filename, clinical_filename, mapped_archer_samples_filename, study_id):
+def merge_fusions(archer_fusions_filename, fusions_filename, linked_cases_filename, clinical_filename, mapped_archer_samples_filename, study_id, gmail_username, gmail_password):
 	""" Driver function that calls helper functions to merge fusion records """
 
 	# load masterlist of known samples for given study - check if error loading samples from file
@@ -205,7 +206,7 @@ def merge_fusions(archer_fusions_filename, fusions_filename, linked_cases_filena
 	# these samples may need to be requeued if not already in queue for next CVR fetch
 	if len(SAMPLES_MISSING_CLINICAL_DATA) > 0:
 		print >> ERROR_FILE, "Found " + str(len(SAMPLES_MISSING_CLINICAL_DATA)) + " sample(s) missing clinical data from: " + clinical_filename
-		send_samples_missing_clinical_data_report(study_id, clinical_filename)
+		send_samples_missing_clinical_data_report(study_id, clinical_filename, gmail_username, gmail_password)
 		for sid in SAMPLES_MISSING_CLINICAL_DATA:
 			print >> ERROR_FILE, "\t" + sid
 
@@ -217,6 +218,8 @@ def main():
 	parser.add_argument('-c', '--clinical-filename', action = 'store', dest = 'clinical_filename', required = True, help = 'data_clinical*.txt from the mskimpact or heme CVR fetch')
 	parser.add_argument('-m', '--mapped-archer-samples-filename', action = 'store', dest = 'mapped_archer_samples_filename', required = True, help = 'Output file storing the archer ids that need to be removed from the mixedpact study')
 	parser.add_argument('-i', '--study-id', action = 'store', dest = 'study_id', required = True, help = 'Cancer study identifier [mskimpact | mskimpact_heme]')
+	parser.add_argument('-p', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
+        parser.add_argument('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
 
 	args = parser.parse_args()
 
@@ -226,6 +229,8 @@ def main():
 	clinical_filename = args.clinical_filename
 	mapped_archer_samples_filename = args.mapped_archer_samples_filename
 	study_id = args.study_id
+        gmail_username = args.gmail_username
+        gmail_password = args.gmail_password
 
 	if not os.path.exists(archer_fusions_filename):
 		print 'Archer fusions file cannot be found ' + archer_fusions_filename
@@ -246,7 +251,7 @@ def main():
 		print 'Invalid study id provided - only these studies supported: ' + ','.join([MSKIMPACT_STUDY_ID, HEMEPACT_STUDY_ID])
 		sys.exit(2)
 
-	merge_fusions(archer_fusions_filename, fusions_filename, linked_cases_filename, clinical_filename, mapped_archer_samples_filename, study_id)
+	merge_fusions(archer_fusions_filename, fusions_filename, linked_cases_filename, clinical_filename, mapped_archer_samples_filename, study_id, gmail_username, gmail_password)
 
 if __name__ == '__main__':
 	main()

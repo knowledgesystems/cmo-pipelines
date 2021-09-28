@@ -70,7 +70,7 @@ SPREADSHEET_USERS_REMOVED_FILENAME = 'ldap_spreadsheet_users_removed.txt'
 DB_USERS_REMOVED_FILENAME = 'ldap_db_users_removed.txt'
 PIPELINES_EMAIL = 'cbioportal-pipelines@cbioportal.org'
 MESSAGE_SUBJECT = 'LDAP user removal summary'
-SMTP_SERVER = 'cbio.mskcc.org'
+SMTP_SERVER = 'smtp.gmail.com'
 
 # LDAPURLS = ["ldaps://ldapha.mskcc.root.mskcc.org/",
 #             "ldap://ldapglb.mskcc.org:389/", this URL works from pipelines
@@ -365,7 +365,7 @@ def generate_ldap_users_removed_messag_body(users_removed, users_type, filename)
     message += '\n\n'
     return message
 
-def email_ldap_summary_results(db_users_removed_filepath, db_users_removed, ss_users_removed_filepath, spreadsheet_users_removed):
+def email_ldap_summary_results(db_users_removed_filepath, db_users_removed, ss_users_removed_filepath, spreadsheet_users_removed, gmail_username, gmail_password):
     '''
         Send LDAP summary email.
     '''
@@ -381,7 +381,8 @@ def email_ldap_summary_results(db_users_removed_filepath, db_users_removed, ss_u
     message_body += generate_ldap_users_removed_messag_body(spreadsheet_users_removed, 'Google Spreadsheet', ss_users_removed_filepath)
 
     msg.attach(MIMEText(message_body))
-    smtp = smtplib.SMTP(SMTP_SERVER)
+    smtp = smtplib.SMTP_SSL(SMTP_SERVER, 465)
+    smtp.login(gmail_username, gmail_password)
     smtp.sendmail(PIPELINES_EMAIL, PIPELINES_EMAIL, msg.as_string())
     smtp.close()
 
@@ -436,7 +437,7 @@ def find_deactivated_ldap_users(properties, ldap_connection, users):
             users_to_remove.add(user)
     return users_to_remove
 
-def purge_deactivated_ldap_users(properties, secrets_filename, creds_filename, tmp_directory):
+def purge_deactivated_ldap_users(properties, secrets_filename, creds_filename, tmp_directory, gmail_username, gmail_password):
     '''
         Purge deactivated LDAP users from database and google spreadsheet.
         Log users that are removed.
@@ -454,7 +455,7 @@ def purge_deactivated_ldap_users(properties, secrets_filename, creds_filename, t
     spreadsheet_users_removed = find_and_remove_deactivated_ldap_spreadsheet_users(client, properties, ldap_connection, ss_users_removed_filepath)
 
     # save results and send LDAP summary email
-    email_ldap_summary_results(db_users_removed_filepath, db_users_removed, ss_users_removed_filepath, spreadsheet_users_removed)
+    email_ldap_summary_results(db_users_removed_filepath, db_users_removed, ss_users_removed_filepath, spreadsheet_users_removed, gmail_username, gmail_password)
     ldap_connection.unbind_s()
 
 def usage(parser):
@@ -468,18 +469,22 @@ def main():
     parser.add_option('-s', '--secrets-file', action = 'store', dest = 'secrets', help = 'google secrets.json')
     parser.add_option('-c', '--creds-file', action = 'store', dest = 'creds', help = 'oauth creds filename')
     parser.add_option('-t', '--tmp-directory', action = 'store', dest = 'tmpdir', help = 'tmp directory where purged usernames are written to')
-
+    parser.add_argument('-g', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
+    parser.add_argument('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
+    
     (options, args) = parser.parse_args()
     secrets_filename = options.secrets
     creds_filename = options.creds
     properties_filename = options.properties
     tmp_directory = options.tmpdir
+    gmail_username = options.gmail_username
+    gmail_password = options.gmail_password
 
     if not secrets_filename or not creds_filename or not properties_filename or not tmp_directory:
         usage(parser)
 
     properties = PortalProperties(properties_filename)
-    purge_deactivated_ldap_users(properties, secrets_filename, creds_filename, tmp_directory)
+    purge_deactivated_ldap_users(properties, secrets_filename, creds_filename, tmp_directory, gmail_username, gmail_password)
 
 if __name__ == '__main__':
     main()

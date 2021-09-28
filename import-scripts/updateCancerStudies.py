@@ -69,9 +69,9 @@ CANCER_STUDY_STABLE_ID_KEY = 'stableid'
 CANCER_STUDY_GROUPS_KEY = 'groups'
 
 # consts used in email
-SMTP_SERVER = "cbio.mskcc.org"
-MESSAGE_FROM = "cbioportal@cbio.mskcc.org"
-MESSAGE_RECIPIENTS = ["cbioportal-cmo-importer@cbio.mskcc.org"]
+SMTP_SERVER = "smtp.gmail.com"
+MESSAGE_FROM = "cbioportal@cbioportal.org"
+MESSAGE_RECIPIENTS = ["cbioportal-cmo-importer@cbioportal.org"]
 MESSAGE_RECIPIENTS_ON_ERROR = ["cbioportal-pipelines@cbioportal.org"]
 MESSAGE_SUBJECT = "cBioPortal cancer study updates"
 MESSAGE_BODY_ERROR = "There was an error attempting to update cancer study groups in the portal database."
@@ -108,7 +108,7 @@ class CancerStudy(object):
 # ------------------------------------------------------------------------------
 # Uses smtplib to send email.
 
-def send_mail(to, subject, body, server=SMTP_SERVER):
+def send_mail(to, subject, body, server=SMTP_SERVER, gmail_username, gmail_password):
 
     assert type(to)==list
 
@@ -125,7 +125,8 @@ def send_mail(to, subject, body, server=SMTP_SERVER):
     for to_name in to:
         combined_to_list.append(to_name)
 
-    smtp = smtplib.SMTP(server)
+    smtp = smtplib.SMTP_SSL(server, 465)
+    smtp.login(gmail_username, gmail_password)
     smtp.sendmail(MESSAGE_FROM, combined_to_list, msg.as_string() )
     smtp.close()
 
@@ -379,7 +380,7 @@ def main():
 
     # parse command line options
     try:
-        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'send-email-confirm='])
+        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'send-email-confirm=', 'gmail-username=', 'gmail-password='])
     except getopt.error, msg:
         print >> ERROR_FILE, msg
         usage()
@@ -396,12 +397,17 @@ def main():
 			secrets_filename = a
 		elif o == '--creds-file':
 			creds_filename = a
+                elif o == '--gmail-username':
+                    gmail_username = a
+                elif o == '--gmail-password':
+                    gmail_password = a
 		elif o == '--properties-file':
 			properties_filename = a
 		elif o == '--send-email-confirm':
 			send_email_confirm = a
     if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or
-        (send_email_confirm != 'true' and send_email_confirm != 'false')):
+        (send_email_confirm != 'true' and send_email_confirm != 'false') or
+        (send_email_confirm == 'true' and (gmail_username == '' or gmail_password == ''))):
         usage()
         sys.exit(2)
 
@@ -447,7 +453,7 @@ def main():
         elif message_body is MESSAGE_BODY_SUCCESS:
             for cancer_study in cancer_studies_updated_map.values():
                 message_body += "%s [%s]\n" % (cancer_study.cancer_study_stable_id, cancer_study.groups)
-            send_mail(MESSAGE_RECIPIENTS, MESSAGE_SUBJECT, message_body)
+            send_mail(MESSAGE_RECIPIENTS, MESSAGE_SUBJECT, message_body, gmail_username, gmail_password)
 
 # ------------------------------------------------------------------------------
 # ready to roll

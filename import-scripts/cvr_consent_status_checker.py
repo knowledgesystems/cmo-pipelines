@@ -17,7 +17,7 @@ PARTA_FIELD_NAME = 'PARTA_CONSENTED_12_245'
 PARTC_FIELD_NAME = 'PARTC_CONSENTED_12_245'
 
 MESSAGE_SENDER = 'cbioportal@cbioportal.org'
-SMTP_SERVER = 'cbio.mskcc.org'
+SMTP_SERVER = 'smtp.gmail.com'
 MESSAGE_RECIPIENTS = ['cbioportal-pipelines@cbioportal.org']
 CONSENT_STATUS_EMAIL_SUBJECT = 'CVR Part A & C Consent Status Updates'
 
@@ -50,7 +50,7 @@ def fetch_expected_consent_status_values():
         expected_consent_status_values[field] = consent_values
     return expected_consent_status_values
 
-def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values):
+def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password):
     '''
         Checks the current consent status for
         Part A & C against the expected consent status values
@@ -98,7 +98,7 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
     if samples_to_remove.get(PARTC_FIELD_NAME, set()):
         remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
     if samples_to_requeue != {} or samples_to_remove != {}:
-        email_consent_status_report(samples_to_requeue, samples_to_remove)
+        email_consent_status_report(samples_to_requeue, samples_to_remove, gmail_username, gmail_password)
 
 def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples):
     '''
@@ -132,7 +132,7 @@ def generate_attachment(message, attachment_name, samples):
     report.add_header('Content-Disposition', 'attachment', filename = attachment_name)
     message.attach(report)
 
-def email_consent_status_report(samples_to_requeue, samples_to_remove):
+def email_consent_status_report(samples_to_requeue, samples_to_remove, gmail_username, gmail_password):
     '''
         Constructs and sends email reporting consent status updates.
     '''
@@ -160,7 +160,8 @@ def email_consent_status_report(samples_to_requeue, samples_to_remove):
     message['To'] = COMMASPACE.join(MESSAGE_RECIPIENTS)
     message['Date'] = formatdate(localtime=True)
 
-    s = smtplib.SMTP(SMTP_SERVER)
+    s = smtplib.SMTP_SSL(SMTP_SERVER, 465)
+    s.login(gmail_username, gmail_password)
     s.sendmail(MESSAGE_SENDER, MESSAGE_RECIPIENTS, message.as_string())
     s.quit()
 
@@ -168,9 +169,15 @@ def main():
     parser = optparse.OptionParser()
     parser.add_option('-c', '--clinical-file', action = 'store', dest = 'clinfile', help = 'CVR clinical file')
     parser.add_option('-m', '--mutation-file', action = 'store', dest = 'maf', help = 'CVR MAF')
+    parser.add_argument('-p', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
+    parser.add_argument('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
+    
     (options, args) = parser.parse_args()
+    
     cvr_clinical_file = options.clinfile
     cvr_mutation_file = options.maf
+    gmail_username = args.gmail_username
+    gmail_password = args.gmail_password
 
     if not cvr_clinical_file or not os.path.exists(cvr_clinical_file):
         print >> ERROR_FILE, "Invalid CVR clinical file: %s, exiting..." % (cvr_clinical_file)
@@ -181,7 +188,7 @@ def main():
         sys.exit(2)
         
     expected_consent_status_values = fetch_expected_consent_status_values()
-    cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values)
+    cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password)
 
 if __name__ == '__main__':
     main()

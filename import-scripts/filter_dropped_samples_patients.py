@@ -20,7 +20,7 @@ import sys
 ERROR_FILE = sys.stderr
 
 # Constants used for email
-SMTP_SERVER = "cbio.mskcc.org"
+SMTP_SERVER = "smtp.gmail.com"
 DROPPED_SAMPLE_FILENAME = "dropped_samples.txt"
 DROPPED_PATIENT_FILENAME = "dropped_patients.txt"
 DROPPED_TIMELINE_FILENAME = "dropped_timeline.txt"
@@ -104,12 +104,16 @@ def main():
     parser.add_argument("-p", "--clinical-patient-file", help = "data_clinical_patient.txt")
     parser.add_argument("-s", "--clinical-sample-file", help = "data_clinical_sample.txt", required = True)
     parser.add_argument("-t", "--timeline-file", help = "data_timeline.txt")
+    parser.add_argument('-g', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
+    parser.add_argument('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
     args = parser.parse_args()
 
     sample_file = args.clinical_sample_file
     patient_file = args.clinical_patient_file
     timeline_file = args.timeline_file
     filtered_samples_file = args.filtered_samples_file
+    gmail_username = args.gmail_username
+    gmail_password = args.gmail_password
 
     if not os.path.exists(sample_file):
         print >> ERROR_FILE, 'clinical sample file not found: ' + sample_file
@@ -163,7 +167,8 @@ def main():
 
     # Only send out report if something was dropped
     if (len(dropped_sample_list) > 0 or len(dropped_patient_list) > 0 or len(dropped_timeline_list) > 0):
-        s = smtplib.SMTP(SMTP_SERVER)
+        s = smtplib.SMTP_SSL(SMTP_SERVER, 465)
+        s.login(gmail_username, gmail_password)
         s.sendmail(MESSAGE_SENDER, all_recipients_list, msg.as_string())
         s.quit()
 

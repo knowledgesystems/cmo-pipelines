@@ -88,7 +88,7 @@ DEFAULT_AUTHORITIES = "PUBLIC;EXTENDED;MSKPUB"
 # consts used in email
 MSKCC_EMAIL_SUFFIX = "@mskcc.org"
 SKI_EMAIL_SUFFIX = "@sloankettering.edu"
-SMTP_SERVER = "cbio.mskcc.org"
+SMTP_SERVER = "smtp.gmail.com"
 MESSAGE_FROM_CMO = "cbioportal-access@cbioportal.org"
 MESSAGE_BCC_CMO = ["cbioportal-access@cbioportal.org"]
 
@@ -136,7 +136,7 @@ class User(object):
 #
 # Uses smtplib to send email.
 #
-def send_mail(to, subject, body, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, server=SMTP_SERVER):
+def send_mail(to, subject, body, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, server=SMTP_SERVER, gmail_username, gmail_password):
 
     assert type(to)==list
     assert type(bcc)==list
@@ -156,7 +156,8 @@ def send_mail(to, subject, body, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, s
     for bcc_name in bcc:
         combined_to_list.append(bcc_name)
 
-    smtp = smtplib.SMTP(server)
+    smtp = smtplib.SMTP_SSL(server, 465)
+    smtp.login(gmail_username, gmail_password)
     smtp.sendmail(sender, combined_to_list, msg.as_string() )
     smtp.close()
 
@@ -496,7 +497,7 @@ def main():
 
     # parse command line options
     try:
-        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'ssl-ca=', 'send-email-confirm=', 'use-institutional-id=', 'port=', 'sender='])
+        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'ssl-ca=', 'send-email-confirm=', 'use-institutional-id=', 'port=', 'sender=', 'gmail-username=', 'gmail-password='])
     except getopt.error as msg:
         print(msg, file = ERROR_FILE)
         usage()
@@ -516,6 +517,10 @@ def main():
             secrets_filename = a
         elif o == '--creds-file':
             creds_filename = a
+        elif o == '--gmail-username':
+            gmail_username = a
+        elif o == '--gmail-password':
+            gmail_password = a
         elif o == '--properties-file':
             properties_filename = a
         elif o == '--ssl-ca':
@@ -528,7 +533,8 @@ def main():
             port = a
 
     if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or port == '' or
-        (send_email_confirm != 'true' and send_email_confirm != 'false')):
+        (send_email_confirm != 'true' and send_email_confirm != 'false') or 
+        (send_email_confirm == 'true' and (gmail_username == '' or gmail_password == ''))):
         usage()
         sys.exit(2)
 
@@ -590,9 +596,9 @@ def main():
                             print(('Sending confirmation email to new user: %s at %s' %
                                                (new_user.name, new_user.inst_email)), file = OUTPUT_FILE)
 
-                            send_mail([new_user.inst_email],subject,body, sender = from_field, bcc = bcc_field)
+                            send_mail([new_user.inst_email],subject,body, sender = from_field, bcc = bcc_field, gmail_username, gmail_password)
                         else:
-                            send_mail([new_user_key], error_subject, error_body, sender = from_field, bcc = bcc_field)
+                            send_mail([new_user_key], error_subject, error_body, sender = from_field, bcc = bcc_field, gmail_username, gmail_password)
 
             # commit changes before moving on to next spreadsheet
             cursor.close()
