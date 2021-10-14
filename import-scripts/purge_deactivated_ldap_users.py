@@ -469,8 +469,8 @@ def main():
     parser.add_option('-s', '--secrets-file', action = 'store', dest = 'secrets', help = 'google secrets.json')
     parser.add_option('-c', '--creds-file', action = 'store', dest = 'creds', help = 'oauth creds filename')
     parser.add_option('-t', '--tmp-directory', action = 'store', dest = 'tmpdir', help = 'tmp directory where purged usernames are written to')
-    parser.add_argument('-g', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
-    parser.add_argument('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
+    parser.add_option('-g', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
+    parser.add_option('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
     
     (options, args) = parser.parse_args()
     secrets_filename = options.secrets

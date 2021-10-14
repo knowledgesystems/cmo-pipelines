@@ -169,8 +169,8 @@ def main():
     parser = optparse.OptionParser()
     parser.add_option('-c', '--clinical-file', action = 'store', dest = 'clinfile', help = 'CVR clinical file')
     parser.add_option('-m', '--mutation-file', action = 'store', dest = 'maf', help = 'CVR MAF')
-    parser.add_argument('-p', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
-    parser.add_argument('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
+    parser.add_option('-p', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
+    parser.add_option('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
     
     (options, args) = parser.parse_args()
     
