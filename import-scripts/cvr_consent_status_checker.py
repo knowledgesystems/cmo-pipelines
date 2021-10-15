@@ -102,7 +102,7 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
 
 def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples):
     '''
-        Removes germline mutation records from MAF for samples where 
+        Removes germline mutation records from MAF for samples where
         Part C Consent Status has changed from Yes to No.
     '''
     tmpfile_name = cvr_mutation_file + ".tmp"
@@ -123,7 +123,7 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
             tmpfile.write(line)
     tmpfile.close()
     os.rename(tmpfile_name, cvr_mutation_file)
- 
+
 def generate_attachment(message, attachment_name, samples):
     '''
         Generates email attachment.
@@ -169,24 +169,28 @@ def main():
     parser = optparse.OptionParser()
     parser.add_option('-c', '--clinical-file', action = 'store', dest = 'clinfile', help = 'CVR clinical file')
     parser.add_option('-m', '--mutation-file', action = 'store', dest = 'maf', help = 'CVR MAF')
-    parser.add_option('-p', '--gmail-password', action = 'store', dest = 'gmail_password', required = True, help = 'Gmail SMTP password')
-    parser.add_option('-u', '--gmail-username', action = 'store', dest = 'gmail_username', required = True, help = 'Gmail username')
-    
+    parser.add_option('-u', '--gmail-username', action = 'store', dest = 'gmail_username', help = 'Gmail username [required]')
+    parser.add_option('-p', '--gmail-password', action = 'store', dest = 'gmail_password', help = 'Gmail SMTP password [required]')
+
     (options, args) = parser.parse_args()
-    
+
     cvr_clinical_file = options.clinfile
     cvr_mutation_file = options.maf
-    gmail_username = args.gmail_username
-    gmail_password = args.gmail_password
-
+    gmail_username = options.gmail_username
+    gmail_password = options.gmail_password
     if not cvr_clinical_file or not os.path.exists(cvr_clinical_file):
         print >> ERROR_FILE, "Invalid CVR clinical file: %s, exiting..." % (cvr_clinical_file)
         sys.exit(2)
-        
     if not cvr_mutation_file or not os.path.exists(cvr_mutation_file):
         print >> ERROR_FILE, "Invalid CVR mutation file: %s, exiting..." % (cvr_mutation_file)
         sys.exit(2)
-        
+    if not gmail_username:
+        print >> ERROR_FILE, "Required option --gmail-username/-u missing, exiting..." % (cvr_mutation_file)
+        sys.exit(2)
+    if not gmail_password:
+        print >> ERROR_FILE, "Required option --gmail-password/-p missing, exiting..." % (cvr_mutation_file)
+        sys.exit(2)
+
     expected_consent_status_values = fetch_expected_consent_status_values()
     cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password)
 
