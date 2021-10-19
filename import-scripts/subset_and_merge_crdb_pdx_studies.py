@@ -902,8 +902,8 @@ def main():
     # generate all logging and trigger files
     identify_missing_metafiles_for_destination_studies(destination_to_source_mapping, root_directory)
 
-    # STEP 8: Validate destination studies
-    validate_destination_studies(destination_to_source_mapping, root_directory, temp_directory)
+    # STEP 8: Validate destination studies (turned off until performance issues are fixed)
+    #validate_destination_studies(destination_to_source_mapping, root_directory, temp_directory)
 
     generate_import_trigger_files(destination_to_source_mapping, temp_directory)
     generate_warning_file(temp_directory, warning_file)
