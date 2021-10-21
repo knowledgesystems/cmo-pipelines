@@ -27,8 +27,8 @@ SAMPLES_MISSING_CLINICAL_DATA = set()
 
 MSKIMPACT_STUDY_ID = "mskimpact"
 HEMEPACT_STUDY_ID = "mskimpact_heme"
-IMPACT_SAMPLE_PATTERN = re.compile('(P-\d*-T\d\d)-IM\S\d*')
-HEME_SAMPLE_PATTERN = re.compile('(P-\d*-T\d\d)-IH\S\d*')
+IMPACT_SAMPLE_PATTERN = re.compile('(P-\d*-T\d\d)-IM\d*')
+HEME_SAMPLE_PATTERN = re.compile('(P-\d*-T\d\d)-IH\d*')
 
 STUDY_SAMPLE_REGEX_PATTERNS = {
 	MSKIMPACT_STUDY_ID:IMPACT_SAMPLE_PATTERN,
