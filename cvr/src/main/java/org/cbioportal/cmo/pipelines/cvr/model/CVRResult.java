@@ -77,6 +77,8 @@ public class CVRResult {
     @JsonProperty("sv-variants")
     private List<CVRSvVariant> svVariants;
     @JsonIgnore
+    private List<Object> cnvArmVariants = new ArrayList<>();
+    @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
     /**
