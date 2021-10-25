@@ -199,6 +199,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
         # fetch new/updated IMPACT samples using CVR Web service   (must come after git fetching)
+        waitOutDmpTumorServerInstabilityPeriod
         printTimeStampedDataProcessingStepMessage "CVR fetch for mskimpact"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS
         if [ $? -gt 0 ] ; then
@@ -228,11 +229,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                     cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR"
                 fi
                 # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
+                waitOutDmpTumorServerInstabilityPeriod
+                waitOutDmpGermlineServerInstabilityPeriod
                 $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt -m $MSK_IMPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD
             fi
         fi
 
         # fetch new/updated IMPACT germline samples using CVR Web service   (must come after normal cvr fetching)
+        waitOutDmpGermlineServerInstabilityPeriod
         printTimeStampedDataProcessingStepMessage "CVR germline fetch for mskimpact"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS
         if [ $? -gt 0 ] ; then
@@ -314,6 +318,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
         # fetch new/updated heme samples using CVR Web service (must come after git fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
+        waitOutDmpTumorServerInstabilityPeriod
         printTimeStampedDataProcessingStepMessage "CVR fetch for hemepact"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS
         if [ $? -gt 0 ] ; then
@@ -337,6 +342,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
         fi
         # fetch new/updated HEMEPACT germline samples using CVR Web service   (must come after normal cvr fetching)
+        waitOutDmpGermlineServerInstabilityPeriod
         printTimeStampedDataProcessingStepMessage "CVR germline fetch for hemepact"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS
         if [ $? -gt 0 ] ; then
@@ -388,6 +394,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
         # fetch new/updated archer samples using CVR Web service (must come after git fetching).
+        waitOutDmpTumorServerInstabilityPeriod
         printTimeStampedDataProcessingStepMessage "CVR fetch for archer"
         # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS
@@ -437,6 +444,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
         # fetch new/updated access samples using CVR Web service (must come after git fetching).
+        waitOutDmpTumorServerInstabilityPeriod
         printTimeStampedDataProcessingStepMessage "CVR fetch for access"
         # access has -b option to block warnings for samples with zero variants (all samples will have zero variants)
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS

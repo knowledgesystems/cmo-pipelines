@@ -1,7 +1,6 @@
 #!/bin/bash
 
-## GLOBALS
-
+## GLOBAL CONSTANTS
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 CVR_TEST_MODE_ARGS=""
 PERFORM_CRDB_FETCH=0
@@ -17,6 +16,12 @@ JAVA_CVR_FETCHER_ARGS="-jar $CVR_FETCHER_JAR_FILENAME"
 JAVA_DARWIN_FETCHER_ARGS="-jar $DARWIN_FETCHER_JAR_FILENAME"
 JAVA_DDP_FETCHER_ARGS="-jar $DDP_FETCHER_JAR_FILENAME"
 JAVA_REDCAP_PIPELINE_ARGS="$JAVA_SSL_ARGS -jar $REDCAP_PIPELINE_JAR_FILENAME"
+CVR_TUMOR_SERVER_SAFETY_LOCKOUT_PERIOD_START_HOUR_MINUTES=0150 #HHMM
+CVR_TUMOR_SERVER_SAFETY_LOCKOUT_PERIOD_DURATION_MINUTES=25
+CVR_GERMLINE_SERVER_SAFETY_LOCKOUT_PERIOD_START_HOUR_MINUTES=0150 #HHMM
+CVR_GERMLINE_SERVER_SAFETY_LOCKOUT_PERIOD_DURATION_MINUTES=25
+SAFETY_LOCKOUT_SLEEP_INTERVAL_SECONDS=30
+
 java_debug_args=""
 ENABLE_DEBUGGING=0
 if [ $ENABLE_DEBUGGING != "0" ] ; then
@@ -33,6 +38,9 @@ FILTER_EMPTY_COLUMNS_KEEP_COLUMN_LIST="PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE,PARTA_
 
 # -----------------------------------------------------------------------------------------------------------
 ## FUNCTIONS
+
+# import needed function waitWhileWithinTimePeriod()
+source $PORTAL_HOME/scripts/date-and-time-handling-functions.sh
 
 # Function to extract property settings from a simple properties file
 # usage : extractPropertiesFromFile sourcefile.properties propertyname1 propertyname2 propertyname3 ...
@@ -376,20 +384,37 @@ function clearPersistenceCachesForGenieArchivePortals() {
     clearPersistenceCachesForPortals "$all_genie_archive_portals"
 }
 
+# this function can be called without arguments to wait out the dmp tumor server lockout period as defined by hardcoded globals
+function waitOutDmpTumorServerInstabilityPeriod() {
+    waitWhileWithinTimePeriod "$CVR_TUMOR_SERVER_SAFETY_LOCKOUT_PERIOD_START_HOUR_MINUTES" "$CVR_TUMOR_SERVER_SAFETY_LOCKOUT_PERIOD_DURATION_MINUTES" "$SAFETY_LOCKOUT_SLEEP_INTERVAL_SECONDS"
+    return 0
+}
+
+# this function can be called without arguments to wait out the dmp germline server lockout period as defined by hardcoded globals
+function waitOutDmpGermlineServerInstabilityPeriod() {
+    waitWhileWithinTimePeriod "$CVR_GERMLINE_SERVER_SAFETY_LOCKOUT_PERIOD_START_HOUR_MINUTES" "$CVR_GERMLINE_SERVER_SAFETY_LOCKOUT_PERIOD_DURATION_MINUTES" "$SAFETY_LOCKOUT_SLEEP_INTERVAL_SECONDS"
+    return 0
+}
+
 # Function for consuming fetched samples after successful import
 function consumeSamplesAfterSolidHemeImport {
     if [ -f $MSK_IMPACT_CONSUME_TRIGGER ] ; then
-        echo "Consuming mskimpact samples from cvr"
+        waitOutDmpTumorServerInstabilityPeriod
+        echo "Consuming mskimpact tumor samples from cvr"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_DATA_HOME/cvr_data.json
+        waitOutDmpGermlineServerInstabilityPeriod
+        echo "Consuming mskimpact germline samples from cvr"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_DATA_HOME/cvr_gml_data.json
         rm -f $MSK_IMPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_HEMEPACT_CONSUME_TRIGGER ] ; then
+        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming mskimpact_heme samples from cvr"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_DATA_HOME/cvr_data.json
         rm -f $MSK_HEMEPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_ACCESS_CONSUME_TRIGGER ] ; then
+        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming mskaccess samples from cvr"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_DATA_HOME/cvr_data.json
         rm -f $MSK_ACCESS_CONSUME_TRIGGER
@@ -399,6 +424,7 @@ function consumeSamplesAfterSolidHemeImport {
 # Function for consuming fetched samples after successful archer import
 function consumeSamplesAfterArcherImport {
     if [ -f $MSK_ARCHER_CONSUME_TRIGGER ] ; then
+        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming archer samples from cvr"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json
         rm -f $MSK_ARCHER_CONSUME_TRIGGER
