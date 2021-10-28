@@ -245,6 +245,17 @@ public class DDPUtils {
         return osStatus;
     }
 
+    public static String getOsMonthsLogging(String dmpPatientId, String osStatus, String osMonths, Long referenceInDays, Long firstDateInDays) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Patient '").append(dmpPatientId).append("' resolves OS_MONTHS to 'NA':  ")
+                .append("( OS_STATUS=").append(osStatus)
+                .append(", OS_MONTHS=").append(osMonths)
+                .append(", REFERENCE_DATE_DAYS=").append(referenceInDays)
+                .append(", FIRST_DATE_days=").append(firstDateInDays)
+                .append(" )");
+        return builder.toString();
+    }
+
     /**
      * Calculate OS_MONTHS.
      *
@@ -276,10 +287,14 @@ public class DDPUtils {
             firstDateInDays = getFirstTumorSeqDateInDays(compositeRecord.getDmpPatientId());
             // handle special cases when calculating OS_MONTHS from date of sequencing
             // return 0 if patient dies before sequencing date or NA if patient is living
-            // and has a follow up date beore sequencing date, otherwise proceed as normal
+            // and has a follow up date before sequencing date, otherwise proceed as normal
             if (patientDiedBeforeFirstTumorSequencingDate(osStatus, referenceInDays, firstDateInDays)) {
                 return String.valueOf(0);
             } else if (lastFollowUpBeforeFirstTumorSequencingDate(osStatus, referenceInDays, firstDateInDays)) {
+                // log cases where OS_MONTHS is 'NA' because patient is living
+                // and has a follow up date before sequencing date
+                String osMonthsLogMessage = getOsMonthsLogging(compositeRecord.getDmpPatientId(), osStatus, osMonths, referenceInDays, firstDateInDays);
+                LOG.debug(osMonthsLogMessage);
                 return "NA";
             }
         } else if (patientDiagnosis != null && patientDiagnosis.size() > 0) {
@@ -288,15 +303,9 @@ public class DDPUtils {
         if (referenceInDays != null && firstDateInDays != null) {
             double osMonthsValue = (referenceInDays - firstDateInDays) / DAYS_TO_MONTHS_CONVERSION;
             if (osMonthsValue < 0) {
-                // log cases where OS_MONTHS is negative
-                StringBuilder builder = new StringBuilder();
-                builder.append("Patient '").append(compositeRecord.getDmpPatientId()).append("' found with negative OS_MONTHS:  ")
-                        .append("( OS_STATUS=").append(osStatus)
-                        .append(", OS_MONTHS=").append(osMonths)
-                        .append(", REFERENCE_DATE_DAYS=").append(referenceInDays)
-                        .append(", FIRST_DATE_days=").append(firstDateInDays)
-                        .append(" )");
-                LOG.warn(builder.toString());
+                // log cases where OS_MONTHS is 'NA' because it calculates to negative
+                String osMonthsLogMessage = getOsMonthsLogging(compositeRecord.getDmpPatientId(), osStatus, osMonths, referenceInDays, firstDateInDays);
+                LOG.warn(osMonthsLogMessage);
                 patientsWithNegativeOsMonths.add(compositeRecord.getDmpPatientId());
                 return "NA";
             } else {
@@ -304,6 +313,9 @@ public class DDPUtils {
             }
         }
         if (osMonths.equals("NA")) {
+            // log cases where OS_MONTHS is 'NA' because required values are  null
+            String osMonthsLogMessage = getOsMonthsLogging(compositeRecord.getDmpPatientId(), osStatus, osMonths, referenceInDays, firstDateInDays);
+            LOG.debug(osMonthsLogMessage);
             patientsMissingSurvival.add(compositeRecord.getDmpPatientId());
         }
         return osMonths;
