@@ -64,16 +64,25 @@ public class DDPUtils {
     private static Boolean useSeqDateOsMonthsMethod = Boolean.FALSE;
     private static Set<String> patientsWithNegativeOsMonths = new HashSet<>();
 
-    private static final Logger LOG = Logger.getLogger(DDPUtils.class);
-
-    private static Long offsetMilliSecondsForCurrentTimeZone = null;
+    private static Long offsetMilliSecondsForCurrentTimeZone = null; // this is to convert an UTC based Date instance to the current local timezone
+    private static Integer offsetMinutesForSavingsTimeChange = null; // this is used to adjust a parsed (midnight) Date object from the constructed local timezone (maybe EDT) to the current local timezone (maybe EST)
     private static Long millisecondsPerDay = 1000L * 60L * 60L * 24L;
+
+    private static final Logger LOG = Logger.getLogger(DDPUtils.class);
 
     private static Long getOffsetMilliSecondsForCurrentTimeZone() {
         if (offsetMilliSecondsForCurrentTimeZone == null) {
             offsetMilliSecondsForCurrentTimeZone = ZonedDateTime.now().getOffset().getTotalSeconds() * 1000L;
         }
         return offsetMilliSecondsForCurrentTimeZone;
+    }
+
+    private static Integer getOffsetMinutesForSavingsTimeChange() {
+        if (offsetMinutesForSavingsTimeChange == null) {
+            Date now = new Date();
+            offsetMinutesForSavingsTimeChange = now.getTimezoneOffset();
+        }
+        return offsetMinutesForSavingsTimeChange;
     }
 
     public static void setNaaccrEthnicityMap(Map<String, String> naaccrEthnicityMap) {
@@ -422,11 +431,26 @@ public class DDPUtils {
      * @param date
      * @return
      */
-    private static Long computeDaysFromDateUsingLocalMidnight(Date date) {
+    private static Long computeDaysFromDateUsingLocalMidnight(Date date, Integer savingstimeOffsetMinuteDifference) {
         Long millisecondsFromUtcEpoc = date.getTime();
-        Long millisecondsIfLocalZoneDefinedEpoc = millisecondsFromUtcEpoc + getOffsetMilliSecondsForCurrentTimeZone();
+        Long millisecondsIfLocalZoneDefinedEpoc = millisecondsFromUtcEpoc + getOffsetMilliSecondsForCurrentTimeZone() + savingstimeOffsetMinuteDifference * 60000;
         return millisecondsIfLocalZoneDefinedEpoc / millisecondsPerDay;
     }
+
+    /* There are two versions of "getDateInDays":
+     *   getDateInDays(Date date) : this version take a "correct" java date instance,
+     *           which captures the number of milliseconds since the epoc (Jan 1, 1970 00:00 UTC). This will be interpreted in the current locale, on whatever day that instant falls in the locale's current timezone.
+     *           The function calls computeDaysFromDateUsingLocalMidnight(), which will compute the total number of days which have passed from the epoc start to the specified day **in the current timezone**.
+     *           The meaning of a day "passing" is that midnight of the next day has arrived in the locale's current time zone. (i.e. Days pass when midnight arrives in local time)
+     *   getDateInDays(String dateValue) : this version takes an abstract date string such as "2021-11-04",
+     *           which will be interpreted as a point in time corresponding to midnight on the specified day in the locale's current timezone. Note that the locale's current timezone will be affected by
+     *           daylight saving time shifts. So, when constructing a java date instance, the constructed Date may be based on a different timezone (such as when the current timezone is EST, and the constructed
+     *           date was during the time of the year when daylight savings time is in effect. If that is so, the constucted Date object may be midnight in a DST timezone (EDT), and a correction factor may be needed
+     *           to shift the underlying millisecond count since epoc so that the instant corresponds to midnight in EST on that date (even though on the actual date the locale was using EDT).
+     *           This adjustment factor is passed in as a second argument to computeDaysFromDateUsingLocalMidnight(), which will adjust the counting of passed days accordingly.
+     *   TODO: the adjustment factor could be removed if getDateInDays(String dateValue) were rewritten to use SimpleDateFormat("yyyy-MM-dd z"), which would take a time zone specifier. In that case, the parsed
+     *           date could be constructed as midnight in the locale's current timezone directly by the SimpleDateFormat class.
+     */
 
     /**
      * Calculates the date in days.
@@ -436,7 +460,7 @@ public class DDPUtils {
      */
     private static Long getDateInDays(Date date) {
         if (date != null) {
-            return computeDaysFromDateUsingLocalMidnight(date);
+            return computeDaysFromDateUsingLocalMidnight(date, 0);
         }
         return null;
     }
@@ -452,7 +476,9 @@ public class DDPUtils {
         if (!Strings.isNullOrEmpty(dateValue) && !NULL_EMPTY_VALUES.contains(dateValue)) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             Date date = sdf.parse(dateValue);
-            return computeDaysFromDateUsingLocalMidnight(date);
+            Integer savingstimeOffsetMinutesForParsedDate = date.getTimezoneOffset();
+            Integer localTimezoneOffsetMinuteDifference = getOffsetMinutesForSavingsTimeChange() - savingstimeOffsetMinutesForParsedDate;
+            return computeDaysFromDateUsingLocalMidnight(date, localTimezoneOffsetMinuteDifference);
         }
         return null;
     }
