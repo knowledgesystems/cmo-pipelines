@@ -55,7 +55,7 @@ public class CVRUtilities {
     // pipeline filenames
     public static final String CVR_FILE = "cvr_data.json";
     public static final String MUTATION_FILE = "data_mutations_extended.txt";
-    public static final String NONSIGNEDOUT_MUTATION_FILE = "data_mutations_nonsignedout.txt";
+    public static final String NONSIGNEDOUT_MUTATION_FILE = "data_nonsignedout_mutations.txt";
     public static final String DEFAULT_CLINICAL_FILE = "data_clinical.txt";
     public static final String SEQ_DATE_CLINICAL_FILE = "cvr/seq_date.txt";
     public static final String DDP_AGE_FILE = "ddp/ddp_age.txt";

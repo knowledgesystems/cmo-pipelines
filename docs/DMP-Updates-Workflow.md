@@ -349,7 +349,7 @@ if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
     * `$MSK_IMPACT_DATA_HOME/data_fusions.txt`
     * `$MSK_IMPACT_DATA_HOME/data_gene_matrix.txt`
     * `$MSK_IMPACT_DATA_HOME/data_mutations_extended.txt`
-    * `$MSK_IMPACT_DATA_HOME/data_mutations_nonsignedout.txt`
+    * `$MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt`
     * `$MSK_IMPACT_DATA_HOME/mskimpact_data_cna_hg19.seg`
     * `$MSK_IMPACT_DATA_HOME/cvr/seq_date.txt`
     * `$MSK_IMPACT_DATA_HOME/cvr/zero_variant_whitelist.txt`
@@ -647,7 +647,7 @@ fi
     * `$MSK_HEMEPACT_DATA_HOME/data_fusions.txt`
     * `$MSK_HEMEPACT_DATA_HOME/data_gene_matrix.txt`
     * `$MSK_HEMEPACT_DATA_HOME/data_mutations_extended.txt`
-    * `$MSK_HEMEPACT_DATA_HOME/data_mutations_nonsignedout.txt`
+    * `$MSK_HEMEPACT_DATA_HOME/data_nonsignedout_mutations.txt`
     * `$MSK_HEMEPACT_DATA_HOME/mskimpact_heme_data_cna_hg19.seg`
     * `$MSK_HEMEPACT_DATA_HOME/cvr/seq_date.txt`
     * `$MSK_HEMEPACT_DATA_HOME/cvr/zero_variant_whitelist.txt`
@@ -782,7 +782,7 @@ fi
     * `$MSK_RAINDANCE_DATA_HOME/cvr_data.json`
     * `$MSK_RAINDANCE_DATA_HOME/data_gene_matrix.txt`
     * `$MSK_RAINDANCE_DATA_HOME/data_mutations_extended.txt`
-    * `$MSK_RAINDANCE_DATA_HOME/data_mutations_nonsignedout.txt`
+    * `$MSK_RAINDANCE_DATA_HOME/data_nonsignedout_mutations.txt`
     * `$MSK_RAINDANCE_DATA_HOME/cvr/seq_date.txt`
     * `$MSK_RAINDANCE_DATA_HOME/cvr/zero_variant_whitelist.txt`
 
@@ -1046,7 +1046,7 @@ fi
     * `$MSK_ACCESS_DATA_HOME/data_SV.txt`
     * `$MSK_ACCESS_DATA_HOME/data_gene_matrix.txt`
     * `$MSK_ACCESS_DATA_HOME/data_mutations_extended.txt`
-    * `$MSK_ACCESS_DATA_HOME/data_mutations_nonsignedout.txt`
+    * `$MSK_ACCESS_DATA_HOME/data_nonsignedout_mutations.txt`
     * `$MSK_ACCESS_DATA_HOME/cvr/seq_date.txt`
     * `$MSK_ACCESS_DATA_HOME/cvr/zero_var_whitelist.txt`
 
@@ -2270,7 +2270,7 @@ fi
         * `$MSK_MIXEDPACT_DATA_HOME/data_gene_matrix.txt`
         * `$MSK_MIXEDPACT_DATA_HOME/data_mutations_extended.txt`
         * `$MSK_MIXEDPACT_DATA_HOME/data_mutations_manual.txt`
-        * `$MSK_MIXEDPACT_DATA_HOME/data_mutations_nonsignedout.txt`
+        * `$MSK_MIXEDPACT_DATA_HOME/data_nonsignedout_mutations.txt`
         * `$MSK_MIXEDPACT_DATA_HOME/data_timeline.txt`
         * `$MSK_MIXEDPACT_DATA_HOME/mixedpact_data_cna_hg19.seg`
     * MSKSOLIDHEME Merge:
@@ -2283,7 +2283,7 @@ fi
         * `$MSK_SOLID_HEME_DATA_HOME/data_gene_matrix.txt`
         * `$MSK_SOLID_HEME_DATA_HOME/data_mutations_extended.txt`
         * `$MSK_SOLID_HEME_DATA_HOME/data_mutations_manual.txt`
-        * `$MSK_SOLID_HEME_DATA_HOME/data_mutations_nonsignedout.txt`
+        * `$MSK_SOLID_HEME_DATA_HOME/data_nonsignedout_mutations.txt`
         * `$MSK_SOLID_HEME_DATA_HOME/data_timeline.txt`
         * `$MSK_SOLID_HEME_DATA_HOME/mskimpact_data_cna_hg19.seg`
 
@@ -2328,7 +2328,7 @@ fi
         * `$MSK_SOLID_HEME_DATA_HOME/data_gene_matrix.txt`
         * `$MSK_SOLID_HEME_DATA_HOME/data_mutations_extended.txt`
         * `$MSK_SOLID_HEME_DATA_HOME/data_mutations_manual.txt`
-        * `$MSK_SOLID_HEME_DATA_HOME/data_mutations_nonsignedout.txt`
+        * `$MSK_SOLID_HEME_DATA_HOME/data_nonsignedout_mutations.txt`
         * `$MSK_SOLID_HEME_DATA_HOME/data_timeline.txt`
         * `$MSK_SOLID_HEME_DATA_HOME/mskimpact_data_cna_hg19.seg`
 

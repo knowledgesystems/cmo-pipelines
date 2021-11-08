@@ -153,7 +153,8 @@ META_FILE_MAP = {MUTATION_META_PATTERN:(MUTATION_FILE_PATTERN, 'mutations'),
     TIMELINE_META_PATTERN:(TIMELINE_FILE_PATTERN, 'timeline'),
     FUSIONS_GML_META_PATTERN:(FUSIONS_GML_FILE_PATTERN, 'fusions_gml')}
 
-MUTATION_FILE_PREFIX = 'data_mutations_'
+MUTATION_FILE_PREFIX = 'data_mutations'
+NONSIGNEDOUT_MUTATION_FILENAME = 'data_nonsignedout_mutations.txt'
 DATA_CLINICAL_SUPP_PREFIX = 'data_clinical_supp'
 
 SEQUENCED_SAMPLES = []
@@ -251,7 +252,8 @@ def merge_files(data_filenames, file_type, reference_set, keep_match, output_dir
 
     for f in data_filenames:
         # update sequenced samples tag if data_mutations* file
-        if MUTATION_FILE_PREFIX in f:
+        data_file_basename = os.path.basename(f)
+        if data_file_basename.startswith(MUTATION_FILE_PREFIX) or data_file_basename == NONSIGNEDOUT_MUTATION_FILENAME:
             update_sequenced_samples(f, reference_set, keep_match)
 
         # now merge data from file
@@ -535,8 +537,9 @@ def write_normal(rows, output_filename, new_header):
     """ Writes out to file normal style merge data, row by row. """
     output_file = open(output_filename, 'w')
 
-    # if output file is data_mutations* then add sequenced samples tag to file before header
-    if MUTATION_FILE_PREFIX in output_filename and SEQUENCED_SAMPLES != []:
+    output_file_basename = os.path.basename(output_filename)
+    # if output file is data_mutations* or data_nonsignedout_mutations then add sequenced samples tag to file before header
+    if (output_file_basename.startswith(MUTATION_FILE_PREFIX) or output_file_basename == NONSIGNEDOUT_MUTATION_FILENAME) and SEQUENCED_SAMPLES != []:
         # only add unique sample ids - this shouldn't happen but done as a precaution
         output_file.write('#sequenced_samples: ' + ' '.join(list(set(SEQUENCED_SAMPLES))) + '\n')
 
