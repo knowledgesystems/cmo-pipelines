@@ -15,7 +15,7 @@ from email.mime.text import MIMEText
 ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
 
-SMTP_SERVER = "smtp.google.com"
+SMTP_SERVER = "smtp.gmail.com"
 MESSAGE_RECIPIENTS = ["cbioportal-dmp-operations@cbioportal.org", "cbioportal-pipelines@cbioportal.org"]
 MESSAGE_SENDER = "cbioportal@cbioportal.org"
 
@@ -27,8 +27,8 @@ SAMPLES_MISSING_CLINICAL_DATA = set()
 
 MSKIMPACT_STUDY_ID = "mskimpact"
 HEMEPACT_STUDY_ID = "mskimpact_heme"
-IMPACT_SAMPLE_PATTERN = re.compile('(P-\d*-T\d\d)-IM\d*')
-HEME_SAMPLE_PATTERN = re.compile('(P-\d*-T\d\d)-IH\d*')
+IMPACT_SAMPLE_PATTERN = re.compile('(P-\d*-T\d\d)-IM\S\d*')
+HEME_SAMPLE_PATTERN = re.compile('(P-\d*-T\d\d)-IH\S\d*')
 
 STUDY_SAMPLE_REGEX_PATTERNS = {
 	MSKIMPACT_STUDY_ID:IMPACT_SAMPLE_PATTERN,
