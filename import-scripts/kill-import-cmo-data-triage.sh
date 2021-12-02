@@ -47,7 +47,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/kill-import-cmo-data-triage.lock"
     script_owner_uid=$(stat --format="%u" $script_path)
     process_list_filename=$(mktemp --tmpdir=$tmp process_list.tmpXXXXXXXX )
     ps -o pid,ppid,command -u $script_owner_uid > "$process_list_filename"
-    parent_process_line=$(grep import-cmo-data-triage.sh "$process_list_filename" | grep import-cmo-data-triage.log | head -n 1)
+    parent_process_line=$(grep import-cmo-data-triage.sh "$process_list_filename" | grep -v kill-import-cmo-data-triage.sh | grep import-cmo-data-triage.log | head -n 1)
     if [ -z "$parent_process_line" ] ; then
         # nothing to kill ... importer is not running
         rm -f "$TRIAGE_IMPORT_KILLING_FILENAME"
