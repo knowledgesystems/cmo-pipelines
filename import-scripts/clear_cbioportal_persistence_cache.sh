@@ -40,6 +40,11 @@ function print_portal_id_values() {
 }
 
 portal_id=$1
+KUBECONFIG_ARG=""
+if [ "$portal_id" == "public" ] || [ "$portal_id" == "genie-private" ] || [ "$portal_id" == "genie-archive" ] || [ "$portal_id" == "genie-public" ] ; then
+    KUBECONFIG_ARG="--kubeconfig $PUBLIC_CLUSTER_KUBECONFIG"
+fi
+
 if [ -z "$portal_id" ] ; then
     echo "usage : $app_name <portal id>"
     print_portal_id_values
@@ -54,7 +59,7 @@ if [ -z "$deployment_id" ] ; then
 fi
 
 /data/portal-cron/scripts/authenticate_service_account.sh 
-$KUBECTL_BINARY set env deployment $deployment_id --env="LAST_RESTART=$(date)"
+$KUBECTL_BINARY $KUBECONFIG_ARG set env deployment $deployment_id --env="LAST_RESTART=$(date)"
 webapp_restart_status=$?
 if [ $webapp_restart_status -ne 0 ] ; then
     echo "warning : the attempt to restart portal '$portal_id' failed : $KUBECTL_BINARY returned status $webapp_restart_status" >&2
@@ -64,7 +69,7 @@ fi
 cache_service_list=${portal_to_cache_service_list[$portal_id]}
 if [ -n "$cache_service_list" ] ; then
     for cache_service in $cache_service_list ; do
-        $KUBECTL_BINARY set env statefulset $cache_service --env="LAST_RESTART=$(date)"
+        $KUBECTL_BINARY $KUBECONFIG_ARG set env statefulset $cache_service --env="LAST_RESTART=$(date)"
         cache_reset_status=$?
         if [ $cache_reset_status -ne 0 ] ; then
             echo "error encountered during attempt to clear portal persistence cache for portal $portal_id : $KUBECTL_BINARY returned status $cache_reset_status" >&2
