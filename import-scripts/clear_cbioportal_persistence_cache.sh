@@ -42,7 +42,9 @@ function print_portal_id_values() {
 portal_id=$1
 KUBECONFIG_ARG=""
 if [ "$portal_id" == "public" ] || [ "$portal_id" == "genie-private" ] || [ "$portal_id" == "genie-archive" ] || [ "$portal_id" == "genie-public" ] ; then
-    KUBECONFIG_ARG="--kubeconfig $PUBLIC_CLUSTER_KUBECONFIG"
+    if ! [ -z $PUBLIC_CLUSTER_KUBECONFIG ] ; then
+        KUBECONFIG_ARG="--kubeconfig $PUBLIC_CLUSTER_KUBECONFIG"
+    fi
 fi
 
 if [ -z "$portal_id" ] ; then
