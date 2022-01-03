@@ -188,17 +188,23 @@ public class CvrSampleListsTasklet implements Tasklet {
 
         RestTemplate restTemplate = new RestTemplate();
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity();
-        ResponseEntity<CVRMasterList> responseEntity = restTemplate.exchange(dmpUrl, HttpMethod.GET, requestEntity, CVRMasterList.class);
-
+        ResponseEntity<CVRMasterList> responseEntity;
         Set<String> dmpSamples = new HashSet<>();
-        for (Map<String, String> samples : responseEntity.getBody().getSamples()) {
-            // there is only one pair per Map
-            if (samples.entrySet().iterator().hasNext()) {
-                Map.Entry pair = (Map.Entry) samples.entrySet().iterator().next();
-                String sample = (String) pair.getValue();
-                log.debug("open(): sample '" + sample + "' in master list");
-                dmpSamples.add(sample);
+        try {
+            responseEntity = restTemplate.exchange(dmpUrl, HttpMethod.GET, requestEntity, CVRMasterList.class);
+            for (Map<String, String> samples : responseEntity.getBody().getSamples()) {
+                // there is only one pair per Map
+                if (samples.entrySet().iterator().hasNext()) {
+                    Map.Entry pair = (Map.Entry) samples.entrySet().iterator().next();
+                    String sample = (String) pair.getValue();
+                    log.debug("open(): sample '" + sample + "' in master list");
+                    dmpSamples.add(sample);
+                }
             }
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            log.error("Error fetching CVR master list, response body is: '" + e.getResponseBodyAsString() + "'");
+        } catch (org.springframework.web.client.RestClientException e) {
+            log.error("Error fetching CVR master list");
         }
         return dmpSamples;
     }

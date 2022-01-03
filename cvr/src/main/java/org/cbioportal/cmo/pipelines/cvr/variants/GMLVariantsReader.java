@@ -33,6 +33,7 @@
 package org.cbioportal.cmo.pipelines.cvr.variants;
 
 import java.util.*;
+import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.springframework.batch.item.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,13 +58,22 @@ public class GMLVariantsReader implements ItemStreamReader<GMLVariant> {
 
     private List<GMLVariant> gmlVariants = new ArrayList<>();
 
+    private Logger log = Logger.getLogger(GMLVariantsReader.class);
+    
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         String dmpUrl = dmpServerName + dmpRetreiveVariants + "/" + sessionId + "/0";
         RestTemplate restTemplate = new RestTemplate();
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity();
-        ResponseEntity<GMLVariant> responseEntity = restTemplate.exchange(dmpUrl, HttpMethod.GET, requestEntity, GMLVariant.class);
-        gmlVariants.add(responseEntity.getBody());
+        ResponseEntity<GMLVariant> responseEntity;
+        try {
+            responseEntity = restTemplate.exchange(dmpUrl, HttpMethod.GET, requestEntity, GMLVariant.class);
+            gmlVariants.add(responseEntity.getBody());
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            log.error("Error fetching GML variant, response body is: '" + e.getResponseBodyAsString() + "'");
+        } catch (org.springframework.web.client.RestClientException e) {
+            log.error("Error fetching GML variant");
+        }
     }
 
     @Override

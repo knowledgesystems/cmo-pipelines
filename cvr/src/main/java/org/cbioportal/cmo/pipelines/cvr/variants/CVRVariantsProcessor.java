@@ -109,6 +109,9 @@ public class CVRVariantsProcessor implements ItemProcessor<CvrResponse, String> 
         ResponseEntity<CVRSegData> responseEntity;
         try {
             responseEntity = restTemplate.exchange(dmpSegmentUrl + sampleId, HttpMethod.GET, requestEntity, CVRSegData.class);
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            log.error("Error getting seg data for sample " + sampleId + " response body is: '" + e.getResponseBodyAsString() + "'");
+            return new CVRSegData();
         } catch (org.springframework.web.client.RestClientException e) {
             String message = "Error getting seg data for sample: " + sampleId;
             log.warn(message);
