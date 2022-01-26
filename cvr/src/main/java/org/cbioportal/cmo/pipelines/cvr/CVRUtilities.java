@@ -62,8 +62,6 @@ public class CVRUtilities {
     public static final String CORRESPONDING_ID_FILE = "cvr/linked_cases.txt";
     public static final String CNA_FILE = "data_CNA.txt";
     public static final String SEG_FILE = "_data_cna_hg19.seg";
-    public static final String FUSION_FILE = "data_fusions.txt";
-    public static final String FUSION_GML_FILE = "data_fusions_gml.txt";
     public static final String SV_FILE = "data_SV.txt";
     public static final String GENE_PANEL_FILE = "data_gene_matrix.txt";
     public static final String GML_FILE = "cvr_gml_data.json";
@@ -95,7 +93,7 @@ public class CVRUtilities {
     private static Map<String, List<String>> datatypesToSkipByStudy() {
         Map<String, List<String>> map = new HashMap<>();
         map.put("mskarcher", Arrays.asList(new String[]{"mutations", "cna", "seg"}));
-        map.put("mskraindance", Arrays.asList(new String[]{"cna", "seg", "sv-fusions"}));
+        map.put("mskraindance", Arrays.asList(new String[]{"cna", "seg", "sv"}));
         map.put("mskaccess", Arrays.asList(new String[]{"seg"}));
         return map;
     }

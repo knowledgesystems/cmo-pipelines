@@ -100,8 +100,8 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
                 CVRSvRecord to_add;
                 while ((to_add = reader.read()) != null) {
                     if (!cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSampleId()) && to_add.getSampleId()!= null) {
-                        to_add.setSite1_Gene(to_add.getSite1_Gene().trim());
-                        to_add.setSite2_Gene(to_add.getSite2_Gene().trim());
+                        to_add.setSite1HugoSymbol(to_add.getSite1HugoSymbol().trim());
+                        to_add.setSite2HugoSymbol(to_add.getSite2HugoSymbol().trim());
                         svRecords.add(to_add);
                     }
                 }
