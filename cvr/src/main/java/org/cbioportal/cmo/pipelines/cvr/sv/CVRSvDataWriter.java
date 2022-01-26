@@ -73,7 +73,7 @@ public class CVRSvDataWriter implements ItemStreamWriter<CompositeSvRecord> {
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {
-                writer.write(StringUtils.join(CVRSvRecord.getFieldNames(), "\t"));
+                writer.write(CVRSvRecord.getStandardSvHeader());
             }
         });
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));

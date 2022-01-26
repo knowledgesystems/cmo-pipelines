@@ -33,45 +33,65 @@
 package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
 import java.util.*;
+
+import com.google.common.base.Strings;
+import org.apache.commons.lang.StringUtils;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRSvVariant;
+import org.cbioportal.cmo.pipelines.cvr.model.GMLCnvIntragenicVariant;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 
 /**
  *
  * @author heinsz
+ * This models what the CVR pipeline is going to write out into a data_sv.txt file
+ * It can construct a CVRSvRecord by
+ * 1) Reading from a sv file (SvReader + CVRSvFieldSetMapper)
+ * 2) Converting a CVRSvVariant (this is the response from CVR)
+ * 3) Converting a CVRGmlVariant (this is the gml response from CVR)
  */
 
 @StepScope
 public class CVRSvRecord {
 
     private String sampleId;
+    private String svStatus;
+    private String site1HugoSymbol;
+    private String site2HugoSymbol;
+    private String site1EnsemblTranscriptId;
+    private String site2EnsemblTranscriptId;
+    private String site1EntrezGeneId;
+    private String site2EntrezGeneId;
+    private String site1RegionNumber;
+    private String Site2RegionNumber;
+    private String site1Region;
+    private String site2Region;
+    private String site1Chromosome;
+    private String site2Chromosome;
+    private String site1Contig;
+    private String site2Contig;
+    private String site1Position;
+    private String site2Position;
+    private String site1Description;
+    private String site2Description;
+    private String site2EffectOnFrame;
+    private String ncbiBuild;
+    private String svClass; // sv_class_name
+    private String tumorSplitReadCount;
+    private String tumorPairedEndReadCount;
+    private String eventInfo;
+    private String breakpointType;
+    private String connectionType; // conn_type
     private String annotation;
-    private String breakpoint_type;
+    private String dnaSupport; // Paired_End_Read_Support
+    private String rnaSupport; // Split_Read_Support
+    private String svLength;
+    private String normalReadCount;
+    private String tumorReadCount;
+    private String normalVariantCount;
+    private String tumorVariantCount;
+    private String normalPairedEndReadCount;
+    private String normalSplitEndReadCount;
     private String comments;
-    private String confidence_class;
-    private String conn_type;
-    private String connection_type;
-    private String event_info;
-    private String mapq;
-    private String normal_read_count;
-    private String normal_variant_count;
-    private String paired_end_read_support;
-    private String site1_chrom;
-    private String site1_desc;
-    private String site1_gene;
-    private String site1_pos;
-    private String site2_chrom;
-    private String site2_desc;
-    private String site2_gene;
-    private String site2_pos;
-    private String split_read_support;
-    private String sv_class_name;
-    private String sv_desc;
-    private String sv_length;
-    private String sv_variant_id;
-    private String tumor_read_count;
-    private String tumor_variant_count;
-    private String variant_status_name;
 
     public CVRSvRecord() {
     }
@@ -79,287 +99,410 @@ public class CVRSvRecord {
     public CVRSvRecord(CVRSvVariant variant, String sampleId) {
         this.sampleId = sampleId;
         this.annotation = variant.getAnnotation();
-        this.breakpoint_type = variant.getBreakpoint_Type();
+        this.breakpointType = variant.getBreakpoint_Type();
         this.comments = variant.getComments();
-        this.confidence_class = variant.getConfidence_Class();
-        this.conn_type = variant.getConn_Type();
-        this.connection_type = variant.getConnection_Type();
-        this.event_info = variant.getEvent_Info();
-        this.mapq = variant.getMapq();
-        this.normal_read_count = variant.getNormal_Read_Count();
-        this.normal_variant_count = variant.getNormal_Variant_Count();
-        this.paired_end_read_support = variant.getPaired_End_Read_Support();
-        this.site1_chrom = variant.getSite1_Chrom();
-        this.site1_desc = variant.getSite1_Desc();
-        this.site1_gene = variant.getSite1_Gene();
-        this.site1_pos = variant.getSite1_Pos();
-        this.site2_chrom = variant.getSite2_Chrom();
-        this.site2_desc = variant.getSite2_Desc();
-        this.site2_gene = variant.getSite2_Gene();
-        this.site2_pos = variant.getSite2_Pos();
-        this.split_read_support = variant.getSplit_Read_Support();
-        this.sv_class_name = variant.getSv_Class_Name();
-        this.sv_desc = variant.getSv_Desc();
-        this.sv_length = variant.getSv_Length();
-        this.sv_variant_id = variant.getSv_VariantId();
-        this.tumor_read_count = variant.getTumor_Read_Count();
-        this.tumor_variant_count = variant.getTumor_Variant_Count();
-        this.variant_status_name = variant.getVariant_Status_Name();
+        this.connectionType = variant.getConnection_Type();
+        this.eventInfo = variant.getEvent_Info();
+        this.ncbiBuild = "GRCh37"; // default, not provided by CVR
+        this.normalReadCount = variant.getNormal_Read_Count();
+        this.normalVariantCount = variant.getNormal_Variant_Count();
+        this.site1Chromosome = variant.getSite1_Chrom();
+        this.site1Description = variant.getSite1_Desc();
+        this.site1HugoSymbol = variant.getSite1_Gene();
+        this.site1Position = variant.getSite1_Pos();
+        this.site2Chromosome = variant.getSite2_Chrom();
+        this.site2Description = variant.getSite2_Desc();
+        this.site2HugoSymbol = variant.getSite2_Gene();
+        this.site2Position = variant.getSite2_Pos();
+        this.svClass = variant.getSv_Class_Name();
+        this.svLength = variant.getSv_Length();
+        this.tumorReadCount = variant.getTumor_Read_Count();
+        this.tumorVariantCount = variant.getTumor_Variant_Count();
+        this.svStatus = "SOMATIC"; // default, not provided by CVR
     }
+
+    public CVRSvRecord(GMLCnvIntragenicVariant variant, String sampleId) {
+        this.sampleId = sampleId;
+        this.comments = (!Strings.isNullOrEmpty(variant.getInterpretation())) ? variant.getInterpretation().replaceAll("[\\t\\n\\r]+"," ") : "";
+        // set event_info and sv_class
+        this.site1HugoSymbol = variant.getGeneId().trim();
+        this.site1Chromosome = variant.getChromosome();
+        this.svStatus = "GERMLINE";
+        if (!Strings.isNullOrEmpty(variant.getCnvClassName())) {
+            String svClass = variant.getCnvClassName();
+            String eventInfo = variant.getCnvClassName().trim().replace("INTRAGENIC_", "");
+            this.eventInfo += " " + eventInfo.toLowerCase();
+            this.svClass = variant.getCnvClassName();
+        }
+    }
+
     public String getSampleId(){
         return sampleId != null ? this.sampleId : "";
     }
 
-    public void setSampleId(String sampleId){
+    public void setSampleId(String sampleId) {
         this.sampleId = sampleId;
     }
 
-    public String getAnnotation(){
+    public String getSvStatus() {
+        return svStatus != null ? this.svStatus : "";
+    }
+
+    public void setSvStatus(String svStatus) {
+        this.svStatus = svStatus;
+    }
+
+    public String getSite1HugoSymbol() {
+        return site1HugoSymbol != null ? this.site1HugoSymbol : "";
+    }
+
+    public void setSite1HugoSymbol(String site1HugoSymbol) {
+        this.site1HugoSymbol = site1HugoSymbol;
+    }
+
+    public String getSite2HugoSymbol() {
+        return site2HugoSymbol != null ? this.site2HugoSymbol : "";
+    }
+
+    public void setSite2HugoSymbol(String site2HugoSymbol) {
+        this.site2HugoSymbol = site2HugoSymbol;
+    }
+
+    public String getSite1EnsemblTranscriptId() {
+        return site1EnsemblTranscriptId != null ? this.site1EnsemblTranscriptId : "";
+    }
+
+    public void setSite1EnsemblTranscriptId(String site1EnsemblTranscriptId) {
+        this.site1EnsemblTranscriptId = site1EnsemblTranscriptId;
+    }
+
+    public String getSite2EnsemblTranscriptId() {
+        return site2EnsemblTranscriptId != null ? this.site2EnsemblTranscriptId : "";
+    }
+
+    public void setSite2EnsemblTranscriptId(String site2EnsemblTranscriptId) {
+        this.site2EnsemblTranscriptId = site2EnsemblTranscriptId;
+    }
+
+    public String getSite1EntrezGeneId() {
+        return site1EntrezGeneId != null ? this.site1EntrezGeneId : "";
+    }
+
+    public void setSite1EntrezGeneId(String site1EntrezGeneId) {
+        this.site1EntrezGeneId = site1EntrezGeneId;
+    }
+
+    public String getSite2EntrezGeneId() {
+        return site2EntrezGeneId != null ? this.site2EntrezGeneId : "";
+    }
+
+    public void setSite2EntrezGeneId(String site2EntrezGeneId) {
+        this.site2EntrezGeneId = site2EntrezGeneId;
+    }
+
+    public String getSite1RegionNumber() {
+        return site1RegionNumber != null ? this.site1RegionNumber : "";
+    }
+
+    public void setSite1RegionNumber(String site1RegionNumber) {
+        this.site1RegionNumber = site1RegionNumber;
+    }
+
+    public String getSite2RegionNumber() {
+        return Site2RegionNumber != null ? this.Site2RegionNumber : "";
+    }
+
+    public void setSite2RegionNumber(String site2RegionNumber) {
+        Site2RegionNumber = site2RegionNumber;
+    }
+
+    public String getSite1Region() {
+        return site1Region != null ? this.site1Region : "";
+    }
+
+    public void setSite1Region(String site1Region) {
+        this.site1Region = site1Region;
+    }
+
+    public String getSite2Region() {
+        return site2Region != null ? this.site2Region : "";
+    }
+
+    public void setSite2Region(String site2Region) {
+        this.site2Region = site2Region;
+    }
+
+    public String getSite1Chromosome() {
+        return site1Chromosome != null ? this.site1Chromosome : "";
+    }
+
+    public void setSite1Chromosome(String site1Chromosome) {
+        this.site1Chromosome = site1Chromosome;
+    }
+
+    public String getSite2Chromosome() {
+        return site2Chromosome != null ? this.site2Chromosome : "";
+    }
+
+    public void setSite2Chromosome(String site2Chromosome) {
+        this.site2Chromosome = site2Chromosome;
+    }
+
+    public String getSite1Contig() {
+        return site1Contig != null ? this.site1Contig : "";
+    }
+
+    public void setSite1Contig(String site1Contig) {
+        this.site1Contig = site1Contig;
+    }
+
+    public String getSite2Contig() {
+        return site2Contig != null ? this.site2Contig : "";
+    }
+
+    public void setSite2Contig(String site2Contig) {
+        this.site2Contig = site2Contig;
+    }
+
+    public String getSite1Position() {
+        return site1Position != null ? this.site1Position : "";
+    }
+
+    public void setSite1Position(String site1Position) {
+        this.site1Position = site1Position;
+    }
+
+    public String getSite2Position() {
+        return site2Position != null ? this.site2Position : "";
+    }
+
+    public void setSite2Position(String site2Position) {
+        this.site2Position = site2Position;
+    }
+
+    public String getSite1Description() {
+        return site1Description != null ? this.site1Description : "";
+    }
+
+    public void setSite1Description(String site1Description) {
+        this.site1Description = site1Description;
+    }
+
+    public String getSite2Description() {
+        return site2Description != null ? this.site2Description : "";
+    }
+
+    public void setSite2Description(String site2Description) {
+        this.site2Description = site2Description;
+    }
+
+    public String getSite2EffectOnFrame() {
+        return site2EffectOnFrame != null ? this.site2EffectOnFrame : "";
+    }
+
+    public void setSite2EffectOnFrame(String site2EffectOnFrame) {
+        this.site2EffectOnFrame = site2EffectOnFrame;
+    }
+
+    public String getNcbiBuild() {
+        return ncbiBuild != null ? this.ncbiBuild : "";
+    }
+
+    public void setNcbiBuild(String ncbiBuild) {
+        this.ncbiBuild = ncbiBuild;
+    }
+
+    public String getSvClass() {
+        return svClass != null ? this.svClass : "";
+    }
+
+    public void setSvClass(String svClass) {
+        this.svClass = svClass;
+    }
+
+    public String getTumorSplitReadCount() {
+        return tumorSplitReadCount != null ? this.tumorSplitReadCount : "";
+    }
+
+    public void setTumorSplitReadCount(String tumorSplitReadCount) {
+        this.tumorSplitReadCount = tumorSplitReadCount;
+    }
+
+    public String getTumorPairedEndReadCount() {
+        return tumorPairedEndReadCount != null ? this.tumorPairedEndReadCount : "";
+    }
+
+    public void setTumorPairedEndReadCount(String tumorPairedEndReadCount) {
+        this.tumorPairedEndReadCount = tumorPairedEndReadCount;
+    }
+
+    public String getEventInfo() {
+        return eventInfo != null ? this.eventInfo : "";
+    }
+
+    public void setEventInfo(String eventInfo) {
+        this.eventInfo = eventInfo;
+    }
+
+    public String getBreakpointType() {
+        return breakpointType != null ? this.breakpointType : "";
+    }
+
+    public void setBreakpointType(String breakpointType) {
+        this.breakpointType = breakpointType;
+    }
+
+    public String getConnectionType() {
+        return connectionType != null ? this.connectionType : "";
+    }
+
+    public void setConnectionType(String connectionType) {
+        this.connectionType = connectionType;
+    }
+
+    public String getAnnotation() {
         return annotation != null ? this.annotation : "";
     }
 
-    public void setAnnotation(String annotation){
+    public void setAnnotation(String annotation) {
         this.annotation = annotation;
     }
 
-    public String getBreakpoint_Type(){
-        return this.breakpoint_type != null ? this.breakpoint_type : "";
+    public String getDnaSupport() {
+        return dnaSupport != null ? this.dnaSupport : "";
     }
 
-    public void setBreakpoint_Type(String breakpoint_type){
-        this.breakpoint_type = breakpoint_type;
+    public void setDnaSupport(String dnaSupport) {
+        this.dnaSupport = dnaSupport;
     }
 
-    public String getComments(){
-        return this.comments != null ? this.comments : "";
+    public String getRnaSupport() {
+        return rnaSupport != null ? this.rnaSupport : "";
     }
 
-    public void setComments(String comments){
+    public void setRnaSupport(String rnaSupport) {
+        this.rnaSupport = rnaSupport;
+    }
+
+    public String getSvLength() {
+        return svLength != null ? this.svLength : "";
+    }
+
+    public void setSvLength(String svLength) {
+        this.svLength = svLength;
+    }
+
+    public String getNormalReadCount() {
+        return normalReadCount != null ? this.normalReadCount : "";
+    }
+
+    public void setNormalReadCount(String normalReadCount) {
+        this.normalReadCount = normalReadCount;
+    }
+
+    public String getTumorReadCount() {
+        return tumorReadCount != null ? this.tumorReadCount : "";
+    }
+
+    public void setTumorReadCount(String tumorReadCount) {
+        this.tumorReadCount = tumorReadCount;
+    }
+
+    public String getNormalVariantCount() {
+        return normalVariantCount != null ? this.normalVariantCount : "";
+    }
+
+    public void setNormalVariantCount(String normalVariantCount) {
+        this.normalVariantCount = normalVariantCount;
+    }
+
+    public String getTumorVariantCount() {
+        return tumorVariantCount != null ? this.tumorVariantCount : "";
+    }
+
+    public void setTumorVariantCount(String tumorVariantCount) {
+        this.tumorVariantCount = tumorVariantCount;
+    }
+
+    public String getNormalPairedEndReadCount() {
+        return normalPairedEndReadCount != null ? this.normalPairedEndReadCount : "";
+    }
+
+    public void setNormalPairedEndReadCount(String normalPairedEndReadCount) {
+        this.normalPairedEndReadCount = normalPairedEndReadCount;
+    }
+
+    public String getNormalSplitEndReadCount() {
+        return normalSplitEndReadCount != null ? this.normalSplitEndReadCount : "";
+    }
+
+    public void setNormalSplitEndReadCount(String normalSplitEndReadCount) {
+        this.normalSplitEndReadCount = normalSplitEndReadCount;
+    }
+
+    public String getComments() {
+        return comments != null ? this.comments : "";
+    }
+
+    public void setComments(String comments) {
         this.comments = comments;
     }
 
-    public String getConfidence_Class(){
-        return this.confidence_class != null ? this.confidence_class : "";
+    public static String getStandardSvHeader() {
+        List<String> standardSvHeader = new ArrayList<String>();
+        for (String fieldName : getFieldNames()) {
+            if (fieldName.equals("SVClass")) {
+                standardSvHeader.add("Class");
+            } else if (fieldName.equals("NcbiBuild")) {
+                standardSvHeader.add("NCBIBuild");
+            } else {
+                standardSvHeader.add(fieldName);
+            }
+        }
+        return StringUtils.join(standardSvHeader, "\t");
     }
 
-    public void setConfidence_Class(String confidence_class){
-        this.confidence_class = confidence_class;
-    }
-
-    public String getConn_Type(){
-        return this.conn_type != null ? this.conn_type : "";
-    }
-
-    public void setConn_Type(String conn_type){
-        this.conn_type = conn_type;
-    }
-
-    public String getConnection_Type(){
-        return this.connection_type != null ? this.connection_type : "";
-    }
-
-    public void setConnection_Type(String connection_type){
-        this.connection_type = connection_type;
-    }
-
-    public String getEvent_Info(){
-        return this.event_info != null ? this.event_info : "";
-    }
-
-    public void setEvent_Info(String event_info){
-        this.event_info = event_info;
-    }
-
-    public String getMapq(){
-        return this.mapq != null ? this.mapq : "";
-    }
-
-    public void setMapq(String mapq){
-        this.mapq = mapq;
-    }
-
-    public String getNormal_Read_Count(){
-        return this.normal_read_count != null ? this.normal_read_count : "";
-    }
-
-    public void setNormal_Read_Count(String normal_read_count){
-        this.normal_read_count = normal_read_count;
-    }
-
-    public String getNormal_Variant_Count(){
-        return this.normal_variant_count != null ? normal_variant_count : "";
-    }
-
-    public void setNormal_Variant_Count(String normal_variant_count){
-        this.normal_variant_count = normal_variant_count;
-    }
-
-    public String getPaired_End_Read_Support(){
-        return this.paired_end_read_support != null ? this.paired_end_read_support : "";
-    }
-
-    public void setPaired_End_Read_Support(String pairedEndReadSupport){
-        this.paired_end_read_support = pairedEndReadSupport;
-    }
-
-    public String getSite1_Chrom(){
-        return this.site1_chrom != null ? this.site1_chrom : "";
-    }
-
-    public void setSite1_Chrom(String site1Chrom){
-        this.site1_chrom = site1Chrom;
-    }
-
-    public String getSite1_Desc(){
-        return this.site1_desc != null ? this.site1_desc : "";
-    }
-
-    public void setSite1_Desc(String site1Desc){
-        this.site1_desc = site1Desc;
-    }
-
-    public String getSite1_Gene(){
-        return this.site1_gene != null ? this.site1_gene : "";
-    }
-
-    public void setSite1_Gene(String site1Gene){
-        this.site1_gene = site1Gene;
-    }
-
-    public String getSite1_Pos(){
-        return this.site1_pos != null ? this.site1_pos : "";
-    }
-
-    public void setSite1_Pos(String site1Pos){
-        this.site1_pos = site1Pos;
-    }
-
-    public String getSite2_Chrom(){
-        return this.site2_chrom != null ? this.site2_chrom : "";
-    }
-
-    public void setSite2_Chrom(String site2Chrom){
-        this.site2_chrom = site2Chrom;
-    }
-
-    public String getSite2_Desc(){
-        return this.site2_desc != null ? this.site2_desc : "";
-    }
-
-    public void setSite2_Desc(String site2Desc){
-        this.site2_desc = site2Desc;
-    }
-
-    public String getSite2_Gene(){
-        return this.site2_gene != null ? this.site2_gene : "";
-    }
-
-    public void setSite2_Gene(String site2Gene){
-        this.site2_gene = site2Gene;
-    }
-
-    public String getSite2_Pos(){
-        return this.site2_pos != null ? this.site2_pos : "";
-    }
-
-    public void setSite2_Pos(String site2Pos){
-        this.site2_pos = site2Pos;
-    }
-
-    public String getSplit_Read_Support(){
-        return this.split_read_support != null ? this.split_read_support : "";
-    }
-
-    public void setSplit_Read_Support(String splitReadSupport){
-        this.split_read_support = splitReadSupport;
-    }
-
-    public String getSv_Class_Name(){
-        return this.sv_class_name != null ? this.sv_class_name : "";
-    }
-
-    public void setSv_Class_Name(String svClassName){
-        this.sv_class_name = svClassName;
-    }
-
-    public String getSv_Desc(){
-        return this.sv_desc != null ? this.sv_desc : "";
-    }
-
-    public void setSv_Desc(String svDesc){
-        this.sv_desc = svDesc;
-    }
-
-    public String getSv_Length(){
-        return this.sv_length != null ? this.sv_length : "";
-    }
-
-    public void setSv_Length(String svLength){
-        this.sv_length = svLength;
-    }
-
-    public String getSv_VariantId(){
-        return this.sv_variant_id != null ? this.sv_variant_id : "";
-    }
-
-    public void setSv_VariantId(String svVariantId){
-        this.sv_variant_id = svVariantId;
-    }
-
-    public String getTumor_Read_Count(){
-        return this.tumor_read_count != null ? this.tumor_read_count : "";
-    }
-
-    public void setTumor_Read_Count(String tumorReadCount){
-        this.tumor_read_count = tumorReadCount;
-    }
-
-    public String getTumor_Variant_Count(){
-        return this.tumor_variant_count != null ? this.tumor_variant_count : "";
-    }
-
-    public void setTumor_Variant_Count(String tumorVariantCount){
-        this.tumor_variant_count = tumorVariantCount;
-    }
-
-    public String getVariant_Status_Name(){
-        return variant_status_name != null ? this.variant_status_name : "";
-    }
-
-    public void setVariant_Status_Name(String variantStatusName){
-        this.variant_status_name = variantStatusName;
-    }
-    
     public static List<String> getFieldNames() {
         List<String> fieldNames = new ArrayList<String>();
         fieldNames.add("SampleId");
+        fieldNames.add("SvStatus");
+        fieldNames.add("Site1HugoSymbol");
+        fieldNames.add("Site2HugoSymbol");
+        fieldNames.add("Site1EnsemblTranscriptId");
+        fieldNames.add("Site2EnsemblTranscriptId");
+        fieldNames.add("Site1EntrezGeneId");
+        fieldNames.add("Site2EntrezGeneId");
+        fieldNames.add("Site1RegionNumber");
+        fieldNames.add("Site2RegionNumber");
+        fieldNames.add("Site1Region");
+        fieldNames.add("Site2Region");
+        fieldNames.add("Site1Chromosome");
+        fieldNames.add("Site2Chromosome");
+        fieldNames.add("Site1Contig");
+        fieldNames.add("Site2Contig");
+        fieldNames.add("Site1Position");
+        fieldNames.add("Site2Position");
+        fieldNames.add("Site1Description");
+        fieldNames.add("Site2Description");
+        fieldNames.add("Site2EffectOnFrame");
+        fieldNames.add("NcbiBuild");
+        fieldNames.add("SvClass");
+        fieldNames.add("TumorSplitReadCount");
+        fieldNames.add("TumorPairedEndReadCount");
+        fieldNames.add("EventInfo");
+        fieldNames.add("BreakpointType");
+        fieldNames.add("ConnectionType");
         fieldNames.add("Annotation");
-        fieldNames.add("Breakpoint_Type");
+        fieldNames.add("DnaSupport");
+        fieldNames.add("RnaSupport");
+        fieldNames.add("SvLength");
+        fieldNames.add("NormalReadCount");
+        fieldNames.add("TumorReadCount");
+        fieldNames.add("NormalVariantCount");
+        fieldNames.add("TumorVariantCount");
+        fieldNames.add("NormalPairedEndReadCount");
+        fieldNames.add("NormalSplitEndReadCount");
         fieldNames.add("Comments");
-        fieldNames.add("Confidence_Class");
-        fieldNames.add("Conn_Type");
-        fieldNames.add("Connection_Type");
-        fieldNames.add("Event_Info");
-        fieldNames.add("Mapq");
-        fieldNames.add("Normal_Read_Count");
-        fieldNames.add("Normal_Variant_Count");
-        fieldNames.add("Paired_End_Read_Support");
-        fieldNames.add("Site1_Chrom");
-        fieldNames.add("Site1_Desc");
-        fieldNames.add("Site1_Gene");
-        fieldNames.add("Site1_Pos");
-        fieldNames.add("Site2_Chrom");
-        fieldNames.add("Site2_Desc");
-        fieldNames.add("Site2_Gene");
-        fieldNames.add("Site2_Pos");
-        fieldNames.add("Split_Read_Support");
-        fieldNames.add("Sv_Class_Name");
-        fieldNames.add("Sv_Desc");
-        fieldNames.add("Sv_Length");
-        fieldNames.add("Sv_VariantId");
-        fieldNames.add("Tumor_Read_Count");
-        fieldNames.add("Tumor_Variant_Count");
-        fieldNames.add("Variant_Status_Name");
         return fieldNames;
     }
 }
