@@ -111,14 +111,14 @@ public class CVRSvRecord {
         // Use Gene1 to test whether v1 or v2 schema
         if (variant.getSite1_Gene() != null && !variant.getSite1_Gene().isEmpty()) {
             this.site1_gene = variant.getSite1_Gene();
-            this.site2_gene = variant.getSite2_Gene() != null ? variant.getGene2() : "";
-            this.site1_exon = variant.getSite1_Exon() != null ? variant.getSite1_Exon() : "";
-            this.site2_exon = variant.getSite2_Exon() != null ? variant.getSite2_Exon() : "";
+            this.site2_gene = variant.getSite2_Gene();
+            this.site1_exon = variant.getSite1_Exon();
+            this.site2_exon = variant.getSite2_Exon();
         } else {
             this.site1_gene = variant.getGene1();
-            this.site2_gene = variant.getGene2() != null ? variant.getGene2() : "";
-            this.site1_exon = variant.getExon1() != null ? variant.getExon1() : "";
-            this.site2_exon = variant.getExon2() != null ? variant.getExon2() : "";
+            this.site2_gene = variant.getGene2();
+            this.site1_exon = variant.getExon1();
+            this.site2_exon = variant.getExon2();
         }
     }
 
@@ -347,7 +347,7 @@ public class CVRSvRecord {
     }
 
     public String getSite1_Exon() {
-        return site1_exon;
+        return this.site1_exon != null ? this.site1_exon : "";
     }
 
     public void setSite1_Exon(String site1_exon) {
@@ -355,11 +355,11 @@ public class CVRSvRecord {
     }
 
     public String getSite2_Exon() {
-        return site2_exon;
+        return this.site2_exon != null ? this.site2_exon : "";
     }
 
     public void setSite2_Exon(String site2_exon) {
-        this.site2_exon = site2_exon;
+    	this.site2_exon = site2_exon;
     }
 
     public static List<String> getFieldNames() {
