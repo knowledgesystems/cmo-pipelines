@@ -6,7 +6,7 @@ enum34==1.1.10
 idna==2.10
 ipaddress==1.0.23
 mysql-connector-python==8.0.21
-protobuf==3.13.0
+protobuf==3.15.0
 pycparser==2.20
 pyOpenSSL==19.1.0
 requests==2.24.0
