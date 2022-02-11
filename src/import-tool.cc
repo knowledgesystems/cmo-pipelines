@@ -92,6 +92,11 @@ static string KILL_TRIAGE_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/tri
 static string TRIAGE_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/triage-import-in-progress");
 static string TRIAGE_IMPORT_KILLING_FILENAME(IMPORT_TRIGGER_BASEDIR + "/triage-import-killing");
 static string TRIAGE_IMPORT_LOG_FILENAME(IMPORT_LOG_BASEDIR + "/triage-cmo-importer.log");
+static string START_HGNC_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-import-start-request");
+static string KILL_HGNC_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-import-kill-request");
+static string HGNC_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-import-in-progress");
+static string HGNC_IMPORT_KILLING_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-import-killing");
+static string HGNC_IMPORT_LOG_FILENAME(IMPORT_LOG_BASEDIR + "/hgnc-importer.log");
 
 /* used for command line argument checking */
 static vector<string> RECOGNIZED_IMPORTERS;
@@ -99,6 +104,7 @@ static vector<string> RECOGNIZED_COMMANDS;
 
 void initialize_static_objects() {
     RECOGNIZED_IMPORTERS.push_back("triage");
+    RECOGNIZED_IMPORTERS.push_back("hgnc");
     RECOGNIZED_COMMANDS.push_back("start");
     RECOGNIZED_COMMANDS.push_back("kill");
     RECOGNIZED_COMMANDS.push_back("status");
@@ -123,7 +129,7 @@ vector<char> character_vector_from_string(string s) {
 void print_usage(string program_name) {
     vector<char> program_name_vector = character_vector_from_string(program_name);
     cerr << "Usage: " << basename(&program_name_vector[0]) << " importer_name command [extra_arguments]" << endl;
-    cerr << "       importer_name must be \"triage\"" << endl;
+    cerr << "       importer_name must be \"triage\" or \"hgnc\"" << endl;
     cerr << "       valid commands:" << endl;
     cerr << "           start : requests that an import run begins as soon as possible - this may wait for an import in progress to finish before starting" << endl;
     cerr << "           kill : requests that any import in progress be halted and that any requested start be canceled" << endl;
@@ -350,17 +356,25 @@ string get_file_modification_time(string file_path) {
     return format_utc_epoc_count_as_local_time(last_modification_time);
 }
 
+// this function assumes importer arg is valid
+int request_importer_start(string importer, string start_trigger_filename, string kill_trigger_filename, string killing_filename) {
+    if (file_exists(killing_filename)) {
+        cerr << "Cannot trigger importer start now because running importer is now being killed (wait a minute or two and try again)" << endl;
+        return 1;
+    }
+    if (file_exists(start_trigger_filename)) {
+        cerr << "Cannot trigger importer start now because importer kill is currently triggered (wait a minute or two and try again)" << endl;
+        return 1;
+    }
+    return create_trigger_file(start_trigger_filename);
+}
+
 int request_importer_start(string importer) {
     if (importer == "triage") {
-        if (file_exists(TRIAGE_IMPORT_KILLING_FILENAME)) {
-            cerr << "Cannot trigger importer start now because running importer is now being killed (wait a minute or two and try again)" << endl;
-            return 1;
-        }
-        if (file_exists(KILL_TRIAGE_IMPORT_TRIGGER_FILENAME)) {
-            cerr << "Cannot trigger importer start now because importer kill is currently triggered (wait a minute or two and try again)" << endl;
-            return 1;
-        }
-        return create_trigger_file(START_TRIAGE_IMPORT_TRIGGER_FILENAME);
+        return request_importer_start(importer, START_TRIAGE_IMPORT_TRIGGER_FILENAME, KILL_TRIAGE_IMPORT_TRIGGER_FILENAME, TRIAGE_IMPORT_KILLING_FILENAME);
+    }
+    if (importer == "hgnc") {
+        return request_importer_start(importer, START_HGNC_IMPORT_TRIGGER_FILENAME, KILL_HGNC_IMPORT_TRIGGER_FILENAME, HGNC_IMPORT_KILLING_FILENAME);
     }
     cerr << "Error : unrecognized importer " << importer << " during attempt to start import." << endl;
     return 1;
@@ -370,42 +384,54 @@ int request_importer_kill(string importer) {
     if (importer == "triage") {
         return create_trigger_file(KILL_TRIAGE_IMPORT_TRIGGER_FILENAME);
     }
+    if (importer == "hgnc") {
+        return create_trigger_file(KILL_HGNC_IMPORT_TRIGGER_FILENAME);
+    }
     cerr << "Error : unrecognized importer " << importer << " during attempt to kill import." << endl;
     return 1;
 }
 
+// this function assumes importer arg is valid
+int report_importer_status(string importer, string start_trigger_filename, string kill_trigger_filename, string in_progress_filename, string killing_filename, string log_filename) {
+    bool import_start_triggered = file_exists(start_trigger_filename);
+    bool import_kill_triggered = file_exists(kill_trigger_filename);
+    bool import_in_progress = file_exists(in_progress_filename);
+    bool import_killing = file_exists(killing_filename);
+    string last_modification_of_log_file = get_file_modification_time(log_filename);
+    string current_time = get_current_time();
+    cout << "Current status for " << importer << " importer:" << endl;
+    if (import_in_progress) {
+        cout << "  importer is running (there is an import in progress)" << endl;
+    } else {
+        cout << "  importer is not running" << endl;
+    }
+    if (import_start_triggered) {
+        cout << "  importer start has been triggered (this may wait until an import in progress completes)" << endl;
+    } else {
+        cout << "  importer start has not been triggered" << endl;
+    }
+    if (import_killing) {
+        cout << "  importer is now being killed (triggers are being reset, and any running import is being halted)" << endl;
+    } else {
+    cout << "  importer is not now being killed" << endl;
+    if (import_kill_triggered) {
+        cout << "  importer kill has been triggered (this will soon cancel any importer start request, and will bring any import in progress to a halt)" << endl;
+    } else {
+        cout << "  importer kill has not been triggered" << endl;
+        }
+    }
+    cout << "  importer log last modification time : " << last_modification_of_log_file << endl;
+    cout << "  current time : " << current_time << endl;
+    return 0;
+}
+
+
 int report_importer_status(string importer) {
     if (importer == "triage") {
-        bool import_start_triggered = file_exists(START_TRIAGE_IMPORT_TRIGGER_FILENAME);
-        bool import_kill_triggered = file_exists(KILL_TRIAGE_IMPORT_TRIGGER_FILENAME);
-        bool import_in_progress = file_exists(TRIAGE_IMPORT_IN_PROGRESS_FILENAME);
-        bool import_killing = file_exists(TRIAGE_IMPORT_KILLING_FILENAME);
-        string last_modification_of_log_file = get_file_modification_time(TRIAGE_IMPORT_LOG_FILENAME);
-        string current_time = get_current_time();
-        cout << "Current status for triage importer:" << endl;
-        if (import_in_progress) {
-            cout << "  importer is running (there is an import in progress)" << endl;
-        } else {
-            cout << "  importer is not running" << endl;
-        }
-        if (import_start_triggered) {
-            cout << "  importer start has been triggered (this may wait until an import in progress completes)" << endl;
-        } else {
-            cout << "  importer start has not been triggered" << endl;
-        }
-        if (import_killing) {
-            cout << "  importer is now being killed (triggers are being reset, and any running import is being halted)" << endl;
-        } else {
-            cout << "  importer is not now being killed" << endl;
-            if (import_kill_triggered) {
-                cout << "  importer kill has been triggered (this will soon cancel any importer start request, and will bring any import in progress to a halt)" << endl;
-            } else {
-                cout << "  importer kill has not been triggered" << endl;
-            }
-        }
-        cout << "  importer log last modification time : " << last_modification_of_log_file << endl;
-        cout << "  current time : " << current_time << endl;
-        return 0;
+        return report_importer_status(importer, START_TRIAGE_IMPORT_TRIGGER_FILENAME, KILL_TRIAGE_IMPORT_TRIGGER_FILENAME, TRIAGE_IMPORT_IN_PROGRESS_FILENAME, TRIAGE_IMPORT_KILLING_FILENAME, TRIAGE_IMPORT_LOG_FILENAME);
+    }
+    if (importer == "hgnc") {
+        return report_importer_status(importer, START_HGNC_IMPORT_TRIGGER_FILENAME, KILL_HGNC_IMPORT_TRIGGER_FILENAME, HGNC_IMPORT_IN_PROGRESS_FILENAME, HGNC_IMPORT_KILLING_FILENAME, HGNC_IMPORT_LOG_FILENAME);
     }
     cerr << "Error : unrecognized importer " << importer << " during attempt to report status." << endl;
     return 1;
@@ -445,22 +471,30 @@ int run_command3_and_wait(string command, string arg1, string arg2, string arg3)
     return child_return_code;
 }
 
-int report_importer_log(string importer, vector<string> & extra_args) {
+// this function assumes importer arg is valid
+int report_importer_log(string importer, string log_filename, vector<string> & extra_args) {
     int linecount = 1000;
     if (extra_args.size() == 1) {
         stringstream iss(extra_args[0]);
         iss >> linecount;
     }
+    if (file_exists(log_filename)) {
+        cout << "Printing the last " << linecount << " lines from file " << log_filename << " :" << endl;
+        stringstream oss;
+        oss << linecount;
+        run_command3_and_wait("/usr/bin/tail", "-n", oss.str(), log_filename);
+    } else {
+        cout << "File " << log_filename << " could not be found." << endl;
+    }
+    return 0;
+}
+
+int report_importer_log(string importer, vector<string> & extra_args) {
     if (importer == "triage") {
-        if (file_exists(TRIAGE_IMPORT_LOG_FILENAME)) {
-            cout << "Printing the last " << linecount << " lines from file " << TRIAGE_IMPORT_LOG_FILENAME << " :" << endl;
-            stringstream oss;
-            oss << linecount;
-            run_command3_and_wait("/usr/bin/tail", "-n", oss.str(), TRIAGE_IMPORT_LOG_FILENAME);
-        } else {
-            cout << "File " << TRIAGE_IMPORT_LOG_FILENAME << " could not be found." << endl;
-        }
-        return 0;
+        return report_importer_log(importer, TRIAGE_IMPORT_LOG_FILENAME, extra_args);
+    }
+    if (importer == "hgnc") {
+        return report_importer_log(importer, HGNC_IMPORT_LOG_FILENAME, extra_args);
     }
     cerr << "Error : unrecognized importer " << importer << " during attempt to report log." << endl;
     return 1;

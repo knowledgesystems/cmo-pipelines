@@ -43,6 +43,11 @@ function clearPersistenceCachesForTriagePortals() {
     clearPersistenceCachesForPortals "$all_triage_portals"
 }
 
+function clearPersistenceCachesForHgncPortals() {
+    all_hgnc_portals="hgnc"
+    clearPersistenceCachesForPortals "$all_hgnc_portals"
+}
+
 function clearPersistenceCachesForPublicPortals() {
     all_public_portals="public"
     clearPersistenceCachesForPortals "$all_public_portals"
