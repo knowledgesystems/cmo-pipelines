@@ -59,8 +59,8 @@ public class SuppVitalStatusRecord {
         this.PATIENT_ID = compositeRecord.getDmpPatientId();
         this.YEAR_CONTACT = DDPUtils.parseYearFromDateAsString(compositeRecord.getLastContactDate());
         this.YEAR_DEATH = DDPUtils.parseYearFromDateAsString(compositeRecord.getPatientDeathDate());
-        this.INT_CONTACT = DDPUtils.getDateInDaysAsString(compositeRecord.getLastContactDate());
-        this.INT_DOD = DDPUtils.getDateInDaysAsString(compositeRecord.getPatientDeathDate());
+        this.INT_CONTACT = DDPUtils.resolveIntervalInDays(compositeRecord.getPatientBirthDate(), compositeRecord.getLastContactDate());
+        this.INT_DOD = DDPUtils.resolveIntervalInDays(compositeRecord.getPatientBirthDate(), compositeRecord.getPatientDeathDate(), true);
         this.DEAD = (!Strings.isNullOrEmpty(compositeRecord.getPatientDeathDate())) ? "True" : "False";
     }
     /**

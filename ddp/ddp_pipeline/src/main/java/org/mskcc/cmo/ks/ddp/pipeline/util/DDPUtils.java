@@ -166,6 +166,21 @@ public class DDPUtils {
         return anonymizePatientAge(age.intValue());
     }
 
+    public static String resolveIntervalInDays(String date1, String date2, Boolean anonymizeIntervalInDays) throws ParseException {
+        if (Strings.isNullOrEmpty(date1) || Strings.isNullOrEmpty(date2)) {
+            return "NA";
+        }
+        Long intervalInDays = Math.abs(getDateInDays(date1) - getDateInDays(date2));
+        if (anonymizeIntervalInDays) {
+            return anonymizeNumberOfDays(intervalInDays);
+        }
+        return intervalInDays.toString();
+    }
+
+    public static String resolveIntervalInDays(String date1, String date2) throws ParseException {
+        return resolveIntervalInDays(date1, date2, false);
+    }
+
     /**
      * Resolve and anonymize patient age at diagnosis.
      *
@@ -200,6 +215,15 @@ public class DDPUtils {
             age = 18;
         }
         return String.valueOf(age);
+    }
+
+    private static String anonymizeNumberOfDays(Long numberOfDays) {
+        if (numberOfDays >= (90 * DAYS_TO_YEARS_CONVERSION)) {
+            return String.valueOf(Math.round(90 * DAYS_TO_YEARS_CONVERSION));
+        } else if (numberOfDays <= (18 * DAYS_TO_YEARS_CONVERSION)) {
+            return String.valueOf(Math.round((18 * DAYS_TO_YEARS_CONVERSION)));
+        }
+        return String.valueOf(numberOfDays);
     }
 
     /**
