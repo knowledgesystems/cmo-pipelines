@@ -545,7 +545,7 @@ public class DDPUtilsTest {
      * @throws Exception
      */
     @Test
-    public void resolvePatientYearsSinceBirthTest()throws Exception {
+    public void resolvePatientYearsSinceBirthTest() throws Exception {
         wait_until_midnight_if_necessary();
         Date now = new Date();
         Calendar calendar = Calendar.getInstance();
@@ -573,6 +573,31 @@ public class DDPUtilsTest {
     public void resolvePatientYearsSinceBirthWithExceptionTest() throws Exception {
         wait_until_midnight_if_necessary();
         DDPUtils.resolveYearsSinceBirth("05/01/2000");
+    }
+
+    @Test
+    public void resolveIntervalInDaysTest() throws Exception {
+        Assert.assertEquals(DDPUtils.resolveIntervalInDays("2021-05-01","2021-05-05"), "4");
+        Assert.assertEquals(DDPUtils.resolveIntervalInDays("2021-05-05","2021-05-01"), "4");
+        Assert.assertEquals(DDPUtils.resolveIntervalInDays(null,"2021-05-05"), "NA");
+        Assert.assertEquals(DDPUtils.resolveIntervalInDays("2021-05-05",null), "NA");
+    }
+
+    @Test
+    public void resolveAnonymizedIntervalInDaysTest() throws Exception {
+        Assert.assertEquals(DDPUtils.resolveIntervalInDays("2021-05-01", "1903-04-06", true), String.valueOf(Math.round(90 * DDPUtils.DAYS_TO_YEARS_CONVERSION)));
+        Assert.assertEquals(DDPUtils.resolveIntervalInDays("2021-05-01", "2015-04-06", true), String.valueOf(Math.round(18 * DDPUtils.DAYS_TO_YEARS_CONVERSION)));
+        Assert.assertEquals(DDPUtils.resolveIntervalInDays("", "2015-04-06", true), "NA");
+    }
+
+    @Test(expected = ParseException.class)
+    public void resolveIntervalInDaysWithInvalidCharacterStringTest() throws Exception {
+        DDPUtils.resolveIntervalInDays("INVALID_DATE","2021-05-05");
+    }
+
+    @Test(expected = ParseException.class)
+    public void resolveIntervalInDaysWithInvalidNumericStringExceptionTest() throws Exception {
+        DDPUtils.resolveIntervalInDays("12301","2021-05-05");
     }
 
     /**
