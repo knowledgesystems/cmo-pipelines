@@ -41,7 +41,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     msk_automation_notification_file=$(mktemp $tmp/msk-automation-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
     CANCERSTUDIESLOGFILENAME="$PORTAL_HOME/logs/update-studies-dashi-gdac.log"
-    DATA_SOURCES_TO_BE_FETCHED="bic-mskcc cmo-argos private impact datahub_shahlab msk-mind-datahub"
+    DATA_SOURCES_TO_BE_FETCHED="bic-mskcc-legacy bic-mskcc cmo-argos private impact datahub_shahlab msk-mind-datahub"
     GMAIL_USERNAME=`grep gmail_username $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
     GMAIL_PASSWORD=`grep gmail_password $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
     unset failed_data_source_fetches
@@ -107,7 +107,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     fi
 
     echo "Cleaning up any untracked files from MSK-CMO import..."
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind
+    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind
 
     $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
 

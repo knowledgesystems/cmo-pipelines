@@ -2,7 +2,7 @@
 
 export CMO_EMAIL_LIST="cbioportal-cmo-importer@cbioportal.org"
 export PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-export ALL_DATA_SOURCES="bic-mskcc cmo-argos private impact impact-MERGED knowledge-systems-curated-studies immunotherapy datahub datahub_shahlab msk-mind-datahub dmp pipelines-testing"
+export ALL_DATA_SOURCES="bic-mskcc-legacy bic-mskcc cmo-argos private impact impact-MERGED knowledge-systems-curated-studies immunotherapy datahub datahub_shahlab msk-mind-datahub dmp pipelines-testing"
 
 unset DATA_SOURCE_NAME_TO_START_LOG_MESSAGE
 declare -Ax DATA_SOURCE_NAME_TO_START_LOG_MESSAGE
@@ -26,13 +26,14 @@ for data_source in ${ALL_DATA_SOURCES[*]} ; do
     DATA_SOURCE_NAME_TO_EMAIL_RECIPIENT[$data_source]="$PIPELINES_EMAIL_LIST"
 done
 #set exceptions for fetches
-for data_source in "bic-mskcc cmo-argos" ; do
+for data_source in "bic-mskcc-legacy bic-mskcc cmo-argos" ; do
     DATA_SOURCE_NAME_TO_FAILURE_LOG_MESSAGE[$data_source]="CMO ($data_source) fetch failed!"
     DATA_SOURCE_NAME_TO_EMAIL_RECIPIENT[$data_source]="$CMO_EMAIL_LIST"
     DATA_SOURCE_NAME_TO_EMAIL_BODY[$data_source]="The CMO ($data_source) data fetch failed. Imports into Triage and production WILL NOT HAVE UP-TO-DATE DATA until this is resolved.\n\n*** DO NOT MARK STUDIES FOR IMPORT INTO msk-automation-portal. ***\n\n*** DO NOT MERGE ANY STUDIES until this has been resolved. Please uncheck any merged studies in the cBio Portal Google document. ***\n\nYou may keep projects marked for import into Triage in the cBio Portal Google document. Triage studies will be reimported once there has been a successful data fetch.\n\nPlease don't hesitate to ask if you have any questions."
     DATA_SOURCE_NAME_TO_EMAIL_SUBJECT[$data_source]="Data fetch failure: CMO ($data_source)"
 done
 DATA_SOURCE_NAME_TO_START_LOG_MESSAGE[knowledge-systems-curated-studies]="fetching updates from cbio-portal-data..."
+DATA_SOURCE_NAME_TO_EXTRA_IMPORTER_ARGS[bic-mskcc-legacy]="--update-worksheet"
 DATA_SOURCE_NAME_TO_EXTRA_IMPORTER_ARGS[bic-mskcc]="--update-worksheet"
 DATA_SOURCE_NAME_TO_EXTRA_IMPORTER_ARGS["cmo-argos"]="--update-worksheet"
 DATA_SOURCE_NAME_TO_FAILURE_LOG_MESSAGE[knowledge-systems-curated-studies]="cbio-portal-data fetch failed!"

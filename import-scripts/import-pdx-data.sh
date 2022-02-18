@@ -140,7 +140,7 @@ fi
 
 source $PATH_TO_AUTOMATION_SCRIPT
 
-if [ -z "$PORTAL_HOME" ] | [ -z "$BIC_DATA_HOME" ] | [ -z "$CMO_ARGOS_DATA_HOME" ] | [ -z "$PRIVATE_DATA_HOME" ] | [ -z "$PDX_DATA_HOME" ] | [ -z "$HG_BINARY" ] | [ -z "$PYTHON_BINARY" ] | [ -z "$DATAHUB_DATA_HOME" ] | [ -z "$ANNOTATOR_JAR" ] | [ -z "$CASE_LIST_CONFIG_FILE"  ] ; then
+if [ -z "$PORTAL_HOME" ] | [ -z "$BIC_LEGACY_DATA_HOME" ] | [ -z "$BIC_DATA_HOME" ] | [ -z "$CMO_ARGOS_DATA_HOME" ] | [ -z "$PRIVATE_DATA_HOME" ] | [ -z "$PDX_DATA_HOME" ] | [ -z "$HG_BINARY" ] | [ -z "$PYTHON_BINARY" ] | [ -z "$DATAHUB_DATA_HOME" ] | [ -z "$ANNOTATOR_JAR" ] | [ -z "$CASE_LIST_CONFIG_FILE"  ] ; then
     message="could not run import-pdx-data.sh: automation-environment.sh script must be run in order to set needed environment variables (like BIC_DATA_HOME, PDX_DATA_HOME, ANNOTATOR_JAR, CASE_LIST_CONFIG_FILE,...)"
     echo ${message}
     echo -e "${message}" |  mail -s "import-pdx-data failed to run." $PIPELINES_EMAIL_LIST
@@ -181,6 +181,7 @@ SUBSET_AND_MERGE_WARNINGS_FILENAME="subset_and_merge_pdx_studies_warnings.txt"
 # status flags (set to 1 when each stage is successfully completed)
 CRDB_PDX_FETCH_SUCCESS=0
 CRDB_PDX_SUBSET_AND_MERGE_SUCCESS=0
+BIC_MSKCC_LEGACY_GIT_FETCH_SUCCESS=0
 BIC_MSKCC_HG_FETCH_SUCCESS=0
 CMO_ARGOS_GIT_FETCH_SUCCESS=0
 PRIVATE_HG_FETCH_SUCESS=0
@@ -210,6 +211,15 @@ if [ $? -gt 0 ]
 then
     echo "Database version expected by portal does not match version in database!"
     DB_VERSION_FAIL=1
+fi
+
+# importer mercurial fetch step
+echo "fetching updates from bic-mskcc-legacy repository..."
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source bic-mskcc-legacy --run-date latest --update-worksheet
+if [ $? -gt 0 ] ; then
+    sendFailureMessageMskPipelineLogsSlack "Fetch BIC-MSKCC-LEGACY Studies From Git Failure"
+else
+    BIC_MSKCC_LEGACY_GIT_FETCH_SUCCESS=1
 fi
 
 # importer mercurial fetch step
@@ -254,7 +264,7 @@ else
 fi
 
 
-if [[ $BIC_MSKCC_HG_FETCH_SUCCESS -eq 1 && $PRIVATE_HG_FETCH_SUCESS -eq 1 && $PDX_HG_FETCH_SUCCESS -eq 1 && $DATAHUB_GIT_FETCH_SUCCESS -eq 1 && $CMO_ARGOS_GIT_FETCH_SUCCESS -eq 1 ]] ; then
+if [[ $BIC_MSKCC_LEGACY_GIT_FETCH_SUCCESS -eq 1 && $BIC_MSKCC_HG_FETCH_SUCCESS -eq 1 && $PRIVATE_HG_FETCH_SUCESS -eq 1 && $PDX_HG_FETCH_SUCCESS -eq 1 && $DATAHUB_GIT_FETCH_SUCCESS -eq 1 && $CMO_ARGOS_GIT_FETCH_SUCCESS -eq 1 ]] ; then
     # udpate status for email
     ALL_HG_FETCH_SUCCESS=1
     echo "fetching pdx data fom crdb"
@@ -278,7 +288,7 @@ if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
     mapping_filename="source_to_destination_mappings.txt"
     clinical_annotation_mapping_filename="clinical_annotations_mappings.txt"
     scripts_directory="$PORTAL_HOME/scripts"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/subset_and_merge_crdb_pdx_studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --data-source-directories $DATAHUB_DATA_HOME,$BIC_DATA_HOME,$CMO_ARGOS_DATA_HOME,$PRIVATE_DATA_HOME,$DMP_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME --clinical-annotation-mapping-file $clinical_annotation_mapping_filename --annotator $ANNOTATOR_JAR --sample-lists-config $CASE_LIST_CONFIG_FILE
+    $PYTHON_BINARY $PORTAL_HOME/scripts/subset_and_merge_crdb_pdx_studies.py --mapping-file $mapping_filename --root-directory $PDX_DATA_HOME --lib $scripts_directory --data-source-directories $DATAHUB_DATA_HOME,$BIC_LEGACY_DATA_HOME,$BIC_DATA_HOME,$CMO_ARGOS_DATA_HOME,$PRIVATE_DATA_HOME,$DMP_DATA_HOME --fetch-directory $CRDB_FETCHER_PDX_HOME --temp-directory $CRDB_PDX_TMPDIR --warning-file $SUBSET_AND_MERGE_WARNINGS_FILENAME --clinical-annotation-mapping-file $clinical_annotation_mapping_filename --annotator $ANNOTATOR_JAR --sample-lists-config $CASE_LIST_CONFIG_FILE
     if [ $? -ne 0 ] ; then
         echo "error: subset_and_merge_crdb_pdx_studies.py exited with non zero status"
         sendFailureMessageMskPipelineLogsSlack "CRDB PDX Subset-And-Merge Script Failure"
@@ -395,6 +405,6 @@ cat "$EMAIL_MESSAGE_FILE"
 cat "$EMAIL_MESSAGE_FILE" | mailx -s "$EMAIL_SUBJECT" $validation_report_attachments $PDX_EMAIL_LIST
 
 echo "Cleaning up any untracked files from MSK-PDX import..."
-bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/crdb_pdx
+bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/crdb_pdx
 
 exit 0
