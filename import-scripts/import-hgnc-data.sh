@@ -50,9 +50,12 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-hgnc-data.lock"
     JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     hgnc_notification_file=$(mktemp $tmp/hgnc-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
-    DATA_SOURCES_TO_BE_FETCHED="bic-mskcc cmo-argos private impact impact-MERGED knowledge-systems-curated-studies immunotherapy datahub datahub_shahlab msk-mind-datahub pipelines-testing"
+    DATA_SOURCES_TO_BE_FETCHED="datahub"
     unset failed_data_source_fetches
     declare -a failed_data_source_fetches
+
+    # redirect PORTAL_DATA_HOME to use the fork of datahub (rather than cBioPortal/datahub
+    export PORTAL_DATA_HOME="$PORTAL_HOME/hgnc-portal-data"
 
     # import is beginning - create status file showing "in_progress", and remove trigger
     rm -f "$START_HGNC_IMPORT_TRIGGER_FILENAME"
@@ -71,8 +74,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-hgnc-data.lock"
     fi
 
     # fetch updates to data source repos
-    #TODO : for now, fetching is disabled so that we do not clash with triage (or other) imports which are in progress. We need to either have separate repos or need a mutex
-    #fetch_updates_in_data_sources $DATA_SOURCES_TO_BE_FETCHED
+    fetch_updates_in_data_sources $DATA_SOURCES_TO_BE_FETCHED
 
     # import data that requires QC into hgnc portal
     echo "importing cancer type updates into hgnc portal database..."
@@ -126,7 +128,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-hgnc-data.lock"
     fi
 
     echo "Cleaning up any untracked files from HGNC import..."
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/impact $PORTAL_DATA_HOME/immunotherapy $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind $PORTAL_DATA_HOME/pipelines-testing
+    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub
 
     # import is done - remove status file showing "in_progress"
     rm -f "$HGNC_IMPORT_IN_PROGRESS_FILENAME"
