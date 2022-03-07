@@ -9,9 +9,7 @@ PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 PDX_EMAIL_LIST="cbioportal-pdx-importer@cbioportal.org"
 CRDB_PDX_TMPDIR=/data/portal-cron/tmp/import-cron-pdx-msk
 ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
-hg_rootdir="uninitialized"
 shopt -s nullglob
-declare -a modified_file_list
 declare -a study_list
 
 # Functions
@@ -28,78 +26,48 @@ function sendSuccessMessageMskPipelineLogsSlack {
     curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"$MESSAGE\", \"icon_emoji\": \":tada:\"}" $SLACK_PIPELINES_MONITOR_URL
 }
 
-function setMercurialRootDirForDirectory {
-    search_dir=$1
-    SCRATCH_FILENAME=$( mktemp --tmpdir=$CRDB_PDX_TMPDIR scratchfile.tmpXXXXXXXX )
-    # find root of mercurial repository
-    rm -f $SCRATCH_FILENAME
-    ( cd $search_dir ; $HG_BINARY root > $SCRATCH_FILENAME )
-    read hg_rootdir < $SCRATCH_FILENAME
-    rm -f $SCRATCH_FILENAME
-}
-
 function purgeOrigFilesUnderDirectory {
     search_dir=$1
-    find $search_dir -name "*.orig" -delete
+    find "$search_dir" -name "*.orig" -delete
 }
 
 function addRemoveFilesUnderDirectory {
     search_dir=$1
     purgeOrigFilesUnderDirectory "$search_dir"
-    ( cd $search_dir ; $HG_BINARY addremove . )
+    ( cd $search_dir ; $GIT_BINARY add -A . )
 }
 
-function commitAllMercurialChanges {
-    any_repo_subdirectory=$1
-    mercurial_log_message=$2
-    setMercurialRootDirForDirectory "$any_repo_subdirectory"
-    $HG_BINARY --repository "$hg_rootdir" commit -m "$mercurial_log_message"
+function commitAllRepositoryChanges {
+    repository_subdirectory=$1
+    changeset_log_message=$2
+    $GIT_BINARY -C "$repository_subdirectory" commit -m "$changeset_log_message"
 }
 
-function pushAllMercurialChangesets {
-    any_repo_subdirectory=$1
-    setMercurialRootDirForDirectory "$any_repo_subdirectory"
-    $HG_BINARY --repository "$hg_rootdir" push
+function pushAllChangesets {
+    repository_subdirectory=$1
+    $GIT_BINARY -C "$repository_subdirectory" push
 }
 
-function purgeAllMercurialChanges {
-    any_repo_subdirectory=$1
-    setMercurialRootDirForDirectory "$any_repo_subdirectory"
-    $HG_BINARY --repository "$hg_rootdir" update -C
+
+function purgeAllFileModifications {
+    repository_subdirectory=$1
+    $GIT_BINARY -C "$repository_subdirectory" reset HEAD --hard
 }
 
 function cleanAllUntrackedFiles {
-    any_repo_subdirectory=$1
-    setMercurialRootDirForDirectory "$any_repo_subdirectory"
-    $HG_BINARY --repository "$hg_rootdir" purge --files
+    repository_subdirectory=$1
+    $GIT_BINARY -C "$repository_subdirectory" clean -fd
 }
 
-function cleanUpEntireMercurialRepository {
-    any_repo_subdirectory=$1
-    purgeAllMercurialChanges "$any_repo_subdirectory"
-    cleanAllUntrackedFiles "$any_repo_subdirectory"
+function cleanUpEntireRepository {
+    repository_subdirectory=$1
+    purgeAllFileModifications "$repo_subdirectory"
+    cleanAllUntrackedFiles "$repo_subdirectory"
 }
 
 function revertModifiedFilesUnderDirectory {
-    search_dir=$1
-    setMercurialRootDirForDirectory "$search_dir"
-    # find all modified files in mercurial repository
-    $HG_BINARY --repository "$hg_rootdir" status --modified | cut -f2 -d$" " > $SCRATCH_FILENAME
-    unset modified_file_list
-    readarray -t modified_file_list < $SCRATCH_FILENAME
-    rm -f $SCRATCH_FILENAME
-    # search for all modified files within search directory, and revert
-    search_dir_slash="$search_dir/"
-    search_dir_prefix_length=${#search_dir_slash}
-    index=0
-    while [ $index -lt ${#modified_file_list} ] ; do
-        absolute_filename="$hg_rootdir/${modified_file_list[$index]}"
-        filename_prefix=${absolute_filename:0:$search_dir_prefix_length}
-        if [ $filename_prefix == $search_dir_slash ] ; then
-            ( cd $search_dir ; $HG_BINARY revert --no-backup $absolute_filename )
-        fi
-        index=$(( $index + 1 ))
-    done
+    repository_subdirectory=$1
+    $GIT_BINARY -C "$repository_subdirectory" checkout -- .
 }
 
 function find_trigger_files_for_existing_studies {
@@ -140,7 +108,7 @@ fi
 
 source $PATH_TO_AUTOMATION_SCRIPT
 
-if [ -z "$PORTAL_HOME" ] | [ -z "$BIC_LEGACY_DATA_HOME" ] | [ -z "$BIC_DATA_HOME" ] | [ -z "$CMO_ARGOS_DATA_HOME" ] | [ -z "$PRIVATE_DATA_HOME" ] | [ -z "$PDX_DATA_HOME" ] | [ -z "$HG_BINARY" ] | [ -z "$PYTHON_BINARY" ] | [ -z "$DATAHUB_DATA_HOME" ] | [ -z "$ANNOTATOR_JAR" ] | [ -z "$CASE_LIST_CONFIG_FILE"  ] ; then
+if [ -z "$PORTAL_HOME" ] | [ -z "$BIC_LEGACY_DATA_HOME" ] | [ -z "$BIC_DATA_HOME" ] | [ -z "$CMO_ARGOS_DATA_HOME" ] | [ -z "$PRIVATE_DATA_HOME" ] | [ -z "$PDX_DATA_HOME" ] | [ -z "$GIT_BINARY" ] | [ -z "$PYTHON_BINARY" ] | [ -z "$DATAHUB_DATA_HOME" ] | [ -z "$ANNOTATOR_JAR" ] | [ -z "$CASE_LIST_CONFIG_FILE"  ] ; then
     message="could not run import-pdx-data.sh: automation-environment.sh script must be run in order to set needed environment variables (like BIC_DATA_HOME, PDX_DATA_HOME, ANNOTATOR_JAR, CASE_LIST_CONFIG_FILE,...)"
     echo ${message}
     echo -e "${message}" |  mail -s "import-pdx-data failed to run." $PIPELINES_EMAIL_LIST
@@ -181,13 +149,13 @@ SUBSET_AND_MERGE_WARNINGS_FILENAME="subset_and_merge_pdx_studies_warnings.txt"
 # status flags (set to 1 when each stage is successfully completed)
 CRDB_PDX_FETCH_SUCCESS=0
 CRDB_PDX_SUBSET_AND_MERGE_SUCCESS=0
-BIC_MSKCC_LEGACY_GIT_FETCH_SUCCESS=0
-BIC_MSKCC_HG_FETCH_SUCCESS=0
-CMO_ARGOS_GIT_FETCH_SUCCESS=0
-PRIVATE_HG_FETCH_SUCESS=0
-PDX_HG_FETCH_SUCCESS=0
-DATAHUB_GIT_FETCH_SUCCESS=0
-ALL_HG_FETCH_SUCCESS=0
+BIC_MSKCC_LEGACY_DATA_SOURCE_FETCH_SUCCESS=0
+BIC_MSKCC_DATA_SOURCE_FETCH_SUCCESS=0
+CMO_ARGOS_DATA_SOURCE_FETCH_SUCCESS=0
+PRIVATE_DATA_SOURCE_FETCH_SUCESS=0
+PDX_DATA_SOURCE_FETCH_SUCCESS=0
+DATAHUB_DATA_SOURCE_FETCH_SUCCESS=0
+ALL_DATA_SOURCE_FETCH_SUCCESS=0
 IMPORT_SUCCESS=0
 CLEAR_PERSISTENCE_CACHE_SUCCESS=0
 
@@ -213,22 +181,22 @@ then
     DB_VERSION_FAIL=1
 fi
 
-# importer mercurial fetch step
+# importer data source fetch step
 echo "fetching updates from bic-mskcc-legacy repository..."
 $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source bic-mskcc-legacy --run-date latest --update-worksheet
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch BIC-MSKCC-LEGACY Studies From Git Failure"
 else
-    BIC_MSKCC_LEGACY_GIT_FETCH_SUCCESS=1
+    BIC_MSKCC_LEGACY_DATA_SOURCE_FETCH_SUCCESS=1
 fi
 
-# importer mercurial fetch step
+# importer data source fetch step
 echo "fetching updates from bic-mskcc repository..."
 $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source bic-mskcc --run-date latest --update-worksheet
 if [ $? -gt 0 ] ; then
-    sendFailureMessageMskPipelineLogsSlack "Fetch BIC-MSKCC Studies From Mercurial Failure"
+    sendFailureMessageMskPipelineLogsSlack "Fetch BIC-MSKCC Studies From Git Failure"
 else
-    BIC_MSKCC_HG_FETCH_SUCCESS=1
+    BIC_MSKCC_DATA_SOURCE_FETCH_SUCCESS=1
 fi
 
 echo "fetching updates from cmo-argos repository..."
@@ -236,15 +204,15 @@ $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source cmo-argos --run-date
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch CMO Argos Studies From Git Failure"
 else
-    CMO_ARGOS_GIT_FETCH_SUCCESS=1
+    CMO_ARGOS_DATA_SOURCE_FETCH_SUCCESS=1
 fi
 
 echo "fetching updates from private repository..."
 $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source private --run-date latest
 if [ $? -gt 0 ] ; then
-    sendFailureMessageMskPipelineLogsSlack "Fetch Private Studies From Mercurial Failure"
+    sendFailureMessageMskPipelineLogsSlack "Fetch Private Studies From Git Failure"
 else
-    PRIVATE_HG_FETCH_SUCESS=1
+    PRIVATE_DATA_SOURCE_FETCH_SUCESS=1
 fi
 
 echo "fetching updates from datahub repository..."
@@ -252,30 +220,30 @@ $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source datahub --run-date l
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch Datahub Studies From Git Failure"
 else
-    DATAHUB_GIT_FETCH_SUCCESS=1
+    DATAHUB_DATA_SOURCE_FETCH_SUCCESS=1
 fi
 
 echo "fetching updates from pdx repository..."
 $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source pdx --run-date latest
 if [ $? -gt 0 ] ; then
-    sendFailureMessageMskPipelineLogsSlack "Fetch PDX Studies From Mercurial Failure"
+    sendFailureMessageMskPipelineLogsSlack "Fetch PDX Studies From Git Failure"
 else
-    PDX_HG_FETCH_SUCCESS=1
+    PDX_DATA_SOURCE_FETCH_SUCCESS=1
 fi
 
 
-if [[ $BIC_MSKCC_LEGACY_GIT_FETCH_SUCCESS -eq 1 && $BIC_MSKCC_HG_FETCH_SUCCESS -eq 1 && $PRIVATE_HG_FETCH_SUCESS -eq 1 && $PDX_HG_FETCH_SUCCESS -eq 1 && $DATAHUB_GIT_FETCH_SUCCESS -eq 1 && $CMO_ARGOS_GIT_FETCH_SUCCESS -eq 1 ]] ; then
+if [[ $BIC_MSKCC_LEGACY_DATA_SOURCE_FETCH_SUCCESS -eq 1 && $BIC_MSKCC_DATA_SOURCE_FETCH_SUCCESS -eq 1 && $PRIVATE_DATA_SOURCE_FETCH_SUCESS -eq 1 && $PDX_DATA_SOURCE_FETCH_SUCCESS -eq 1 && $DATAHUB_DATA_SOURCE_FETCH_SUCCESS -eq 1 && $CMO_ARGOS_DATA_SOURCE_FETCH_SUCCESS -eq 1 ]] ; then
     # udpate status for email
-    ALL_HG_FETCH_SUCCESS=1
+    ALL_DATA_SOURCE_FETCH_SUCCESS=1
     echo "fetching pdx data fom crdb"
     $JAVA_BINARY $JAVA_CRDB_FETCHER_ARGS --pdx --directory $CRDB_FETCHER_PDX_HOME
     if [ $? -ne 0 ] ; then
         echo "error: crdb_pdx_fetch failed"
         sendFailureMessageMskPipelineLogsSlack "Fetch CRDB PDX Failure"
-        cleanUpEntireMercurialRepository $CRDB_FETCHER_PDX_HOME
+        cleanUpEntireRepository $CRDB_FETCHER_PDX_HOME
     else
         addRemoveFilesUnderDirectory $CRDB_FETCHER_PDX_HOME
-        commitAllMercurialChanges $CRDB_FETCHER_PDX_HOME "CRDB PDX Fetch"
+        commitAllRepositoryChanges $CRDB_FETCHER_PDX_HOME "CRDB PDX Fetch"
         CRDB_PDX_FETCH_SUCCESS=1
     fi
 fi
@@ -292,14 +260,14 @@ if [ $CRDB_PDX_FETCH_SUCCESS -ne 0 ] ; then
     if [ $? -ne 0 ] ; then
         echo "error: subset_and_merge_crdb_pdx_studies.py exited with non zero status"
         sendFailureMessageMskPipelineLogsSlack "CRDB PDX Subset-And-Merge Script Failure"
-        cleanUpEntireMercurialRepository $CRDB_FETCHER_PDX_HOME
+        cleanUpEntireRepository $CRDB_FETCHER_PDX_HOME
     else
         CRDB_PDX_SUBSET_AND_MERGE_SUCCESS=1
     fi
 fi
 
 if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
-    # check trigger files and do appropriate hg add and hg purge
+    # check trigger files and do appropriate data source operations
     find_studies_to_be_reverted
     index=0
     while [ $index -lt ${#study_list} ] ; do
@@ -312,11 +280,11 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
         addRemoveFilesUnderDirectory "$PDX_DATA_HOME/${study_list[$index]}"
         index=$(( $index + 1 ))
     done
-    commitAllMercurialChanges $CRDB_FETCHER_PDX_HOME "CRDB PDX Subset and Merge"
+    commitAllRepositoryChanges $CRDB_FETCHER_PDX_HOME "CRDB PDX Subset and Merge"
 fi
 
-# push changesets to mercurial - this will commit to them regardless of whether import succeeds, or partially succeeds, or fails
-pushAllMercurialChangesets $CRDB_FETCHER_PDX_HOME
+# push changesets to data source - this will commit to them regardless of whether import succeeds, or partially succeeds, or fails
+pushAllChangesets $CRDB_FETCHER_PDX_HOME
 
 #TODO : make this smarter .. to only import if the destination study has changed (i.e. alter the spreadsheet checkmarks)
 #TODO : check if we can reuse the pdx-portal column
@@ -356,8 +324,8 @@ echo "sending notification email.."
 EMAIL_MESSAGE_FILE="$CRDB_PDX_TMPDIR/pdx_summary_email_body.txt"
 EMAIL_SUBJECT="CRDB PDX cBioPortal import failure"
 rm -f $EMAIL_MESSAGE_FILE
-if [ $ALL_HG_FETCH_SUCCESS -eq 0 ] ; then
-    echo -e "The import of CRDB PDX studies did not occur today due to a failure to update the mercurial repositories used to hold study data." >> "$EMAIL_MESSAGE_FILE"
+if [ $ALL_DATA_SOURCE_FETCH_SUCCESS -eq 0 ] ; then
+    echo -e "The import of CRDB PDX studies did not occur today due to a failure to update the git repositories used to hold study data." >> "$EMAIL_MESSAGE_FILE"
 else
     if [ $CRDB_PDX_FETCH_SUCCESS -eq 0 ] ; then
         echo -e "The import of CRDB PDX studies did not occur today due to a failure to download PDX data from the CRDB database server." >> "$EMAIL_MESSAGE_FILE"
