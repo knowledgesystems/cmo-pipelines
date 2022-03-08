@@ -56,15 +56,15 @@ function validateRedcapExportForStudy {
 # REDCAP EXPORTS
 REDCAP_JAR_FILENAME="$PORTAL_HOME/lib/redcap_pipeline.jar"
 JAVA_REDCAP_PIPELINE_ARGS="$JAVA_SSL_ARGS -jar $REDCAP_JAR_FILENAME"
-# update mercurial repo with latest changes
-cd $REDCAP_BACKUP_DATA_HOME; $HG_BINARY pull -u
+# update snapshot repo with latest changes
+cd $REDCAP_BACKUP_DATA_HOME; $GIT_BINARY pull ; $GIT_BINARY clean -fd
 
 # export and commit MSKIMPACT REDCap data
 echo "Exporting MSKIMPACT REDCap data..."
 $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskimpact -d $MSKIMPACT_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for MSKIMPACT! Aborting any changes made during export..."
-    cd $MSKIMPACT_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+    cd $MSKIMPACT_REDCAP_BACKUP; $GIT_BINARY checkout -- .
     MSKIMPACT_REDCAP_EXPORT_FAIL=1
     sendFailureMessageMskPipelineLogsSlack "MSKIMPACT export"
 else
@@ -72,12 +72,12 @@ else
     if [ $? -gt 0 ]; then
         echo "Validation of MSKIMPACT REDCap snapshot failed! Aborting any changes made during export..."
         MSKIMPACT_VALIDATION_FAIL=1
-        cd $MSKIMPACT_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+        cd $MSKIMPACT_REDCAP_BACKUP; $GIT_BINARY checkout -- .
         MSKIMPACT_REDCAP_EXPORT_FAIL=1
         sendFailureMessageMskPipelineLogsSlack "MSKIMPACT validation"
     else
         echo "Committing MSKIMPACT REDCap data snapshot"
-        cd $MSKIMPACT_REDCAP_BACKUP; $HG_BINARY commit -m "MSKIMPACT REDCap Snapshot"
+        cd $MSKIMPACT_REDCAP_BACKUP; $GIT_BINARY add -A . ; $GIT_BINARY commit -m "MSKIMPACT REDCap Snapshot"
     fi
 fi
 
@@ -85,7 +85,7 @@ fi
 $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskimpact_heme -d $HEMEPACT_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for HEMEPACT! Aborting any changes made during export..."
-    cd $HEMEPACT_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+    cd $HEMEPACT_REDCAP_BACKUP; $GIT_BINARY checkout -- .
     HEMEPACT_REDCAP_EXPORT_FAIL=1
     sendFailureMessageMskPipelineLogsSlack "HEMEPACT export"
 else
@@ -93,12 +93,12 @@ else
     if [ $? -gt 0 ]; then
         echo "Validation of HEMEPACT REDCap snapshot failed! Aborting any changes made during export..."
         HEMEPACT_VALIDATION_FAIL=1
-        cd $HEMEPACT_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+        cd $HEMEPACT_REDCAP_BACKUP; $GIT_BINARY checkout -- .
         HEMEPACT_REDCAP_EXPORT_FAIL=1
         sendFailureMessageMskPipelineLogsSlack "HEMEPACT validation"
     else
         echo "Committing HEMEPACT REDCap data snapshot"
-        cd $HEMEPACT_REDCAP_BACKUP; $HG_BINARY commit -m "HEMEPACT REDCap Snapshot"
+        cd $HEMEPACT_REDCAP_BACKUP; $GIT_BINARY add -A . ; $GIT_BINARY commit -m "HEMEPACT REDCap Snapshot"
     fi
 fi
 
@@ -106,7 +106,7 @@ fi
 $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskarcher -d $ARCHER_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for ARCHER! Aborting any changes made during export..."
-    cd $ARCHER_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+    cd $ARCHER_REDCAP_BACKUP; $GIT_BINARY checkout -- .
     ARCHER_REDCAP_EXPORT_FAIL=1
     sendFailureMessageMskPipelineLogsSlack "ARCHER export"
 else
@@ -114,12 +114,12 @@ else
     if [ $? -gt 0 ]; then
         echo "Validation of ARCHER REDCap snapshot failed! Aborting any changes made during export..."
         ARCHER_VALIDATION_FAIL=1
-        cd $ARCHER_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+        cd $ARCHER_REDCAP_BACKUP; $GIT_BINARY checkout -- .
         ARCHER_REDCAP_EXPORT_FAIL=1
         sendFailureMessageMskPipelineLogsSlack "ARCHER validation"
     else
         echo "Committing ARCHER REDCap data snapshot"
-        cd $ARCHER_REDCAP_BACKUP; $HG_BINARY commit -m "ARCHER REDCap Snapshot"
+        cd $ARCHER_REDCAP_BACKUP; $GIT_BINARY add -A . ; $GIT_BINARY commit -m "ARCHER REDCap Snapshot"
     fi
 fi
 
@@ -127,7 +127,7 @@ fi
 $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskaccess -d $ACCESS_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for ACCESS! Aborting any changes made during export..."
-    cd $ACCESS_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+    cd $ACCESS_REDCAP_BACKUP; $GIT_BINARY checkout -- .
     ACCESS_REDCAP_EXPORT_FAIL=1
     sendFailureMessageMskPipelineLogsSlack "ACCESS export"
 else
@@ -135,19 +135,19 @@ else
     if [ $? -gt 0 ]; then
         echo "Validation of ACCESS REDCap snapshot failed! Aborting any changes made during export..."
         ACCESS_VALIDATION_FAIL=1
-        cd $ACCESS_REDCAP_BACKUP; $HG_BINARY update -C; rm *.orig
+        cd $ACCESS_REDCAP_BACKUP; $GIT_BINARY checkout -- .
         ACCESS_REDCAP_EXPORT_FAIL=1
         sendFailureMessageMskPipelineLogsSlack "ACCESS validation"
     else
         echo "Committing ACCESS REDCap data snapshot"
-        cd $ACCESS_REDCAP_BACKUP; $HG_BINARY commit -m "ACCESS REDCap Snapshot"
+        cd $ACCESS_REDCAP_BACKUP; $GIT_BINARY add -A . ; $GIT_BINARY commit -m "ACCESS REDCap Snapshot"
     fi
 fi
 
-# push outgoing changesets to mercurial repo
-echo "Pushing REDCap snapshot back to mercurial repository..."
+# push outgoing changesets to snapshot repo
+echo "Pushing REDCap snapshot back to git repository..."
 echo $(date)
-cd $REDCAP_BACKUP_DATA_HOME; $HG_BINARY push
+cd $REDCAP_BACKUP_DATA_HOME; $GIT_BINARY push
 
 # slack successful backup message
 if [[ $MSKIMPACT_REDCAP_EXPORT_FAIL -eq 0 && $MSKIMPACT_VALIDATION_FAIL -eq 0 && $HEMEPACT_REDCAP_EXPORT_FAIL -eq 0 && $HEMEPACT_VALIDATION_FAIL -eq 0 && $ARCHER_REDCAP_EXPORT_FAIL -eq 0 && $ARCHER_VALIDATION_FAIL -eq 0 && $ACCESS_REDCAP_EXPORT_FAIL -eq 0 && $ACCESS_VALIDATION_FAIL -eq 0 ]]; then
