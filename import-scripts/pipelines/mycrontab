@@ -1,8 +1,8 @@
 MAILTO=cbioportal-pipelines@cbioportal.org
 
-########################## 
+##########################
 # Monitors
-########################## 
+##########################
 */5 * * * * . /data/portal-cron/scripts/automation-environment.sh; . /data/portal-cron/pipelines-credentials/precache.dat; $PYTHON_BINARY /data/portal-cron/scripts/precache-portals.py -d cbioportal-backend-genie-public,cbioportal-backend-genie-private >> /data/portal-cron/logs/precache-portals.log 2>&1 || echo "Failure in crontab: precache portals script exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
 */3 * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-redis-and-restart.sh >> /data/portal-cron/logs/monitor-redis-and-restart.log 2>&1 || echo "Failure in crontab: monitor-redis-and-restart.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
 0 0 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-stalled-jobs.sh >> /data/portal-cron/logs/monitor-stalled-jobs.log 2>&1 || echo "Failure in crontab: monitor-stalled-jobs.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
@@ -15,9 +15,9 @@ MAILTO=cbioportal-pipelines@cbioportal.org
 # delete slow terminating pods
 * * * * * . /data/portal-cron/scripts/delete_slow_to_terminate_pods.sh >> /data/portal-cron/logs/delete_slow_to_terminate_pods.log 2>&1 || echo "Failure in crontab: delete_slow_to_terminate_pods.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
 
-########################## 
-# Miscellaneous 
-########################## 
+##########################
+# Miscellaneous
+##########################
 0 0 * * * /usr/sbin/logrotate -f -s /data/portal-cron/logrotate.status /data/portal-cron/portal-cron-logrotate
 # make sure we can execute all scripts, execute daily at midnight
 55 23 * * * chmod u+x /data/portal-cron/scripts/*.sh /data/portal-cron/scripts/*.py || echo "Failure in crontab: chmod exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org

@@ -54,14 +54,13 @@ export JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net
 #######################
 # environment variables for configuration / properties files
 #######################
-export PORTAL_CONFIG_HOME=$PORTAL_DATA_HOME/portal-configuration
+export PORTAL_CONFIG_HOME=$PORTAL_GIT_HOME/portal-configuration
 export PIPELINES_CONFIG_HOME=$PORTAL_GIT_HOME/pipelines-configuration
 
 #######################
 # environment variables for top level data repositories
 #######################
 export BIC_LEGACY_DATA_HOME=$PORTAL_DATA_HOME/bic-mskcc-legacy
-export BIC_DATA_HOME=$PORTAL_DATA_HOME/bic-mskcc
 export CMO_ARGOS_DATA_HOME="$PORTAL_DATA_HOME/cmo-argos"
 export PDX_DATA_HOME=$PORTAL_DATA_HOME/crdb_pdx
 export PRIVATE_DATA_HOME=$PORTAL_DATA_HOME/private

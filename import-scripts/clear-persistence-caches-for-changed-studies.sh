@@ -104,8 +104,8 @@ PORTAL_DB_LIST="public"
 #PORTAL_DB_LIST="public genie-public"
 unset PORTAL_DB_TO_CONFIG_MAP_FILE
 declare -A PORTAL_DB_TO_CONFIG_MAP_FILE
-PORTAL_DB_TO_CONFIG_MAP_FILE["public"]="/data/portal-cron/cbio-portal-data/portal-configuration/k8s-config-vars/public/config_map.yaml"
-PORTAL_DB_TO_CONFIG_MAP_FILE["genie-public"]="/data/portal-cron/cbio-portal-data/portal-configuration/k8s-config-vars/public/config_map_genie_public.yaml"
+PORTAL_DB_TO_CONFIG_MAP_FILE["public"]="/data/portal-cron/git-repos/portal-configuration/k8s-config-vars/public/config_map.yaml"
+PORTAL_DB_TO_CONFIG_MAP_FILE["genie-public"]="/data/portal-cron/git-repos/portal-configuration/k8s-config-vars/public/config_map_genie_public.yaml"
 unset PORTAL_DB_TO_PORTAL_API_BASE_URI
 declare -A PORTAL_DB_TO_PORTAL_API_BASE_URI
 PORTAL_DB_TO_PORTAL_API_BASE_URI["public"]="https://www.cbioportal.org/api"

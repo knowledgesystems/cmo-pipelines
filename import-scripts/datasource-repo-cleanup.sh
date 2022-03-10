@@ -12,7 +12,6 @@ source /data/portal-cron/scripts/automation-environment.sh
 # GLOBALS
 
 EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-MERCURIAL_MANAGER="mercurial"
 GITHUB_MANAGER="github"
 DEFAULT_REPOSITORY_MANAGER="UNKNOWN"
 
@@ -30,8 +29,8 @@ function cleanupGithubRepository {
     cd $GITHUB_REPO_PATH
     current_github_branch=$(git rev-parse --abbrev-ref HEAD)
 
-    echo "git checkout ."
-    git checkout . ; return_value=$?
+    echo "git checkout -- ."
+    git checkout -- . ; return_value=$?
     if [ $return_value -gt 0 ] ; then
         return $return_value
     fi
@@ -53,18 +52,6 @@ function cleanupGithubRepository {
     return $return_value
 }
 
-# Function for cleaning up mercurial repository
-function cleanupMercurialRepository {
-    # (1) MERCURIAL_REPOSITORY_PATH : mercurial repository path
-
-    MERCURIAL_REPOSITORY_PATH=$1
-    cd $MERCURIAL_REPOSITORY_PATH
-    echo "hg status -un | xargs rm -f"
-    $HG_BINARY status -un | xargs rm -f ; return_value=$?
-    $HG_BINARY update -C
-    return $return_value
-}
-
 # Function for determining repository manager type
 function determineRepositoryManager {
     # (1) REPO_PATH : repository path
@@ -74,11 +61,6 @@ function determineRepositoryManager {
     git rev-parse --is-inside-work-tree > /dev/null 2>&1
     if [ $? -eq 0 ] ; then
         repository_manager="$GITHUB_MANAGER"
-        return
-    fi
-    hg root > /dev/null 2>&1
-    if [ $? -eq 0 ] ; then
-        repository_manager="$MERCURIAL_MANAGER"
         return
     fi
 }
@@ -115,9 +97,6 @@ else
             determineRepositoryManager $repository
             echo -e "\t---> Repository manager = $repository_manager"
             case "$repository_manager" in
-                $MERCURIAL_MANAGER)
-                    cleanupMercurialRepository $repository ; return_value=$?
-                    ;;
                 $GITHUB_MANAGER)
                     cleanupGithubRepository $repository ; return_value=$?
                     ;;
