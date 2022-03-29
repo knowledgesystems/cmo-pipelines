@@ -61,6 +61,9 @@ public class CvrSampleListUtil {
     private Set<String> whitelistedSamplesWithZeroVariants = new HashSet<>();
     private Set<String> nonWhitelistedZeroVariantSamples = new HashSet<>();
     private Set<String> newUnreportedSamplesWithZeroVariants = new HashSet<>();
+    // list of samples that were successfully consumed and whose metadata should
+    // be published to the smile server (https://github.com/mskcc/smile-server)
+    private Set<String> smileSamplesToPublishList = new HashSet<>();
 
     Logger log = Logger.getLogger(CvrSampleListUtil.class);
 
@@ -403,6 +406,31 @@ public class CvrSampleListUtil {
      */
     public void setNewUnreportedSamplesWithZeroVariants(Set<String> newUnreportedSamplesWithZeroVariants) {
         this.newUnreportedSamplesWithZeroVariants = newUnreportedSamplesWithZeroVariants;
+    }
+
+    /**
+     * Returns list of samples that were consumed successfully and whose metadata should
+     * be published to SMILE.
+     * @return
+     */
+    public Set<String> getSmileSamplesToPublishList() {
+        return smileSamplesToPublishList;
+    }
+
+    /**
+     * @param smileSamplesToPublishList the list of samples consumed successfully to set
+     */
+    public void setSmileSamplesToPublishList(Set<String> smileSamplesToPublishList) {
+        this.smileSamplesToPublishList = smileSamplesToPublishList;
+    }
+
+    /**
+     * Updates list of samples consumed successfully. This list is used to determine which samples metadata
+     * should be published to SMILE.
+     * @param sampleId
+     */
+    public void updateSmileSamplesToPublishList(String sampleId) {
+        this.smileSamplesToPublishList.add(sampleId);
     }
 
     /**
