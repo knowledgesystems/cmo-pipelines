@@ -50,7 +50,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-hgnc-data.lock"
     JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     hgnc_notification_file=$(mktemp $tmp/hgnc-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
-    DATA_SOURCES_TO_BE_FETCHED="datahub"
+    DATA_SOURCES_TO_BE_FETCHED="datahub impact"
     unset failed_data_source_fetches
     declare -a failed_data_source_fetches
 
@@ -128,7 +128,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-hgnc-data.lock"
     fi
 
     echo "Cleaning up any untracked files from HGNC import..."
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub
+    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/impact
 
     # import is done - remove status file showing "in_progress"
     rm -f "$HGNC_IMPORT_IN_PROGRESS_FILENAME"
