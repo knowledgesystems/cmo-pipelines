@@ -136,7 +136,6 @@ public class CVRPipeline {
             checkExceptions(jobExecution, jobParameters, emailUtil);
         }
         log.info("Shutting down CVR Pipeline");
-        System.exit(SpringApplication.exit(ctx));
     }
 
     private static void launchConsumeSamplesJob(String[] args, String jsonFilename, boolean testingMode, boolean gml) throws Exception {
@@ -169,7 +168,6 @@ public class CVRPipeline {
             checkExceptions(jobExecution, jobParameters, emailUtil);
         }
         log.info("Shutting down Consume Sample Job");
-        System.exit(SpringApplication.exit(ctx));
     }
 
     private static void checkExceptions(JobExecution jobExecution, JobParameters jobParameters, EmailUtil emailUtil) {

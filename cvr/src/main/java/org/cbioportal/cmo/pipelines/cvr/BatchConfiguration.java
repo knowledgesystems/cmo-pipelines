@@ -62,8 +62,6 @@ import org.cbioportal.models.*;
 import java.util.*;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
-import org.cbioportal.cmo.pipelines.cvr.smile.SmilePublisherTasklet;
-import org.mskcc.cmo.messaging.Gateway;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.annotation.*;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -89,7 +87,7 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 @Configuration
 @EnableBatchProcessing
-@ComponentScan(basePackages = {"org.cbioportal.annotator", "org.mskcc.cmo.messaging", "org.mskcc.cmo.common.*"})
+@ComponentScan(basePackages="org.cbioportal.annotator")
 public class BatchConfiguration {
     public static final String CVR_JOB = "cvrJob";
     public static final String JSON_JOB = "jsonJob";
@@ -108,15 +106,6 @@ public class BatchConfiguration {
     private int chunkInterval;
 
     private final Logger log = Logger.getLogger(BatchConfiguration.class);
-
-    @Autowired
-    private Gateway messagingGateway;
-
-    @Bean
-    public Gateway messagingGateway() throws Exception {
-        messagingGateway.connect();
-        return messagingGateway;
-    }
 
     @Bean
     public CVRUtilities cvrUtilities() {
@@ -167,7 +156,6 @@ public class BatchConfiguration {
     public Job consumeSamplesJob() {
         return jobBuilderFactory.get(CONSUME_SAMPLES_JOB)
                 .start(consumeSampleStep())
-                .next(smilePublisherStep())
                 .build();
     }
 
@@ -418,13 +406,6 @@ public class BatchConfiguration {
         return stepBuilderFactory.get("cvrRequeueStep")
                 .listener(cvrRequeueListener())
                 .tasklet(cvrRequeueTasklet())
-                .build();
-    }
-
-    @Bean
-    public Step smilePublisherStep() {
-        return stepBuilderFactory.get("smilePublisherStep")
-                .tasklet(smilePublisherTasklet())
                 .build();
     }
 
@@ -715,12 +696,6 @@ public class BatchConfiguration {
     @StepScope
     public ItemStreamWriter<String> consumeSampleWriter() {
         return new ConsumeSampleWriter();
-    }
-
-    @Bean
-    @StepScope
-    public Tasklet smilePublisherTasklet() {
-        return new SmilePublisherTasklet();
     }
 
     @Bean

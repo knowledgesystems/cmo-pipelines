@@ -49,27 +49,3 @@ dmp.email.recipient=
 
 # computational pathology settings
 comppath.wsv.baseurl=https://slides-dev.mskcc.org/viewer?ids=IMAGE_ID.svs@annotation=off
-
-# smile connection properties
-
-# smile publishing topic
-smile.dmp_new_sample_topic=
-
-# these properties are built into the smile nats message lib (github.com/mskcc/smile-messaging-java)
-# smile publishing failures log file
-smile.publishing_failures_filepath=
-
-# smile nats ssl
-nats.tls_channel=
-nats.keystore_path=
-nats.truststore_path=
-nats.key_password=
-nats.store_password=
-
-# smile nats connection proprties
-nats.consumer_name=
-nats.consumer_password=
-nats.url=
-nats.filter_subject=
-nats.request_wait_time_in_seconds=
-
