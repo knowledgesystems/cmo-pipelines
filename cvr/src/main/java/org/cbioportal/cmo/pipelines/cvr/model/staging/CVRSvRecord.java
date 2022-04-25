@@ -93,12 +93,25 @@ public class CVRSvRecord {
     private String normalSplitEndReadCount;
     private String comments;
 
+    private static final String ONCOKB_TYPE = "ONCOKB_TYPE:";
+
     public CVRSvRecord() {
     }
 
     public CVRSvRecord(CVRSvVariant variant, String sampleId) {
         this.sampleId = sampleId;
-        this.annotation = variant.getAnnotation();
+        // special handling for joining annotation and oncokb_type into one field in the data SV file
+        // format is [annotation];ONCOKB_TYPE:[oncokb_type] - no semi-colon if either value is null/empty
+        String completeAnnotation = null;
+        if (variant.getAnnotation() != null && !variant.getAnnotation().isEmpty()) {
+            completeAnnotation = variant.getAnnotation();
+            if (variant.getOncokbType() != null && !variant.getOncokbType().isEmpty()) {
+                completeAannotation = annotation + ";" + ONCOKB_TYPE + variant.getOncokbType();
+            }
+        } else if (variant.getOncokbType() != null && !variant.getOncokbType().isEmpty()) {
+            completeAnnotation = ONCOKB_TYPE + variant.getOncokbType();
+        }
+        this.annotation = completeAnnotation;
         this.breakpointType = variant.getBreakpoint_Type();
         this.comments = variant.getComments();
         this.connectionType = variant.getConnection_Type();

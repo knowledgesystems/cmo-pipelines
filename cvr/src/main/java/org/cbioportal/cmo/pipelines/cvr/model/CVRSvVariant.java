@@ -81,7 +81,8 @@ import javax.annotation.Generated;
     "gene2",
     "exon1",
     "exon2",
-    "sample_comment"
+    "sample_comment",
+    "oncokb_type"
 })
 public class CVRSvVariant {
     @JsonProperty("annotation")
@@ -148,6 +149,8 @@ public class CVRSvVariant {
     private String exon2;
     @JsonProperty("sample_comment")
     private String sampleComment;
+    @JsonProperty("oncokb_type")
+    private String oncokbType;
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -836,5 +839,19 @@ public class CVRSvVariant {
      */
     public void setSampleComment(String sampleComment) {
         this.sampleComment = sampleComment;
+    }
+
+    /**
+     * @return the oncokbType
+     */
+    public String getOncokbType() {
+        return oncokbType;
+    }
+
+    /**
+     * @param oncokbType the oncokbType to set
+     */
+    public void setOncokbType(String oncokbType) {
+        this.oncokbType = oncokbType;
     }
 }
