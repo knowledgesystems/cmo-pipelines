@@ -44,6 +44,10 @@ export START_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-impor
 export KILL_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-kill-request
 export HGNC_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-in-progress
 export HGNC_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-killing
+export START_DEVDB_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-start-request
+export KILL_DEVDB_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-kill-request
+export DEVDB_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-in-progress
+export DEVDB_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-killing
 export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-config
 
 #######################
