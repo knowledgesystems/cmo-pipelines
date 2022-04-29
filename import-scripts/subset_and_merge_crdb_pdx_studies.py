@@ -265,7 +265,7 @@ def resolve_source_study_path(source_id, data_source_directories):
         For cmo studies, the cancer study path may be resolved by splitting the cancer study
         identifier (source id) on the first three underscores.
 
-        Ex: ke_07_83_b --> /data/portal-cron/cbio-portal-data/bic-mskcc/ke/07/83/b
+        Ex: ke_07_83_b --> /data/portal-cron/cbio-portal-data/bic-mskcc-legacy/ke/07/83/b
     """
     source_paths = []
     for data_source_directory in data_source_directories:
