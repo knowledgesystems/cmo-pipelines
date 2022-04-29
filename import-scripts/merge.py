@@ -7,6 +7,7 @@ import os
 import shutil
 import re
 import csv
+import study_directory_uses_original_filenames
 
 # ------------------------------------------------------------------------------
 # globals
@@ -102,7 +103,6 @@ NON_CASE_IDS = [
     'COMPOSITE.ELEMENT.REF',
     'HYBRIDIZATION REF',
 ]
-
 
 # only files fitting patterns placed in these two lists will be merged
 NORMAL_MERGE_PATTERNS = [MUTATION_META_PATTERN,
@@ -817,6 +817,15 @@ def organize_files(studies, file_types, merge_clinical):
             else:
                 file_types[SUPP_DATA].append(study_file)
 
+def exit_if_unsupported_filenames_detected(study_paths):
+    unsupported_filenames_detected = False
+    for study_path in study_paths:
+        if not study_directory_uses_original_filenames.study_directory_uses_original_filenames(study_path):
+            print("unsupported filenames present in study directory '%s' - unable to merge" % study_path)
+            unsupported_filenames_detected = True
+    if unsupported_filenames_detected:
+        sys.exit(2)
+
 def usage():
     print >> OUTPUT_FILE, 'merge.py --subset [/path/to/subset] --output-directory [/path/to/output] --study-id [study id] --cancer-type [cancer type] --merge-clinical [true/false] --exclude-supplemental-data [true/false] --excluded-samples [/path/to/exclude_list] <path/to/study path/to/study ...>'
 
@@ -921,6 +930,9 @@ def main():
         exclude_supp_data = False
     else:
         exclude_supp_data = True
+
+    # test input study paths for new filenames
+    exit_if_unsupported_filenames_detected(args)
 
     # get all the filenames
     organize_files(args, file_types, merge_clinical)

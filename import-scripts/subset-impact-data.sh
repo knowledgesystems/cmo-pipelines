@@ -55,6 +55,14 @@ if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
 fi
 echo -e "\tPORTAL_SCRIPTS_DIRECTORY="$PORTAL_SCRIPTS_DIRECTORY
 
+# check for presence of new filename pattens (not yet supported) and fail if present
+
+$PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/study_directory_uses_original_filenames.py -d $INPUT_DIRECTORY
+if [ $? -ne 0 ] ; then
+    echo "unsupported filenames present - skipping subset" >&2
+    exit 1
+fi
+
 # status flags
 GEN_SUBSET_LIST_FAILURE=0
 MERGE_SCRIPT_FAILURE=0
@@ -106,7 +114,7 @@ if [ $STUDY_ID == "genie" ]; then
         $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --seq-date-file="$INPUT_DIRECTORY/cvr/seq_date.txt" --age-file="$INPUT_DIRECTORY/ddp/ddp_age.txt" --convert-to-days="true"
         if [ $? -gt 0 ] ; then
             echo "Failed to add AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt using $INPUT_DIRECTORY/cvr/seq_date.txt. Exiting..."
-            exit 2l
+            exit 2
         fi
 
         # rename GENE_PANEL to SEQ_ASSAY_ID in data_clinical_supp_sample.txt
