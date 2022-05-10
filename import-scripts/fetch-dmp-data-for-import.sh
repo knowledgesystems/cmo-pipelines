@@ -253,12 +253,12 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             FETCH_CVR_IMPACT_FAIL=1
         else
             # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_gml_data.json
+            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json
             if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_gml_data.json! MSK-IMPACT will not be imported!"
+                echo "PHI attributes found in $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json! MSK-IMPACT will not be imported!"
                 cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
                 cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_gml_data.json"
+                sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json"
                 IMPORT_STATUS_IMPACT=1
                 #override the success of the tumor sample cvr fetch with a failed status
                 FETCH_CVR_IMPACT_FAIL=1
