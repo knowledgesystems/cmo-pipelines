@@ -581,6 +581,7 @@ def annotate_maf(destination_to_source_mapping, root_directory, annotator_jar):
         # otherwise remove annotated maf if exists in destination study directory
         if annotator_status == 0:
             shutil.copy(annot_maf, orig_maf)
+            os.remove(annot_maf)
             DESTINATION_STUDY_STATUS_FLAGS[destination][ANNOTATION_SUCCESS] = True
         else:
             if os.path.isfile(annot_maf):
