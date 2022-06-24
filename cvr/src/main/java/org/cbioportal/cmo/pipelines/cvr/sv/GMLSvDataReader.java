@@ -67,6 +67,9 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
     @Value("#{jobParameters[privateDirectory]}")
     private String privateDirectory;
 
+    @Value("#{jobParameters[stagingDirectory]}")
+    private String stagingDirectory;
+
     private Set<String> gmlSvSeen = new HashSet<>();
     private List<CVRSvRecord> gmlSvRecords = new ArrayList<>();
 

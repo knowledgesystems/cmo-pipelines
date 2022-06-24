@@ -63,7 +63,7 @@ public class CVRSvRecord {
     private String site1EntrezGeneId;
     private String site2EntrezGeneId;
     private String site1RegionNumber;
-    private String Site2RegionNumber;
+    private String site2RegionNumber;
     private String site1Region;
     private String site2Region;
     private String site1Chromosome;
@@ -102,7 +102,6 @@ public class CVRSvRecord {
         this.annotation = variant.getAnnotation();
         this.breakpointType = variant.getBreakpoint_Type();
         this.comments = variant.getComments();
-
         // CVR confirmed Site1_GENE/Gene1 is a NOT_NULL field
         // Use Gene1 to test whether v1 or v2 schema
         if (variant.getSite1_Gene() != null && !variant.getSite1_Gene().isEmpty()) {
@@ -116,9 +115,8 @@ public class CVRSvRecord {
             this.site1RegionNumber = variant.getExon1();
             this.site2RegionNumber = variant.getExon2();
         }
-
-	this.connectionType = variant.getConnection_Type();
-        this.eventInfo = variant.getEvent_Info();
+        this.connectionType = variant.getConnection_Type();
+	this.eventInfo = variant.getEvent_Info();
         this.ncbiBuild = "GRCh37"; // default, not provided by CVR
         this.normalReadCount = variant.getNormal_Read_Count();
         this.normalVariantCount = variant.getNormal_Variant_Count();
@@ -133,6 +131,13 @@ public class CVRSvRecord {
         this.tumorReadCount = variant.getTumor_Read_Count();
         this.tumorVariantCount = variant.getTumor_Variant_Count();
         this.svStatus = "SOMATIC"; // default, not provided by CVR
+       
+	// cover cases where event info is blank (this is the logic used to set the Fusion column in now deprecated data_fusion file) 
+	if (variant.getEvent_Info().equals("-")) {
+		String site1GeneTrimmed = variant.getSite1_Gene().trim();
+		String site2GeneTrimmed = variant.getSite2_Gene().trim();
+		this.eventInfo = site1GeneTrimmed.equals(site2GeneTrimmed) ? site1GeneTrimmed + "-intragenic" : site2GeneTrimmed + "-" + site1GeneTrimmed + " fusion";
+	}
     }
 
     public CVRSvRecord(GMLCnvIntragenicVariant variant, String sampleId) {
@@ -223,11 +228,11 @@ public class CVRSvRecord {
     }
 
     public String getSite2RegionNumber() {
-        return Site2RegionNumber != null ? this.Site2RegionNumber : "";
+        return site2RegionNumber != null ? this.site2RegionNumber : "";
     }
 
     public void setSite2RegionNumber(String site2RegionNumber) {
-        Site2RegionNumber = site2RegionNumber;
+        this.site2RegionNumber = site2RegionNumber;
     }
 
     public String getSite1Region() {
@@ -442,22 +447,6 @@ public class CVRSvRecord {
         return normalPairedEndReadCount != null ? this.normalPairedEndReadCount : "";
     }
 
-<<<<<<< HEAD
-    public String getSite1_Exon() {
-        return this.site1_exon != null ? this.site1_exon : "";
-    }
-
-    public void setSite1_Exon(String site1_exon) {
-        this.site1_exon = site1_exon;
-    }
-
-    public String getSite2_Exon() {
-        return this.site2_exon != null ? this.site2_exon : "";
-    }
-
-    public void setSite2_Exon(String site2_exon) {
-    	this.site2_exon = site2_exon;
-=======
     public void setNormalPairedEndReadCount(String normalPairedEndReadCount) {
         this.normalPairedEndReadCount = normalPairedEndReadCount;
     }
@@ -490,7 +479,6 @@ public class CVRSvRecord {
             }
         }
         return StringUtils.join(standardSvHeader, "\t");
->>>>>>> removing ref to fusion
     }
 
     public static List<String> getFieldNames() {
@@ -534,35 +522,6 @@ public class CVRSvRecord {
         fieldNames.add("NormalPairedEndReadCount");
         fieldNames.add("NormalSplitEndReadCount");
         fieldNames.add("Comments");
-<<<<<<< HEAD
-        fieldNames.add("Confidence_Class");
-        fieldNames.add("Conn_Type");
-        fieldNames.add("Connection_Type");
-        fieldNames.add("Event_Info");
-        fieldNames.add("Mapq");
-        fieldNames.add("Normal_Read_Count");
-        fieldNames.add("Normal_Variant_Count");
-        fieldNames.add("Paired_End_Read_Support");
-        fieldNames.add("Site1_Chrom");
-        fieldNames.add("Site1_Desc");
-        fieldNames.add("Site1_Exon");
-        fieldNames.add("Site1_Gene");
-        fieldNames.add("Site1_Pos");
-        fieldNames.add("Site2_Chrom");
-        fieldNames.add("Site2_Desc");
-        fieldNames.add("Site2_Exon");
-        fieldNames.add("Site2_Gene");
-        fieldNames.add("Site2_Pos");
-        fieldNames.add("Split_Read_Support");
-        fieldNames.add("Sv_Class_Name");
-        fieldNames.add("Sv_Desc");
-        fieldNames.add("Sv_Length");
-        fieldNames.add("Sv_VariantId");
-        fieldNames.add("Tumor_Read_Count");
-        fieldNames.add("Tumor_Variant_Count");
-        fieldNames.add("Variant_Status_Name");
-=======
->>>>>>> removing ref to fusion
         return fieldNames;
     }
 }
