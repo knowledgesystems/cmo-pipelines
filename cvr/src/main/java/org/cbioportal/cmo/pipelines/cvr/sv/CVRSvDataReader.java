@@ -99,9 +99,9 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
             try {
                 CVRSvRecord to_add;
                 while ((to_add = reader.read()) != null) {
-                    if (!cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSampleId()) && to_add.getSampleId()!= null) {
-                        to_add.setSite1HugoSymbol(to_add.getSite1HugoSymbol().trim());
-                        to_add.setSite2HugoSymbol(to_add.getSite2HugoSymbol().trim());
+                    if (!cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSample_ID()) && to_add.getSample_ID()!= null) {
+                        to_add.setSite1_Hugo_Symbol(to_add.getSite1_Hugo_Symbol().trim());
+                        to_add.setSite2_Hugo_Symbol(to_add.getSite2_Hugo_Symbol().trim());
                         svRecords.add(to_add);
                     }
                 }
@@ -134,8 +134,8 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
     public CVRSvRecord read() throws Exception {
         while (!svRecords.isEmpty()) {
             CVRSvRecord record = svRecords.remove(0);
-            if (!cvrSampleListUtil.getPortalSamples().contains(record.getSampleId())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSampleId());
+            if (!cvrSampleListUtil.getPortalSamples().contains(record.getSample_ID())) {
+                cvrSampleListUtil.addSampleRemoved(record.getSample_ID());
                 continue;
             }
             return record;

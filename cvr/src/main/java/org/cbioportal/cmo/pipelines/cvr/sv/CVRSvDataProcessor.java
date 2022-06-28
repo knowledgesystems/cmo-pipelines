@@ -60,7 +60,7 @@ public class CVRSvDataProcessor implements ItemProcessor<CVRSvRecord, CompositeS
             record.add(cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString()));
         }
         CompositeSvRecord compRecord = new CompositeSvRecord();
-        if (cvrSampleListUtil.getNewDmpSamples().contains(i.getSampleId())) {
+        if (cvrSampleListUtil.getNewDmpSamples().contains(i.getSample_ID())) {
             compRecord.setNewSvRecord(StringUtils.join(record, "\t").trim());
         } else {
             compRecord.setOldSvRecord(StringUtils.join(record, "\t").trim());

@@ -53,6 +53,9 @@ public class CVRSvFieldSetMapper implements  FieldSetMapper<CVRSvRecord> {
         List<String> fields = CVRSvRecord.getFieldNames();
         for (int i = 0; i < fields.size(); i++) {
             String field = fields.get(i);
+            if (field == "Class") {
+                field = "SV_Class";
+            }
             try {
                 record.getClass().getMethod("set" + field, String.class).invoke(record, fs.readString(i).trim());
             } catch (Exception e) {

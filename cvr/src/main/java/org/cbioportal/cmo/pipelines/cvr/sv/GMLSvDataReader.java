@@ -143,7 +143,7 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
         try {
             CVRSvRecord to_add;
             while ((to_add = reader.read()) != null) {
-                String patientId = cvrSampleListUtil.getSamplePatientId(to_add.getSampleId());
+                String patientId = cvrSampleListUtil.getSamplePatientId(to_add.getSample_ID());
                 // check that matching patient id can be found from patient-sample mapping
                 // and whether patient is in new dmp germline patients (to prevent duplicates)
                 if (!Strings.isNullOrEmpty(patientId) && !cvrSampleListUtil.getNewDmpGmlPatients().contains(patientId)) {
@@ -161,7 +161,7 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
     }
 
     private String getGmlSvKey(CVRSvRecord record) {
-        return record.getSampleId() + "|" + record.getSite1HugoSymbol() + "|" + record.getSite2HugoSymbol() + "|" + record.getEventInfo();
+        return record.getSample_ID() + "|" + record.getSite1_Hugo_Symbol() + "|" + record.getSite2_Hugo_Symbol() + "|" + record.getEvent_Info();
     }
 
     @Override
@@ -176,8 +176,8 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
     public CVRSvRecord read() throws Exception {
         while (!gmlSvRecords.isEmpty()) {
             CVRSvRecord record = gmlSvRecords.remove(0);
-            if (!cvrSampleListUtil.getPortalSamples().contains(record.getSampleId())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSampleId());
+            if (!cvrSampleListUtil.getPortalSamples().contains(record.getSample_ID())) {
+                cvrSampleListUtil.addSampleRemoved(record.getSample_ID());
                 continue;
             }
             return record;

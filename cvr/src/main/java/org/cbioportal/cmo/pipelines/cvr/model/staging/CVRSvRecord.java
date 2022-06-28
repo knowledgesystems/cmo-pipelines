@@ -116,7 +116,7 @@ public class CVRSvRecord {
             this.site2RegionNumber = variant.getExon2();
         }
         this.connectionType = variant.getConnection_Type();
-	this.eventInfo = variant.getEvent_Info();
+        this.eventInfo = variant.getEvent_Info();
         this.ncbiBuild = "GRCh37"; // default, not provided by CVR
         this.normalReadCount = variant.getNormal_Read_Count();
         this.normalVariantCount = variant.getNormal_Variant_Count();
@@ -155,227 +155,227 @@ public class CVRSvRecord {
         }
     }
 
-    public String getSampleId(){
+    public String getSample_ID(){
         return sampleId != null ? this.sampleId : "";
     }
 
-    public void setSampleId(String sampleId) {
+    public void setSample_ID(String sampleId) {
         this.sampleId = sampleId;
     }
 
-    public String getSvStatus() {
+    public String getSV_Status() {
         return svStatus != null ? this.svStatus : "";
     }
 
-    public void setSvStatus(String svStatus) {
+    public void setSV_Status(String svStatus) {
         this.svStatus = svStatus;
     }
 
-    public String getSite1HugoSymbol() {
+    public String getSite1_Hugo_Symbol() {
         return site1HugoSymbol != null ? this.site1HugoSymbol : "";
     }
 
-    public void setSite1HugoSymbol(String site1HugoSymbol) {
+    public void setSite1_Hugo_Symbol(String site1HugoSymbol) {
         this.site1HugoSymbol = site1HugoSymbol;
     }
 
-    public String getSite2HugoSymbol() {
+    public String getSite2_Hugo_Symbol() {
         return site2HugoSymbol != null ? this.site2HugoSymbol : "";
     }
 
-    public void setSite2HugoSymbol(String site2HugoSymbol) {
+    public void setSite2_Hugo_Symbol(String site2HugoSymbol) {
         this.site2HugoSymbol = site2HugoSymbol;
     }
 
-    public String getSite1EnsemblTranscriptId() {
+    public String getSite1_Ensembl_Transcript_Id() {
         return site1EnsemblTranscriptId != null ? this.site1EnsemblTranscriptId : "";
     }
 
-    public void setSite1EnsemblTranscriptId(String site1EnsemblTranscriptId) {
+    public void setSite1_Ensembl_Transcript_Id(String site1EnsemblTranscriptId) {
         this.site1EnsemblTranscriptId = site1EnsemblTranscriptId;
     }
 
-    public String getSite2EnsemblTranscriptId() {
+    public String getSite2_Ensembl_Transcript_Id() {
         return site2EnsemblTranscriptId != null ? this.site2EnsemblTranscriptId : "";
     }
 
-    public void setSite2EnsemblTranscriptId(String site2EnsemblTranscriptId) {
+    public void setSite2_Ensembl_Transcript_Id(String site2EnsemblTranscriptId) {
         this.site2EnsemblTranscriptId = site2EnsemblTranscriptId;
     }
 
-    public String getSite1EntrezGeneId() {
+    public String getSite1_Entrez_Gene_Id() {
         return site1EntrezGeneId != null ? this.site1EntrezGeneId : "";
     }
 
-    public void setSite1EntrezGeneId(String site1EntrezGeneId) {
+    public void setSite1_Entrez_Gene_Id(String site1EntrezGeneId) {
         this.site1EntrezGeneId = site1EntrezGeneId;
     }
 
-    public String getSite2EntrezGeneId() {
+    public String getSite2_Entrez_Gene_Id() {
         return site2EntrezGeneId != null ? this.site2EntrezGeneId : "";
     }
 
-    public void setSite2EntrezGeneId(String site2EntrezGeneId) {
+    public void setSite2_Entrez_Gene_Id(String site2EntrezGeneId) {
         this.site2EntrezGeneId = site2EntrezGeneId;
     }
 
-    public String getSite1RegionNumber() {
+    public String getSite1_Region_Number() {
         return site1RegionNumber != null ? this.site1RegionNumber : "";
     }
 
-    public void setSite1RegionNumber(String site1RegionNumber) {
+    public void setSite1_Region_Number(String site1RegionNumber) {
         this.site1RegionNumber = site1RegionNumber;
     }
 
-    public String getSite2RegionNumber() {
+    public String getSite2_Region_Number() {
         return site2RegionNumber != null ? this.site2RegionNumber : "";
     }
 
-    public void setSite2RegionNumber(String site2RegionNumber) {
+    public void setSite2_Region_Number(String site2RegionNumber) {
         this.site2RegionNumber = site2RegionNumber;
     }
 
-    public String getSite1Region() {
+    public String getSite1_Region() {
         return site1Region != null ? this.site1Region : "";
     }
 
-    public void setSite1Region(String site1Region) {
+    public void setSite1_Region(String site1Region) {
         this.site1Region = site1Region;
     }
 
-    public String getSite2Region() {
+    public String getSite2_Region() {
         return site2Region != null ? this.site2Region : "";
     }
 
-    public void setSite2Region(String site2Region) {
+    public void setSite2_Region(String site2Region) {
         this.site2Region = site2Region;
     }
 
-    public String getSite1Chromosome() {
+    public String getSite1_Chromosome() {
         return site1Chromosome != null ? this.site1Chromosome : "";
     }
 
-    public void setSite1Chromosome(String site1Chromosome) {
+    public void setSite1_Chromosome(String site1Chromosome) {
         this.site1Chromosome = site1Chromosome;
     }
 
-    public String getSite2Chromosome() {
+    public String getSite2_Chromosome() {
         return site2Chromosome != null ? this.site2Chromosome : "";
     }
 
-    public void setSite2Chromosome(String site2Chromosome) {
+    public void setSite2_Chromosome(String site2Chromosome) {
         this.site2Chromosome = site2Chromosome;
     }
 
-    public String getSite1Contig() {
+    public String getSite1_Contig() {
         return site1Contig != null ? this.site1Contig : "";
     }
 
-    public void setSite1Contig(String site1Contig) {
+    public void setSite1_Contig(String site1Contig) {
         this.site1Contig = site1Contig;
     }
 
-    public String getSite2Contig() {
+    public String getSite2_Contig() {
         return site2Contig != null ? this.site2Contig : "";
     }
 
-    public void setSite2Contig(String site2Contig) {
+    public void setSite2_Contig(String site2Contig) {
         this.site2Contig = site2Contig;
     }
 
-    public String getSite1Position() {
+    public String getSite1_Position() {
         return site1Position != null ? this.site1Position : "";
     }
 
-    public void setSite1Position(String site1Position) {
+    public void setSite1_Position(String site1Position) {
         this.site1Position = site1Position;
     }
 
-    public String getSite2Position() {
+    public String getSite2_Position() {
         return site2Position != null ? this.site2Position : "";
     }
 
-    public void setSite2Position(String site2Position) {
+    public void setSite2_Position(String site2Position) {
         this.site2Position = site2Position;
     }
 
-    public String getSite1Description() {
+    public String getSite1_Description() {
         return site1Description != null ? this.site1Description : "";
     }
 
-    public void setSite1Description(String site1Description) {
+    public void setSite1_Description(String site1Description) {
         this.site1Description = site1Description;
     }
 
-    public String getSite2Description() {
+    public String getSite2_Description() {
         return site2Description != null ? this.site2Description : "";
     }
 
-    public void setSite2Description(String site2Description) {
+    public void setSite2_Description(String site2Description) {
         this.site2Description = site2Description;
     }
 
-    public String getSite2EffectOnFrame() {
+    public String getSite2_Effect_On_Frame() {
         return site2EffectOnFrame != null ? this.site2EffectOnFrame : "";
     }
 
-    public void setSite2EffectOnFrame(String site2EffectOnFrame) {
+    public void setSite2_Effect_On_Frame(String site2EffectOnFrame) {
         this.site2EffectOnFrame = site2EffectOnFrame;
     }
 
-    public String getNcbiBuild() {
+    public String getNCBI_Build() {
         return ncbiBuild != null ? this.ncbiBuild : "";
     }
 
-    public void setNcbiBuild(String ncbiBuild) {
+    public void setNCBI_Build(String ncbiBuild) {
         this.ncbiBuild = ncbiBuild;
     }
 
-    public String getSvClass() {
+    public String getSV_Class() {
         return svClass != null ? this.svClass : "";
     }
 
-    public void setSvClass(String svClass) {
+    public void setSV_Class(String svClass) {
         this.svClass = svClass;
     }
 
-    public String getTumorSplitReadCount() {
+    public String getTumor_Split_Read_Count() {
         return tumorSplitReadCount != null ? this.tumorSplitReadCount : "";
     }
 
-    public void setTumorSplitReadCount(String tumorSplitReadCount) {
+    public void setTumor_Split_Read_Count(String tumorSplitReadCount) {
         this.tumorSplitReadCount = tumorSplitReadCount;
     }
 
-    public String getTumorPairedEndReadCount() {
+    public String getTumor_Paired_End_Read_Count() {
         return tumorPairedEndReadCount != null ? this.tumorPairedEndReadCount : "";
     }
 
-    public void setTumorPairedEndReadCount(String tumorPairedEndReadCount) {
+    public void setTumor_Paired_End_Read_Count(String tumorPairedEndReadCount) {
         this.tumorPairedEndReadCount = tumorPairedEndReadCount;
     }
 
-    public String getEventInfo() {
+    public String getEvent_Info() {
         return eventInfo != null ? this.eventInfo : "";
     }
 
-    public void setEventInfo(String eventInfo) {
+    public void setEvent_Info(String eventInfo) {
         this.eventInfo = eventInfo;
     }
 
-    public String getBreakpointType() {
+    public String getBreakpoint_Type() {
         return breakpointType != null ? this.breakpointType : "";
     }
 
-    public void setBreakpointType(String breakpointType) {
+    public void setBreakpoint_Type(String breakpointType) {
         this.breakpointType = breakpointType;
     }
 
-    public String getConnectionType() {
+    public String getConnection_Type() {
         return connectionType != null ? this.connectionType : "";
     }
 
-    public void setConnectionType(String connectionType) {
+    public void setConnection_Type(String connectionType) {
         this.connectionType = connectionType;
     }
 
@@ -387,75 +387,75 @@ public class CVRSvRecord {
         this.annotation = annotation;
     }
 
-    public String getDnaSupport() {
+    public String getDNA_Support() {
         return dnaSupport != null ? this.dnaSupport : "";
     }
 
-    public void setDnaSupport(String dnaSupport) {
+    public void setDNA_Support(String dnaSupport) {
         this.dnaSupport = dnaSupport;
     }
 
-    public String getRnaSupport() {
+    public String getRNA_Support() {
         return rnaSupport != null ? this.rnaSupport : "";
     }
 
-    public void setRnaSupport(String rnaSupport) {
+    public void setRNA_Support(String rnaSupport) {
         this.rnaSupport = rnaSupport;
     }
 
-    public String getSvLength() {
+    public String getLength() {
         return svLength != null ? this.svLength : "";
     }
 
-    public void setSvLength(String svLength) {
+    public void setLength(String svLength) {
         this.svLength = svLength;
     }
 
-    public String getNormalReadCount() {
+    public String getNormal_Read_Count() {
         return normalReadCount != null ? this.normalReadCount : "";
     }
 
-    public void setNormalReadCount(String normalReadCount) {
+    public void setNormal_Read_Count(String normalReadCount) {
         this.normalReadCount = normalReadCount;
     }
 
-    public String getTumorReadCount() {
+    public String getTumor_Read_Count() {
         return tumorReadCount != null ? this.tumorReadCount : "";
     }
 
-    public void setTumorReadCount(String tumorReadCount) {
+    public void setTumor_Read_Count(String tumorReadCount) {
         this.tumorReadCount = tumorReadCount;
     }
 
-    public String getNormalVariantCount() {
+    public String getNormal_Variant_Count() {
         return normalVariantCount != null ? this.normalVariantCount : "";
     }
 
-    public void setNormalVariantCount(String normalVariantCount) {
+    public void setNormal_Variant_Count(String normalVariantCount) {
         this.normalVariantCount = normalVariantCount;
     }
 
-    public String getTumorVariantCount() {
+    public String getTumor_Variant_Count() {
         return tumorVariantCount != null ? this.tumorVariantCount : "";
     }
 
-    public void setTumorVariantCount(String tumorVariantCount) {
+    public void setTumor_Variant_Count(String tumorVariantCount) {
         this.tumorVariantCount = tumorVariantCount;
     }
 
-    public String getNormalPairedEndReadCount() {
+    public String getNormal_Paired_End_Read_Count() {
         return normalPairedEndReadCount != null ? this.normalPairedEndReadCount : "";
     }
 
-    public void setNormalPairedEndReadCount(String normalPairedEndReadCount) {
+    public void setNormal_Paired_End_Read_Count(String normalPairedEndReadCount) {
         this.normalPairedEndReadCount = normalPairedEndReadCount;
     }
 
-    public String getNormalSplitEndReadCount() {
+    public String getNormal_Split_End_Read_Count() {
         return normalSplitEndReadCount != null ? this.normalSplitEndReadCount : "";
     }
 
-    public void setNormalSplitEndReadCount(String normalSplitEndReadCount) {
+    public void setNormal_Split_End_Read_Count(String normalSplitEndReadCount) {
         this.normalSplitEndReadCount = normalSplitEndReadCount;
     }
 
@@ -470,57 +470,51 @@ public class CVRSvRecord {
     public static String getStandardSvHeader() {
         List<String> standardSvHeader = new ArrayList<String>();
         for (String fieldName : getFieldNames()) {
-            if (fieldName.equals("SVClass")) {
-                standardSvHeader.add("Class");
-            } else if (fieldName.equals("NcbiBuild")) {
-                standardSvHeader.add("NCBIBuild");
-            } else {
                 standardSvHeader.add(fieldName);
-            }
         }
         return StringUtils.join(standardSvHeader, "\t");
     }
 
     public static List<String> getFieldNames() {
         List<String> fieldNames = new ArrayList<String>();
-        fieldNames.add("SampleId");
-        fieldNames.add("SvStatus");
-        fieldNames.add("Site1HugoSymbol");
-        fieldNames.add("Site2HugoSymbol");
-        fieldNames.add("Site1EnsemblTranscriptId");
-        fieldNames.add("Site2EnsemblTranscriptId");
-        fieldNames.add("Site1EntrezGeneId");
-        fieldNames.add("Site2EntrezGeneId");
-        fieldNames.add("Site1RegionNumber");
-        fieldNames.add("Site2RegionNumber");
-        fieldNames.add("Site1Region");
-        fieldNames.add("Site2Region");
-        fieldNames.add("Site1Chromosome");
-        fieldNames.add("Site2Chromosome");
-        fieldNames.add("Site1Contig");
-        fieldNames.add("Site2Contig");
-        fieldNames.add("Site1Position");
-        fieldNames.add("Site2Position");
-        fieldNames.add("Site1Description");
-        fieldNames.add("Site2Description");
-        fieldNames.add("Site2EffectOnFrame");
-        fieldNames.add("NcbiBuild");
-        fieldNames.add("SvClass");
-        fieldNames.add("TumorSplitReadCount");
-        fieldNames.add("TumorPairedEndReadCount");
-        fieldNames.add("EventInfo");
-        fieldNames.add("BreakpointType");
-        fieldNames.add("ConnectionType");
+        fieldNames.add("Sample_ID");
+        fieldNames.add("SV_Status");
+        fieldNames.add("Site1_Hugo_Symbol");
+        fieldNames.add("Site2_Hugo_Symbol");
+        fieldNames.add("Site1_Ensembl_Transcript_Id");
+        fieldNames.add("Site2_Ensembl_Transcript_Id");
+        fieldNames.add("Site1_Entrez_Gene_Id");
+        fieldNames.add("Site2_Entrez_Gene_Id");
+        fieldNames.add("Site1_Region_Number");
+        fieldNames.add("Site2_Region_Number");
+        fieldNames.add("Site1_Region");
+        fieldNames.add("Site2_Region");
+        fieldNames.add("Site1_Chromosome");
+        fieldNames.add("Site2_Chromosome");
+        fieldNames.add("Site1_Contig");
+        fieldNames.add("Site2_Contig");
+        fieldNames.add("Site1_Position");
+        fieldNames.add("Site2_Position");
+        fieldNames.add("Site1_Description");
+        fieldNames.add("Site2_Description");
+        fieldNames.add("Site2_Effect_On_Frame");
+        fieldNames.add("NCBI_Build");
+        fieldNames.add("Class");
+        fieldNames.add("Tumor_Split_Read_Count");
+        fieldNames.add("Tumor_Paired_End_Read_Count");
+        fieldNames.add("Event_Info");
+        fieldNames.add("Breakpoint_Type");
+        fieldNames.add("Connection_Type");
         fieldNames.add("Annotation");
-        fieldNames.add("DnaSupport");
-        fieldNames.add("RnaSupport");
-        fieldNames.add("SvLength");
-        fieldNames.add("NormalReadCount");
-        fieldNames.add("TumorReadCount");
-        fieldNames.add("NormalVariantCount");
-        fieldNames.add("TumorVariantCount");
-        fieldNames.add("NormalPairedEndReadCount");
-        fieldNames.add("NormalSplitEndReadCount");
+        fieldNames.add("DNA_Support");
+        fieldNames.add("RNA_Support");
+        fieldNames.add("Length");
+        fieldNames.add("Normal_Read_Count");
+        fieldNames.add("Tumor_Read_Count");
+        fieldNames.add("Normal_Variant_Count");
+        fieldNames.add("Tumor_Variant_Count");
+        fieldNames.add("Normal_Paired_End_Read_Count");
+        fieldNames.add("Normal_Split_End_Read_Count");
         fieldNames.add("Comments");
         return fieldNames;
     }
