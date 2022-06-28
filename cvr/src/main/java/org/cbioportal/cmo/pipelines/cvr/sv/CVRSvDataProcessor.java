@@ -57,7 +57,11 @@ public class CVRSvDataProcessor implements ItemProcessor<CVRSvRecord, CompositeS
     public CompositeSvRecord process(CVRSvRecord i) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : i.getFieldNames()) {
-            record.add(cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString()));
+            String queryField = field;
+            if (field == "Class") {
+                queryField = "SV_Class";
+            }
+            record.add(cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + queryField).invoke(i).toString()));
         }
         CompositeSvRecord compRecord = new CompositeSvRecord();
         if (cvrSampleListUtil.getNewDmpSamples().contains(i.getSample_ID())) {

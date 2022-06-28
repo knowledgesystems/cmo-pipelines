@@ -133,7 +133,7 @@ public class CVRSvRecord {
         this.svStatus = "SOMATIC"; // default, not provided by CVR
        
 	// cover cases where event info is blank (this is the logic used to set the Fusion column in now deprecated data_fusion file) 
-	if (variant.getEvent_Info().equals("-")) {
+	if (variant.getEvent_Info().equals("-") && (variant.getSite1_Gene() != null || variant.getSite2_Gene() != null)) {
 		String site1GeneTrimmed = variant.getSite1_Gene().trim();
 		String site2GeneTrimmed = variant.getSite2_Gene().trim();
 		this.eventInfo = site1GeneTrimmed.equals(site2GeneTrimmed) ? site1GeneTrimmed + "-intragenic" : site2GeneTrimmed + "-" + site1GeneTrimmed + " fusion";
