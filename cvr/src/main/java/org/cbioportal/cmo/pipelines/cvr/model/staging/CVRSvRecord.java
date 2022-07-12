@@ -403,11 +403,11 @@ public class CVRSvRecord {
         this.rnaSupport = rnaSupport;
     }
 
-    public String getLength() {
+    public String getSV_Length() {
         return svLength != null ? this.svLength : "";
     }
 
-    public void setLength(String svLength) {
+    public void setSV_Length(String svLength) {
         this.svLength = svLength;
     }
 
@@ -508,7 +508,7 @@ public class CVRSvRecord {
         fieldNames.add("Annotation");
         fieldNames.add("DNA_Support");
         fieldNames.add("RNA_Support");
-        fieldNames.add("Length");
+        fieldNames.add("SV_Length");
         fieldNames.add("Normal_Read_Count");
         fieldNames.add("Tumor_Read_Count");
         fieldNames.add("Normal_Variant_Count");

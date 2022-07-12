@@ -397,8 +397,9 @@ def load_samples_from_data_file(study_directory, properties):
                 case_id_column = 'SAMPLE_ID'
         elif 'Tumor_Sample_Barcode' in header:
             case_id_column = 'Tumor_Sample_Barcode'
-        elif 'SampleId' in header:
-            case_id_column = 'SampleId'
+        # covers SV file
+        elif 'Sample_ID' in header:
+            case_id_column = 'Sample_ID'
         elif properties['datatype'] == SEG_DATATYPE:
             case_id_column = 'ID'
         else:

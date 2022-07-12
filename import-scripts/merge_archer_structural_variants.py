@@ -54,7 +54,7 @@ def is_valid_study_sample_id(sample_id, study_id):
 
 def get_sv_event_key(data):
 	""" Returns a 'key' used for identifying structural variant events. """
-	return (data['SampleId'].strip(), data['EventInfo'].strip(), data['Site1HugoSymbol'].strip(), data['Site2HugoSymbol'].strip())
+	return (data['Sample_ID'].strip(), data['Event_Info'].strip(), data['Site1_Hugo_Symbol'].strip(), data['Site2_Hugo_Symbol'].strip())
 
 def load_linked_archer_cases(linked_archer_cases_filename, study_id):
 	""" Get the mapping between archer -> impact/heme samples """
@@ -99,14 +99,14 @@ def get_archer_structural_variants(archer_structural_variants_filename, header, 
 	with open(archer_structural_variants_filename) as archer_structural_variants_file:
 		reader = csv.DictReader(archer_structural_variants_file, dialect = 'excel-tab')
 		for line in reader:
-			archer_sid = line['SampleId'].strip()
+			archer_sid = line['Sample_ID'].strip()
 			if archer_sid in LINKED_ARCHER_CASES.keys():
 				mapped_case_id = LINKED_ARCHER_CASES[archer_sid].strip()
 
 				# check that mapped case id belongs to current study being processed
 				if is_valid_study_sample_id(mapped_case_id, study_id):
 					# update current structural variant event with mapped case id and update structural variant datum
-					line['SampleId'] = mapped_case_id
+					line['Sample_ID'] = mapped_case_id
 					line['Event_Info'] = line['Event_Info'] + ' - Archer'
 
 					# check if we've seen event already to prevent duplicates
