@@ -84,7 +84,7 @@ def get_existing_structural_variants(structural_variants_filename):
 	header = get_header(structural_variants_filename)
 	existing_structural_variants = []
 	with open(structural_variants_filename) as structural_variants_file:
-		reader = csv.DictReader(structural_variants_file, dialect = 'excel-tab')
+		reader = csv.DictReader(structural_variants_file, restval = '', dialect = 'excel-tab')
 		for line in reader:
 			SEEN_SV_EVENTS.add(get_sv_event_key(line))
 			existing_structural_variants.append(line)
@@ -97,7 +97,7 @@ def get_archer_structural_variants(archer_structural_variants_filename, header, 
 	"""
 	archer_structural_variants_added = 0
 	with open(archer_structural_variants_filename) as archer_structural_variants_file:
-		reader = csv.DictReader(archer_structural_variants_file, dialect = 'excel-tab')
+		reader = csv.DictReader(archer_structural_variants_file, restval = '', dialect = 'excel-tab')
 		for line in reader:
 			archer_sid = line['Sample_ID'].strip()
 			if archer_sid in LINKED_ARCHER_CASES.keys():
