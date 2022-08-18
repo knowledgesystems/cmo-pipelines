@@ -114,6 +114,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
 
     # scripts
     MAF_ANNOTATOR_SCRIPT="$ONCOKB_ANNOTATOR_HOME/MafAnnotator.py"
+    SV_ANNOTATOR_SCRIPT="$ONCOKB_ANNOTATOR_HOME/StructuralVariantAnnotator.py"
     CNA_ANNOTATOR_SCRIPT="$ONCOKB_ANNOTATOR_HOME/CnaAnnotator.py"
     CLINICAL_ANNOTATOR_SCRIPT="$ONCOKB_ANNOTATOR_HOME/ClinicalDataAnnotator.py"
     PDF_SCRIPT="$ONCOKB_ANNOTATOR_HOME/OncoKBPlots.py"
@@ -131,6 +132,10 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     ONCOKB_MAF_FILE_ZIPPED="${ONCOKB_MAF_FILE}.gz"
     ONCOKB_PREVIOUS_MAF_FILE="$ONCOKB_OUT_DIR/data_mutations_extended.oncokb.previous.txt"
     ONCOKB_SOMATIC_MAF_FILE="$ONCOKB_OUT_DIR/data_mutations_extended_somatic.oncokb.txt"
+
+    SOURCE_SV_FILE="$MSK_SOLID_HEME_DATA_HOME/data_sv.txt"
+    STAGING_SV_FILE="$STAGING_DIR/data_sv.txt"
+    ONCOKB_SV_FILE="$ONCOKB_OUT_DIR/data_sv.oncokb.txt"
 
     SOURCE_CNA_FILE="$MSK_SOLID_HEME_DATA_HOME/data_CNA.txt"
     STAGING_CNA_FILE="$STAGING_DIR/data_CNA.txt"
@@ -205,6 +210,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
         mkdir -p $ONCOKB_OUT_DIR
         cp -a $SOURCE_SAMPLE_FILE $STAGING_SAMPLE_FILE
         cp -a $SOURCE_CNA_FILE $STAGING_CNA_FILE
+        cp -a $SOURCE_SV_FILE $STAGING_SV_FILE
         cp -a $SOURCE_MAF_FILE $STAGING_MAF_FILE # maf is last because it takes the longest to copy
     fi
 
@@ -233,6 +239,17 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
         # if a previous annotated maf was created during this step then remove it from directory
         if [ -f "$ONCOKB_PREVIOUS_MAF_FILE" ] ; then
             rm -f $ONCOKB_PREVIOUS_MAF_FILE
+        fi
+    fi
+
+    # Annotating SV
+    if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
+        echo $(date)
+        echo "Beginning SV annotation..."
+        $PYTHON3_BINARY $SV_ANNOTATOR_SCRIPT -b ONCOKB_TOKEN -i STAGING_SV_FILE -o ONCOKB_SV_FILE -c $STAGING_SAMPLE_FILE
+        if [ $? -ne 0 ] ; then
+            echo "Failed to annotate SV file, exiting..."
+            ONCOKB_ANNOTATION_SUCCESS=0
         fi
     fi
 
@@ -327,6 +344,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     # Cleanup copied staging files if they exist
     rm -f $STAGING_SAMPLE_FILE
     rm -f $STAGING_CNA_FILE
+    rm -f $STAGING_SV_FILE
     rm -f $STAGING_MAF_FILE
 
     echo $(date)
