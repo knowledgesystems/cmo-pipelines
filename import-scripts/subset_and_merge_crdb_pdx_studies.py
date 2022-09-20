@@ -273,7 +273,14 @@ def resolve_source_study_path(source_id, data_source_directories):
     source_paths = []
     for data_source_directory in data_source_directories:
         # find study by source id in root directory
-        source_path = os.path.join(data_source_directory, source_id)
+	if "cmo-argos" in data_source_directory:
+            source_path = os.path.join(data_source_directory, "ci", source_id)
+            if os.path.isdir(source_path):
+                source_paths.append(source_path)
+            source_path = os.path.join(data_source_directory, "pi", source_id)
+            if os.path.isdir(source_path):
+                source_paths.append(source_path)
+	source_path = os.path.join(data_source_directory, source_id)
         if os.path.isdir(source_path):
             source_paths.append(source_path)
         # find study by assuming study id is path representation (first three underscores represent directory hierarchy)
