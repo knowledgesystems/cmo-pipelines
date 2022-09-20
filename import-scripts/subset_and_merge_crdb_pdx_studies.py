@@ -7,7 +7,6 @@ import re
 import shutil
 import subprocess
 import sys
-
 import clinicalfile_utils
 import validation_utils
 
@@ -105,6 +104,16 @@ GENE_MATRIX_FILE_PATTERN = 'data_gene_matrix.txt'
 GENE_MATRIX_META_PATTERN = 'meta_gene_matrix.txt'
 SV_FILE_PATTERN = 'data_sv.txt'
 SV_META_PATTERN = 'meta_sv.txt'
+
+NEW_TO_OLD_FILENAME_MAP = {'data_cna.txt':'data_CNA.txt',
+    'meta_cna.txt':'meta_CNA.txt',
+    'data_log2_cna.txt':'data_log2CNA.txt',
+    'meta_log2_cna.txt':'meta_log2CNA.txt',
+    'data_gene_panel_matrix.txt':'data_gene_matrix.txt',
+    'meta_gene_panel_matrix.txt':'meta_gene_matrix.txt',
+    'data_mutations.txt':'data_mutations_extended.txt',
+    'meta_mutations.txt':'meta_mutations_extended.txt'
+}
 
 # meta/data file mapping
 FILE_TO_METAFILE_MAP = { MUTATION_FILE_PATTERN : MUTATION_META_PATTERN,
@@ -319,9 +328,26 @@ def create_source_id_to_path_mapping(destination_to_source_mapping, data_source_
         # resolved source path 'None' handled by resolve_source_study_path(...)
         source_id_to_path_mapping[source_id] = resolve_source_study_path(source_id, data_source_directories)
     return source_id_to_path_mapping
-
 # ------------------------------------------------------------------------------------------------------------
 # STEP 2: Subsetting source directory files into destination/source sub-directory.
+def rename_new_to_old_filename(directory):
+    file_was_converted = False
+    for new_filename in NEW_TO_OLD_FILENAME_MAP:
+        old_filename = NEW_TO_OLD_FILENAME_MAP[new_filename]
+        file_to_rename = os.path.join(directory, new_filename)
+        if os.path.exists(file_to_rename):
+            print >> OUTPUT_FILE, "renaming " + file_to_rename
+            file_was_converted = True
+            os.rename(file_to_rename, os.path.join(directory, old_filename))
+    return file_was_converted
+
+def rename_old_to_new_filename(directory):
+    for new_filename in NEW_TO_OLD_FILENAME_MAP:
+        old_filename = NEW_TO_OLD_FILENAME_MAP[new_filename]
+        file_to_rename = os.path.join(directory, old_filename)
+        if os.path.exists(file_to_rename):
+            print >> OUTPUT_FILE, "renaming " + file_to_rename
+            os.rename(file_to_rename, os.path.join(directory, new_filename))
 
 def subset_source_directories_for_destination_studies(destination_to_source_mapping, source_id_to_path_mapping, root_directory, lib):
     """
@@ -330,8 +356,6 @@ def subset_source_directories_for_destination_studies(destination_to_source_mapp
             - Subset script is passed a list of patient IDs (either the source patient id or destination/mapped patient id) to subset
                 the source study data by. Source patient IDs are used for CRDB PDX patients.
             - If subset script fails on source study, adds source study to list of skipped source studies for destination study.
-
-
     """
     for destination, source_id_to_sourcemappings in destination_to_source_mapping.items():
         for source, sourcemappings in source_id_to_sourcemappings.items():
@@ -346,6 +370,7 @@ def subset_source_directories_for_destination_studies(destination_to_source_mapp
 
             # build comma-delimited patient list to pass to the subset script
             if source_directory:
+                file_was_converted = rename_new_to_old_filename(source_directory)
                 if source == CRDB_FETCH_SOURCE_ID:
                     patient_list = ','.join([patient.destination_pid for patient in sourcemappings.patients])
                 else:
@@ -354,6 +379,8 @@ def subset_source_directories_for_destination_studies(destination_to_source_mapp
                 clinical_file_pattern_to_use = get_clinical_file_pattern_to_use(source_directory)
                 subset_source_directories_call = generate_bash_subset_call(lib, destination, working_source_subdirectory, source_directory, patient_list, clinical_file_pattern_to_use)
                 subset_source_directories_status = subprocess.call(subset_source_directories_call, shell = True)
+                if file_was_converted:
+                    rename_old_to_new_filename(source_directory)
 
                 # studies which cannot be subsetted are marked to be skipped when merging
                 if subset_source_directories_status != 0:
@@ -574,7 +601,7 @@ def annotate_maf(destination_to_source_mapping, root_directory, annotator_jar):
         # if annotation succeeded then replace original maf with annotated maf
         # otherwise remove annotated maf if exists in destination study directory
         if annotator_status == 0:
-            shutil.copy(annot_maf, orig_maf)
+            shutil.move(annot_maf, orig_maf)
             DESTINATION_STUDY_STATUS_FLAGS[destination][ANNOTATION_SUCCESS] = True
         else:
             if os.path.isfile(annot_maf):
