@@ -223,7 +223,7 @@ def create_destination_to_source_mapping(destination_source_patient_mapping_reco
                     HAS_ALL_METAFILES : False,
                     ANNOTATION_SUCCESS : False,
                     GENERATE_CASE_LISTS_SUCCESS : False,
-                    PASSED_VALIDATION : False
+                    PASSED_VALIDATION : True
             }
         if destination not in SKIPPED_SOURCE_STUDIES:
             SKIPPED_SOURCE_STUDIES[destination] = set()
@@ -285,9 +285,10 @@ def resolve_source_study_path(source_id, data_source_directories):
             source_paths.append(source_path)
         # find study by assuming study id is path representation (first three underscores represent directory hierarchy)
         split_source_id = source_id.split("_", 3)
-        source_path = os.path.join(data_source_directory, *split_source_id)
-        if os.path.isdir(source_path):
-            source_paths.append(source_path)
+        if len(split_source_id) > 1:
+            source_path = os.path.join(data_source_directory, *split_source_id)
+            if os.path.isdir(source_path):
+                source_paths.append(source_path)
     # only one path found, return value
     if len(source_paths) == 1:
         return source_paths[0]
@@ -449,10 +450,18 @@ def filter_clinical_annotations(source_subdirectory, clinical_annotations):
         # gets index of the "filtered attributes" in the header
         # writing out record columns by index (deals with metadata headers as well)
         attribute_indices = [header.index(attribute) for attribute in filtered_header]
+        needs_metadata_header_indicator = False
+        if attribute_indices[0] != 0:
+            needs_metadata_header_indicator = True
         with open(clinical_file, "r") as f:
             for line in f:
+                is_metadata_header_line = False
+                if line.startswith("#"):
+                    is_metadata_header_line = True
                 data = line.rstrip("\n").split("\t")
                 data_to_write = [data[index] for index in attribute_indices]
+                if is_metadata_header_line and needs_metadata_header_indicator:
+                    data_to_write[0] = "#" + str(data_to_write[0])
                 to_write.append("\t".join(data_to_write))
         clinicalfile_utils.write_data_list_to_file(clinical_file, to_write)
 
