@@ -1,0 +1,105 @@
+Changelog Summary, 2022-12-12
+
+Total patients: 18
+New patients: 18
+Deleted patients: 0
+
+Total samples: 23
+New samples: 23
+Deleted samples: 0
+
+Bladder Cancer
+	Total patients: 3
+	New patients: 3
+	Deleted patients: 0
+
+	Total samples: 3
+	New samples: 3
+		Sample type:
+			Metastasis: 1
+			Primary: 2
+		Sample class:
+			Tumor: 3
+	Deleted samples: 0
+
+Breast Cancer
+	Total patients: 3
+	New patients: 3
+	Deleted patients: 0
+
+	Total samples: 4
+	New samples: 4
+		Sample type:
+			Metastasis: 1
+			Primary: 3
+		Sample class:
+			Tumor: 4
+	Deleted samples: 0
+
+Endometrial Cancer
+	Total patients: 3
+	New patients: 3
+	Deleted patients: 0
+
+	Total samples: 4
+	New samples: 4
+		Sample type:
+			Metastasis: 3
+			Primary: 1
+		Sample class:
+			Tumor: 4
+	Deleted samples: 0
+
+Hepatobiliary Cancer
+	Total patients: 1
+	New patients: 1
+	Deleted patients: 0
+
+	Total samples: 2
+	New samples: 2
+		Sample type:
+			Metastasis: 1
+			Primary: 1
+		Sample class:
+			Tumor: 2
+	Deleted samples: 0
+
+Mesothelioma
+	Total patients: 7
+	New patients: 7
+	Deleted patients: 0
+
+	Total samples: 7
+	New samples: 7
+		Sample type:
+			Primary: 7
+		Sample class:
+			Tumor: 7
+	Deleted samples: 0
+
+Non-Small Cell Lung Cancer
+	Total patients: 2
+	New patients: 2
+	Deleted patients: 0
+
+	Total samples: 2
+	New samples: 2
+		Sample type:
+			Metastasis: 1
+			Primary: 1
+		Sample class:
+			Tumor: 2
+	Deleted samples: 0
+
+Uterine Serous Carcinoma/Uterine Papillary Serous Carcinoma
+	Total patients: 1
+	New patients: 1
+	Deleted patients: 0
+
+	Total samples: 1
+	New samples: 1
+		Sample type:
+			Metastasis: 1
+		Sample class:
+			Tumor: 1
+	Deleted samples: 0

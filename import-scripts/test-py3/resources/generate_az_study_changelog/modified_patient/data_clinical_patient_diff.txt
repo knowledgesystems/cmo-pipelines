@@ -1,0 +1,10 @@
+diff --git a/tests/mskimpact/data_clinical_patient.txt b/tests/mskimpact/data_clinical_patient.txt
+index 90c0b90..081c773 100644
+--- a/tests/mskimpact/data_clinical_patient.txt
++++ b/tests/mskimpact/data_clinical_patient.txt
+@@ -8 +8 @@ P-0000106						N/A	YES	NO	66	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	LIVING
+-P-0000114	NO	6	NO	NO	1	ABCDEFG	YES	YES	45	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	DECEASED	13.677	No								16221	Dead	16656	16656	NA
++P-0000114	NO	6	NO	NO	1	ABCDEFG	YES	YES	46	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	DECEASED	13.677	No								16221	Dead	16656	16656	NA
+@@ -19 +19 @@ P-0000108						ABCDEFG	NO	NO	69	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic
+-P-0000111	YES	4	NO	NO	0	ABCDEFG	YES	YES	53	WHITE	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	DECEASED	13.315	No								18934	Dead	19364	19364	NA
++P-0000111	YES	4	NO	NO	0	ABCDEFG	YES	YES	53	ASIAN-FAR	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	DECEASED	13.315	No								18934	Dead	19364	19364	NA

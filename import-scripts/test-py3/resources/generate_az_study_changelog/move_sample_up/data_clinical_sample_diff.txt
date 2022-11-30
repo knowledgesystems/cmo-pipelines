@@ -1,0 +1,12 @@
+diff --git a/tests/mskimpact/move_sample_up/data_clinical_sample.txt b/tests/mskimpact/move_sample_up/data_clinical_sample.txt
+index 5f03c97..28ac69a 100644
+--- a/tests/mskimpact/move_sample_up/data_clinical_sample.txt
++++ b/tests/mskimpact/move_sample_up/data_clinical_sample.txt
+@@ -8,0 +9 @@ P-0000106-T03-IM3	P-0000106	2015/04/07	2015/04	2015, Wk. 15		Non-Small Cell Lung
++P-0000107-T01-IM3	P-0000107	2015/04/07	2015/04	2015, Wk. 15		Endometrial Cancer	Metastasis	Tumor	Pelvis	Uterus	Uterine Endometrioid Carcinoma	IMPACT341		1222	10	UEC	Not Available	1.23	Stable	MSKCC	Matched	72	NO	58.6	4.5	38.6	NO	NA		
+@@ -16 +16,0 @@ P-0000103-T03-IM6	P-0000103	2017/01/31	2017/01	2017, Wk. 05		Uterine Serous Carc
+-P-0000107-T01-IM3	P-0000107	2015/04/07	2015/04	2015, Wk. 15		Endometrial Cancer	Metastasis	Tumor	Pelvis	Uterus	Uterine Endometrioid Carcinoma	IMPACT341		1222	10	UEC	Not Available	1.23	Stable	MSKCC	Matched	72	NO	58.6	4.5	38.6	NO	NA		
+@@ -18,0 +19 @@ P-0000116-T01-IM3	P-0000116	2014/11/08	2014/11	2014, Wk. 5		Bladder Cancer
++P-0000108-T01-IM3	P-0000108	2015/04/07	2015/04	2015, Wk. 15		Mesothelioma	Primary	Tumor	Not Applicable	Pleura	Pleural Mesothelioma, Epithelioid Type	IMPACT341		387	40	PLEMESO	Not Available	0.09	Stable	MSKCC	Matched	69	NO	29.9	2.2	61.6	NO	NA		
+@@ -23 +23,0 @@ P-0000104-T02-IM3	P-0000104	2015/04/07	2015/04	2015, Wk. 15		Hepatobiliary Cance
+-P-0000108-T01-IM3	P-0000108	2015/04/07	2015/04	2015, Wk. 15		Mesothelioma	Primary	Tumor	Not Applicable	Pleura	Pleural Mesothelioma, Epithelioid Type	IMPACT341		387	40	PLEMESO	Not Available	0.09	Stable	MSKCC	Matched	69	NO	29.9	2.2	61.6	NO	NA		

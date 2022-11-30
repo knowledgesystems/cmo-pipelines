@@ -1,0 +1,10 @@
+diff --git a/tests/mskimpact/new_patient/data_clinical_patient.txt b/tests/mskimpact/new_patient/data_clinical_patient.txt
+index 081c773..19029cd 100644
+--- a/tests/mskimpact/new_patient/data_clinical_patient.txt
++++ b/tests/mskimpact/new_patient/data_clinical_patient.txt
+@@ -5,0 +6 @@ PATIENT_ID	CRDB_ADJ_TXT	CRDB_NOSYSTXT	CRDB_PRIOR_RX	CRDB_BRAINMET	CRDB_ECOG	OTHE
++P-0000150						ABCDEFG	YES	YES	70	WHITE	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	LIVING	75.649	No												
+@@ -11,0 +13 @@ P-0000103						N/A	YES	NO	76	WHITE	JEWISH	Female	Non-Spanish; Non-Hispanic	DECEA
++P-0000151						ABCDEFG	YES	YES	27	ASIAN-FAR EAST/INDIAN SUBCONT	MUSLIM	Female	Non-Spanish; Non-Hispanic	LIVING	103.101	No								6947	Alive	NA	NA	NA
+@@ -23,0 +26 @@ P-0000101						ABCDEFG	NO	NO	72	WHITE	JEWISH	Female	Non-Spanish; Non-Hispanic	DE
++P-0000152	YES	2	NO	NO	1	ABCDEFG	YES	YES	70	WHITE	JEWISH	Male	Non-Spanish; Non-Hispanic	LIVING	93.140	No								22453	Alive	NA	NA	NA

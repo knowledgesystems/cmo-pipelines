@@ -1,0 +1,12 @@
+diff --git a/tests/mskimpact/deleted_patient/data_clinical_patient.txt b/tests/mskimpact/deleted_patient/data_clinical_patient.txt
+index 081c773..6a0ad79 100644
+--- a/tests/mskimpact/deleted_patient/data_clinical_patient.txt
++++ b/tests/mskimpact/deleted_patient/data_clinical_patient.txt
+@@ -8 +7,0 @@ P-0000106						N/A	YES	NO	66	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	LIVING
+-P-0000114	NO	6	NO	NO	1	ABCDEFG	YES	YES	46	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	DECEASED	13.677	No								16221	Dead	16656	16656	NA
+@@ -15 +13,0 @@ P-0000116						ABCDEFG	NO	NO	77	ASIAN-FAR EAST/INDIAN SUBCONT	NONE	Female	Non-Sp
+-P-0000200	YES	1	NO	NO	1	ABCDEFG	YES	YES	76	WHITE	CHRISTIAN	Male	Non-Spanish; Non-Hispanic	DECEASED	0.263	No								28062	Dead	28107	28107	NA
+@@ -18 +15,0 @@ P-0000104						ABCDEFG	NO	NO
+-P-0000108						ABCDEFG	NO	NO	69	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic	DECEASED	5.293	No												
+@@ -23 +19,0 @@ P-0000109						ABCDEFG	YES	NO	77	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic
+-P-0000101						ABCDEFG	NO	NO	72	WHITE	JEWISH	Female	Non-Spanish; Non-Hispanic	DECEASED	9.797	No												

@@ -1,0 +1,11 @@
+diff --git a/tests/mskimpact/new_sample/data_clinical_sample.txt b/tests/mskimpact/new_sample/data_clinical_sample.txt
+index 5f03c97..a9fa901 100644
+--- a/tests/mskimpact/new_sample/data_clinical_sample.txt
++++ b/tests/mskimpact/new_sample/data_clinical_sample.txt
+@@ -10,0 +11 @@ P-0000114-T01-IM3	P-0000114	2015/04/07	2015/04	2015, Wk. 15		Breast Cancer	Metas
++P-0000114-T02-IM3	P-0000114	2015/04/07	2015/04	2015, Wk. 15		Bladder Cancer	Metastasis	Tumor	Liver	Breast	Breast Invasive Ductal Carcinoma	IMPACT341		281	40	IDC	Not Available	2.55	Stable	MSKCC	Matched	45	NO	78.6	7.8	88.2	NO	NA		
+@@ -11,0 +13 @@ P-0000113-T01-IM3	P-0000113	2015/04/07	2015/04	2015, Wk. 15		Mesothelioma	Primar
++P-0000113-T02-IM3	P-0000113	2015/04/07	2015/04	2015, Wk. 15		Mesothelioma	Primary	Tumor	Not Applicable	Peritoneum	Peritoneal Mesothelioma	IMPACT341		454	30	PEMESO	Not Available	0.08	Stable	MSKCC	Matched	62	NO	68	5.6	95.3	NO	NA		
+@@ -26,0 +29,2 @@ P-0000112-T02-IM3	P-0000112	2015/04/07	2015/04	2015, Wk. 15		Bladder Cancer	Meta
++P-0000153-T02-IM3	P-0000153	2015/04/07	2015/04	2015, Wk. 15		Bladder Cancer	Metastasis	Tumor	Liver	Bladder	Bladder Urothelial Carcinoma	IMPACT341		833	50	BLCA	Not Available	2.24	Stable	MSKCC	Matched	58	NO	96.3	30.1	91.8	YES	465975		
++P-0000153-T01-IM3	P-0000153	2015/04/07	2015/04	2015, Wk. 15		Bladder Cancer	Metastasis	Tumor	Liver	Bladder	Bladder Urothelial Carcinoma	IMPACT341		833	50	BLCA	Not Available	2.24	Stable	MSKCC	Matched	58	NO	96.3	30.1	91.8	YES	465975		

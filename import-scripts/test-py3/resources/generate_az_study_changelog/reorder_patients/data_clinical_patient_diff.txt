@@ -1,0 +1,40 @@
+diff --git a/tests/mskimpact/reorder_patients/data_clinical_patient.txt b/tests/mskimpact/reorder_patients/data_clinical_patient.txt
+index 081c773..f120167 100644
+--- a/tests/mskimpact/reorder_patients/data_clinical_patient.txt
++++ b/tests/mskimpact/reorder_patients/data_clinical_patient.txt
+@@ -6,17 +5,0 @@ PATIENT_ID	CRDB_ADJ_TXT	CRDB_NOSYSTXT	CRDB_PRIOR_RX	CRDB_BRAINMET	CRDB_ECOG	OTHE
+-P-0000117	YES	6	YES	NO	0	ABCDEFG	YES	NO	40	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	DECEASED	3.551	No								14484	Dead	14631	14631	NA
+-P-0000106						N/A	YES	NO	66	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	LIVING	103.463	No								21192	Alive	NA	NA	NA
+-P-0000114	NO	6	NO	NO	1	ABCDEFG	YES	YES	46	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	DECEASED	13.677	No								16221	Dead	16656	16656	NA
+-P-0000113						ABCDEFG	NO	NO	61	WHITE	LUTHERAN	Male	Non-Spanish; Non-Hispanic	DECEASED	2.170	No												
+-P-0000105						ABCDEFG	YES	NO	64	WHITE	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	DECEASED	34.586	No								22399	Dead	23469	NA	NA
+-P-0000103						N/A	YES	NO	76	WHITE	JEWISH	Female	Non-Spanish; Non-Hispanic	DECEASED	45.731	No								26238	Dead	27952	27952	NA
+-P-0000107						ABCDEFG	YES	YES	80	ASIAN-FAR EAST/INDIAN SUBCONT	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	LIVING	104.877	No								26192	Alive	NA	NA	NA
+-P-0000115						ABCDEFG	NO	NO	82	WHITE	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	DECEASED	12.000	No												
+-P-0000116						ABCDEFG	NO	NO	77	ASIAN-FAR EAST/INDIAN SUBCONT	NONE	Female	Non-Spanish; Non-Hispanic	LIVING	4.110	No												
+-P-0000200	YES	1	NO	NO	1	ABCDEFG	YES	YES	76	WHITE	CHRISTIAN	Male	Non-Spanish; Non-Hispanic	DECEASED	0.263	No								28062	Dead	28107	28107	NA
+-P-0000102						ABCDEFG	NO	NO	67	OTHER	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	LIVING	102.970	No												
+-P-0000104						ABCDEFG	NO	NO																				
+-P-0000108						ABCDEFG	NO	NO	69	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic	DECEASED	5.293	No												
+-P-0000111	YES	4	NO	NO	0	ABCDEFG	YES	YES	53	ASIAN-FAR	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	DECEASED	13.315	No								18934	Dead	19364	19364	NA
+-P-0000110	YES	1	YES	NO	0	ABCDEFG	YES	NO	72	WHITE	METHODIST	Male	Non-Spanish; Non-Hispanic	DECEASED	56.647	No								25724	Alive	NA	NA	NA
+-P-0000112	NO	3	NO	NO	0	ABCDEFG	YES	NO																22684	Alive	NA	NA	NA
+-P-0000109						ABCDEFG	YES	NO	77	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic	DECEASED	19.923	No								28004	Dead	28188	NA	NA
+@@ -23,0 +7,17 @@ P-0000101						ABCDEFG	NO	NO	72	WHITE	JEWISH	Female	Non-Spanish; Non-Hispanic	DE
++P-0000109						ABCDEFG	YES	NO	77	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic	DECEASED	19.923	No								28004	Dead	28188	NA	NA
++P-0000112	NO	3	NO	NO	0	ABCDEFG	YES	NO																22684	Alive	NA	NA	NA
++P-0000110	YES	1	YES	NO	0	ABCDEFG	YES	NO	72	WHITE	METHODIST	Male	Non-Spanish; Non-Hispanic	DECEASED	56.647	No								25724	Alive	NA	NA	NA
++P-0000111	YES	4	NO	NO	0	ABCDEFG	YES	YES	53	ASIAN-FAR	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	DECEASED	13.315	No								18934	Dead	19364	19364	NA
++P-0000108						ABCDEFG	NO	NO	69	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic	DECEASED	5.293	No												
++P-0000104						ABCDEFG	NO	NO																				
++P-0000102						ABCDEFG	NO	NO	67	OTHER	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	LIVING	102.970	No												
++P-0000200	YES	1	NO	NO	1	ABCDEFG	YES	YES	76	WHITE	CHRISTIAN	Male	Non-Spanish; Non-Hispanic	DECEASED	0.263	No								28062	Dead	28107	28107	NA
++P-0000116						ABCDEFG	NO	NO	77	ASIAN-FAR EAST/INDIAN SUBCONT	NONE	Female	Non-Spanish; Non-Hispanic	LIVING	4.110	No												
++P-0000115						ABCDEFG	NO	NO	82	WHITE	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	DECEASED	12.000	No												
++P-0000107						ABCDEFG	YES	YES	80	ASIAN-FAR EAST/INDIAN SUBCONT	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	LIVING	104.877	No								26192	Alive	NA	NA	NA
++P-0000103						N/A	YES	NO	76	WHITE	JEWISH	Female	Non-Spanish; Non-Hispanic	DECEASED	45.731	No								26238	Dead	27952	27952	NA
++P-0000105						ABCDEFG	YES	NO	64	WHITE	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hispanic	DECEASED	34.586	No								22399	Dead	23469	NA	NA
++P-0000113						ABCDEFG	NO	NO	61	WHITE	LUTHERAN	Male	Non-Spanish; Non-Hispanic	DECEASED	2.170	No												
++P-0000114	NO	6	NO	NO	1	ABCDEFG	YES	YES	46	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	DECEASED	13.677	No								16221	Dead	16656	16656	NA
++P-0000106						N/A	YES	NO	66	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	LIVING	103.463	No								21192	Alive	NA	NA	NA
++P-0000117	YES	6	YES	NO	0	ABCDEFG	YES	NO	40	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	DECEASED	3.551	No								14484	Dead	14631	14631	NA

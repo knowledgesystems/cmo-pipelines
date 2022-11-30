@@ -1,0 +1,6 @@
+diff --git a/tests/mskimpact/deleted_sample/data_clinical_patient.txt b/tests/mskimpact/deleted_sample/data_clinical_patient.txt
+index 081c773..785da41 100644
+--- a/tests/mskimpact/deleted_sample/data_clinical_patient.txt
++++ b/tests/mskimpact/deleted_sample/data_clinical_patient.txt
+@@ -8 +7,0 @@ P-0000106						N/A	YES	NO	66	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	LIVING
+-P-0000114	NO	6	NO	NO	1	ABCDEFG	YES	YES	46	WHITE	NONE	Female	Non-Spanish; Non-Hispanic	DECEASED	13.677	No								16221	Dead	16656	16656	NA

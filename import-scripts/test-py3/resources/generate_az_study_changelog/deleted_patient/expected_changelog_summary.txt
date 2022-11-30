@@ -1,0 +1,72 @@
+Changelog Summary, 2022-12-08
+
+Total patients: 14
+New patients: 0
+Deleted patients: 4
+
+Total samples: 19
+New samples: 0
+Deleted samples: 4
+
+Bladder Cancer
+	Total patients: 2
+	New patients: 0
+	Deleted patients: 1
+
+	Total samples: 2
+	New samples: 0
+	Deleted samples: 1
+
+Breast Cancer
+	Total patients: 2
+	New patients: 0
+	Deleted patients: 1
+
+	Total samples: 3
+	New samples: 0
+	Deleted samples: 1
+
+Endometrial Cancer
+	Total patients: 3
+	New patients: 0
+	Deleted patients: 0
+
+	Total samples: 4
+	New samples: 0
+	Deleted samples: 0
+
+Hepatobiliary Cancer
+	Total patients: 1
+	New patients: 0
+	Deleted patients: 0
+
+	Total samples: 2
+	New samples: 0
+	Deleted samples: 0
+
+Mesothelioma
+	Total patients: 5
+	New patients: 0
+	Deleted patients: 2
+
+	Total samples: 5
+	New samples: 0
+	Deleted samples: 2
+
+Non-Small Cell Lung Cancer
+	Total patients: 2
+	New patients: 0
+	Deleted patients: 0
+
+	Total samples: 2
+	New samples: 0
+	Deleted samples: 0
+
+Uterine Serous Carcinoma/Uterine Papillary Serous Carcinoma
+	Total patients: 1
+	New patients: 0
+	Deleted patients: 0
+
+	Total samples: 1
+	New samples: 0
+	Deleted samples: 0

@@ -1,0 +1,13 @@
+diff --git a/tests/mskimpact/new_patient/data_clinical_sample.txt b/tests/mskimpact/new_patient/data_clinical_sample.txt
+index 5f03c97..e4b8080 100644
+--- a/tests/mskimpact/new_patient/data_clinical_sample.txt
++++ b/tests/mskimpact/new_patient/data_clinical_sample.txt
+@@ -12,0 +13,2 @@ P-0000105-T01-IM3	P-0000105	2015/04/07	2015/04	2015, Wk. 15		Endometrial Cancer
++P-0000152-T01-IM3	P-0000152	2015/04/07	2015/04	2015, Wk. 15		Endometrial Cancer	Metastasis	Tumor	Lung	Uterus	Uterine Endometrioid Carcinoma	IMPACT341		1016	40	UEC	Not Available	0.72	Stable	MSKCC	Matched	62	NO	74.4	6.7	59.2	YES	744317		
++P-0000152-T02-IM3	P-0000152	2015/04/07	2015/04	2015, Wk. 15		Breast Cancer	Metastasis	Tumor	Lung	Uterus	Uterine Endometrioid Carcinoma	IMPACT341		1016	40	UEC	Not Available	0.72	Stable	MSKCC	Matched	62	NO	74.4	6.7	59.2	YES	744317		
+@@ -15,0 +18 @@ P-0000103-T03-IM6	P-0000103	2017/01/31	2017/01	2017, Wk. 05		Uterine Serous Carc
++P-0000103-T04-IM6	P-0000103	2017/01/31	2017/01	2017, Wk. 05		Uterine Serous Carcinoma/Uterine Papillary Serous Carcinoma	Metastasis	Tumor	Liver	Uterus	Uterine Serous Carcinoma/Uterine Papillary Serous Carcinoma	IMPACT468		558	50	USC	MICROSATELLITE STABLE (MSS). See MSI note below.	1.46	Stable	MSKCC	Matched	76	YES	52.4	4.4	29.0	YES	547333		
+@@ -18,0 +22 @@ P-0000116-T01-IM3	P-0000116	2014/11/08	2014/11	2014, Wk. 5		Bladder Cancer
++P-0000151-T01-IM3	P-0000151	2018/11/08	2018/11	2018, Wk. 45		Non-Small Cell Lung Cancer	Metastasis	Tumor	Lymph Node	Lung	Lung Adenocarcinoma	IMPACT341		757	40	LUAD	NA	-1	Do not report	MSKCC	Unmatched	69	NO	89.5	12.3	82.1	NO	NA		
+@@ -20,0 +25 @@ P-0000102-T01-IM3	P-0000102	2015/04/07	2015/04	2015, Wk. 15		Non-Small Cell Lung
++P-0000150-T01-IM3	P-0000150	2015/04/07	2015/04	2015, Wk. 15		Non-Small Cell Lung Cancer	Primary	Tumor	Not Applicable	Lung	Lung Adenocarcinoma	IMPACT341		380	30	LUAD	NA	-1	Do not report	MSKCC	Unmatched	59	NO	78.5	7.8	63.0	NO	NA		

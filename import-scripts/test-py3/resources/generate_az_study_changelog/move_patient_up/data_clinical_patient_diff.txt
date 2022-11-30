@@ -1,0 +1,12 @@
+diff --git a/tests/mskimpact/move_patient_up/data_clinical_patient.txt b/tests/mskimpact/move_patient_up/data_clinical_patient.txt
+index 081c773..9f4ec82 100644
+--- a/tests/mskimpact/move_patient_up/data_clinical_patient.txt
++++ b/tests/mskimpact/move_patient_up/data_clinical_patient.txt
+@@ -10,0 +11 @@ P-0000105						ABCDEFG	YES	NO	64	WHITE	CATHOLIC/ROMAN	Female	Non-Spanish; Non-Hi
++P-0000200	YES	1	NO	NO	1	ABCDEFG	YES	YES	76	WHITE	CHRISTIAN	Male	Non-Spanish; Non-Hispanic	DECEASED	0.263	No								28062	Dead	28107	28107	NA
+@@ -12,0 +14 @@ P-0000107						ABCDEFG	YES	YES	80	ASIAN-FAR EAST/INDIAN SUBCONT	CATHOLIC/ROMAN	F
++P-0000108						ABCDEFG	NO	NO	69	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic	DECEASED	5.293	No												
+@@ -15 +16,0 @@ P-0000116						ABCDEFG	NO	NO	77	ASIAN-FAR EAST/INDIAN SUBCONT	NONE	Female	Non-Sp
+-P-0000200	YES	1	NO	NO	1	ABCDEFG	YES	YES	76	WHITE	CHRISTIAN	Male	Non-Spanish; Non-Hispanic	DECEASED	0.263	No								28062	Dead	28107	28107	NA
+@@ -18 +18,0 @@ P-0000104						ABCDEFG	NO	NO
+-P-0000108						ABCDEFG	NO	NO	69	WHITE	PROTESTANT	Male	Non-Spanish; Non-Hispanic	DECEASED	5.293	No												

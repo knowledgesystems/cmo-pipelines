@@ -1,0 +1,19 @@
+diff --git a/import-scripts/test-py3/resources/generate_az_study_changelog/cancer_type_changes/data_clinical_sample.txt b/import-scripts/test-py3/resources/generate_az_study_changelog/cancer_type_changes/data_clinical_sample.txt
+index 3ed32dd..c56edb0 100644
+--- a/import-scripts/test-py3/resources/generate_az_study_changelog/cancer_type_changes/data_clinical_sample.txt
++++ b/import-scripts/test-py3/resources/generate_az_study_changelog/cancer_type_changes/data_clinical_sample.txt
+@@ -7 +7 @@ P-0000117-T01-IM3	P-0000117	2015/04/07	2015/04	2015, Wk. 15		Breast Cancer	Prima
+-P-0000117-T03-IM3	P-0000117	2015/04/07	2015/04	2015, Wk. 15		Bone Cancer	Primary	Tumor	Not Applicable	Breast	Breast Invasive Ductal Carcinoma	IMPACT341		428	50	IDC	Not Available	2.50	Stable	MSKCC	Matched	40	NO	58.6	4.5	67.8	NO	NA		
++P-0000117-T03-IM3	P-0000117	2015/04/07	2015/04	2015, Wk. 15		Ampullary Cancer	Primary	Tumor	Not Applicable	Breast	Breast Invasive Ductal Carcinoma	IMPACT341		428	50	IDC	Not Available	2.50	Stable	MSKCC	Matched	40	NO	58.6	4.5	67.8	NO	NA		
+@@ -7 +7 @@ P-0000117-T01-IM3	P-0000117	2015/04/07	2015/04	2015, Wk. 15		Breast Cancer	Prima
+-P-0000106-T02-IM3	P-0000106	2015/04/07	2015/04	2015, Wk. 15		Breast Cancer	Primary	Tumor	Not Applicable	Breast	Breast Invasive Ductal Carcinoma	IMPACT341		344	N/A	IDC	MICROSATELLITE INSTABILITY-INDETERMINATE. See MSI note below.	4.10	Indeterminate	MSKCC	Matched	59	NO	17.1	1.1	13.5	NO	NA		
++P-0000106-T02-IM3	P-0000106	2015/04/07	2015/04	2015, Wk. 15		Lung Adenocarcinoma	Primary	Tumor	Not Applicable	Breast	Breast Invasive Ductal Carcinoma	IMPACT341		344	N/A	IDC	MICROSATELLITE INSTABILITY-INDETERMINATE. See MSI note below.	4.10	Indeterminate	MSKCC	Matched	59	NO	17.1	1.1	13.5	NO	NA		
+@@ -10 +10 @@ P-0000106-T04-IM6	P-0000106	2014/08/01	2014/08	2014, Wk. 5	Breast Cancer	
+-P-0000114-T01-IM3	P-0000114	2015/04/07	2015/04	2015, Wk. 15		Breast Cancer	Metastasis	Tumor	Liver	Breast	Breast Invasive Ductal Carcinoma	IMPACT341		281	40	IDC	Not Available	2.55	Stable	MSKCC	Matched	45	NO	78.6	7.8	88.2	NO	NA		
++P-0000114-T01-IM3	P-0000114	2015/04/07	2015/04	2015, Wk. 15		Non-Small Cell Lung Cancer	Metastasis	Tumor	Liver	Breast	Breast Invasive Ductal Carcinoma	IMPACT341		281	40	IDC	Not Available	2.55	Stable	MSKCC	Matched	45	NO	78.6	7.8	88.2	NO	NA		
+@@ -13 +13 @@ P-0000105-T01-IM3	P-0000105	2015/04/07	2015/04	2015, Wk. 15		Endometrial Cancer
+-P-0000103-T01-IM3	P-0000103	2015/04/07	2015/04	2015, Wk. 15		Endometrial Cancer	Primary	Tumor	Not Applicable	Uterus	Uterine Serous Carcinoma/Uterine Papillary Serous Carcinoma	IMPACT341		1161	N/A	USC	MICROSATELLITE STABLE (MSS). See note.	0.0	Stable	MSKCC	Matched	73	NO	17.1	1.1	4.9	NO	NA		
++P-0000103-T01-IM3	P-0000103	2015/04/07	2015/04	2015, Wk. 15		Bladder Cancer	Primary	Tumor	Not Applicable	Uterus	Uterine Serous Carcinoma/Uterine Papillary Serous Carcinoma	IMPACT341		1161	N/A	USC	MICROSATELLITE STABLE (MSS). See note.	0.0	Stable	MSKCC	Matched	73	NO	17.1	1.1	4.9	NO	NA		
+@@ -21,0 +22 @@ P-0000104-T01-IM3	P-0000104	2015/04/07	2015/04	2015, Wk. 15		Hepatobiliary Cance
+-P-0000104-T01-IM3	P-0000104	2015/04/07	2015/04	2015, Wk. 15		Mesothelioma	Metastasis	Tumor	Bladder	Bladder	Hepatocellular Carcinoma	IMPACT341		761	90	HCC	Not Available	0.08	Stable	MSKCC	Matched	65	NO	58.6	4.5	59.3	YES	744547		
++P-0000104-T01-IM3	P-0000104	2015/04/07	2015/04	2015, Wk. 15		Hepatobiliary Cancer	Metastasis	Tumor	Bladder	Bladder	Hepatocellular Carcinoma	IMPACT341		761	90	HCC	Not Available	0.08	Stable	MSKCC	Matched	65	NO	58.6	4.5	59.3	YES	744547		
