@@ -33,28 +33,6 @@ function push_updates_to_az_git_repo() {
     )
 }
 
-function copy_delivered_meta_files() {
-    unset meta_filenames_to_include
-    declare -A meta_filenames_to_include
-    meta_filenames_to_include[meta_clinical_patient.txt]+=1
-    meta_filenames_to_include[meta_clinical_sample.txt]+=1
-    meta_filenames_to_include[meta_CNA.txt]+=1
-    meta_filenames_to_include[meta_gene_matrix.txt]+=1
-    meta_filenames_to_include[meta_mutations_extended.txt]+=1
-    meta_filenames_to_include[meta_study.txt]+=1
-    meta_filenames_to_include[meta_sv.txt]+=1
-    meta_filenames_to_include[mskimpact_meta_cna_hg19_seg.txt]+=1
-    for filepath in $AZ_TMPDIR/* ; do
-        filename=$(basename $filepath)
-        if ! [ -z ${meta_filenames_to_include[$filename]} ] ; then
-            if ! cp -a $filepath $AZ_MSK_IMPACT_DATA_HOME ; then
-                return 1
-            fi
-        fi
-    done
-    return 0
-}
-
 function filter_files_in_delivery_directory() {
     unset filenames_to_deliver
     declare -A filenames_to_deliver
@@ -159,12 +137,15 @@ function filter_clinical_attribute_columns() {
     PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.filtered"
     find_clinical_attributes_to_filter_arg "$PATIENT_INPUT_FILEPATH" patient
     PATIENT_EXCLUDED_HEADER_FIELD_LIST="$clinical_attributes_to_filter_arg"
+
     SAMPLE_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
     SAMPLE_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
     find_clinical_attributes_to_filter_arg "$SAMPLE_INPUT_FILEPATH" sample
     SAMPLE_EXCLUDED_HEADER_FIELD_LIST="$clinical_attributes_to_filter_arg"
+    
     $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$PATIENT_INPUT_FILEPATH" -e "$PATIENT_EXCLUDED_HEADER_FIELD_LIST" > "$PATIENT_OUTPUT_FILEPATH" &&
     $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$SAMPLE_INPUT_FILEPATH" -e "$SAMPLE_EXCLUDED_HEADER_FIELD_LIST" > "$SAMPLE_OUTPUT_FILEPATH" &&
+    
     mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH" &&
     mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
 }
@@ -308,20 +289,6 @@ printTimeStampedDataProcessingStepMessage "filter non-delivered files and includ
 # Filter out files which are not delivered
 if ! filter_files_in_delivery_directory ; then
     msg="Filtering of non-delivered files (az-msk-impact-2022) failed."
-    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
-
-    EMAIL_BODY="$msg"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
-fi
-
-# Carry over the appropriate meta files
-if ! copy_delivered_meta_files; then
-    msg="Copy of metadata files (az-msk-impact-2022) failed."
     sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
 
     EMAIL_BODY="$msg"
