@@ -3,6 +3,7 @@
 export AZ_DATA_HOME=$PORTAL_DATA_HOME/az-msk-impact-2022
 export AZ_MSK_IMPACT_DATA_HOME=$AZ_DATA_HOME/mskimpact
 export AZ_TMPDIR=$AZ_DATA_HOME/tmp
+
 DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID AGE_CURRENT RACE RELIGION SEX ETHNICITY OS_STATUS OS_MONTHS"
 DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID DATE_ADDED MONTH_ADDED WEEK_ADDED CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SO_COMMENTS SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_COMMENT MSI_SCORE MSI_TYPE SOMATIC_STATUS AGE_AT_SEQ_REPORTED_YEARS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE"
 unset clinical_attributes_in_file
@@ -13,8 +14,8 @@ declare -g clinical_attributes_to_filter_arg="unset"
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
 function pull_latest_data_from_az_git_repo() {
-    (   # executed in a subshell to avoid changing the actual working directory
-        # if any statement fails, the return value of the entire expression is the failure status
+    (   # Executed in a subshell to avoid changing the actual working directory
+        # If any statement fails, the return value of the entire expression is the failure status
         cd $AZ_DATA_HOME &&
         $GIT_BINARY fetch &&
         $GIT_BINARY reset origin/main --hard &&
@@ -24,8 +25,8 @@ function pull_latest_data_from_az_git_repo() {
 }
 
 function push_updates_to_az_git_repo() {
-    (   # executed in a subshell to avoid changing the actual working directory
-        # if any statement fails, the return value of the entire expression is the failure status
+    (   # Executed in a subshell to avoid changing the actual working directory
+        # If any statement fails, the return value of the entire expression is the failure status
         cd $AZ_DATA_HOME &&
         $GIT_BINARY add * &&
         $GIT_BINARY commit -m "Latest AstraZeneca MSK-IMPACT dataset" &&
@@ -36,6 +37,7 @@ function push_updates_to_az_git_repo() {
 function filter_files_in_delivery_directory() {
     unset filenames_to_deliver
     declare -A filenames_to_deliver
+
     filenames_to_deliver[data_clinical_patient.txt]+=1
     filenames_to_deliver[data_clinical_sample.txt]+=1
     filenames_to_deliver[data_CNA.txt]+=1
@@ -45,10 +47,12 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[data_nonsignedout_mutations.txt]+=1
     filenames_to_deliver[data_sv.txt]+=1
     filenames_to_deliver[mskimpact_data_cna_hg19.seg]+=1
+    filenames_to_deliver[case_lists]+=1
+
     for filepath in $AZ_MSK_IMPACT_DATA_HOME/* ; do
         filename=$(basename $filepath)
-        if [ -z ${filenames_to_deliver[$filename]} ] && [ ! -d "$filepath" ] ; then
-            if ! rm -f $filepath ; then
+        if [ -z ${filenames_to_deliver[$filename]} ] ; then
+            if ! rm -rf $filepath ; then
                 return 1
             fi
         fi
