@@ -3,6 +3,12 @@
 export AZ_DATA_HOME=$PORTAL_DATA_HOME/az-msk-impact-2022
 export AZ_MSK_IMPACT_DATA_HOME=$AZ_DATA_HOME/mskimpact
 export AZ_TMPDIR=$AZ_DATA_HOME/tmp
+DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID AGE_CURRENT RACE RELIGION SEX ETHNICITY OS_STATUS OS_MONTHS"
+DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID DATE_ADDED MONTH_ADDED WEEK_ADDED CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SO_COMMENTS SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_COMMENT MSI_SCORE MSI_TYPE SOMATIC_STATUS AGE_AT_SEQ_REPORTED_YEARS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE"
+unset clinical_attributes_in_file
+declare -gA clinical_attributes_in_file=() 
+unset clinical_attributes_to_filter_arg
+declare -g clinical_attributes_to_filter_arg="unset"
 
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
@@ -27,6 +33,159 @@ function push_updates_to_az_git_repo() {
     )
 }
 
+function copy_delivered_meta_files() {
+    unset meta_filenames_to_include
+    declare -A meta_filenames_to_include
+    meta_filenames_to_include[meta_clinical_patient.txt]+=1
+    meta_filenames_to_include[meta_clinical_sample.txt]+=1
+    meta_filenames_to_include[meta_CNA.txt]+=1
+    meta_filenames_to_include[meta_gene_matrix.txt]+=1
+    meta_filenames_to_include[meta_mutations_extended.txt]+=1
+    meta_filenames_to_include[meta_study.txt]+=1
+    meta_filenames_to_include[meta_sv.txt]+=1
+    meta_filenames_to_include[mskimpact_meta_cna_hg19_seg.txt]+=1
+    for filepath in $AZ_TMPDIR/* ; do
+        filename=$(basename $filepath)
+        if ! [ -z ${meta_filenames_to_include[$filename]} ] ; then
+            if ! cp -a $filepath $AZ_MSK_IMPACT_DATA_HOME ; then
+                return 1
+            fi
+        fi
+    done
+    return 0
+}
+
+function filter_files_in_delivery_directory() {
+    unset filenames_to_deliver
+    declare -A filenames_to_deliver
+    filenames_to_deliver[data_clinical_patient.txt]+=1
+    filenames_to_deliver[data_clinical_sample.txt]+=1
+    filenames_to_deliver[data_CNA.txt]+=1
+    filenames_to_deliver[data_gene_matrix.txt]+=1
+    filenames_to_deliver[data_mutations_extended.txt]+=1
+    filenames_to_deliver[data_mutations_manual.txt]+=1
+    filenames_to_deliver[data_nonsignedout_mutations.txt]+=1
+    filenames_to_deliver[data_sv.txt]+=1
+    filenames_to_deliver[mskimpact_data_cna_hg19.seg]+=1
+    for filepath in $AZ_MSK_IMPACT_DATA_HOME/* ; do
+        filename=$(basename $filepath)
+        if [ -z ${filenames_to_deliver[$filename]} ] && [ ! -d "$filepath" ] ; then
+            if ! rm -f $filepath ; then
+                return 1
+            fi
+        fi
+    done
+    return 0
+}
+
+function find_clinical_attribute_header_line_from_file() {
+    clinical_attribute_filepath="$1"
+    declare -g clinical_attribute_header_line="unset" # results are stored in this variable
+    if ! [ -r "$clinical_attribute_filepath" ] ; then
+        echo "error: cannot read file $clinical_attribute_filepath" >&2
+        return 1
+    fi
+    # search file for header line
+    while read -r line ; do
+        if [ ${#line} -eq 0 ] ; then
+            echo "error: first uncommented line in $clinical_attribute_filepath was empty" >&2
+            return 1
+        fi
+        if ! [ ${line:0:1} == "#" ] ; then
+            clinical_attribute_header_line=$line
+            break
+        fi
+    done < "$clinical_attribute_filepath"
+    if [ "$clinical_attribute_header_line" == "unset" ] ; then
+        echo "error: unable to find header line in $clinical_attribute_filepath" >&2
+        return 1
+    fi
+}
+
+function find_clinical_attributes_in_file() {
+    clinical_attribute_filepath=$1
+    clinical_attributes_in_file=() # results are stored in this global array
+    if ! find_clinical_attribute_header_line_from_file "$clinical_attribute_filepath" ; then
+        return 1
+    fi
+    for attribute in $clinical_attribute_header_line ; do
+        clinical_attributes_in_file[$attribute]+=1
+    done
+}
+
+function find_clinical_attributes_to_filter_arg() {
+    clinical_attribute_filepath=$1
+    clinical_attribute_filetype=$2 # must be either "patient" or "sample"
+    declare -A clinical_attributes_to_filter=()
+    if ! find_clinical_attributes_in_file "$clinical_attribute_filepath" ; then
+        return 1
+    fi
+    unset delivered_attributes
+    declare -A delivered_attributes=()
+    case $clinical_attribute_filetype in
+        patient)
+            for attribute in $DELIVERED_PATIENT_ATTRIBUTES ; do
+                delivered_attributes[$attribute]+=1
+            done
+            ;;
+        sample)
+            for attribute in $DELIVERED_SAMPLE_ATTRIBUTES ; do
+                delivered_attributes[$attribute]+=1
+            done
+            ;;
+        *) 
+            echo "error: illegal filetype passed to find_clinical_attributes_to_filter() : $clinical_attribute_filetype" >&2
+            return 1
+            ;;
+    esac
+    for attribute in ${!clinical_attributes_in_file[@]} ; do
+        if [ -z ${delivered_attributes[$attribute]} ] ; then
+            clinical_attributes_to_filter[$attribute]+=1
+        fi
+    done
+    clinical_attributes_to_filter_arg=""
+    list_size=0
+    for attribute in ${!clinical_attributes_to_filter[@]} ; do
+        clinical_attributes_to_filter_arg="$clinical_attributes_to_filter_arg$attribute"
+        list_size=$(($list_size+1))
+        if [ "$list_size" -lt ${#clinical_attributes_to_filter[@]} ] ; then
+            clinical_attributes_to_filter_arg="$clinical_attributes_to_filter_arg,"
+        fi
+    done
+}
+
+function filter_clinical_attribute_columns() {
+    PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
+    PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.filtered"
+    find_clinical_attributes_to_filter_arg "$PATIENT_INPUT_FILEPATH" patient
+    PATIENT_EXCLUDED_HEADER_FIELD_LIST="$clinical_attributes_to_filter_arg"
+    SAMPLE_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
+    SAMPLE_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
+    find_clinical_attributes_to_filter_arg "$SAMPLE_INPUT_FILEPATH" sample
+    SAMPLE_EXCLUDED_HEADER_FIELD_LIST="$clinical_attributes_to_filter_arg"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$PATIENT_INPUT_FILEPATH" -e "$PATIENT_EXCLUDED_HEADER_FIELD_LIST" > "$PATIENT_OUTPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$SAMPLE_INPUT_FILEPATH" -e "$SAMPLE_EXCLUDED_HEADER_FIELD_LIST" > "$SAMPLE_OUTPUT_FILEPATH" &&
+    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH" &&
+    mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
+}
+
+function add_metadata_headers() {
+    CDD_URL="http://cdd.cbioportal.mskcc.org/api/"
+    INPUT_FILENAMES="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt $AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
+}
+
+function generate_case_lists() {
+    CASE_LIST_DIR="$AZ_MSK_IMPACT_DATA_HOME/case_lists"
+    if ! [ -d "$CASE_LIST_DIR" ] ; then
+        if ! mkdir -p "$CASE_LIST_DIR" ; then
+            return 1
+        fi
+    fi
+    $PYTHON_BINARY /data/portal-cron/scripts/generate_case_lists.py --case-list-config-file $CASE_LIST_CONFIG_FILE --case-list-dir $CASE_LIST_DIR --study-dir $AZ_MSK_IMPACT_DATA_HOME --study-id mskimpact -o
+}
+
+# ------------------------------------------------------------------------------------------------------------------------
 # 1. Pull latest from AstraZeneca repo (mskcc/az-msk-impact-2022)
 printTimeStampedDataProcessingStepMessage "pull of AstraZeneca data updates to git repository"
 
@@ -35,7 +194,7 @@ if ! pull_latest_data_from_az_git_repo ; then
 
     EMAIL_BODY="Failed to pull AstraZeneca incoming changes from Git - address ASAP!"
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" | mail -s "[URGENT] GIT PULL FAILURE" $PIPELINES_EMAIL_LIST
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
     exit 1
 fi
@@ -62,7 +221,7 @@ if [ $? -gt 0 ] ; then
 
     EMAIL_BODY="Failed to copy MSK-IMPACT data to AstraZeneca repo. Subset study will not be updated."
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" | mail -s "MSK-IMPACT Data Copy Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
     cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 
@@ -86,7 +245,7 @@ if [ $? -gt 0 ] ; then
 
     EMAIL_BODY="Failed to subset AstraZeneca MSK-IMPACT data. Subset study will not be updated."
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" | mail -s "AstraZeneca MSK-IMPACT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
     cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 
@@ -107,7 +266,67 @@ if [ $? -gt 0 ] ; then
 
     EMAIL_BODY="Failed to merge subset of MSK-IMPACT for AstraZeneca"
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "AstraZeneca MSK-IMPACT Merge Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
+
+    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+
+    exit 1
+fi
+
+printTimeStampedDataProcessingStepMessage "filter clinical attribute columns and add metadata headers for AstraZeneca"
+
+# Filter clincal attribute columns from clinical files
+if ! filter_clinical_attribute_columns ; then
+    msg="Filtering of non-delivered clinical attribute columns (az-msk-impact-2022) failed."
+    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
+
+    EMAIL_BODY="$msg"
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
+
+    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+
+    exit 1
+fi
+
+# Add metadata headers to clinical files
+if ! add_metadata_headers ; then
+    msg="Adding of metadata headers to clinical attribute files (az-msk-impact-2022) failed."
+    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
+
+    EMAIL_BODY="$msg"
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
+
+    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+
+    exit 1
+fi
+
+printTimeStampedDataProcessingStepMessage "filter non-delivered files and include delivered meta files for AstraZeneca"
+
+# Filter out files which are not delivered
+if ! filter_files_in_delivery_directory ; then
+    msg="Filtering of non-delivered files (az-msk-impact-2022) failed."
+    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
+
+    EMAIL_BODY="$msg"
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
+
+    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+
+    exit 1
+fi
+
+# Carry over the appropriate meta files
+if ! copy_delivered_meta_files; then
+    msg="Copy of metadata files (az-msk-impact-2022) failed."
+    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
+
+    EMAIL_BODY="$msg"
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
     cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 
@@ -131,7 +350,7 @@ if [ $? -gt 0 ] ; then
 
     EMAIL_BODY="Failed to generate changelog summary for AstraZeneca MSK-Impact subset"
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "AstraZeneca MSK-IMPACT Changelog Failure: Changelog summary will not be provided." $PIPELINES_EMAIL_LIST
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
     cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 
@@ -151,7 +370,7 @@ if [ $? -gt 0 ] ; then
 
     EMAIL_BODY="Failed to filter germine events from mutation file for AstraZeneca MSK-Impact subset."
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "AstraZeneca MSK-IMPACT Mutation Germline Filter Failure: Changelog summary will not be provided." $PIPELINES_EMAIL_LIST
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
     cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 
@@ -168,7 +387,7 @@ if [ $? -gt 0 ] ; then
 
     EMAIL_BODY="Failed to filter germine events from nonsignedout mutation file for AstraZeneca MSK-Impact subset."
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "AstraZeneca MSK-IMPACT Mutation Germline Filter Failure: Changelog summary will not be provided." $PIPELINES_EMAIL_LIST
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
     cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 
@@ -186,7 +405,7 @@ if [ $? -gt 0 ] ; then
 
     EMAIL_BODY="Failed to filter germine events from structural variant file for AstraZeneca MSK-Impact subset."
     echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "AstraZeneca MSK-IMPACT Structural Variant Germline Filter Failure: Changelog summary will not be provided." $PIPELINES_EMAIL_LIST
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
     cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 
@@ -195,10 +414,25 @@ fi
 mv $sv_filtered_filepath $sv_filepath
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 6. Push the updates data to GitHub
-printTimeStampedDataProcessingStepMessage "push of AstraZeneca data updates to git repository"
+# 6. Generate case list files
+printTimeStampedDataProcessingStepMessage "generate case list files for AstraZeneca"
 
-echo "Committing AstraZeneca MSK-IMPACT data"
+if ! generate_case_lists ; then
+    msg="Generation of case lists (az-msk-impact-2022) failed"
+    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
+
+    EMAIL_BODY="$msg"
+    echo -e "Sending email $EMAIL_BODY"
+    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
+
+    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+
+    exit 1
+fi
+
+# ------------------------------------------------------------------------------------------------------------------------
+# 7. Push the updates data to GitHub
+printTimeStampedDataProcessingStepMessage "push of AstraZeneca data updates to git repository"
 
 if ! push_updates_to_az_git_repo ; then
     sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (az-msk-impact-2022) :fire: - address ASAP!"
