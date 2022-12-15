@@ -13,6 +13,19 @@ declare -g clinical_attributes_to_filter_arg="unset"
 
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
+function report_error() {
+    error_message="$1"
+
+    # Send Slack message and email reporting the error
+    sendPreImportFailureMessageMskPipelineLogsSlack "$error_message"
+    echo -e "Sending email $error_message"
+    echo -e "$error_message" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
+
+    # Reset the local git repo and exit
+    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+    exit 1
+}
+
 function pull_latest_data_from_az_git_repo() {
     (   # Executed in a subshell to avoid changing the actual working directory
         # If any statement fails, the return value of the entire expression is the failure status
@@ -186,13 +199,7 @@ function generate_case_lists() {
 printTimeStampedDataProcessingStepMessage "pull of AstraZeneca data updates to git repository"
 
 if ! pull_latest_data_from_az_git_repo ; then
-    sendPreImportFailureMessageMskPipelineLogsSlack "GIT PULL (az-msk-impact-2022) :fire: - address ASAP!"
-
-    EMAIL_BODY="Failed to pull AstraZeneca incoming changes from Git - address ASAP!"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    exit 1
+    report_error "GIT PULL FAILURE (az-msk-impact-2022) :fire: - address ASAP!"
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
@@ -212,16 +219,7 @@ fi
 cp -a $MSK_SOLID_HEME_DATA_HOME/* $AZ_TMPDIR
 
 if [ $? -gt 0 ] ; then
-    echo "ERROR! Failed to copy MSK-IMPACT data to AstraZeneca repo. Skipping subset, merge, and update of AstraZeneca MSK-IMPACT!"
-    sendPreImportFailureMessageMskPipelineLogsSlack "Copy MSK-IMPACT data to AstraZeneca repo"
-
-    EMAIL_BODY="Failed to copy MSK-IMPACT data to AstraZeneca repo. Subset study will not be updated."
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "ERROR! Failed to copy MSK-IMPACT data to AstraZeneca repo. Study will not be updated."
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
@@ -236,16 +234,7 @@ $PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py \
     --subset-filename="$AZ_TMPDIR/part_a_subset.txt"
 
 if [ $? -gt 0 ] ; then
-    echo "ERROR! Failed to generate subset of MSK-IMPACT for AstraZeneca. Skipping merge and update of AstraZeneca MSK-IMPACT!"
-    sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca subset generation from MSK-IMPACT"
-
-    EMAIL_BODY="Failed to subset AstraZeneca MSK-IMPACT data. Subset study will not be updated."
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "ERROR! Failed to generate subset of MSK-IMPACT for AstraZeneca. Study will not be updated"
 fi
 
 # Write out the subsetted data
@@ -257,62 +246,26 @@ $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
     $AZ_TMPDIR
 
 if [ $? -gt 0 ] ; then
-    echo "Error! Failed to merge subset of MSK-IMPACT for AstraZeneca. Skipping update of AstraZeneca MSK-IMPACT!"
-    sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca subset merge from MSK-IMPACT"
-
-    EMAIL_BODY="Failed to merge subset of MSK-IMPACT for AstraZeneca"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Error! Failed to write subset of MSK-IMPACT data for AstraZeneca. Study will not be updated"
 fi
 
 printTimeStampedDataProcessingStepMessage "filter clinical attribute columns and add metadata headers for AstraZeneca"
 
 # Filter clincal attribute columns from clinical files
 if ! filter_clinical_attribute_columns ; then
-    msg="Filtering of non-delivered clinical attribute columns (az-msk-impact-2022) failed."
-    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
-
-    EMAIL_BODY="$msg"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Filtering of non-delivered clinical attribute columns (az-msk-impact-2022) failed. Study will not be updated"
 fi
 
 # Add metadata headers to clinical files
 if ! add_metadata_headers ; then
-    msg="Adding of metadata headers to clinical attribute files (az-msk-impact-2022) failed."
-    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
-
-    EMAIL_BODY="$msg"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Adding of metadata headers to clinical attribute files (az-msk-impact-2022) failed."
 fi
 
 printTimeStampedDataProcessingStepMessage "filter non-delivered files and include delivered meta files for AstraZeneca"
 
 # Filter out files which are not delivered
 if ! filter_files_in_delivery_directory ; then
-    msg="Filtering of non-delivered files (az-msk-impact-2022) failed."
-    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
-
-    EMAIL_BODY="$msg"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Filtering of non-delivered files (az-msk-impact-2022) failed."
 fi
 
 # Remove temporary directory now that the subset has been merged
@@ -327,16 +280,7 @@ printTimeStampedDataProcessingStepMessage "generate changelog for AstraZeneca MS
 $PYTHON3_BINARY $PORTAL_HOME/scripts/generate_az_study_changelog_py3.py $AZ_MSK_IMPACT_DATA_HOME
 
 if [ $? -gt 0 ] ; then
-    echo "Error! Failed to generate changelog summary for AstraZeneca MSK-Impact subset."
-    sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca MSK-IMPACT changelog generation"
-
-    EMAIL_BODY="Failed to generate changelog summary for AstraZeneca MSK-Impact subset"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Error! Failed to generate changelog summary for AstraZeneca MSK-Impact subset."
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
@@ -347,16 +291,7 @@ mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
 mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt.filtered"
 $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
 if [ $? -gt 0 ] ; then
-    echo "Error! Failed to filter germline events from mutation file for AstraZeneca MSK-Impact subset."
-    sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca MSK-IMPACT mutation event filtering"
-
-    EMAIL_BODY="Failed to filter germline events from mutation file for AstraZeneca MSK-Impact subset."
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Error! Failed to filter germline events from mutation file for AstraZeneca MSK-Impact subset."
 fi
 mv $mutation_filtered_filepath $mutation_filepath
 
@@ -364,16 +299,7 @@ mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
 mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt.filtered"
 $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
 if [ $? -gt 0 ] ; then
-    echo "Error! Failed to filter germline events from nonsignedout mutation file for AstraZeneca MSK-Impact subset."
-    sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca MSK-IMPACT mutation event filtering"
-
-    EMAIL_BODY="Failed to filter germline events from nonsignedout mutation file for AstraZeneca MSK-Impact subset."
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Error! Failed to filter germline events from nonsignedout mutation file for AstraZeneca MSK-Impact subset."
 fi
 mv $mutation_filtered_filepath $mutation_filepath
 
@@ -382,16 +308,7 @@ sv_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
 $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $sv_filepath $sv_filtered_filepath --event-type structural_variant
 
 if [ $? -gt 0 ] ; then
-    echo "Error! Failed to filter germline events from structural variant file for AstraZeneca MSK-Impact subset."
-    sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca MSK-IMPACT structural variant event filtering"
-
-    EMAIL_BODY="Failed to filter germline events from structural variant file for AstraZeneca MSK-Impact subset."
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Error! Failed to filter germline events from structural variant file for AstraZeneca MSK-Impact subset."
 fi
 mv $sv_filtered_filepath $sv_filepath
 
@@ -400,16 +317,7 @@ mv $sv_filtered_filepath $sv_filepath
 printTimeStampedDataProcessingStepMessage "generate case list files for AstraZeneca"
 
 if ! generate_case_lists ; then
-    msg="Generation of case lists (az-msk-impact-2022) failed"
-    sendPreImportFailureMessageMskPipelineLogsSlack "$msg"
-
-    EMAIL_BODY="$msg"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "Generation of case lists (az-msk-impact-2022) failed"
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
@@ -417,15 +325,7 @@ fi
 printTimeStampedDataProcessingStepMessage "push of AstraZeneca data updates to git repository"
 
 if ! push_updates_to_az_git_repo ; then
-    sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (az-msk-impact-2022) :fire: - address ASAP!"
-
-    EMAIL_BODY="Failed to push AstraZeneca MSK-IMPACT outgoing changes to Git - address ASAP!"
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" |  mail -s "[URGENT] GIT PUSH FAILURE" $PIPELINES_EMAIL_LIST
-
-    cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-    exit 1
+    report_error "GIT PUSH (az-msk-impact-2022) :fire: - address ASAP!"
 fi
 
 # Send a message on success
