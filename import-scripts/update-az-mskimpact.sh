@@ -38,6 +38,7 @@ function filter_files_in_delivery_directory() {
     unset filenames_to_deliver
     declare -A filenames_to_deliver
 
+    # Deliver data files
     filenames_to_deliver[data_clinical_patient.txt]+=1
     filenames_to_deliver[data_clinical_sample.txt]+=1
     filenames_to_deliver[data_CNA.txt]+=1
@@ -48,6 +49,16 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[data_sv.txt]+=1
     filenames_to_deliver[mskimpact_data_cna_hg19.seg]+=1
     filenames_to_deliver[case_lists]+=1
+
+    # Deliver meta files
+    filenames_to_deliver[meta_clinical_patient.txt]+=1
+    filenames_to_deliver[meta_clinical_sample.txt]+=1
+    filenames_to_deliver[meta_CNA.txt]+=1
+    filenames_to_deliver[meta_gene_matrix.txt]+=1
+    filenames_to_deliver[meta_mutations_extended.txt]+=1
+    filenames_to_deliver[meta_study.txt]+=1
+    filenames_to_deliver[meta_sv.txt]+=1
+    filenames_to_deliver[mskimpact_meta_cna_hg19_seg.txt]+=1
 
     for filepath in $AZ_MSK_IMPACT_DATA_HOME/* ; do
         filename=$(basename $filepath)
