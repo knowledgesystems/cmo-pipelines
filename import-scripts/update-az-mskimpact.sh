@@ -336,10 +336,10 @@ mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
 mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt.filtered"
 $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
 if [ $? -gt 0 ] ; then
-    echo "Error! Failed to filter germine events from mutation file for AstraZeneca MSK-Impact subset."
+    echo "Error! Failed to filter germline events from mutation file for AstraZeneca MSK-Impact subset."
     sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca MSK-IMPACT mutation event filtering"
 
-    EMAIL_BODY="Failed to filter germine events from mutation file for AstraZeneca MSK-Impact subset."
+    EMAIL_BODY="Failed to filter germline events from mutation file for AstraZeneca MSK-Impact subset."
     echo -e "Sending email $EMAIL_BODY"
     echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
@@ -353,10 +353,10 @@ mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
 mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt.filtered"
 $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
 if [ $? -gt 0 ] ; then
-    echo "Error! Failed to filter germine events from nonsignedout mutation file for AstraZeneca MSK-Impact subset."
+    echo "Error! Failed to filter germline events from nonsignedout mutation file for AstraZeneca MSK-Impact subset."
     sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca MSK-IMPACT mutation event filtering"
 
-    EMAIL_BODY="Failed to filter germine events from nonsignedout mutation file for AstraZeneca MSK-Impact subset."
+    EMAIL_BODY="Failed to filter germline events from nonsignedout mutation file for AstraZeneca MSK-Impact subset."
     echo -e "Sending email $EMAIL_BODY"
     echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
@@ -371,10 +371,10 @@ sv_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
 $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $sv_filepath $sv_filtered_filepath --event-type structural_variant
 
 if [ $? -gt 0 ] ; then
-    echo "Error! Failed to filter germine events from structural variant file for AstraZeneca MSK-Impact subset."
+    echo "Error! Failed to filter germline events from structural variant file for AstraZeneca MSK-Impact subset."
     sendPreImportFailureMessageMskPipelineLogsSlack "AstraZeneca MSK-IMPACT structural variant event filtering"
 
-    EMAIL_BODY="Failed to filter germine events from structural variant file for AstraZeneca MSK-Impact subset."
+    EMAIL_BODY="Failed to filter germline events from structural variant file for AstraZeneca MSK-Impact subset."
     echo -e "Sending email $EMAIL_BODY"
     echo -e "$EMAIL_BODY" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
