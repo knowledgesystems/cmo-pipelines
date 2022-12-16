@@ -238,8 +238,7 @@ fi
 # Create temporary directory to store data before subsetting
 if ! [ -d "$AZ_TMPDIR" ] ; then
     if ! mkdir -p "$AZ_TMPDIR" ; then
-        echo "ERROR: could not create tmp directory '$AZ_TMPDIR'" >&2
-        exit 1
+        report_error "ERROR: Failed to create temporary directory for AstraZeneca MSK-IMPACT. Exiting."
     fi
 fi
 if [[ -d "$AZ_TMPDIR" && "$AZ_TMPDIR" != "/" ]] ; then
