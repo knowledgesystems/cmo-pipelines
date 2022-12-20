@@ -84,7 +84,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         echo "importing cancer type updates into genie portal database..."
         $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${oncotree_version_to_use}
         echo "importing study data into genie portal database..."
-        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version ${oncotree_version_to_use} --transcript-overrides-source mskcc
+        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version ${oncotree_version_to_use} --transcript-overrides-source mskcc --disable-redcap-export
         IMPORT_EXIT_STATUS=$?
         if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
             echo "Genie import failed!"
