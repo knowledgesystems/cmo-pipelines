@@ -11,6 +11,18 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
 
     source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
 
+    DELIVERED_FILE_LIST="""
+        data_clinical_sample.oncokb.pdf
+        data_clinical_sample.oncokb.txt.gz
+        data_clinical_sample_somatic.oncokb.pdf
+        data_clinical_sample_somatic.oncokb.txt.gz
+        data_CNA.oncokb.txt.gz
+        data_mutations_extended.oncokb.txt.gz
+        data_mutations_extended_somatic.oncokb.txt.gz
+        data_sv.oncokb.txt.gz
+        README.md
+    """
+
     function send_failure_messages() {
         email_message=$1
         email_subject=$2
@@ -75,11 +87,13 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
         wd=$(pwd)
         cd $ONCOKB_ANNOTATED_GIT_DIR
         # Create and push a git amended changeset
-        if ! git add . ; then
-            message="Error during attempt to 'git add .' in repository oncokb-annotated-msk-impact"
-            send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
-            exit 1
-        fi
+        for filename in $DELIVERED_FILE_LIST ; do
+            if ! git add $filename ; then
+                message="Error during attempt to 'git add $filename' in repository oncokb-annotated-msk-impact"
+                send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
+                exit 1
+            fi
+        done
         if ! git commit --amend --message "latest oncokb annotations of mskimpact" ; then
             message="Error occurred during 'git commit --amend' ..."
             send_failure_messages "$message" "oncokb-annotator failed to run." "$message"
