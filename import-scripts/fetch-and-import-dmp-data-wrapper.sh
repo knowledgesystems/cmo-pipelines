@@ -38,9 +38,13 @@ SKIP_DMP_IMPORT_BEFORE_HHMM=2000
     date
     echo "executing update-msk-spectrum-cohort.sh"
     /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
-    date
-    echo "executing update-az-mskimpact.sh"
-    /data/portal-cron/scripts/update-az-mskimpact.sh
+    # Only run AstraZeneca updates on Sundays
+    day_of_week=$(date +%u)
+    if [ "$day_of_week" -eq 7 ] ; then
+        date
+        echo "executing update-az-mskimpact.sh"
+        /data/portal-cron/scripts/update-az-mskimpact.sh
+    fi
     date
     echo "wrapper complete"
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH
