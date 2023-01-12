@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export AZ_DATA_HOME=$PORTAL_DATA_HOME/az-msk-impact-2022
+export AZ_DATA_HOME=$PORTAL_DATA_HOME/az-msk-impact
 export AZ_MSK_IMPACT_DATA_HOME=$AZ_DATA_HOME/mskimpact
 export AZ_TMPDIR=$AZ_DATA_HOME/tmp
 
@@ -225,7 +225,7 @@ function generate_case_lists() {
 }
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 1. Pull latest from AstraZeneca repo (mskcc/az-msk-impact-2022)
+# 1. Pull latest from AstraZeneca repo (az-msk-impact)
 printTimeStampedDataProcessingStepMessage "Pull of AstraZeneca MSK-IMPACT data updates"
 
 if ! pull_latest_data_from_az_git_repo ; then
