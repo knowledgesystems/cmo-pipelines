@@ -52,6 +52,20 @@ function push_updates_to_az_git_repo() {
     )
 }
 
+function transfer_to_az_sftp_server() {
+    # Connect to the SFTP server
+    TRANSFER_KEY="/home/cbioportal_importer/.ssh/id_rsa_astrazeneca_sftp"
+    SFTP_USER=$(cat $AZ_SFTP_USER)
+    SERVICE_ENDPOINT=$(cat $AZ_SERVICE_ENDPOINT)
+    sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT"
+
+    # Transfer the contents of the repo
+    put -apR "$AZ_DATA_HOME"
+
+    # Exit the SFTP connection 
+    exit
+}
+
 function filter_files_in_delivery_directory() {
     unset filenames_to_deliver
     declare -A filenames_to_deliver
@@ -392,11 +406,20 @@ if ! generate_case_lists ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 7. Push the updates data to GitHub
+# 7. Push the updated data to GitHub
 printTimeStampedDataProcessingStepMessage "Push data updates to AstraZeneca MSK-IMPACT git repository"
 
 if ! push_updates_to_az_git_repo ; then
     report_error "ERROR: Failed git push for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
+# ------------------------------------------------------------------------------------------------------------------------
+# 7. Push the updated data to AstraZeneca's SFTP server
+
+printTimeStampedDataProcessingStepMessage "Transfer data updates to SFTP server for AstraZeneca MSK-IMPACT"
+
+if ! transfer_to_az_sftp_server ; then
+    report_error "ERROR: Failed to transfer data updates to SFTP server for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
 # Send a message on success

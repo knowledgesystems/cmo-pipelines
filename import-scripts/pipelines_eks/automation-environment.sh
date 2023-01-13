@@ -203,3 +203,9 @@ export CRDB_FETCHER_PDX_HOME=$PDX_DATA_HOME/crdb_pdx_raw_data
 # environment variables used for oncokb annotator script
 #######################
 export ONCOKB_TOKEN_FILE=$PORTAL_HOME/pipelines-credentials/oncokb.token
+
+#######################
+# environment variables used in the update-az-mskimpact script
+#######################
+export AZ_SFTP_USER=$PORTAL_HOME/pipelines-credentials/astrazeneca_sftp.user
+export AZ_SERVICE_ENDPOINT=$PORTAL_HOME/pipelines-credentials/astrazeneca_sftp.service_endpoint
