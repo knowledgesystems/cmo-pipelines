@@ -12,7 +12,6 @@ MAILTO=cbioportal-pipelines@cbioportal.org
 * * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/kill-import-devdb-data.sh >> /data/portal-cron/logs/kill-import-devdb-data.log 2>&1
 0 20 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/fetch-and-import-dmp-data-wrapper.sh >> /data/portal-cron/logs/fetch-and-import-dmp-impact-data.log 2>&1 || echo "Failure in crontab: fetch-and-import-dmp-data-wrapper.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
 0 4,12 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-public-data.sh >> /data/portal-cron/logs/import-public-data-msk.log 2>&1 || echo "Failure in crontab: import-public-data.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
-0 15 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-genie-data.sh >> /data/portal-cron/logs/import-genie-data-msk.log 2>&1 || echo "Failure in crontab: import-genie-data.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
 
 ##########################
 # Monitors
