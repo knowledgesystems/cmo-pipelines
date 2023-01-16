@@ -43,6 +43,12 @@ function print_portal_id_values() {
     done
 }
 
+function authenticate_msk_service_account_if_necessary() {
+    if [ -z "KUBECONFIG_ARG" ] ; then
+        /data/portal-cron/scripts/authenticate_service_account.sh
+    fi
+}
+
 portal_id=$1
 KUBECONFIG_ARG=""
 if [ "$portal_id" == "public" ] || [ "$portal_id" == "genie-private" ] || [ "$portal_id" == "genie-archive" ] || [ "$portal_id" == "genie-public" ] ; then
@@ -64,7 +70,7 @@ if [ -z "$deployment_id" ] ; then
     exit 1
 fi
 
-/data/portal-cron/scripts/authenticate_service_account.sh 
+authenticate_msk_service_account_if_necessary
 $KUBECTL_BINARY $KUBECONFIG_ARG set env deployment $deployment_id --env="LAST_RESTART=$(date)"
 webapp_restart_status=$?
 if [ $webapp_restart_status -ne 0 ] ; then

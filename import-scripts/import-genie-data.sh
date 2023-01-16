@@ -3,12 +3,12 @@
 FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
 (
     echo $(date)
-    
+
     # check lock so that script executions do not overlap
     if ! flock --nonblock --exclusive $flock_fd ; then
         exit 0
     fi
-    
+
     # set necessary env variables with automation-environment.sh
     if [[ -z $PORTAL_HOME || -z $JAVA_BINARY ]] ; then
         echo "Error : import-aws-gdac-data.sh cannot be run without setting PORTAL_HOME and JAVA_BINARY environment variables. (Use automation-environment.sh)"
@@ -16,7 +16,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     fi
 
     source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
-    
+
     tmp=$PORTAL_HOME/tmp/import-cron-genie
     if ! [ -d "$tmp" ] ; then
         if ! mkdir -p "$tmp" ; then
@@ -35,7 +35,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     if [ $ENABLE_DEBUGGING != "0" ] ; then
         java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27186"
     fi
-    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    JAVA_IMPORTER_ARGS="$java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     genie_portal_notification_file=$(mktemp $tmp/genie-portal-update-notification.$now.XXXXXX)
     IMPORTING_GENIE_RELEASE_BEFORE_9_0=0
     if [ $IMPORTING_GENIE_RELEASE_BEFORE_9_0 != "0" ] ; then
@@ -44,7 +44,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         oncotree_version_to_use=oncotree_2019_12_01
     fi
     CLEAR_PERSISTENCE_CACHE=0 # 0 = do not clear cache, non-0 = clear cache
-    
+
     echo $now : starting import
     CDD_ONCOTREE_RECACHE_FAIL=0
     if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
@@ -57,7 +57,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
             echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $PIPELINES_EMAIL_LIST
         fi
     fi
-    
+
     DB_VERSION_FAIL=0
     # check database version before importing anything
     echo "Checking if database version is compatible"
@@ -66,7 +66,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         echo "Database version expected by portal does not match version in database!"
         DB_VERSION_FAIL=1
     fi
-    
+
     # fetch updates in genie repository
     echo "fetching updates from genie..."
     GENIE_FETCH_FAIL=0
@@ -78,7 +78,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "Data fetch failure: genie" $PIPELINES_EMAIL_LIST
     fi
-    
+
     if [[ $DB_VERSION_FAIL -eq 0 && $GENIE_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]]; then
         # import genie studies into genie portal
         echo "importing cancer type updates into genie portal database..."
@@ -108,7 +108,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
                 CLEAR_PERSISTENCE_CACHE=1
             fi
         fi
-    
+
         # clear persistence cache
         if [ $CLEAR_PERSISTENCE_CACHE -ne 0 ] ; then
             echo "clearing persistence cache for genie portal ..."
@@ -119,16 +119,16 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
             echo "No studies have been updated, skipping redeployment of genie portal pods"
         fi
     fi
-    
+
     # send email if db version isn't compatible
     if [ $DB_VERSION_FAIL -gt 0 ]; then
         EMAIL_BODY="The genie database version is incompatible. Imports will be skipped until database is updated."
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "GENIE Update Failure: DB version is incompatible" $PIPELINES_EMAIL_LIST
     fi
-    
+
     $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal genie-portal --notification-file "$genie_portal_notification_file"
-    
+
     echo "Cleaning up any untracked files from MSK-TRIAGE import..."
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/genie
 ) {flock_fd}>$FLOCK_FILEPATH

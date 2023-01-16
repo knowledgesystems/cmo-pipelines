@@ -1,19 +1,17 @@
 #!/bin/bash
 
-#TODO : break up this environment variable setting script into a global script and several secondary scripts as needed by import scripts
-
 #######################
 # general paths/options for system executables
 #######################
-export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk.x86_64
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.302.b08-0.amzn2.0.1.x86_64
 export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
 export JAVA_BINARY=$JAVA_HOME/bin/java
-export PYTHON_BINARY=/data/tools/python2.7/bin/python
-export PYTHON3_BINARY=/data/tools/python3.4.10/bin/python3
-export MAVEN_BINARY=/data/tools/mvn
+export PYTHON_BINARY=/usr/bin/python
+export PYTHON3_BINARY=/usr/bin/python3
+export MAVEN_BINARY=/opt/apache-maven-3.8.6/bin/mvn
 export HG_BINARY=/usr/bin/hg
-export GIT_BINARY=/usr/local/bin/git
-export PATH=/data/tools:/data/tools/python2.7/bin:/data/tools/python3.4.10/bin:$PATH
+export GIT_BINARY=/usr/bin/git
+export PATH=$(bash --login -c 'echo $PATH')
 
 #######################
 # environment variables for top-level data repositories / code bases
@@ -34,11 +32,23 @@ export ONCO_HOME=$PORTAL_GIT_HOME/oncotree
 export ONCOKB_ANNOTATOR_HOME=$PORTAL_GIT_HOME/oncokb-annotator
 export CDD_HOME=$PORTAL_GIT_HOME/clinical-data-dictionary
 export DDP_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/application-secure.properties
-export EKS_ACCOUNT_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/eks-account.credentials
 export AWS_SSL_TRUSTSTORE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore
 export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore.password
 export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
 export GMAIL_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/gmail.credentials
+export START_TRIAGE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/triage-import-start-request
+export KILL_TRIAGE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/triage-import-kill-request
+export TRIAGE_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/triage-import-in-progress
+export TRIAGE_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/triage-import-killing
+export START_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-start-request
+export KILL_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-kill-request
+export HGNC_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-in-progress
+export HGNC_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-killing
+export START_DEVDB_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-start-request
+export KILL_DEVDB_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-kill-request
+export DEVDB_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-in-progress
+export DEVDB_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-killing
+export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-config
 
 #######################
 # SSL args (for AWS + redcap)
@@ -48,13 +58,13 @@ export JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net
 #######################
 # environment variables for configuration / properties files
 #######################
-export PORTAL_CONFIG_HOME=$PORTAL_DATA_HOME/portal-configuration
+export PORTAL_CONFIG_HOME=$PORTAL_GIT_HOME/portal-configuration
 export PIPELINES_CONFIG_HOME=$PORTAL_GIT_HOME/pipelines-configuration
 
 #######################
 # environment variables for top level data repositories
 #######################
-export BIC_DATA_HOME=$PORTAL_DATA_HOME/bic-mskcc
+export BIC_LEGACY_DATA_HOME=$PORTAL_DATA_HOME/bic-mskcc-legacy
 export CMO_ARGOS_DATA_HOME="$PORTAL_DATA_HOME/cmo-argos"
 export PDX_DATA_HOME=$PORTAL_DATA_HOME/crdb_pdx
 export PRIVATE_DATA_HOME=$PORTAL_DATA_HOME/private
