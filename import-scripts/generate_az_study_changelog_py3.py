@@ -86,7 +86,7 @@ class DataHandler:
                 if line[0] == '#':
                     continue
 
-                col_names = line.split('\t')
+                col_names = [col.strip() for col in line.split('\t')]
                 break
 
             for col_idx, col_name in enumerate(col_names):

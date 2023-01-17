@@ -219,11 +219,10 @@ function anonymize_age_at_seq_with_cap() {
     SAMPLE_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
     SAMPLE_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.age_anonymized"
     UPPER_AGE_LIMIT=89
-    LOWER_AGE_LIMIT=18
     OS_MONTHS_PRECISION=2
 
     # Anonymize AGE_AT_SEQUENCING_REPORTED_YEARS and truncate OS_MONTHS
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/anonymize_age_at_seq_with_cap_py3.py "$PATIENT_INPUT_FILEPATH" "$PATIENT_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH" "$SAMPLE_OUTPUT_FILEPATH" -u "$UPPER_AGE_LIMIT" -l "$LOWER_AGE_LIMIT" -o "$OS_MONTHS_PRECISION"
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/anonymize_age_at_seq_with_cap_py3.py "$PATIENT_INPUT_FILEPATH" "$PATIENT_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH" "$SAMPLE_OUTPUT_FILEPATH" -u "$UPPER_AGE_LIMIT" -o "$OS_MONTHS_PRECISION" &&
 
     # Rewrite the patient and sample files with updated data
     mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH" &&

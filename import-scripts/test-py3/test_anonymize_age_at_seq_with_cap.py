@@ -35,14 +35,10 @@ class TestAnonymizeAgeAtSeq(unittest.TestCase):
     def test_na_ages(self):
         self.compare_expected_output_to_actual('na_ages')
 
-    def test_age_at_seq_lt_lower_age_limit(self):
-        self.assertRaises(ValueError, self.compare_expected_output_to_actual, 'age_at_seq_lt_lower_age_limit')
-
-    def test_age_current_lt_lower_age_limit(self):
-        self.assertRaises(ValueError, self.compare_expected_output_to_actual, 'age_current_lt_lower_age_limit')
-
     def test_patient_id_not_in_patient_file(self):
-        self.assertRaises(IndexError, self.compare_expected_output_to_actual, 'patient_id_not_in_patient_file')
+        self.assertRaises(
+            IndexError, self.compare_expected_output_to_actual, 'patient_id_not_in_patient_file'
+        )
 
     def test_os_months_column_missing(self):
         self.assertRaises(IndexError, self.compare_expected_output_to_actual, 'os_months_column_missing')
@@ -68,9 +64,7 @@ class TestAnonymizeAgeAtSeq(unittest.TestCase):
     def test_os_months_integers(self):
         self.compare_expected_output_to_actual('os_months_integers')
 
-    def compare_expected_output_to_actual(
-        self, sub_dir, upper_age_limit=89, lower_age_limit=18, os_months_precision=2
-    ):
+    def compare_expected_output_to_actual(self, sub_dir, upper_age_limit=89, os_months_precision=2):
         patient_data_path = os.path.join(TestAnonymizeAgeAtSeq.base_dir, sub_dir, 'data_clinical_patient.txt')
         output_patient_data_path = os.path.join(
             TestAnonymizeAgeAtSeq.base_dir, sub_dir, 'generated_data_clinical_patient.txt'
@@ -88,7 +82,7 @@ class TestAnonymizeAgeAtSeq(unittest.TestCase):
 
         # Read the patient file
         patient_file_reader = PatientFileWriter(
-            patient_data_path, output_patient_data_path, upper_age_limit, lower_age_limit, os_months_precision
+            patient_data_path, output_patient_data_path, upper_age_limit, os_months_precision
         )
 
         try:
@@ -110,7 +104,6 @@ class TestAnonymizeAgeAtSeq(unittest.TestCase):
             sample_data_path,
             output_sample_data_path,
             upper_age_limit,
-            lower_age_limit,
             patient_file_reader.patient_os_years_map,
         )
 
