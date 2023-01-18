@@ -212,7 +212,12 @@ def write_standardized_columns(clinical_filename, output_file):
         to the SAMPLE_ID column (to avoid creating an actual sample tagged 'NA'
     """
     header = get_header(clinical_filename)
-    sample_id_index = header.index("SAMPLE_ID")
+
+    try:
+        sample_id_index = header.index('SAMPLE_ID')
+    except ValueError:
+        sample_id_index = -1
+    
     with open(clinical_filename) as clinical_file:
         for line in clinical_file:
             line = line.rstrip('\n')

@@ -213,6 +213,21 @@ function add_metadata_headers() {
     $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
 }
 
+function standardize_clinical_data() {
+    PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
+    PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.standardized"
+    SAMPLE_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
+    SAMPLE_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.standardized"
+
+    # Standardize the clinical files to use NA for blank values
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_clinical_data.py -f "$PATIENT_INPUT_FILEPATH" > "$PATIENT_OUTPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_clinical_data.py -f "$SAMPLE_INPUT_FILEPATH" > "$SAMPLE_OUTPUT_FILEPATH" &&
+
+    # Rewrite the patient and sample files with updated data
+    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH" &&
+    mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
+}
+
 function anonymize_age_at_seq_with_cap() {
     PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.os_months_trunc"
@@ -304,6 +319,11 @@ fi
 # Add metadata headers to clinical files
 if ! add_metadata_headers ; then
     report_error "ERROR: Failed to add metadata headers to clinical attribute files for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
+# Standardize blank clinical data values to NA
+if ! standardize_clinical_data ; then
+    report_error "ERROR: Failed to standardize blank clinical data values to NA for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
 # Anonymize ages
