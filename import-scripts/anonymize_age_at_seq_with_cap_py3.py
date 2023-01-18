@@ -88,7 +88,7 @@ class PatientLineProcessor(LineProcessor):
         self.os_months_precision = os_months_precision
 
     def apply_age_current_limit(self, cols, patient_id_col_index, age_current_col_index):
-        """Applies age limits to the 'AGE_AT_SEQ_REPORTED_YEARS' column:
+        """Applies age limits to the 'AGE_CURRENT' column:
             If 'AGE_CURRENT' > upper_age_limit, this function will overwrite the value of
                 'AGE_CURRENT' to '>{upper_age_limit}'.
 
