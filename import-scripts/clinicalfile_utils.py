@@ -206,6 +206,11 @@ def write_data(data_file, output_file):
                 os.write(output_file, line)
 
 def write_standardized_columns(clinical_filename, output_file):
+    """
+    	Rewrites a file (assumed clinical/timeline) and replaces
+        all NA placeholders/blanks with 'NA'. Does not make same adjustment
+        to the SAMPLE_ID column (to avoid creating an actual sample tagged 'NA'
+    """
     header = get_header(clinical_filename)
     sample_id_index = header.index("SAMPLE_ID")
     with open(clinical_filename) as clinical_file:
@@ -214,8 +219,11 @@ def write_standardized_columns(clinical_filename, output_file):
             row = line.split('\t')
             to_write = []
             for index, field in enumerate(row):
-                if index == sample_id_index
-            output_file.write('\t'.join([standardize_clinical_datum(field, sample_id_index, index) for index, field in enumerate(row)]))
+                if index == sample_id_index:
+                    to_write.append(field)
+                    continue
+                to_write.append(standardize_clinical_datum(field))
+            output_file.write('\t'.join(to_write))
             output_file.write('\n')
     
 def write_and_exclude_columns(clinical_filename, exclude_column_names, output_file):
