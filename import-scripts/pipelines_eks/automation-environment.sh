@@ -1,9 +1,55 @@
 #!/bin/bash
 
 #######################
+# helper functions
+#######################
+
+function autodetect_and_export_java_home() {
+    # to locate JAVA_HOME, we can trace the path using the readlink program
+    # as an example, a recently deployed node had java installed here:
+    #    /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.342.b07-1.amzn2.0.1.x86_64
+    # and the /usr/bin/java symlink pointed (through two links) to:
+    #    /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.342.b07-1.amzn2.0.1.x86_64/jre/bin/java
+    # This function determines the (canonical) installation path from the java executable link
+    java_exec_path=$(which java)
+    if [ -z $java_exec_path ] ; then
+        echo "failed to set JAVA_HOME because no java executable can be found in PATH" >&2
+        return
+    fi
+    java_canonical_path=$(readlink -f $java_exec_path)
+    java_canonical_path_len=${#java_canonical_path}
+    RELATIVE_SUBPATH_CANIDATES="/jre/bin/java /bin/java"
+    unset matching_relative_subpath
+    for relative_subpath in $RELATIVE_SUBPATH_CANIDATES; do
+        suffix_regex="${relative_subpath}$"
+        if [[ $java_canonical_path =~ $suffix_regex ]]; then
+            matching_relative_subpath="$relative_subpath"
+            relative_subpath_len=${#relative_subpath}
+            break
+        fi
+    done
+    if [ -z $matching_relative_subpath ] ; then
+        echo "failed to set JAVA_HOME because the java executable $java_canonical_path did not end with a recognized subpath"
+        return
+    fi
+    stripped_java_path_len=$(($java_canonical_path_len - $relative_subpath_len))
+    stripped_java_path=${java_canonical_path:0:$stripped_java_path_len}
+    export JAVA_HOME="$stripped_java_path"
+}
+
+function export_java_home() {
+    if [[ -z $1 || "$1" == "AUTODETECT" ]] ; then
+        autodetect_and_export_java_home
+        return
+    fi
+    export JAVA_HOME="$1"
+}
+
+#######################
 # general paths/options for system executables
 #######################
-export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.302.b08-0.amzn2.0.1.x86_64
+export_java_home "AUTODETECT"
+#export_java_home "/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.302.b08-0.amzn2.0.1.x86_64"
 export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
 export JAVA_BINARY=$JAVA_HOME/bin/java
 export PYTHON_BINARY=/usr/bin/python
@@ -60,6 +106,7 @@ export JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net
 #######################
 export PORTAL_CONFIG_HOME=$PORTAL_GIT_HOME/portal-configuration
 export PIPELINES_CONFIG_HOME=$PORTAL_GIT_HOME/pipelines-configuration
+export GITHUB_CRONTAB_URL="https://api.github.com/repos/knowledgesystems/cmo-pipelines/contents/import-scripts/pipelines_eks/mycrontab"
 
 #######################
 # environment variables for top level data repositories
