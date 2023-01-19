@@ -209,7 +209,7 @@ def write_standardized_columns(clinical_filename, output_file):
     """
     	Rewrites a file (assumed clinical/timeline) and replaces
         all NA placeholders/blanks with 'NA'. Does not make same adjustment
-        to the SAMPLE_ID column (to avoid creating an actual sample tagged 'NA'
+        to the SAMPLE_ID column (to avoid creating an actual sample tagged 'NA')
     """
     header = get_header(clinical_filename)
 
