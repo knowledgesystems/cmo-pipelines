@@ -1,5 +1,5 @@
 # run all unit tests with:
-#     import-scripts> python -m unittest discover
+#     import-scripts> python -m unittest discover test
 #
 # TODO this only tests process_clinical_file, other methods should be tested too
 # TODO fix the removing data bug

@@ -1,5 +1,5 @@
 # run all unit tests with:
-#     import-scripts> python -m unittest discover
+#     import-scripts> python -m unittest discover test
 #
 # Author: Avery Wang
 

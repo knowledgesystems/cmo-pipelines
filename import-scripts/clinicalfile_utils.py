@@ -287,6 +287,9 @@ def get_value_set_for_clinical_attribute(clinical_file, clinical_attribute):
     return value_set
 
 def standardize_clinical_datum(val):
+    """
+        Standardizes any NA/blank placeholder value ('', 'NA', 'N/A', None) to 'NA'
+    """
     try:
         vfixed = val.strip()
     except AttributeError:
