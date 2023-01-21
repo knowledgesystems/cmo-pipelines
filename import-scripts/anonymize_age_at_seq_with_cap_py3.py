@@ -11,10 +11,10 @@ Usage:
     python3 anonymize_age_at_seq_with_cap_py3.py $INPUT_PATIENT_FILE_PATH $OUTPUT_PATIENT_FILE_PATH $INPUT_SAMPLE_FILE_PATH $OUTPUT_SAMPLE_FILE_PATH [ --upper-age-limit $UPPER_AGE_LIMIT ] [ --os-months-precision $OS_MONTHS_PRECISION ]
 Example:
     python3 anonymize_age_at_seq_with_cap_py3.py \
-            path/to/az-msk-impact-2022/data_clinical_patient.txt \
-            path/to/az-msk-impact-2022/data_clinical_patient_output.txt \
-            path/to/az-msk-impact-2022/data_clinical_sample.txt \
-            path/to/az-msk-impact-2022/data_clinical_sample_output.txt \
+            path/to/az_mskimpact/data_clinical_patient.txt \
+            path/to/az_mskimpact/data_clinical_patient_output.txt \
+            path/to/az_mskimpact/data_clinical_sample.txt \
+            path/to/az_mskimpact/data_clinical_sample_output.txt \
             --upper-age-limit 89
             --os-months-precision 2
 """

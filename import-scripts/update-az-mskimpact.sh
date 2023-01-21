@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-export AZ_DATA_HOME=$PORTAL_DATA_HOME/az-msk-impact
-export AZ_MSK_IMPACT_DATA_HOME=$AZ_DATA_HOME/mskimpact
+export AZ_DATA_HOME="$PORTAL_DATA_HOME/az-data"
+export AZ_MSKIMPACT_STABLE_ID="az_mskimpact"
+export AZ_MSK_IMPACT_DATA_HOME="$AZ_DATA_HOME/$AZ_MSKIMPACT_STABLE_ID"
 export AZ_TMPDIR=$AZ_DATA_HOME/tmp
 
 # Patient and sample attributes that we want to deliver in our data
@@ -252,11 +253,11 @@ function generate_case_lists() {
             return 1
         fi
     fi
-    $PYTHON_BINARY /data/portal-cron/scripts/generate_case_lists.py --case-list-config-file $CASE_LIST_CONFIG_FILE --case-list-dir $CASE_LIST_DIR --study-dir $AZ_MSK_IMPACT_DATA_HOME --study-id az_msk_impact -o
+    $PYTHON_BINARY /data/portal-cron/scripts/generate_case_lists.py --case-list-config-file $CASE_LIST_CONFIG_FILE --case-list-dir $CASE_LIST_DIR --study-dir $AZ_MSK_IMPACT_DATA_HOME --study-id $AZ_MSKIMPACT_STABLE_ID -o
 }
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 1. Pull latest from AstraZeneca repo (az-msk-impact)
+# 1. Pull latest from AstraZeneca repo (az-data)
 printTimeStampedDataProcessingStepMessage "Pull of AstraZeneca MSK-IMPACT data updates"
 
 if ! pull_latest_data_from_az_git_repo ; then

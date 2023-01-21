@@ -8,8 +8,8 @@ the file where every event which is not noted as SOMATIC has been removed.
 Usage:
     python3 filter_non_somatic_events_py3.py $INPUT_FILE_PATH $OUTPUT_FILE_PATH --event-type $FILE_TYPE \
 Example:
-    python3 filter_non_somatic_events_py3.py /path/to/az-msk-impact-2022/data_mutation_extended.txt \
-        /path/to/az-msk-impact-2022/data_mutation_extended.txt.filtered --event-type mutation
+    python3 filter_non_somatic_events_py3.py /path/to/az_mskimpact/data_mutation_extended.txt \
+        /path/to/az_mskimpact/data_mutation_extended.txt.filtered --event-type mutation
 """
 
 import argparse
@@ -45,7 +45,7 @@ class LineProcessor:
         return line[0] == '#'
 
     def process(self, line):
-        """Process each line of the given file to remove all events that are not 'SOMATIC'.
+        """Process each line of the given file to remove all events that are not 'SOMATIC' or 'UNKNOWN'.
 
         Args:
             line (string): A line from the input file
@@ -75,7 +75,7 @@ class LineProcessor:
 
         cols = line.split('\t')
         value = cols[col_index].rstrip('\n')
-        if value.casefold() == 'SOMATIC'.casefold():
+        if value.casefold() == 'SOMATIC'.casefold() or value.casefold() == 'UNKNOWN'.casefold():
             self.output_file_handle.write(line)
 
 

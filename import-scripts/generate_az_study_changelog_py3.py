@@ -20,7 +20,7 @@ Usage:
         --output-dir $OUTPUT_DIR
 
 Example:
-    python3 generate_az_study_changelog_py3.py /path/to/az-msk-impact-2022/
+    python3 generate_az_study_changelog_py3.py /path/to/az_mskimpact/
 
 When `--output-filename` and `--output-dir` are not provided, the summary file
 is written to `$DATA_REPO_PATH/changelog_summary.txt` by default.
