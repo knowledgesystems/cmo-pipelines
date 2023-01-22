@@ -7,12 +7,13 @@ SKIP_DMP_IMPORT_BEFORE_HHMM=2000
 
 (
     date
-
     # check lock so that executions of this script not overlap
     if ! flock --nonblock --exclusive $my_flock_fd ; then
         echo "Failure : could not acquire lock for $MY_FLOCK_FILEPATH another instance of this process seems to still be running."
         exit 1
     fi
+
+    day_of_week_at_process_start=$(date +%u)
 
     date
     echo executing fetch-dmp-data-for-import.sh
@@ -39,8 +40,7 @@ SKIP_DMP_IMPORT_BEFORE_HHMM=2000
     echo "executing update-msk-spectrum-cohort.sh"
     /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
     # Only run AstraZeneca updates on Sundays
-    day_of_week=$(date +%u)
-    if [ "$day_of_week" -eq 7 ] ; then
+    if [ "$day_of_week_at_process_start" -eq 6 ] ; then
         date
         echo "executing update-az-mskimpact.sh"
         /data/portal-cron/scripts/update-az-mskimpact.sh
