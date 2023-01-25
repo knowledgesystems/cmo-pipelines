@@ -1,4 +1,4 @@
-/* Copyright (c) 2021, 2022 Memorial Sloan Kettering Cancer Center.
+/* Copyright (c) 2021, 2022, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF
@@ -87,6 +87,11 @@ using namespace std;
 
 static string IMPORT_TRIGGER_BASEDIR("/data/portal-cron/import-trigger");
 static string IMPORT_LOG_BASEDIR("/data/portal-cron/logs");
+static string START_GENIE_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/genie-import-start-request");
+static string KILL_GENIE_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/genie-import-kill-request");
+static string GENIE_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/genie-import-in-progress");
+static string GENIE_IMPORT_KILLING_FILENAME(IMPORT_TRIGGER_BASEDIR + "/genie-import-killing");
+static string GENIE_IMPORT_LOG_FILENAME(IMPORT_LOG_BASEDIR + "/genie-aws-importer.log");
 static string START_TRIAGE_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/triage-import-start-request");
 static string KILL_TRIAGE_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/triage-import-kill-request");
 static string TRIAGE_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/triage-import-in-progress");
@@ -108,6 +113,7 @@ static vector<string> RECOGNIZED_IMPORTERS;
 static vector<string> RECOGNIZED_COMMANDS;
 
 void initialize_static_objects() {
+    RECOGNIZED_IMPORTERS.push_back("genie");
     RECOGNIZED_IMPORTERS.push_back("triage");
     RECOGNIZED_IMPORTERS.push_back("hgnc");
     RECOGNIZED_IMPORTERS.push_back("devdb");
@@ -135,7 +141,7 @@ vector<char> character_vector_from_string(string s) {
 void print_usage(string program_name) {
     vector<char> program_name_vector = character_vector_from_string(program_name);
     cerr << "Usage: " << basename(&program_name_vector[0]) << " importer_name command [extra_arguments]" << endl;
-    cerr << "       importer_name must be \"triage\" or \"hgnc\" or \"devdb\"" << endl;
+    cerr << "       importer_name must be \"genie\" or \"triage\" or \"hgnc\" or \"devdb\"" << endl;
     cerr << "       valid commands:" << endl;
     cerr << "           start : requests that an import run begins as soon as possible - this may wait for an import in progress to finish before starting" << endl;
     cerr << "           kill : requests that any import in progress be halted and that any requested start be canceled" << endl;
@@ -310,6 +316,20 @@ void create_base_directory_if_absent() {
     }
 }
 
+/* get_hostname()
+ * Uses 'gethostname' system call
+ */
+string get_hostname() {
+    char hostname_array[257] = "";
+    if (gethostname(hostname_array, 256) != 0) {
+        return "Undetermined";
+    }
+    hostname_array[256] = '\0';
+    stringstream oss;
+    oss << hostname_array;
+    return oss.str();
+}
+
 /* create_trigger_file()
  * File is created using fstream, and then success is tested
  */
@@ -322,7 +342,8 @@ int create_trigger_file(string filepath) {
     my_file.open(filepath.c_str(), ios::out);
     my_file.close();
     if (file_exists(filepath)) {
-        cout << "created file on eks pipelines server : " << filepath << endl;
+        string hostname = get_hostname();
+        cout << "created file on " << hostname << " server : " << filepath << endl;
         return 0;
     }
     cerr << "Error: could not create file " << filepath << endl;
@@ -356,7 +377,7 @@ string get_file_modification_time(string file_path) {
     vector<char> file_path_vector = character_vector_from_string(file_path);
     struct stat file_stat;
     if (stat(&file_path_vector[0], &file_stat) != 0) {
-        return "Undertermined";
+        return "Undetermined";
     }
     time_t last_modification_time(file_stat.st_mtime);
     return format_utc_epoc_count_as_local_time(last_modification_time);
@@ -376,6 +397,9 @@ int request_importer_start(string importer, string start_trigger_filename, strin
 }
 
 int request_importer_start(string importer) {
+    if (importer == "genie") {
+        return request_importer_start(importer, START_GENIE_IMPORT_TRIGGER_FILENAME, KILL_GENIE_IMPORT_TRIGGER_FILENAME, GENIE_IMPORT_KILLING_FILENAME);
+    }
     if (importer == "triage") {
         return request_importer_start(importer, START_TRIAGE_IMPORT_TRIGGER_FILENAME, KILL_TRIAGE_IMPORT_TRIGGER_FILENAME, TRIAGE_IMPORT_KILLING_FILENAME);
     }
@@ -390,6 +414,9 @@ int request_importer_start(string importer) {
 }
 
 int request_importer_kill(string importer) {
+    if (importer == "genie") {
+        return create_trigger_file(KILL_GENIE_IMPORT_TRIGGER_FILENAME);
+    }
     if (importer == "triage") {
         return create_trigger_file(KILL_TRIAGE_IMPORT_TRIGGER_FILENAME);
     }
@@ -439,6 +466,9 @@ int report_importer_status(string importer, string start_trigger_filename, strin
 
 
 int report_importer_status(string importer) {
+    if (importer == "genie") {
+        return report_importer_status(importer, START_GENIE_IMPORT_TRIGGER_FILENAME, KILL_GENIE_IMPORT_TRIGGER_FILENAME, GENIE_IMPORT_IN_PROGRESS_FILENAME, GENIE_IMPORT_KILLING_FILENAME, GENIE_IMPORT_LOG_FILENAME);
+    }
     if (importer == "triage") {
         return report_importer_status(importer, START_TRIAGE_IMPORT_TRIGGER_FILENAME, KILL_TRIAGE_IMPORT_TRIGGER_FILENAME, TRIAGE_IMPORT_IN_PROGRESS_FILENAME, TRIAGE_IMPORT_KILLING_FILENAME, TRIAGE_IMPORT_LOG_FILENAME);
     }
@@ -505,6 +535,9 @@ int report_importer_log(string importer, string log_filename, vector<string> & e
 }
 
 int report_importer_log(string importer, vector<string> & extra_args) {
+    if (importer == "genie") {
+        return report_importer_log(importer, GENIE_IMPORT_LOG_FILENAME, extra_args);
+    }
     if (importer == "triage") {
         return report_importer_log(importer, TRIAGE_IMPORT_LOG_FILENAME, extra_args);
     }

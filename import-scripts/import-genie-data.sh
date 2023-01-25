@@ -10,8 +10,19 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     fi
 
     # set necessary env variables with automation-environment.sh
-    if [[ -z $PORTAL_HOME || -z $JAVA_BINARY ]] ; then
-        echo "Error : import-aws-gdac-data.sh cannot be run without setting PORTAL_HOME and JAVA_BINARY environment variables. (Use automation-environment.sh)"
+    if [[ -z "$PORTAL_HOME" || -z "$JAVA_BINARY" || -z "$START_GENIE_IMPORT_TRIGGER_FILENAME" || -z "$KILL_GENIE_IMPORT_TRIGGER_FILENAME" || -z "$GENIE_IMPORT_IN_PROGRESS_FILENAME" || -z "$GENIE_IMPORT_KILLING_FILENAME" ]] ; then
+        echo "Error : import-genie-data.sh cannot be run without setting the PORTAL_HOME, JAVA_BINARY, START_GENIE_IMPORT_TRIGGER_FILENAME, KILL_GENIE_IMPORT_TRIGGER_FILENAME, GENIE_IMPORT_IN_PROGRESS_FILENAME, GENIE_IMPORT_KILLING_FILENAME environment variables. (Use automation-environment.sh)"
+        exit 1
+    fi
+
+    if [ -f "$KILL_GENIE_IMPORT_TRIGGER_FILENAME" ] || [ -f "$GENIE_IMPORT_KILLING_FILENAME" ] ; then
+        # if import kill is happening or is triggered, cancel any import trigger and exit
+        rm -f "$START_GENIE_IMPORT_TRIGGER_FILENAME"
+        exit 1
+    fi
+
+    if ! [ -f "$START_GENIE_IMPORT_TRIGGER_FILENAME" ] ; then
+        # no start trigger for import, so exit
         exit 1
     fi
 
