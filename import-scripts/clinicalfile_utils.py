@@ -253,7 +253,8 @@ def duplicate_existing_attribute_to_new_attribute(clinical_file, existing_attrib
     header_processed = False
 
     if existing_attribute_name in header:
-        to_write = get_ordered_metadata_and_add_new_attribute(clinical_file, new_attribute_name)
+        if has_metadata_headers(clinical_file):
+		to_write = get_ordered_metadata_and_add_new_attribute(clinical_file, new_attribute_name)
         header = get_header(clinical_file)
         existing_attribute_index = header.index(existing_attribute_name)
         with open(clinical_file, "r") as f:

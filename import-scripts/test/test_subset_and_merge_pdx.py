@@ -309,7 +309,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             Test Step 7(c): check that DISPLAY_SAMPLE_NAME column is added to clinical header
         """
         self.setup_root_directory_with_previous_test_output("subset_timeline_files_step")
-        add_display_sample_name_column(self.mock_destination_to_source_mapping, self.root_directory)
+        add_display_sample_name_column(self.lib, self.mock_destination_to_source_mapping, self.root_directory)
         self.check_add_display_sample_name_column_step()
 
     def check_add_display_sample_name_column_step(self):
