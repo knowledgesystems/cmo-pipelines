@@ -2,8 +2,6 @@
 
 FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
 (
-    echo $(date)
-
     # check lock so that script executions do not overlap
     if ! flock --nonblock --exclusive $flock_fd ; then
         exit 0

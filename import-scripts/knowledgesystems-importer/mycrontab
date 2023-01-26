@@ -3,7 +3,8 @@ MAILTO=cbioportal-pipelines@cbioportal.org
 ##########################
 # Import Scripts (Comment these out when upgrading)
 ##########################
-0 15 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-genie-data.sh >> /data/portal-cron/logs/import-genie-data-msk.log 2>&1 || echo "Failure in crontab: import-genie-data.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
+* * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-genie-data.sh >> /data/portal-cron/logs/import-genie-data.log 2>&1
+* * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/kill-import-genie-data.sh >> /data/portal-cron/logs/kill-import-genie-data.log 2>&1
 
 ##########################
 # Monitors

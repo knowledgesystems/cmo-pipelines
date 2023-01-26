@@ -87,6 +87,8 @@ using namespace std;
 
 static string IMPORT_TRIGGER_BASEDIR("/data/portal-cron/import-trigger");
 static string IMPORT_LOG_BASEDIR("/data/portal-cron/logs");
+static string CONFIG_BASEDIR("/data/portal-cron/etc/import-tool");
+static string CONFIG_FILENAME(CONFIG_BASEDIR + "/import-tool_config");
 static string START_GENIE_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/genie-import-start-request");
 static string KILL_GENIE_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/genie-import-kill-request");
 static string GENIE_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/genie-import-in-progress");
@@ -110,18 +112,8 @@ static string DEVDB_IMPORT_LOG_FILENAME(IMPORT_LOG_BASEDIR + "/devdb-importer.lo
 
 /* used for command line argument checking */
 static vector<string> RECOGNIZED_IMPORTERS;
+static vector<string> MANAGED_IMPORTERS;
 static vector<string> RECOGNIZED_COMMANDS;
-
-void initialize_static_objects() {
-    RECOGNIZED_IMPORTERS.push_back("genie");
-    RECOGNIZED_IMPORTERS.push_back("triage");
-    RECOGNIZED_IMPORTERS.push_back("hgnc");
-    RECOGNIZED_IMPORTERS.push_back("devdb");
-    RECOGNIZED_COMMANDS.push_back("start");
-    RECOGNIZED_COMMANDS.push_back("kill");
-    RECOGNIZED_COMMANDS.push_back("status");
-    RECOGNIZED_COMMANDS.push_back("log");
-}
 
 /* character_vector_from_string()
  * This function is needed because many cstdlib functions and system calls
@@ -138,17 +130,6 @@ vector<char> character_vector_from_string(string s) {
     return v;
 }
 
-void print_usage(string program_name) {
-    vector<char> program_name_vector = character_vector_from_string(program_name);
-    cerr << "Usage: " << basename(&program_name_vector[0]) << " importer_name command [extra_arguments]" << endl;
-    cerr << "       importer_name must be \"genie\" or \"triage\" or \"hgnc\" or \"devdb\"" << endl;
-    cerr << "       valid commands:" << endl;
-    cerr << "           start : requests that an import run begins as soon as possible - this may wait for an import in progress to finish before starting" << endl;
-    cerr << "           kill : requests that any import in progress be halted and that any requested start be canceled" << endl;
-    cerr << "           status : print a report on pending requests and any import in progress" << endl;
-    cerr << "           log : print the last N lines of the importer log file. N defaults to 1000, or can be set using extra_arguments." << endl;
-}
-
 /* string_is_in_vector()
  * Search in an unordered vector of strings
  */
@@ -159,80 +140,6 @@ bool string_is_in_vector(string s, const vector<string> &vector_of_strings) {
         }
     }
     return false;
-}
-
-bool is_recognized_importer(string s) {
-    return string_is_in_vector(s, RECOGNIZED_IMPORTERS);
-}
-
-bool is_recognized_command(string s) {
-    return string_is_in_vector(s, RECOGNIZED_COMMANDS);
-}
-
-bool strings_are_equal(string s1, string s2) {
-    return s1.compare(s2) == 0;
-}
-
-bool string_is_a_positive_integer(string s) {
-    /* ignores flanking whitespace */
-    stringstream iss(s);
-    int i(0);
-    iss >> skipws >> i;
-    if (iss.fail()) {
-        return false;
-    }
-    if (iss.eof()) {
-        return i > 0;
-    }
-    // something remaining in string suffix ... allow whitespace but nothing else
-    char a(0);
-    iss >> skipws >> a;
-    if (iss.bad()) {
-        return false;
-    }
-    return i > 0 && a == (char)0;
-}
-
-bool arguments_are_valid(int argc, char **argv) {
-    if (argc < 3) {
-        return false; // must have at least importer and command args
-    }
-    if (! is_recognized_importer(argv[1])) {
-        cerr << "Error : " << argv[1] << " is not a valid importer name" << endl << endl;
-        return false;
-    }
-    if (! is_recognized_command(argv[2])) {
-        cerr << "Error : " << argv[2] << " is not a valid command" << endl << endl;
-        return false;
-    }
-    if (strings_are_equal(argv[2], "start") ||
-            strings_are_equal(argv[2], "kill") ||
-            strings_are_equal(argv[2], "status")) {
-        if (argc > 3) {
-            cerr << "Error : " << argv[2] << " does not accept extra arguments" << endl << endl;
-            return false;
-        }
-    }
-    if (strings_are_equal(argv[2], "log")) {
-        if (argc > 4) {
-            cerr << "Error : " << argv[2] << " accepts only a single extra argument. More than one received." << endl << endl;
-            return false;
-        }
-        if (argc == 4) {
-            if (! string_is_a_positive_integer(argv[3])) {
-                cerr << "Error : " << argv[2] << " allows an extra argument, but it must be a positive integer (max 2147483647). Received: " << argv[3] << endl << endl;
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-void extract_extra_args(vector<string> & extra_args, int argc, char **argv) {
-    for (int i = 3; i < argc; i++) {
-        string arg(argv[i]);
-        extra_args.push_back(arg);
-    }
 }
 
 /* file_exists()
@@ -285,6 +192,150 @@ bool directory_exists(string dir_path) {
     return S_ISDIR(dir_stat.st_mode);
 }
 
+/* initialize_static_managed_importers()
+ * assume that every recognized importer is managed on this server unless a config file
+ * is present on the system. If the config file is there, then the names of the importers
+ * which are managed on this system are read from the config file. (They will only be
+ * recognized if they are on the RECOGNIZED_IMPORTERS list)
+ */
+void initialize_static_managed_importers() {
+    if (!file_exists(CONFIG_FILENAME)) {
+        /* without a config file assume all recognized importers are managed on this server */
+        for (int i = 0; i < RECOGNIZED_IMPORTERS.size(); i++) {
+            MANAGED_IMPORTERS.push_back(RECOGNIZED_IMPORTERS[i]);
+        }
+        return;
+    }
+    fstream config_file;
+    config_file.open(CONFIG_FILENAME.c_str(), ios::in);
+    string line;
+    while (getline(config_file, line)) {
+        if (string_is_in_vector(line, RECOGNIZED_IMPORTERS)) {
+            MANAGED_IMPORTERS.push_back(line);
+        }
+    }
+    config_file.close();
+}
+
+void initialize_static_objects() {
+    RECOGNIZED_IMPORTERS.push_back("genie");
+    RECOGNIZED_IMPORTERS.push_back("triage");
+    RECOGNIZED_IMPORTERS.push_back("hgnc");
+    RECOGNIZED_IMPORTERS.push_back("devdb");
+    initialize_static_managed_importers();
+    RECOGNIZED_COMMANDS.push_back("start");
+    RECOGNIZED_COMMANDS.push_back("kill");
+    RECOGNIZED_COMMANDS.push_back("status");
+    RECOGNIZED_COMMANDS.push_back("log");
+}
+
+/* get_hostname()
+ * Uses 'gethostname' system call
+ */
+string get_hostname() {
+    char hostname_array[257] = "";
+    if (gethostname(hostname_array, 256) != 0) {
+        return "Undetermined";
+    }
+    hostname_array[256] = '\0';
+    stringstream oss;
+    oss << hostname_array;
+    return oss.str();
+}
+
+void print_usage(string program_name) {
+    vector<char> program_name_vector = character_vector_from_string(program_name);
+    cerr << "Usage: " << basename(&program_name_vector[0]) << " importer_name command [extra_arguments]" << endl;
+    cerr << "       importer_name must be \"genie\" or \"triage\" or \"hgnc\" or \"devdb\"" << endl;
+    cerr << "       valid commands:" << endl;
+    cerr << "           start : requests that an import run begins as soon as possible - this may wait for an import in progress to finish before starting" << endl;
+    cerr << "           kill : requests that any import in progress be halted and that any requested start be canceled" << endl;
+    cerr << "           status : print a report on pending requests and any import in progress" << endl;
+    cerr << "           log : print the last N lines of the importer log file. N defaults to 1000, or can be set using extra_arguments." << endl;
+}
+
+bool is_recognized_importer(string s) {
+    return string_is_in_vector(s, RECOGNIZED_IMPORTERS);
+}
+
+bool is_managed_importer(string s) {
+    return string_is_in_vector(s, MANAGED_IMPORTERS);
+}
+
+bool is_recognized_command(string s) {
+    return string_is_in_vector(s, RECOGNIZED_COMMANDS);
+}
+
+bool strings_are_equal(string s1, string s2) {
+    return s1.compare(s2) == 0;
+}
+
+bool string_is_a_positive_integer(string s) {
+    /* ignores flanking whitespace */
+    stringstream iss(s);
+    int i(0);
+    iss >> skipws >> i;
+    if (iss.fail()) {
+        return false;
+    }
+    if (iss.eof()) {
+        return i > 0;
+    }
+    // something remaining in string suffix ... allow whitespace but nothing else
+    char a(0);
+    iss >> skipws >> a;
+    if (iss.bad()) {
+        return false;
+    }
+    return i > 0 && a == (char)0;
+}
+
+bool arguments_are_valid(int argc, char **argv) {
+    if (argc < 3) {
+        return false; // must have at least importer and command args
+    }
+    if (! is_recognized_importer(argv[1])) {
+        cerr << "Error : " << argv[1] << " is not a valid importer name" << endl << endl;
+        return false;
+    }
+    if (! is_managed_importer(argv[1])) {
+        cerr << "Error : " << argv[1] << " is a recognized importer, but is not managed on this server (" << get_hostname() << ")" << endl << endl;
+        return false;
+    }
+    if (! is_recognized_command(argv[2])) {
+        cerr << "Error : " << argv[2] << " is not a valid command" << endl << endl;
+        return false;
+    }
+    if (strings_are_equal(argv[2], "start") ||
+            strings_are_equal(argv[2], "kill") ||
+            strings_are_equal(argv[2], "status")) {
+        if (argc > 3) {
+            cerr << "Error : " << argv[2] << " does not accept extra arguments" << endl << endl;
+            return false;
+        }
+    }
+    if (strings_are_equal(argv[2], "log")) {
+        if (argc > 4) {
+            cerr << "Error : " << argv[2] << " accepts only a single extra argument. More than one received." << endl << endl;
+            return false;
+        }
+        if (argc == 4) {
+            if (! string_is_a_positive_integer(argv[3])) {
+                cerr << "Error : " << argv[2] << " allows an extra argument, but it must be a positive integer (max 2147483647). Received: " << argv[3] << endl << endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+void extract_extra_args(vector<string> & extra_args, int argc, char **argv) {
+    for (int i = 3; i < argc; i++) {
+        string arg(argv[i]);
+        extra_args.push_back(arg);
+    }
+}
+
 /* create_directory()
  * This functions similar to 'mkdir -p' - the path passed as an argument is
  * traversed upwards until an existing parent directory is found to exist,
@@ -314,20 +365,6 @@ void create_base_directory_if_absent() {
     if (! directory_exists(IMPORT_TRIGGER_BASEDIR)) {
         create_directory(IMPORT_TRIGGER_BASEDIR, true, true);
     }
-}
-
-/* get_hostname()
- * Uses 'gethostname' system call
- */
-string get_hostname() {
-    char hostname_array[257] = "";
-    if (gethostname(hostname_array, 256) != 0) {
-        return "Undetermined";
-    }
-    hostname_array[256] = '\0';
-    stringstream oss;
-    oss << hostname_array;
-    return oss.str();
 }
 
 /* create_trigger_file()
@@ -389,7 +426,7 @@ int request_importer_start(string importer, string start_trigger_filename, strin
         cerr << "Cannot trigger importer start now because running importer is now being killed (wait a minute or two and try again)" << endl;
         return 1;
     }
-    if (file_exists(start_trigger_filename)) {
+    if (file_exists(kill_trigger_filename)) {
         cerr << "Cannot trigger importer start now because importer kill is currently triggered (wait a minute or two and try again)" << endl;
         return 1;
     }
