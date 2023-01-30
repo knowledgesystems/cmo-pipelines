@@ -53,17 +53,13 @@ function push_updates_to_az_git_repo() {
 }
 
 function transfer_to_az_sftp_server() {
-    # Connect to the SFTP server
+    # Get server credentials
     TRANSFER_KEY="/home/cbioportal_importer/.ssh/id_rsa_astrazeneca_sftp"
     SFTP_USER=$(cat $AZ_SFTP_USER)
     SERVICE_ENDPOINT=$(cat $AZ_SERVICE_ENDPOINT)
-    sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" &&
 
-    # Transfer the contents of the repo
-    put -apR "$AZ_DATA_HOME" &&
-
-    # Exit the SFTP connection 
-    exit
+    # Connect and transfer data
+    sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" -b <<< "put -R "$AZ_DATA_HOME""
 }
 
 function filter_files_in_delivery_directory() {
