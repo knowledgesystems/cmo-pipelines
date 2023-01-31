@@ -55,8 +55,8 @@ function push_updates_to_az_git_repo() {
 function transfer_to_az_sftp_server() {
     # Get server credentials
     TRANSFER_KEY="/home/cbioportal_importer/.ssh/id_rsa_astrazeneca_sftp"
-    SFTP_USER=$(cat $AZ_SFTP_USER)
-    SERVICE_ENDPOINT=$(cat $AZ_SERVICE_ENDPOINT)
+    SFTP_USER=$(cat $AZ_SFTP_USER_FILE)
+    SERVICE_ENDPOINT=$(cat $AZ_SERVICE_ENDPOINT_FILE)
 
     # Connect and transfer data
     sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" -b <<< "put -R "$AZ_DATA_HOME""
