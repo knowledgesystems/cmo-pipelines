@@ -75,12 +75,13 @@ if [ -z "$cluster_id" ] || [ -z "$deployment_id" ]; then
     exit 1
 fi
 
+unset KUBECONFIG_ARG
 if [ "$cluster_id" == "$CLUSTER_ID_DIGITS" ] ; then
     /data/portal-cron/scripts/authenticate_service_account.sh
-fi
-unset KUBECONFIG_ARG
-if ! [ -z $PUBLIC_CLUSTER_KUBECONFIG ] ; then
-    KUBECONFIG_ARG="--kubeconfig $PUBLIC_CLUSTER_KUBECONFIG"
+else
+    if ! [ -z $PUBLIC_CLUSTER_KUBECONFIG ] ; then
+        KUBECONFIG_ARG="--kubeconfig $PUBLIC_CLUSTER_KUBECONFIG"
+    fi
 fi
 
 $KUBECTL_BINARY $KUBECONFIG_ARG set env deployment $deployment_id --env="LAST_RESTART=$(date)"
