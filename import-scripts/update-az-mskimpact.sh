@@ -63,7 +63,7 @@ function transfer_to_az_sftp_server() {
     sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" -b <<EOF
 put -R "$AZ_DATA_HOME/az_mskimpact" "$AZ_DATA_HOME/az_mskimpact"
 put -R "$AZ_DATA_HOME/gene_panels" "$AZ_DATA_HOME/gene_panels"
-put -R "$AZ_DATA_HOME/README.md" "$AZ_DATA_HOME"
+put "$AZ_DATA_HOME/README.md" "$AZ_DATA_HOME"
 exit
 EOF
 }
