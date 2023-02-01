@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-export AZ_DATA_HOME="$PORTAL_DATA_HOME/az-data"
+export AZ_REPO_NAME="az-data"
+export AZ_DATA_HOME="$PORTAL_DATA_HOME/$AZ_REPO_NAME"
 export AZ_MSKIMPACT_STABLE_ID="az_mskimpact"
 export AZ_MSK_IMPACT_DATA_HOME="$AZ_DATA_HOME/$AZ_MSKIMPACT_STABLE_ID"
 export AZ_TMPDIR=$AZ_DATA_HOME/tmp
@@ -61,9 +62,9 @@ function transfer_to_az_sftp_server() {
     # Connect and transfer data
     # With use of here-doc, there must be no leading whitespace until EOF
     sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" -b <<EOF
-put -R "$AZ_DATA_HOME/az_mskimpact" "$AZ_DATA_HOME/az_mskimpact"
-put -R "$AZ_DATA_HOME/gene_panels" "$AZ_DATA_HOME/gene_panels"
-put "$AZ_DATA_HOME/README.md" "$AZ_DATA_HOME"
+put -R "$AZ_DATA_HOME/az_mskimpact" "$AZ_REPO_NAME/az_mskimpact"
+put -R "$AZ_DATA_HOME/gene_panels" "$AZ_REPO_NAME/gene_panels"
+put "$AZ_DATA_HOME/README.md" "$AZ_REPO_NAME"
 exit
 EOF
 }
