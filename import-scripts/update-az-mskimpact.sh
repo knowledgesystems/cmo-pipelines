@@ -59,7 +59,13 @@ function transfer_to_az_sftp_server() {
     SERVICE_ENDPOINT=$(cat $AZ_SERVICE_ENDPOINT_FILE)
 
     # Connect and transfer data
-    sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" -b <<< "put -R "$AZ_DATA_HOME""
+    # With use of here-doc, there must be no leading whitespace until EOF
+    sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" -b <<EOF
+put -R "$AZ_DATA_HOME/az_mskimpact" "$AZ_DATA_HOME/az_mskimpact"
+put -R "$AZ_DATA_HOME/gene_panels" "$AZ_DATA_HOME/gene_panels"
+put -R "$AZ_DATA_HOME/README.md" "$AZ_DATA_HOME"
+exit
+EOF
 }
 
 function filter_files_in_delivery_directory() {
