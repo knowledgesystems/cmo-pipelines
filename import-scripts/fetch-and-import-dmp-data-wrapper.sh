@@ -40,7 +40,7 @@ SKIP_DMP_IMPORT_BEFORE_HHMM=2000
     echo "executing update-msk-spectrum-cohort.sh"
     /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
     # Only run AstraZeneca updates on Sundays
-    if [ "$day_of_week_at_process_start" -eq 6 ] ; then
+    if [ "$day_of_week_at_process_start" -eq 7 ] ; then
         date
         echo "executing update-az-mskimpact.sh"
         /data/portal-cron/scripts/update-az-mskimpact.sh
