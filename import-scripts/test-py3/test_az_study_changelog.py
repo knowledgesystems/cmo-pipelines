@@ -96,28 +96,23 @@ class TestChangelog(unittest.TestCase):
 
     def parse_git_line_tokens(self, git_path):
         git_lines = []
+        data_handler = DataHandler(git_path)
 
         with open(git_path, 'r') as git_file_handle:
             for line in git_file_handle:
                 tokens = line.split('\t')
-
-                # Only want to process the file contents (tab-delimited data)
-                if len(tokens) == 1 or tokens[0][0] not in {'-', '+'}:
-                    continue
 
                 # Git prepends each line of git log with a '+' or '-'
                 # We will use this to correctly parse the changes to each line
                 mode = tokens[0][0]
                 tokens[0] = tokens[0][1:]
 
+                # Only want to process the file contents (tab-delimited data)
                 # Ignore commented lines - they are tab delimited, and will be marked as added on first commit
-                if tokens[0][0] == '#':
-                    continue
-
                 # Ignore row that contains column names - this will be marked as added on first commit
-                if 'PATIENT_ID' in tokens:
+                if data_handler.is_git_diff_header(tokens, mode) or data_handler.is_commented_line(tokens) or data_handler.is_data_header_line(tokens):
                     continue
-
+                
                 git_lines.append((mode, tokens))
 
         return git_lines
