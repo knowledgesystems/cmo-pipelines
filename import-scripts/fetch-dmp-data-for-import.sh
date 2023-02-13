@@ -977,6 +977,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             echo "MSK Kings County subset successful!"
             addCancerTypeCaseLists $MSK_KINGS_DATA_HOME "msk_kingscounty" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            standardizeGenePanelMatrix $MSK_KINGS_DATA_HOME
             touch $MSK_KINGS_IMPORT_TRIGGER
         fi
     fi
@@ -1004,6 +1005,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             echo "MSK Lehigh Valley subset successful!"
             addCancerTypeCaseLists $MSK_LEHIGH_DATA_HOME "msk_lehighvalley" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            standardizeGenePanelMatrix $MSK_LEHIGH_DATA_HOME
             touch $MSK_LEHIGH_IMPORT_TRIGGER
         fi
     fi
@@ -1031,6 +1033,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             echo "MSK Queens Cancer Center subset successful!"
             addCancerTypeCaseLists $MSK_QUEENS_DATA_HOME "msk_queenscancercenter" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            standardizeGenePanelMatrix $MSK_QUEENS_DATA_HOME
             touch $MSK_QUEENS_IMPORT_TRIGGER
         fi
     fi
@@ -1058,6 +1061,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             echo "MSK Miami Cancer Institute subset successful!"
             addCancerTypeCaseLists $MSK_MCI_DATA_HOME "msk_miamicancerinstitute" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            standardizeGenePanelMatrix $MSK_MCI_DATA_HOME
             touch $MSK_MCI_IMPORT_TRIGGER
         fi
     fi
@@ -1085,6 +1089,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             echo "MSK Hartford Healthcare subset successful!"
             addCancerTypeCaseLists $MSK_HARTFORD_DATA_HOME "msk_hartfordhealthcare" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            standardizeGenePanelMatrix $MSK_HARTFORD_DATA_HOME
             touch $MSK_HARTFORD_IMPORT_TRIGGER
         fi
     fi
@@ -1112,6 +1117,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             echo "MSK Ralph Lauren subset successful!"
             addCancerTypeCaseLists $MSK_RALPHLAUREN_DATA_HOME "msk_ralphlauren" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            standardizeGenePanelMatrix $MSK_RALPHLAUREN_DATA_HOME
             touch $MSK_RALPHLAUREN_IMPORT_TRIGGER
         fi
     fi
@@ -1139,6 +1145,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             echo "MSK Tailor Med Japan subset successful!"
             addCancerTypeCaseLists $MSK_RIKENGENESISJAPAN_DATA_HOME "msk_rikengenesisjapan" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            standardizeGenePanelMatrix $MSK_RIKENGENESISJAPAN_DATA_HOME
             touch $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER
         fi
     fi
@@ -1180,6 +1187,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             else
                 echo "MSKIMPACT_PED subset successful!"
                 addCancerTypeCaseLists $MSKIMPACT_PED_DATA_HOME "mskimpact_ped" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            	standardizeGenePanelMatrix $MSKIMPACT_PED_DATA_HOME
                 touch $MSKIMPACT_PED_IMPORT_TRIGGER
             fi
         fi
@@ -1211,6 +1219,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             echo "MSKIMPACT SCLC subset successful!"
             addCancerTypeCaseLists $MSK_SCLC_DATA_HOME "sclc_mskimpact_2017" "data_clinical_sample.txt" "data_clinical_patient.txt"
+            standardizeGenePanelMatrix $MSK_SCLC_DATA_HOME
             touch $MSK_SCLC_IMPORT_TRIGGER
         fi
     fi

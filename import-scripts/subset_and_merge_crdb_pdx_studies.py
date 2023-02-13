@@ -875,7 +875,7 @@ def generate_merge_clinical_files_call(lib, cancer_study_id, destination_directo
     return merge_clinical_files_call
 
 def generate_add_metadata_headers_call(lib, destination_directory):
-    add_metadata_headers_call = 'python ' + lib + '/add_clinical_attribute_metadata_headers -f ' + destination_directory + '/data_clinical*'
+    add_metadata_headers_call = 'python ' + lib + '/add_clinical_attribute_metadata_headers.py -f ' + destination_directory + '/data_clinical*'
     return add_metadata_headers_call 
 
 def generate_annotator_call(annotator_jar, destination_directory):

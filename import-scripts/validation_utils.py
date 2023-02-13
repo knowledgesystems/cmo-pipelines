@@ -93,7 +93,7 @@ def fill_in_blank_gene_panel_values(gene_matrix_file):
                     if data_value:
                         processed_data.append(data_value)
                     # special case for cna gene panel (copy mutations gene panel if it exists)
-                    elif mutations_gene_panel_index != -1 and index == cna_gene_panel_index:
+                    elif mutations_gene_panel_index != -1 and index == cna_gene_panel_index and data[mutations_gene_panel_index]:
                         processed_data.append(data[mutations_gene_panel_index])
                     # no mutations gene panel available OR any other blank values
                     else:

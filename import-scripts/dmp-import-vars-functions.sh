@@ -66,6 +66,12 @@ function printTimeStampedDataProcessingStepMessage {
     echo "beginning $STEP_DESCRIPTION $(date)..."
 }
 
+function standardizeGenePanelMatrix {
+    STUDY_DATA_DIRECTORY=$1
+    GENE_PANEL_MATRIX_FILE="$STUDY_DATA_DIRECTORY/data_gene_matrix.txt"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_gene_matrix_file.py --gene-panel-matrix-filename $GENE_PANEL_MATRIX_FILE
+}
+
 # Function to generate case lists by cancer type
 function addCancerTypeCaseLists {
     STUDY_DATA_DIRECTORY=$1
