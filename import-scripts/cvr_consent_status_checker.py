@@ -118,7 +118,7 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
                 tmpfile.write(line)
                 continue
             record = dict(zip(header, map(str.strip, line.split('\t'))))
-            if record[SAMPLE_ID_COLUMN] in revoked_germline_samples and record[MUTATION_STATUS_COLUMN] == GERMLINE_MUTATION_STATUS:
+            if record[SAMPLE_ID_COLUMN] in revoked_germline_samples and GERMLINE_MUTATION_STATUS in record[MUTATION_STATUS_COLUMN]:
                continue
             tmpfile.write(line)
     tmpfile.close()

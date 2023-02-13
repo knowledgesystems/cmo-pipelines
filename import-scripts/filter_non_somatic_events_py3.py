@@ -27,6 +27,8 @@ class EventType(Enum):
 class LineProcessor:
     """Handles the processing of each line - filtering for somatic events only"""
 
+    acceptedEventStatuses = set(['somatic', 'unknown', 'germline - pathogenic', 'germline - likely pathogenic'])
+
     def __init__(self, event_type, col_indices, output_file_handle):
         self.event_type = event_type
         self.col_indices = col_indices
@@ -75,7 +77,7 @@ class LineProcessor:
 
         cols = line.split('\t')
         value = cols[col_index].rstrip('\n')
-        if value.casefold() == 'SOMATIC'.casefold() or value.casefold() == 'UNKNOWN'.casefold():
+        if value.casefold() in LineProcessor.acceptedEventStatuses:
             self.output_file_handle.write(line)
 
 

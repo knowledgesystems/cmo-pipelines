@@ -322,7 +322,7 @@ public class CVRUtilities {
         String matchNormValidationAllele2 = "";
         String verificationStatus = "";
         String validationStatus = VALIDATION_STATUS_UNKNOWN;
-        String mutationStatus = "GERMLINE";
+        String mutationStatus = StringUtils.isEmpty(snp.getPathScore()) ? "GERMLINE" : "GERMLINE - " + snp.getPathScore();
         String sequencingPhase = "";
         String sequencingSource = "";
         String validationMethod = "";
