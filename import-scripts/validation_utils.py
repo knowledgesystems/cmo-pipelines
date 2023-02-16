@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-import argparse
 import os
-import sys
 
 import clinicalfile_utils
 import generate_case_lists

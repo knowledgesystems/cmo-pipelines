@@ -246,6 +246,17 @@ function standardize_clinical_data() {
     mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
 }
 
+function standardize_cna_data() {
+    DATA_CNA_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_CNA.txt"
+    DATA_CNA_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_CNA.txt.standardized"
+
+    # Standardize the CNA file to use NA for blank values
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_cna_data.py -f "$DATA_CNA_INPUT_FILEPATH" > "$DATA_CNA_OUTPUT_FILEPATH" &&
+
+    # Rewrite the CNA file with the standardized data
+    mv "$DATA_CNA_INPUT_FILEPATH" "$DATA_CNA_OUTPUT_FILEPATH"
+}
+
 function anonymize_age_at_seq_with_cap() {
     PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.os_months_trunc"
@@ -342,6 +353,11 @@ fi
 # Standardize blank clinical data values to NA
 if ! standardize_clinical_data ; then
     report_error "ERROR: Failed to standardize blank clinical data values to NA for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
+# Standardize blank CNA data values to NA
+if ! standardize_cna_data ; then
+    report_error "ERROR: Failed to standardize blank CNA data values to NA for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
 # Anonymize ages
