@@ -258,9 +258,9 @@ function standardize_mutations_data() {
     NSOUT_MUTATIONS_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
 
     # Standardize the mutations files to check for valid values in the 'NCBI_Build' column
-    $PYTHON_BINARY $PORTAL_HOME/import-scripts/standardize_mutations_data.py -f "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/import-scripts/standardize_mutations_data.py -f "$MUTATIONS_MAN_INPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/import-scripts/standardize_mutations_data.py -f "$NSOUT_MUTATIONS_INPUT_FILEPATH"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$MUTATIONS_MAN_INPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$NSOUT_MUTATIONS_INPUT_FILEPATH"
 }
 
 function anonymize_age_at_seq_with_cap() {
