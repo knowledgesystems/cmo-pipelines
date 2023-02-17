@@ -247,14 +247,9 @@ function standardize_clinical_data() {
 }
 
 function standardize_cna_data() {
-    DATA_CNA_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_CNA.txt"
-    DATA_CNA_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_CNA.txt.standardized"
-
     # Standardize the CNA file to use NA for blank values
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_cna_data.py -f "$DATA_CNA_INPUT_FILEPATH" > "$DATA_CNA_OUTPUT_FILEPATH" &&
-
-    # Rewrite the CNA file with the standardized data
-    mv "$DATA_CNA_INPUT_FILEPATH" "$DATA_CNA_OUTPUT_FILEPATH"
+    DATA_CNA_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_CNA.txt"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_cna_data.py -f "$DATA_CNA_INPUT_FILEPATH"
 }
 
 function anonymize_age_at_seq_with_cap() {
