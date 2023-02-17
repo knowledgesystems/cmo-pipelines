@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
 """ standardize_clinical_data.py
 This script rewrites a clinical/timeline file to replace all NA placeholders/blank values with 'NA'.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import os
 
 import clinicalfile_utils
@@ -13,15 +14,20 @@ def standardize_sv_file(sv_file):
         Other steps can be added in the future if necessary.
     """
     if not os.path.isfile(sv_file):
-        print "Specified structural variant file (%s) does not exist, no changes made..." % (cna_file)
+        print "Specified structural variant file (%s) does not exist, no changes made..." % (sv_file)
         return
     remove_records_with_invalid_genes(sv_file)
     standardize_sv_header(sv_file)
 
 def remove_records_with_invalid_genes(sv_file):
     """
-        Fill in blank values with "NA" to pass validation
-        e.g data_CNA.txt fails validation with blanks
+        Standardizes a structural variant file by removing records
+        with invalid genes, ie, a record with no values for all of the 
+        following fields:
+            - Site1_Hugo_Symbol
+            - Site2_Hugo_Symbol
+            - Site1_Entrez_Gene_Id
+            - Site2_Entrez_Gene_Id
     """
     header_processed = False
     header = []
@@ -40,12 +46,16 @@ def remove_records_with_invalid_genes(sv_file):
                     to_write.append(line.rstrip('\n'))
                     header_processed = True
                     continue
-		if any([True if data[header.index(required_column)] else False for required_column in required_columns]):
+                if any([True if data[header.index(required_column)] else False for required_column in required_columns]):
                     to_write.append(line.rstrip('\n'))
    
     clinicalfile_utils.write_data_list_to_file(sv_file, to_write)
 
 def standardize_sv_header(sv_file):
+    """
+        Standardize the data header in a structural variant file to the most updated format.
+        If the 'Sample_ID' header value is found, change it to 'Sample_Id'.
+    """
     header_processed = False
     to_write = []
 
@@ -55,13 +65,13 @@ def standardize_sv_header(sv_file):
             if line.startswith('#'):
                 # automatically add commented out lines
                 to_write.append(line.rstrip('\n'))
-	    if not header_processed:
+            if not header_processed:
                 if 'Sample_ID' in data:
-		    processed_data = ['Sample_Id' if data_value == 'Sample_ID' else data_value for data_value in data]
-		    to_write.append('\t'.join(processed_data))
-		    header_processed = True
-		    continue 
-	    to_write.append(line.rstrip('\n'))
+                    processed_data = ['Sample_Id' if data_value == 'Sample_ID' else data_value for data_value in data]
+                    to_write.append('\t'.join(processed_data))
+                    header_processed = True
+                    continue 
+            to_write.append(line.rstrip('\n'))
 
     clinicalfile_utils.write_data_list_to_file(sv_file, to_write)
 
