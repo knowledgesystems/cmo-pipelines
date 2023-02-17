@@ -100,6 +100,55 @@ def fill_in_blank_gene_panel_values(gene_matrix_file):
 
     clinicalfile_utils.write_data_list_to_file(gene_matrix_file, to_write)
 
+def standardize_mutations_file(mutations_file):
+    """
+        Various processes for standardizing a mutations file.
+        Other steps can be added in the future if necessary.
+    """
+    if not os.path.isfile(mutations_file):
+        print "Specified mutations file (%s) does not exist, no changes made..." % (mutations_file)
+        return
+    fix_invalid_ncbi_build_values(mutations_file)
+
+def fix_invalid_ncbi_build_values(mutations_file):
+    """
+        Checks for invalid NCBI_Build data values, ie, any data value
+        not starting with prefix 'GRCh'. If an invalid value is found,
+        'GRCh' is prepended to the value.
+    """
+    header_processed = False
+    header = []
+    to_write = []
+
+    with open(mutations_file, "r") as f:
+        ncbi_build_value_prefix = "GRCh"
+        for line in f.readlines():
+            data = line.rstrip("\n").split("\t")
+            if line.startswith("#"):
+                # Automatically add commented out lines
+                to_write.append(line.rstrip("\n"))
+            else:
+                if not header_processed:
+                    header = data
+                    ncbi_build_index = clinicalfile_utils.get_index_for_column(header, "NCBI_Build")
+                    if ncbi_build_index == -1:
+                        print "NCBI_Build column not found in mutations file %s." % (mutations_file)
+                        return
+                    to_write.append(line.rstrip("\n"))
+                    header_processed = True
+                    continue
+                # Only process the 'NCBI_Build' column
+                # Prepend 'GRCh' to the data value if it doesn't already contain this prefix
+                processed_data = []
+                for index, data_value in enumerate(data):
+                    if index == ncbi_build_index and data_value and not data_value.startswith(ncbi_build_value_prefix):
+                        processed_data.append(ncbi_build_value_prefix + data_value)
+                    else:
+                        processed_data.append(data_value)
+                to_write.append("\t".join(processed_data))
+
+    clinicalfile_utils.write_data_list_to_file(mutations_file, to_write)
+
 def remove_duplicate_rows(filename, record_identifier_column):
     """
         Drop and log duplicate records - where records are identified by the values under specified column (record_identifier_column)

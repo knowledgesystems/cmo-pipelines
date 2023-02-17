@@ -252,6 +252,17 @@ function standardize_cna_data() {
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_cna_data.py -f "$DATA_CNA_INPUT_FILEPATH"
 }
 
+function standardize_mutations_data() {
+    MUTATIONS_EXTD_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
+    MUTATIONS_MAN_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_manual.txt"
+    NSOUT_MUTATIONS_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
+
+    # Standardize the mutations files to check for valid values in the 'NCBI_Build' column
+    $PYTHON_BINARY $PORTAL_HOME/import-scripts/standardize_mutations_data.py -f "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_HOME/import-scripts/standardize_mutations_data.py -f "$MUTATIONS_MAN_INPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_HOME/import-scripts/standardize_mutations_data.py -f "$NSOUT_MUTATIONS_INPUT_FILEPATH"
+}
+
 function anonymize_age_at_seq_with_cap() {
     PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.os_months_trunc"
@@ -307,7 +318,8 @@ if [ $? -gt 0 ] ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 3. Remove Part A non-consented patients + samples
+# 3. Post-process the dataset
+
 printTimeStampedDataProcessingStepMessage "Subset and merge of Part A Consented patients for AstraZeneca MSK-IMPACT"
 
 # Generate subset of Part A consented patients from MSK-Impact
@@ -333,7 +345,7 @@ if [ $? -gt 0 ] ; then
     report_error "ERROR: Failed to write out subsetted data for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
-printTimeStampedDataProcessingStepMessage "Filter clinical attribute columns, add metadata headers, and anonymize age at sequencing for AstraZeneca MSK-IMPACT"
+printTimeStampedDataProcessingStepMessage "Filter clinical attribute columns, add metadata headers, standardize data files, and anonymize age at sequencing for AstraZeneca MSK-IMPACT"
 
 # Filter clinical attribute columns from clinical files
 if ! filter_clinical_attribute_columns ; then
@@ -355,6 +367,11 @@ if ! standardize_cna_data ; then
     report_error "ERROR: Failed to standardize blank CNA data values to NA for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
+# Standardize mutations files
+if ! standardize_mutations_data ; then
+    report_error "ERROR: Failed to standardize mutations files for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
 # Anonymize ages
 if ! anonymize_age_at_seq_with_cap ; then
     report_error "ERROR: Failed to anonymize AGE_AT_SEQUENCING_REPORTED_YEARS for AstraZeneca MSK-IMPACT. Exiting."
@@ -367,7 +384,7 @@ if ! filter_files_in_delivery_directory ; then
     report_error "ERROR: Failed to filter non-delivered files for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
-# Remove temporary directory now that the subset has been merged
+# Remove temporary directory now that the subset has been merged and post-processed
 if [[ -d "$AZ_TMPDIR" && "$AZ_TMPDIR" != "/" ]] ; then
     rm -rf "$AZ_TMPDIR" "$AZ_MSK_IMPACT_DATA_HOME/part_a_subset.txt"
 fi
