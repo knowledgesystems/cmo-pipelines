@@ -139,13 +139,10 @@ def fix_invalid_ncbi_build_values(mutations_file):
                     continue
                 # Only process the 'NCBI_Build' column
                 # Prepend 'GRCh' to the data value if it doesn't already contain this prefix
-                processed_data = []
-                for index, data_value in enumerate(data):
-                    if index == ncbi_build_index and data_value and not data_value.startswith(ncbi_build_value_prefix):
-                        processed_data.append(ncbi_build_value_prefix + data_value)
-                    else:
-                        processed_data.append(data_value)
-                to_write.append("\t".join(processed_data))
+                ncbi_value = data[ncbi_build_index]
+                if ncbi_value and not ncbi_value.startswith(ncbi_build_value_prefix):
+                    data[ncbi_build_index] = ncbi_build_value_prefix + ncbi_value
+                to_write.append("\t".join(data))
 
     clinicalfile_utils.write_data_list_to_file(mutations_file, to_write)
 
