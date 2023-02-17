@@ -17,13 +17,19 @@ import os
 import validation_utils
 
 ERROR_FILE = sys.stderr
-OUTPUT_FILE = sys.stdout
 
 
 def main():
     # Receive path to clinical file as an argument
     parser = argparse.ArgumentParser(prog='standardize_cna_data.py')
-    parser.add_argument('-f', '--filename', dest='filename', action='store', required=True, help='path to data_CNA.txt file')
+    parser.add_argument(
+        '-f',
+        '--filename',
+        dest='filename',
+        action='store',
+        required=True,
+        help='path to data_cna.txt file',
+    )
 
     args = parser.parse_args()
     filename = args.filename
