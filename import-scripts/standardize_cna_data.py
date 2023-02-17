@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
 """ standardize_cna_data.py
 This script rewrites a CNA file to replace all blank values with 'NA'.
@@ -6,7 +6,7 @@ This script rewrites a CNA file to replace all blank values with 'NA'.
 Usage:
     python standardize_cna_data.py --filename $INPUT_CNA_FILE
 Example:
-    python standardize_cna_data.py --filename /path/to/data_CNA.txt
+    python standardize_cna_data.py --filename /path/to/data_cna.txt
 
 """
 
