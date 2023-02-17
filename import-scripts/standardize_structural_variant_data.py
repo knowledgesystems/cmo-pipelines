@@ -2,7 +2,7 @@
 
 """ standardize_structural_variant_data.py
 This script standardizes a structural variant data file by:
-    * Removing records with invalid genes, ie, a record with no values for all of the 
+    * Removing records with invalid genes, ie, a record with no values for all of the
     following fields:
         - Site1_Hugo_Symbol
         - Site2_Hugo_Symbol

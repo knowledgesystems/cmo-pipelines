@@ -263,6 +263,11 @@ function standardize_mutations_data() {
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$NSOUT_MUTATIONS_INPUT_FILEPATH"
 }
 
+function standardize_structural_variant_data() {
+    DATA_SV_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_structural_variant_data.py -f "$DATA_SV_INPUT_FILEPATH"
+}
+
 function anonymize_age_at_seq_with_cap() {
     PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.os_months_trunc"
@@ -370,6 +375,11 @@ fi
 # Standardize mutations files
 if ! standardize_mutations_data ; then
     report_error "ERROR: Failed to standardize mutations files for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
+# Standardize structural variant data by removing records with invalid genes and standardizing the file header
+if ! standardize_structural_variant_data ; then
+    report_error "ERROR: Failed to standardize structural variant data for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
 # Anonymize ages
