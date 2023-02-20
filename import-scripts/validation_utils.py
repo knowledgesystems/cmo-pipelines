@@ -176,7 +176,42 @@ def standardize_mutations_file(mutations_file):
     if not os.path.isfile(mutations_file):
         print "Specified mutations file (%s) does not exist, no changes made..." % (mutations_file)
         return
+    fill_in_blank_variant_classification_values(mutations_file)
     fix_invalid_ncbi_build_values(mutations_file)
+
+def fill_in_blank_variant_classification_values(mutations_file):
+    """
+        Fill in blank variant classification values with "Unknown" to pass validation
+    """
+    header_processed = False
+    header = []
+    to_write = []
+
+    with open(mutations_file, "r") as f:
+        for line in f.readlines():
+            data = line.rstrip('\n').split('\t')
+            if line.startswith('#'):
+                # Automatically add commented out lines
+                to_write.append(line.rstrip('\n'))
+            else:
+                if not header_processed:
+                    header = data
+                    variant_classification_index = clinicalfile_utils.get_index_for_column(header, "Variant_Classification")
+                    if variant_classification_index == -1:
+                        print "Variant_Classification column not found in mutations file %s." % (mutations_file)
+                        return
+                    to_write.append(line.rstrip('\n'))
+                    header_processed = True
+                    continue
+                # Only process the 'Variant_Classification' column
+                # Create copy of list with "Unknown" replacing blank/empty spaces
+                # No replacement occurs if there is a value
+                variant_classification_value = data[variant_classification_index]
+                if not variant_classification_value:
+                    data[variant_classification_index] = "Unknown"
+                to_write.append("\t".join(data))
+
+    clinicalfile_utils.write_data_list_to_file(mutations_file, to_write)
 
 def fix_invalid_ncbi_build_values(mutations_file):
     """
