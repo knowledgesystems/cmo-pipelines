@@ -147,13 +147,18 @@ class DataHandler:
 
         # Obtain git diff for the file
         diff_info = g.diff('--unified=0', '--', self.data_path)
-        lines = diff_info.split('\n')
 
+        # Check if there is a git diff to process
+        if not diff_info:
+            return
+
+        lines = diff_info.split('\n')
         for line in lines:
             tokens = line.split('\t')
 
             # Git prepends each line of git diff with a '+' or '-'
             # We will use this to correctly parse the changes to each line
+
             mode = tokens[0][0]
             tokens[0] = tokens[0][1:]
 
