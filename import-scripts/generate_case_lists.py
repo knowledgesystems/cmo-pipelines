@@ -63,6 +63,7 @@ MUTATION_CASE_LIST_META_HEADER = "sequenced_samples"
 MUTATION_CASE_ID_COLUMN_HEADER = "Tumor_Sample_Barcode"
 SAMPLE_ID_COLUMN_HEADER = "SAMPLE_ID"
 ALTERNATE_SAMPLE_ID_COLUMN_HEADER = "Sample_ID"
+SV_SAMPLE_ID_COLUMN_HEADER = "Sample_Id"
 NON_CASE_IDS = frozenset(["MIRNA", "LOCUS", "ID", "GENE SYMBOL", "ENTREZ_GENE_ID", "HUGO_SYMBOL", "LOCUS ID", "CYTOBAND", "COMPOSITE.ELEMENT.REF", "HYBRIDIZATION REF"])
 CANCER_STUDY_TAG = "<CANCER_STUDY>"
 NUM_CASES_TAG = "<NUM_CASES>"
@@ -184,7 +185,7 @@ def get_case_list_from_staging_file(study_dir, staging_filename, verbose):
                 # look for MAF file case id column header
                 # if this is not a MAF file and header contains the case ids, return here
                 # we are assuming the header contains the case ids because SAMPLE_ID_COLUMN_HEADER is missing
-                if MUTATION_CASE_ID_COLUMN_HEADER not in values and SAMPLE_ID_COLUMN_HEADER not in values and ALTERNATE_SAMPLE_ID_COLUMN_HEADER not in values:
+                if MUTATION_CASE_ID_COLUMN_HEADER not in values and SAMPLE_ID_COLUMN_HEADER not in values and ALTERNATE_SAMPLE_ID_COLUMN_HEADER not in values and SV_SAMPLE_ID_COLUMN_HEADER not in values:
                     if verbose:
                         print "LOG: get_case_list_from_staging_file(), this is not a MAF header but has no '%s' column, we assume it contains sample ids..." % (SAMPLE_ID_COLUMN_HEADER)
                     for potential_case_id in values:
@@ -200,8 +201,10 @@ def get_case_list_from_staging_file(study_dir, staging_filename, verbose):
                         id_column_index = values.index(MUTATION_CASE_ID_COLUMN_HEADER)
                     elif SAMPLE_ID_COLUMN_HEADER in values:
                         id_column_index = values.index(SAMPLE_ID_COLUMN_HEADER)
-                    else:
+                    elif ALTERNATE_SAMPLE_ID_COLUMN_HEADER in values:
                         id_column_index = values.index(ALTERNATE_SAMPLE_ID_COLUMN_HEADER)
+                    else:
+                        id_column_index = values.index(SV_SAMPLE_ID_COLUMN_HEADER)
 
                     if verbose:
                         print "LOG: get_case_list_from_staging_file(), this is a MAF or clinical file, samples ids in column with index: %d" % (id_column_index)
