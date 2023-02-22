@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2023 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -32,6 +32,7 @@
 package org.mskcc.cmo.ks.ddp.pipeline;
 
 import java.io.IOException;
+import org.mskcc.cmo.ks.ddp.pipeline.model.AgeAtSeqDateRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.SuppVitalStatusRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.SuppAgeRecord;
@@ -62,6 +63,8 @@ public class DDPSortTasklet implements Tasklet {
     private String outputDirectory;
     @Value("${ddp.clinical_filename}")
     private String clinicalFilename;
+    @Value("${ddp.age_at_seq_date_filename}")
+    private String ageAtSeqDateFilename;
     @Value("${ddp.timeline_chemotherapy_filename}")
     private String timelineChemotherapyFilename;
     @Value("${ddp.timeline_radiation_filename}")
@@ -91,6 +94,9 @@ public class DDPSortTasklet implements Tasklet {
         Path clinicalFilePath = Paths.get(outputDirectory, clinicalFilename);
         validateDemographicsRecordCount(clinicalFilePath.toString());
         sortAndOverwriteFile(clinicalFilePath, ClinicalRecord.getFieldNames(includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery));
+
+        Path ageAtSeqDateFilePath = Paths.get(outputDirectory, ageAtSeqDateFilename);
+        sortAndOverwriteFile(ageAtSeqDateFilePath, AgeAtSeqDateRecord.getFieldNames());
 
         // sort and overwrite timeline files if applicable
         if (includeChemotherapy) {

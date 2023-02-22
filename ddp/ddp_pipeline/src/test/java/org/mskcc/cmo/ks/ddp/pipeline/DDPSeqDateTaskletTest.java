@@ -38,10 +38,10 @@ import java.util.*;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
 import org.junit.Test;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import org.mockito.*;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-
 /**
  *
  * @author Manda Wilson
@@ -55,7 +55,8 @@ public class DDPSeqDateTaskletTest {
         BufferedReader mockBufferedReader = Mockito.mock(BufferedReader.class);
         Mockito.when(mockBufferedReader.readLine()).thenReturn("BLAH").thenReturn("SAMPLE_1\tPATIENT_1\tMon, 01 Oct 2018 15:09:02 GMT").thenReturn(null);
         DDPSeqDateTasklet tasklet = new DDPSeqDateTasklet();
-        Map<String, Date> actualPatientFirstSeqDateMap = tasklet.getFirstSeqDatePerPatientFromFile("filename", mockBufferedReader);
+        tasklet.setSeqDateMaps("filename", mockBufferedReader);
+        Map<String, Date> actualPatientFirstSeqDateMap = DDPUtils.getPatientFirstSeqDateMap();
         Assert.assertTrue("Expected an empty map because of an invalid header", actualPatientFirstSeqDateMap.size() == 0);
     }
 
@@ -77,7 +78,8 @@ public class DDPSeqDateTaskletTest {
             .thenReturn("SAMPLE_10\tPATIENT_5\t") // no date provided, this patient should not have a seq date in map
             .thenReturn(null);
         DDPSeqDateTasklet tasklet = new DDPSeqDateTasklet();
-        Map<String, Date> actualPatientFirstSeqDateMap = tasklet.getFirstSeqDatePerPatientFromFile("filename", mockBufferedReader);
+        tasklet.setSeqDateMaps("filename", mockBufferedReader);
+        Map<String, Date> actualPatientFirstSeqDateMap = DDPUtils.getPatientFirstSeqDateMap();
         Map<String, Date> expectedPatientFirstSeqDateMap = new HashMap<String, Date>();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
         expectedPatientFirstSeqDateMap.put("PATIENT_1", simpleDateFormat.parse("Mon, 01 Oct 2018 15:09:02 GMT")); 

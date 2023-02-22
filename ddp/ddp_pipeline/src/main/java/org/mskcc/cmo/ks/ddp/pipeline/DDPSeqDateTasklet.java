@@ -94,8 +94,8 @@ public class DDPSeqDateTasklet implements Tasklet {
         Collections.sort(header);
         if (dmpSampleIdColumnIndex == -1 || dmpPatientIdColumnIndex == -1 || seqDateColumnIndex == -1 || !EXPECTED_SEQ_DATE_FILE_HEADER.equals(header)) {
             LOG.warn("Invalid header in '" + filename + "', expected '" + String.join(",", EXPECTED_SEQ_DATE_FILE_HEADER) + "', found '" + String.join(",", header)+ "'");
-            DDPUtils.setPatientFirstSeqDateMap(patientFirstSeqDateMap); // empty map
             DDPUtils.setSampleSeqDateMap(sampleSeqDateMap); // empty map
+            DDPUtils.setPatientFirstSeqDateMap(patientFirstSeqDateMap); // empty map
         } 
         // e.g. Wed, 16 Mar 2016 18:09:02 GMT
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");

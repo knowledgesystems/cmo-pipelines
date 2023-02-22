@@ -70,7 +70,6 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
 
     }
 
-
     /**
      * Create age at seq records.
      *

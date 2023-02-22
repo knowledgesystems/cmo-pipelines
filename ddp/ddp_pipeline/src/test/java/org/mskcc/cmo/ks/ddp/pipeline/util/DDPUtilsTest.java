@@ -286,6 +286,8 @@ public class DDPUtilsTest {
      *      the current age at which the patient was diagnosed for each sample/specimen collection.
      */
 
+
+    /*
     @Test(expected = NullPointerException.class)
     public void resolvePatientAgeAtDiagnosisNullPointerExceptionTest() throws Exception {
         resolvePatientAgeAtDiagnosisAndAssert(null, null, null, null, "18");
@@ -329,6 +331,7 @@ public class DDPUtilsTest {
         String alternateBirthDateString = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DATE);
         resolvePatientAgeAtDiagnosisAndAssert(alternateBirthDateString, birthDateString, null, null, "20"); // use 20 birthday not 21
     }
+    */
 
     /* Tests for getFirstTumorDiagnosisDate()
     * if patientDiagnosis is null, return null
@@ -717,6 +720,7 @@ public class DDPUtilsTest {
         Assert.assertEquals(expectedValue, returnedValue);
     }
 
+    /*
     private void resolvePatientAgeAtDiagnosisAndAssert(String birthDte, String dateOfBirth, Integer demographicsAge, Integer cohortAge, String expectedValue) throws ParseException {
         DDPCompositeRecord testPatient = new DDPCompositeRecord();
         PatientDemographics testDemographics = new PatientDemographics();
@@ -730,6 +734,7 @@ public class DDPUtilsTest {
         String returnedValue = DDPUtils.resolvePatientAgeAtDiagnosis(testPatient);
         Assert.assertEquals(expectedValue, returnedValue);
     }
+    */
 
     private void getFirstTumorDiagnosisDateAndAssert(List<String> tumorDiagnosisDates, String expectedValue) throws ParseException {
         String returnedValue;

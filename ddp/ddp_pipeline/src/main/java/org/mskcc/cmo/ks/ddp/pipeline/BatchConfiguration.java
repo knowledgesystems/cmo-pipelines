@@ -173,6 +173,12 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
+    public AgeAtSeqDateProcessor ageAtSeqDateProcessor() {
+        return new AgeAtSeqDateProcessor();
+    }
+
+    @Bean
+    @StepScope
     public SuppVitalStatusProcessor suppVitalStatusProcessor() {
         return new SuppVitalStatusProcessor();
     }
@@ -199,6 +205,12 @@ public class BatchConfiguration {
     @StepScope
     public ItemStreamWriter<CompositeResult> timelineRadiationWriter() {
         return new TimelineRadiationWriter();
+    }
+
+    @Bean
+    @StepScope
+    public ItemStreamWriter<CompositeResult> ageAtSeqDateWriter() {
+        return new AgeAtSeqDateWriter();
     }
 
     @Bean
@@ -239,6 +251,7 @@ public class BatchConfiguration {
         CompositeItemWriter<CompositeResult> writer = new CompositeItemWriter<>();
         List<ItemWriter<? super CompositeResult>> delegates = new ArrayList<>();
         delegates.add(clinicalWriter());
+        delegates.add(ageAtSeqDateWriter());
         delegates.add(timelineRadiationWriter());
         delegates.add(timelineChemoWriter());
         delegates.add(timelineSurgeryWriter());

@@ -3,6 +3,7 @@ chunk=500
 
 # DDP Filenames
 ddp.clinical_filename=data_clinical_ddp.txt
+ddp.age_at_seq_date_filename=data_age_at_seq_date_ddp.txt
 ddp.timeline_chemotherapy_filename=data_timeline_ddp_chemotherapy.txt
 ddp.timeline_radiation_filename=data_timeline_ddp_radiation.txt
 ddp.timeline_surgery_filename=data_timeline_ddp_surgery.txt
