@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2023 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -40,6 +40,7 @@ import java.util.List;
  */
 public class CompositeResult {
     private String clinicalResult;
+    private List<String> ageAtSeqDateResults;
     private List<String> timelineRadiationResults;
     private List<String> timelineChemoResults;
     private List<String> timelineSurgeryResults;
@@ -61,6 +62,20 @@ public class CompositeResult {
      */
     public void setClinicalResult(String clinicalResult) {
         this.clinicalResult = clinicalResult;
+    }
+
+    /**
+     * @return the ageAtSeqDateResults
+     */
+    public List<String> getAgeAtSeqDateResults() {
+        return ageAtSeqDateResults;
+    }
+
+    /**
+     * @param ageAtSeqDateResults the ageAtSeqDateResults to set
+     */
+    public void setAgeAtSeqDateResults(List<String> ageAtSeqDateResults) {
+        this.ageAtSeqDateResults = ageAtSeqDateResults;
     }
 
     /**

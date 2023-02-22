@@ -82,6 +82,9 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
     private ClinicalProcessor clinicalProcessor;
 
     @Autowired
+    private AgeAtSeqDateProcessor ageAtSeqDateProcessor;
+
+    @Autowired
     private TimelineRadiationProcessor timelineRadiationProcessor;
 
     @Autowired
@@ -153,9 +156,11 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
             LOG.error("Error converting composite record into clinical record: " + compositeRecord.getDmpPatientId());
             return null;
         }
+
         // create composite result and call remaining processors
         CompositeResult compositeResult = new CompositeResult();
         compositeResult.setClinicalResult(clinicalResult);
+        compositeResult.setAgeAtSeqDateResults(ageAtSeqDateProcessor.process(compositeRecord));
         compositeResult.setTimelineRadiationResults(timelineRadiationProcessor.process(compositeRecord));
         compositeResult.setTimelineChemoResults(timelineChemoProcessor.process(compositeRecord));
         compositeResult.setTimelineSurgeryResults(timelineSurgeryProcessor.process(compositeRecord));

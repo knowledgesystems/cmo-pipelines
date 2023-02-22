@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2021 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 - 2023 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -60,6 +60,7 @@ public class DDPUtils {
     private static Map<String, String> naaccrRaceMap;
     private static Map<String, String> naaccrSexMap;
     private static Map<String, Date> patientFirstSeqDateMap = new HashMap<String, Date>();
+    private static Map<String, Date> sampleSeqDateMap = new HashMap<String, Date>();
     private static Set<String> patientsMissingSurvival = new HashSet<>();
     private static Boolean useSeqDateOsMonthsMethod = Boolean.FALSE;
     private static Set<String> patientsWithNegativeOsMonths = new HashSet<>();
@@ -117,6 +118,14 @@ public class DDPUtils {
         return DDPUtils.patientFirstSeqDateMap;
     }
 
+    public static void setSampleSeqDateMap(Map<String, Date> sampleSeqDateMap) {
+        DDPUtils.sampleSeqDateMap = sampleSeqDateMap;
+    }
+
+    public static Map<String, Date> getSampleSeqDateMap() {
+        return DDPUtils.sampleSeqDateMap;
+    }
+
     public static Set<String> getPatientsMissingSurvival() {
         return DDPUtils.patientsMissingSurvival;
     }
@@ -167,6 +176,34 @@ public class DDPUtils {
     }
 
     /**
+     * Resolve and anonymize patient age at seq.
+     *
+     * @param compositeRecord
+     * @return
+     * @throws ParseException
+     */
+    public static String resolveAgeAtSeqDate(String sampleId, String patientBirthDate) throws ParseException {
+        // TODO MEW do we use current age if we don't have birth date?
+        // if patient birth date is null/empty then use current age value
+        /*if (Strings.isNullOrEmpty(compositeRecord.getPatientBirthDate())) {
+            return anonymizePatientAge(compositeRecord.getPatientAge());
+        }*/
+        Long birthDateInDays = getDateInDays(patientBirthDate);
+        Date referenceDate = sampleSeqDateMap.get(sampleId); // TODO MEW does this throw exception?
+        Long referenceDateInDays = null;
+        // use current date as reference date if patient not deceased, otherwise use date of death
+        if (referenceDate != null) {
+            referenceDateInDays = getDateInDays(referenceDate);
+        }
+        else {
+            // TODO MEW what do we do here?
+        }
+        // TODO MEW check referenceDateInDays cannot be or is not null
+        Double age = (referenceDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
+        return anonymizePatientAge(age.intValue());
+    }
+
+    /**
      * Given two date strings, find the number of days that has elapsed between the two
      * Order of dates does not matter
      * Option to anonymize the interval (<18 or >90 years) if the output is used for sensitive fields
@@ -210,7 +247,7 @@ public class DDPUtils {
      * @return
      * @throws ParseException
      */
-    public static String resolvePatientAgeAtDiagnosis(DDPCompositeRecord compositeRecord) throws ParseException {
+    /*public static String resolvePatientAgeAtDiagnosis(DDPCompositeRecord compositeRecord) throws ParseException {
         // if patient birth date is null/empty then use current age value
         if (Strings.isNullOrEmpty(compositeRecord.getPatientBirthDate())) {
             return anonymizePatientAge(compositeRecord.getPatientAge());
@@ -219,7 +256,7 @@ public class DDPUtils {
         Long currentDateInDays = getDateInDays(new Date());
         Double age = (currentDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
         return anonymizePatientAge(age.intValue());
-    }
+    }*/ // TODO remove this, it isn't used anymore (except in tests)
 
     /**
      * Returns anonymized patient age as string.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2019 - 2023 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -73,7 +73,7 @@ public class DDPSeqDateTasklet implements Tasklet {
             LOG.debug("Seq date file is: " + seqDateFilename);
             BufferedReader reader = new BufferedReader(new FileReader(seqDateFilename));
             // pass reader as parameter so we can mock it in tests
-            DDPUtils.setPatientFirstSeqDateMap(getFirstSeqDatePerPatientFromFile(seqDateFilename, reader));
+            setSeqDateMaps(seqDateFilename, reader); // calls DDPUtils.setSampleSeqDateMap() and DDPUtils.setPatientFirstSeqDateMap()
             DDPUtils.setUseSeqDateOsMonthsMethod(Boolean.TRUE);
         } else {
             LOG.debug("No seq date file given.");
@@ -81,18 +81,21 @@ public class DDPSeqDateTasklet implements Tasklet {
         return RepeatStatus.FINISHED;
     }
 
-    public Map<String, Date> getFirstSeqDatePerPatientFromFile(String filename, BufferedReader reader) throws IOException {
+    public void setSeqDateMaps(String filename, BufferedReader reader) throws IOException {
         // this method is public for unit testing
+        Map <String, Date> sampleSeqDateMap = new HashMap<String, Date>();
         Map <String, Date> patientFirstSeqDateMap = new HashMap<String, Date>();
         // skip first line (header)
         List<String> header = Arrays.asList(reader.readLine().split("\t"));
+        int dmpSampleIdColumnIndex = header.indexOf(SAMPLE_ID_COLUMN_LABEL);
         int dmpPatientIdColumnIndex = header.indexOf(PATIENT_ID_COLUMN_LABEL);
         int seqDateColumnIndex = header.indexOf(SEQ_DATE_COLUMN_LABEL);
         Collections.sort(EXPECTED_SEQ_DATE_FILE_HEADER);
         Collections.sort(header);
-        if (dmpPatientIdColumnIndex == -1 || seqDateColumnIndex == -1 || !EXPECTED_SEQ_DATE_FILE_HEADER.equals(header)) {
+        if (dmpSampleIdColumnIndex == -1 || dmpPatientIdColumnIndex == -1 || seqDateColumnIndex == -1 || !EXPECTED_SEQ_DATE_FILE_HEADER.equals(header)) {
             LOG.warn("Invalid header in '" + filename + "', expected '" + String.join(",", EXPECTED_SEQ_DATE_FILE_HEADER) + "', found '" + String.join(",", header)+ "'");
-            return patientFirstSeqDateMap; // empty map
+            DDPUtils.setPatientFirstSeqDateMap(patientFirstSeqDateMap); // empty map
+            DDPUtils.setSampleSeqDateMap(sampleSeqDateMap); // empty map
         } 
         // e.g. Wed, 16 Mar 2016 18:09:02 GMT
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
@@ -100,11 +103,13 @@ public class DDPSeqDateTasklet implements Tasklet {
         List<String> warnings = new ArrayList<String>();
         while ((line = reader.readLine()) != null) {
             String[] record = line.split("\t", -1);
+            String dmpSampleId = record[dmpSampleIdColumnIndex];
             String dmpPatientId = record[dmpPatientIdColumnIndex];
             String seqDateString = record[seqDateColumnIndex];
             if (!StringUtils.isEmpty(seqDateString)) {
                 try {
                     Date parsedRecordSeqDate = simpleDateFormat.parse(seqDateString);
+                    sampleSeqDateMap.put(dmpSampleId, parsedRecordSeqDate);
                     if (!patientFirstSeqDateMap.containsKey(dmpPatientId) || parsedRecordSeqDate.before(patientFirstSeqDateMap.get(dmpPatientId))) {
                         patientFirstSeqDateMap.put(dmpPatientId, parsedRecordSeqDate);
                     }
@@ -123,6 +128,7 @@ public class DDPSeqDateTasklet implements Tasklet {
                 LOG.warn(warnings.get(w)); 
             }
         }
-        return patientFirstSeqDateMap;
+        DDPUtils.setSampleSeqDateMap(sampleSeqDateMap);
+        DDPUtils.setPatientFirstSeqDateMap(patientFirstSeqDateMap);
     }
 }
