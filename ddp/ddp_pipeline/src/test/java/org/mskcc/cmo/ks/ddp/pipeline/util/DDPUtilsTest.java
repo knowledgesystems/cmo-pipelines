@@ -225,6 +225,30 @@ public class DDPUtilsTest {
         resolveOsStatusAndAssert(false, false, null, null, null, "NA");
     }
 
+    /* Tests for resolveAgeAtSeqDate()
+    * TODO describe test behavior here
+    */
+
+    @Test(expected = ParseException.class)
+    public void resolveAgeAtSeqDateParseExceptionTest() throws ParseException {
+        resolveAgeAtSeqDateAndAssert("invalid date", "Thu, 1 Aug 2019 19:17:55 UTC", "NA");
+    }
+
+    @Test
+    public void resolveAgeAtSeqDateTest() throws ParseException {
+        // Test anonymized before 18
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 1 Aug 2019 19:17:55 UTC", "18");
+        // Test age the day before 19th birthday
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Wed, 1 Jun 2022 19:17:55 UTC", "18");
+        // Test 19th birthday
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 2 Jun 2022 19:17:55 UTC", "19");
+        // Test that patient is still 19
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Mon, 27 Feb 2023 19:17:55 UTC", "19");
+        // Test anonymized when 91
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 3 Jun 2094 19:17:55 UTC", "90");
+        // TODO test invalid dates/null dates
+    }
+
     /* Tests for resolveOsMonths()
     * if os status is "LIVING" and getPLALASTACTVDTE is null or "", expect "NA"
     * otherwise os status is not "LIVING" and getDeceasedDate is null or "", expect "NA"
@@ -691,6 +715,19 @@ public class DDPUtilsTest {
             testPatient.setCohortPatient(testCohortPatient);
         }
         String returnedValue = DDPUtils.resolveOsStatus(testPatient);
+        Assert.assertEquals(expectedValue, returnedValue);
+    }
+
+    private void resolveAgeAtSeqDateAndAssert(String patientBirthDate, String sampleSeqDate, String expectedValue) throws ParseException {
+        String dmpSampleId = "TEST_SAMPLE_ID";
+        Map<String, Date> sampleSeqDateMap = new HashMap<String, Date>();
+        if (sampleSeqDate != null) {
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
+            Date seqDate = simpleDateFormat.parse(sampleSeqDate);
+            sampleSeqDateMap.put(dmpSampleId, seqDate);
+        }
+        DDPUtils.setSampleSeqDateMap(sampleSeqDateMap);
+        String returnedValue = DDPUtils.resolveAgeAtSeqDate(dmpSampleId, patientBirthDate);
         Assert.assertEquals(expectedValue, returnedValue);
     }
 
