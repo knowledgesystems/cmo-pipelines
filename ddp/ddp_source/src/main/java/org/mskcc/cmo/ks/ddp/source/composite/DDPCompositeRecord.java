@@ -65,6 +65,11 @@ public class DDPCompositeRecord {
         this.dmpSampleIds = (dmpSampleIds != null) ? dmpSampleIds : new ArrayList();
     }
 
+    public DDPCompositeRecord(String dmpPatientId, List<String> dmpSampleIds) {
+        this.dmpPatientId = dmpPatientId;
+        this.dmpSampleIds = (dmpSampleIds != null) ? dmpSampleIds : new ArrayList();
+    }
+
     public DDPCompositeRecord(String dmpPatientId, List<String> dmpSampleIds, CohortPatient cohortPatient) {
         this.ddpDeidentifiedPid = String.valueOf(cohortPatient.getPID());
         this.dmpPatientId = dmpPatientId;

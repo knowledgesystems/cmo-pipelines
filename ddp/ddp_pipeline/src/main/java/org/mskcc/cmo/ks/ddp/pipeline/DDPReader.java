@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018-2023 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -117,7 +117,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
         }
         // add pediatric cohort patient ids to execution context for processor
         ec.put("pediatricCohortPatientIdsSet", getPediatricCohortPatientIdsSet());
-        LOG.info("Fetched " + ddpCompositeRecordList.size()+  " DDP records");
+        LOG.info("Fetched " + ddpCompositeRecordList.size() +  " DDP records");
     }
 
     /**
@@ -157,6 +157,61 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
     }
 
     /**
+     * Helper function to return a unique set of composite records for a list of patient ids.
+     * Patient ids can either be P_IDs from the cohort endpoint or DMP ids.
+     *
+     * Removes records matching ids in 'excludedPatientIds' if necessary.
+     *
+     * @param cohortId
+     * @return
+     */
+    private Map<String, DDPCompositeRecord> getDDPCompositeRecords(Set<String> patientIds) throws Exception {
+        Map<String, DDPCompositeRecord> compositeRecords = new HashMap<String, DDPCompositeRecord>();
+        Map<String, CompletableFuture<PatientIdentifiers>> futurePatientIdentifiers = new HashMap<String, CompletableFuture<PatientIdentifiers>>();
+
+        int count = 0;
+        for (String patientId : patientIds) {
+            try {
+                // getPatientIdentifiers() is an Async function meaning the loop does not depend on request being completed
+                futurePatientIdentifiers.put(patientId, ddpDataSource.getPatientIdentifiers(patientId));
+            } catch (Exception e) {
+                LOG.error("Failed to resolve dmp id's for record'" + patientId + "' -- skipping (" + e.getMessage() + ")");
+                ddpPatientListUtil.addPatientsMissingDMPId(patientId);
+            }
+            count++;
+            if (testMode && count >= TEST_MODE_PATIENT_THRESHOLD) {
+                break;
+            }
+        }
+
+        // ensures composite records will not be created until all requests for Patient Identifiers are completed
+        for (String patientIdentifier : futurePatientIdentifiers.keySet()) {
+            getCompletableFuturePatientIdentifiers(patientIdentifier, futurePatientIdentifiers);
+        }
+
+        LOG.info("creating composite Records");
+        for(String patientIdentifier : futurePatientIdentifiers.keySet()) {
+            PatientIdentifiers pids = getCompletableFuturePatientIdentifiers(patientIdentifier, futurePatientIdentifiers);
+            if (pids != null && !Strings.isNullOrEmpty(pids.getDmpPatientId())) {
+                if (pids.getDmpPatientId().equals("P-0000000")) {
+                    LOG.error("Patient ID " + patientIdentifier + " resolved to DMP ID: P-0000000");
+                    continue;
+                }
+                compositeRecords.put(patientIdentifier, new DDPCompositeRecord(pids.getDmpPatientId(), pids.getDmpSampleIds()));
+            } else {
+                LOG.error("Failed to resolve dmp id's for record '" + patientIdentifier + "' -- skipping");
+                ddpPatientListUtil.addPatientsMissingDMPId(patientIdentifier);
+                continue;
+            }
+        }
+        // filter composite records to return if excluded patient id list is not empty
+        if (!excludedPatientIds.isEmpty()) {
+            return filterCompositeRecords(compositeRecords);
+        }
+        return compositeRecords;
+    }
+
+    /**
      * Helper function to return a unique set of composite records for cohort ids.
      *
      * Removes records matching ids in 'excludedPatientIds' if necessary.
@@ -168,51 +223,16 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
         List<CohortPatient> records = ddpDataSource.getPatientRecordsByCohortId(cohortId);
         LOG.info("Fetched " + records.size()+  " active patients for cohort: " + cohortName);
 
-        List<DDPCompositeRecord> compositeRecords = new ArrayList<>();
-        Map<String, CompletableFuture<PatientIdentifiers>> futurePatientIdentifiers = new HashMap<String, CompletableFuture<PatientIdentifiers>>();
         Map<String, CohortPatient> cohortPatientRecords = new HashMap<String, CohortPatient>();
-
-        int count = 0;
         for (CohortPatient record : records) {
-            try {
-                cohortPatientRecords.put(record.getPID().toString(), record);
-                // getPatientIdentifiers() is an Async function meaning the loop does not depend on request being completed
-                futurePatientIdentifiers.put(record.getPID().toString(), ddpDataSource.getPatientIdentifiers(record.getPID().toString()));
-            } catch (Exception e) {
-                LOG.error("Failed to resolve dmp id's for record'" + record.getPID() + "' -- skipping (" + e.getMessage() + ")");
-                ddpPatientListUtil.addPatientsMissingDMPId(record.getPID());
-            }
-            count++;
-            if (testMode && count >= TEST_MODE_PATIENT_THRESHOLD) {
-                break;
-            }
+            cohortPatientRecords.put(record.getPID().toString(), record);
         }
 
-        // ensures composite records will not be created until all requests for Patient Identifiers are completed
-        for(String patientIdentifier : futurePatientIdentifiers.keySet()) {
-            getCompletableFuturePatientIdentifiers(patientIdentifier, futurePatientIdentifiers);
+        Map<String, DDPCompositeRecord> compositeRecords = getDDPCompositeRecords(cohortPatientRecords.keySet());
+        for (Map.Entry<String, DDPCompositeRecord> entry: compositeRecords.entrySet()) {
+            entry.getValue().setCohortPatient(cohortPatientRecords.get(entry.getKey()));
         }
-
-        LOG.info("creating composite Records");
-        for(String  patientIdentifier : futurePatientIdentifiers.keySet()) {
-            PatientIdentifiers pids = getCompletableFuturePatientIdentifiers(patientIdentifier, futurePatientIdentifiers);
-            if (pids != null && !Strings.isNullOrEmpty(pids.getDmpPatientId())) {
-                if (pids.getDmpPatientId().equals("P-0000000")) {
-                    LOG.error("Patient ID " + patientIdentifier + " resolved to DMP ID: P-0000000");
-                    continue;
-                }
-                compositeRecords.add(new DDPCompositeRecord(pids.getDmpPatientId(), pids.getDmpSampleIds(), cohortPatientRecords.get(patientIdentifier)));
-            } else {
-                LOG.error("Failed to resolve dmp id's for record '" + patientIdentifier + "' -- skipping");
-                ddpPatientListUtil.addPatientsMissingDMPId(Integer.parseInt(patientIdentifier));
-                continue;
-            }
-        }
-        // filter composite records to return if excluded patient id list is not empty
-        if (!excludedPatientIds.isEmpty()) {
-            return filterCompositeRecords(compositeRecords);
-        }
-        return compositeRecords;
+	return new ArrayList<>(compositeRecords.values());
     }
 
     /**
@@ -254,23 +274,12 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
      * Removes records matching patient ids in 'excludedPatientIds' if necessary.
      *
      * @param patientIds
+     * @param records CohortPatient records, might be null
      * @return
      */
-    private List<DDPCompositeRecord> getDDPCompositeRecordsByPatientIds(Set<String> patientIds) {
-        List<DDPCompositeRecord> compositeRecords = new ArrayList<>();
-        int count = 0;
-        for (String patientId : patientIds) {
-            compositeRecords.add(new DDPCompositeRecord(patientId));
-            count++;
-            if (testMode && count >= TEST_MODE_PATIENT_THRESHOLD) {
-                break;
-            }
-        }
-        // filter composite records to return if excluded patient id list is not empty
-        if (!excludedPatientIds.isEmpty()) {
-            return filterCompositeRecords(compositeRecords);
-        }
-        return compositeRecords;
+    private List<DDPCompositeRecord> getDDPCompositeRecordsByPatientIds(Set<String> patientIds) throws Exception {
+        Map<String, DDPCompositeRecord> compositeRecords = getDDPCompositeRecords(patientIds);
+	return new ArrayList<>(compositeRecords.values());
     }
 
     /**
@@ -301,14 +310,14 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
      *
      * @return
      */
-    private List<DDPCompositeRecord> filterCompositeRecords(List<DDPCompositeRecord> compositeRecords) {
+    private Map<String, DDPCompositeRecord> filterCompositeRecords(Map<String, DDPCompositeRecord> compositeRecords) {
         LOG.info("Removing composite records matching ids in 'excludedPatientIds'...");
-        List<DDPCompositeRecord> filteredCompositeRecords = new ArrayList<>();
-        for (DDPCompositeRecord record : compositeRecords) {
-            if (excludedPatientIds.contains(record.getDmpPatientId())) {
+        Map<String, DDPCompositeRecord> filteredCompositeRecords = new HashMap<>();
+        for (Map.Entry<String, DDPCompositeRecord> entry: compositeRecords.entrySet()) {
+            if (excludedPatientIds.contains(entry.getValue().getDmpPatientId())) {
                 continue;
             }
-            filteredCompositeRecords.add(record);
+            filteredCompositeRecords.put(entry.getKey(), entry.getValue());
         }
         LOG.info("Removed " + (compositeRecords.size() - filteredCompositeRecords.size()) + " from final composite record set");
         return filteredCompositeRecords;

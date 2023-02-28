@@ -63,8 +63,8 @@ public class DDPPatientListUtil {
     /**
      * @param patientId the patientId to add
      */
-    public void addPatientsMissingDMPId(Integer patientId) {
-        this.patientsMissingDMPIds.add(String.valueOf(patientId));
+    public void addPatientsMissingDMPId(String patientId) {
+        this.patientsMissingDMPIds.add(patientId);
     }
 
     /**

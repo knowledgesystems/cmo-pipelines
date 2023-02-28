@@ -46,13 +46,13 @@ import org.apache.commons.lang.builder.ToStringBuilder;
  */
 public class AgeAtSeqDateRecord {
     private String SAMPLE_ID;
-    private String AGE_AT_SEQ_DATE;
+    private String AGE_AT_SEQ_REPORTED_YEARS;
 
     public AgeAtSeqDateRecord(){}
 
     public AgeAtSeqDateRecord(String sampleId, String patientBirthDate) throws ParseException {
         this.SAMPLE_ID = sampleId;
-        this.AGE_AT_SEQ_DATE = DDPUtils.resolveAgeAtSeqDate(sampleId, patientBirthDate);
+        this.AGE_AT_SEQ_REPORTED_YEARS = DDPUtils.resolveAgeAtSeqDate(sampleId, patientBirthDate);
     }
 
     /**
@@ -70,17 +70,17 @@ public class AgeAtSeqDateRecord {
     }
 
     /**
-     * @return the AGE_AT_SEQ_DATE
+     * @return the AGE_AT_SEQ_REPORTED_YEARS
      */
-    public String getAGE_AT_SEQ_DATE() {
-        return AGE_AT_SEQ_DATE;
+    public String getAGE_AT_SEQ_REPORTED_YEARS() {
+        return AGE_AT_SEQ_REPORTED_YEARS;
     }
 
     /**
-     * @param AGE_AT_SEQ_DATE the AGE_AT_SEQ_DATE to set
+     * @param AGE_AT_SEQ_REPORTED_YEARS the AGE_AT_SEQ_REPORTED_YEARS to set
      */
-    public void setAGE_AT_SEQ_DATE(String AGE_AT_SEQ_DATE) {
-        this.AGE_AT_SEQ_DATE = AGE_AT_SEQ_DATE;
+    public void setAGE_AT_SEQ_REPORTED_YEARS(String AGE_AT_SEQ_REPORTED_YEARS) {
+        this.AGE_AT_SEQ_REPORTED_YEARS = AGE_AT_SEQ_REPORTED_YEARS;
     }
 
     @Override
@@ -96,7 +96,7 @@ public class AgeAtSeqDateRecord {
     public static List<String> getFieldNames() {
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add("SAMPLE_ID");
-        fieldNames.add("AGE_AT_SEQ_DATE");
+        fieldNames.add("AGE_AT_SEQ_REPORTED_YEARS");
         return fieldNames;
     }
 }
