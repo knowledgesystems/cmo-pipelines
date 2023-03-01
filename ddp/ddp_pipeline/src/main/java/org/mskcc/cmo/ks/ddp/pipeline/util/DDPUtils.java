@@ -188,19 +188,26 @@ public class DDPUtils {
         /*if (Strings.isNullOrEmpty(compositeRecord.getPatientBirthDate())) {
             return anonymizePatientAge(compositeRecord.getPatientAge());
         }*/
+	for (String sample : sampleSeqDateMap.keySet()) {
+            LOG.error("MEW: sample '" + sample + "' has date '" + sampleSeqDateMap.get(sample) + "'");
+	}
+        LOG.error("MEW: in resolveAgeAtSeqDate for sample '" + sampleId + "' birth date '" + patientBirthDate + "'");
+        LOG.error("MEW: number of sequencing dates in map: " + sampleSeqDateMap.size());
         Long birthDateInDays = getDateInDays(patientBirthDate);
         Date referenceDate = sampleSeqDateMap.get(sampleId); // TODO MEW does this throw exception?
         Long referenceDateInDays = null;
         // use current date as reference date if patient not deceased, otherwise use date of death
         if (referenceDate != null) {
             referenceDateInDays = getDateInDays(referenceDate);
-        }
-        else {
+        } else {
             // TODO MEW what do we do here?
+            LOG.error("MEW: Sequencing date is null for sample");
         }
-        // TODO MEW check referenceDateInDays cannot be or is not null
-        Double age = (referenceDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
-        return anonymizePatientAge(age.intValue());
+	LOG.error("MEW: referenceDateInDays '" + referenceDateInDays + "' and birthDateInDays '" + birthDateInDays + "' DAYS_TO_YEARS_CONVERSION '" + DAYS_TO_YEARS_CONVERSION + "'");
+        // TODO MEW check referenceDateInDays cannot be or is not null and birthDateInDays
+        Double age = (referenceDateInDays == null || birthDateInDays == null) ? null : (referenceDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
+	LOG.error("MEW: age '" + age + "'");
+        return (age == null) ? null : anonymizePatientAge(age.intValue());
     }
 
     /**

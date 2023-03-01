@@ -173,12 +173,6 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public AgeAtSeqDateProcessor ageAtSeqDateProcessor() {
-        return new AgeAtSeqDateProcessor();
-    }
-
-    @Bean
-    @StepScope
     public SuppVitalStatusProcessor suppVitalStatusProcessor() {
         return new SuppVitalStatusProcessor();
     }
