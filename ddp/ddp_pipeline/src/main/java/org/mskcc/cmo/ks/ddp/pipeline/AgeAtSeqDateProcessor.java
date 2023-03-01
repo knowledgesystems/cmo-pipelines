@@ -54,7 +54,7 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
 
     @Override
     public List<String> process(DDPCompositeRecord compositeRecord) throws Exception {
-        List<AgeAtSeqDateRecord> ageAtSeqDateRecords = convertAgeAtSeqDateRecord(compositeRecord.getDmpSampleIds(), compositeRecord.getPatientBirthDate());
+        List<AgeAtSeqDateRecord> ageAtSeqDateRecords = convertAgeAtSeqDateRecord(compositeRecord.getDmpPatientId(), compositeRecord.getDmpSampleIds(), compositeRecord.getPatientBirthDate());
         // TODO MEW make sure the ageAtSeqDateRecord actually has an age at seq, otherwise don't include record?
         // construct records into strings for writing to output file
         List<String> records = new ArrayList<>();
@@ -76,12 +76,12 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
      * @param sampleId
      * @return
      */
-    private List<AgeAtSeqDateRecord> convertAgeAtSeqDateRecord(List<String> sampleIds, String patientBirthDate) {
+    private List<AgeAtSeqDateRecord> convertAgeAtSeqDateRecord(String patientId, List<String> sampleIds, String patientBirthDate) {
         List<AgeAtSeqDateRecord> ageAtSeqDateRecords = new ArrayList<>();
         for (String sampleId : sampleIds) {
             AgeAtSeqDateRecord record;
             try {
-                record = new AgeAtSeqDateRecord(sampleId, patientBirthDate);
+                record = new AgeAtSeqDateRecord(patientId, sampleId, patientBirthDate);
             }
             catch (ParseException e) {
                 LOG.error("Error creating age at seq date record: " + sampleId);

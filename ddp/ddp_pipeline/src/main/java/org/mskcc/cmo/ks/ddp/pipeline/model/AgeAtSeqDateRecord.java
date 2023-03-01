@@ -32,9 +32,7 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline.model;
 
-import com.google.common.base.Strings;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
-import org.mskcc.cmo.ks.ddp.source.model.Radiation;
 
 import java.text.ParseException;
 import java.util.*;
@@ -45,14 +43,30 @@ import org.apache.commons.lang.builder.ToStringBuilder;
  * @author Manda Wilson and Calla Chennault
  */
 public class AgeAtSeqDateRecord {
+    private String PATIENT_ID;
     private String SAMPLE_ID;
     private String AGE_AT_SEQ_REPORTED_YEARS;
 
     public AgeAtSeqDateRecord(){}
 
-    public AgeAtSeqDateRecord(String sampleId, String patientBirthDate) throws ParseException {
+    public AgeAtSeqDateRecord(String patientId, String sampleId, String patientBirthDate) throws ParseException {
+        this.PATIENT_ID = patientId;
         this.SAMPLE_ID = sampleId;
         this.AGE_AT_SEQ_REPORTED_YEARS = DDPUtils.resolveAgeAtSeqDate(sampleId, patientBirthDate);
+    }
+
+    /**
+     * @return the PATIENT_ID
+     */
+    public String getPATIENT_ID() {
+        return PATIENT_ID;
+    }
+
+    /**
+     * @param PATIENT_ID the PATIENT_ID to set
+     */
+    public void setPATIENT_ID(String PATIENT_ID) {
+        this.PATIENT_ID = PATIENT_ID;
     }
 
     /**
@@ -95,6 +109,7 @@ public class AgeAtSeqDateRecord {
      */
     public static List<String> getFieldNames() {
         List<String> fieldNames = new ArrayList<>();
+        fieldNames.add("PATIENT_ID");
         fieldNames.add("SAMPLE_ID");
         fieldNames.add("AGE_AT_SEQ_REPORTED_YEARS");
         return fieldNames;
