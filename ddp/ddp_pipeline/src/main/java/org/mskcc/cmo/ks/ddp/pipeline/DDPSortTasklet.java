@@ -34,9 +34,6 @@ package org.mskcc.cmo.ks.ddp.pipeline;
 import java.io.IOException;
 import org.mskcc.cmo.ks.ddp.pipeline.model.AgeAtSeqDateRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
-import org.mskcc.cmo.ks.ddp.pipeline.model.SuppVitalStatusRecord;
-import org.mskcc.cmo.ks.ddp.pipeline.model.SuppAgeRecord;
-import org.mskcc.cmo.ks.ddp.pipeline.model.SuppNaaccrMappingsRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineChemoRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineRadiationRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineSurgeryRecord;
@@ -126,8 +123,7 @@ public class DDPSortTasklet implements Tasklet {
                     ") dropped greater than 90% of current record count (" + currentDemographicsRecCount +
                     ") in backup demographics file - exiting...");
         }
-    }    
-
+    }
 
     private void sortAndOverwriteFile(Path filePath, List<String> fieldNames) throws IOException {
         LOG.info("Sorting and overwriting file:" + filePath.toString());

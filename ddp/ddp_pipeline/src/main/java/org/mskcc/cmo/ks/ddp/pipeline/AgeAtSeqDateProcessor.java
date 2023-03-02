@@ -37,7 +37,6 @@ import org.mskcc.cmo.ks.ddp.pipeline.model.AgeAtSeqDateRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 
 import java.util.*;
-import com.google.common.base.Strings;
 import java.text.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.batch.item.ItemProcessor;
@@ -91,5 +90,4 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
         }
         return ageAtSeqDateRecords;
     }
-
 }

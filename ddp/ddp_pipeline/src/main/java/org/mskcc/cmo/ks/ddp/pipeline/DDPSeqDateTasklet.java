@@ -73,7 +73,8 @@ public class DDPSeqDateTasklet implements Tasklet {
             LOG.debug("Seq date file is: " + seqDateFilename);
             BufferedReader reader = new BufferedReader(new FileReader(seqDateFilename));
             // pass reader as parameter so we can mock it in tests
-            setSeqDateMaps(seqDateFilename, reader); // calls DDPUtils.setSampleSeqDateMap() and DDPUtils.setPatientFirstSeqDateMap()
+            // setSeqDateMaps() calls DDPUtils.setSampleSeqDateMap() and DDPUtils.setPatientFirstSeqDateMap()
+            setSeqDateMaps(seqDateFilename, reader);
             DDPUtils.setUseSeqDateOsMonthsMethod(Boolean.TRUE);
         } else {
             LOG.debug("No seq date file given.");
@@ -96,6 +97,7 @@ public class DDPSeqDateTasklet implements Tasklet {
             LOG.warn("Invalid header in '" + filename + "', expected '" + String.join(",", EXPECTED_SEQ_DATE_FILE_HEADER) + "', found '" + String.join(",", header)+ "'");
             DDPUtils.setSampleSeqDateMap(sampleSeqDateMap); // empty map
             DDPUtils.setPatientFirstSeqDateMap(patientFirstSeqDateMap); // empty map
+            return;
         } 
         // e.g. Wed, 16 Mar 2016 18:09:02 GMT
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");

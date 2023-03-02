@@ -39,7 +39,6 @@ import com.google.common.base.Strings;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
-import java.time.ZoneOffset;
 import java.util.*;
 import java.io.*;
 import org.apache.commons.lang.StringUtils;
@@ -59,8 +58,8 @@ public class DDPUtils {
     private static Map<String, String> naaccrEthnicityMap;
     private static Map<String, String> naaccrRaceMap;
     private static Map<String, String> naaccrSexMap;
-    private static Map<String, Date> patientFirstSeqDateMap = new HashMap<String, Date>();
     private static Map<String, Date> sampleSeqDateMap = new HashMap<String, Date>();
+    private static Map<String, Date> patientFirstSeqDateMap = new HashMap<String, Date>();
     private static Set<String> patientsMissingSurvival = new HashSet<>();
     private static Boolean useSeqDateOsMonthsMethod = Boolean.FALSE;
     private static Set<String> patientsWithNegativeOsMonths = new HashSet<>();
@@ -110,20 +109,20 @@ public class DDPUtils {
         return DDPUtils.naaccrSexMap;
     }
 
-    public static void setPatientFirstSeqDateMap(Map<String, Date> patientFirstSeqDateMap) {
-        DDPUtils.patientFirstSeqDateMap = patientFirstSeqDateMap;
-    }
-
-    public static Map<String, Date> getPatientFirstSeqDateMap() {
-        return DDPUtils.patientFirstSeqDateMap;
-    }
-
     public static void setSampleSeqDateMap(Map<String, Date> sampleSeqDateMap) {
         DDPUtils.sampleSeqDateMap = sampleSeqDateMap;
     }
 
     public static Map<String, Date> getSampleSeqDateMap() {
         return DDPUtils.sampleSeqDateMap;
+    }
+
+    public static void setPatientFirstSeqDateMap(Map<String, Date> patientFirstSeqDateMap) {
+        DDPUtils.patientFirstSeqDateMap = patientFirstSeqDateMap;
+    }
+
+    public static Map<String, Date> getPatientFirstSeqDateMap() {
+        return DDPUtils.patientFirstSeqDateMap;
     }
 
     public static Set<String> getPatientsMissingSurvival() {
@@ -188,9 +187,9 @@ public class DDPUtils {
         /*if (Strings.isNullOrEmpty(compositeRecord.getPatientBirthDate())) {
             return anonymizePatientAge(compositeRecord.getPatientAge());
         }*/
-	for (String sample : sampleSeqDateMap.keySet()) {
+        for (String sample : sampleSeqDateMap.keySet()) {
             LOG.error("MEW: sample '" + sample + "' has date '" + sampleSeqDateMap.get(sample) + "'");
-	}
+        }
         LOG.error("MEW: in resolveAgeAtSeqDate for sample '" + sampleId + "' birth date '" + patientBirthDate + "'");
         LOG.error("MEW: number of sequencing dates in map: " + sampleSeqDateMap.size());
         Long birthDateInDays = getDateInDays(patientBirthDate);
@@ -203,10 +202,10 @@ public class DDPUtils {
             // TODO MEW what do we do here?
             LOG.error("MEW: Sequencing date is null for sample");
         }
-	LOG.error("MEW: referenceDateInDays '" + referenceDateInDays + "' and birthDateInDays '" + birthDateInDays + "' DAYS_TO_YEARS_CONVERSION '" + DAYS_TO_YEARS_CONVERSION + "'");
+        LOG.error("MEW: referenceDateInDays '" + referenceDateInDays + "' and birthDateInDays '" + birthDateInDays + "' DAYS_TO_YEARS_CONVERSION '" + DAYS_TO_YEARS_CONVERSION + "'");
         // TODO MEW check referenceDateInDays cannot be or is not null and birthDateInDays
         Double age = (referenceDateInDays == null || birthDateInDays == null) ? null : (referenceDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
-	LOG.error("MEW: age '" + age + "'");
+        LOG.error("MEW: age '" + age + "'");
         return (age == null) ? null : anonymizePatientAge(age.intValue());
     }
 
