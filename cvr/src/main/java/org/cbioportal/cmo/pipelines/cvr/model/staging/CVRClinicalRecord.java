@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2023 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -65,7 +65,6 @@ public class CVRClinicalRecord {
     private String institute;
     private String somaticStatus;
     private String seqDate;
-    private String ageAtSeqReportedYears;
     private String archer;
     private String cvrTmbCohortPercentile;
     private String cvrTmbScore;
@@ -99,7 +98,6 @@ public class CVRClinicalRecord {
         this.institute = metaData.getOutsideInstitute();
         this.somaticStatus = metaData.getSomaticStatus();
         this.seqDate = metaData.getDateTumorSequencing();
-        this.ageAtSeqReportedYears = "NA";
         this.archer = "NO";
         this.cvrTmbCohortPercentile = (metaData.getTmbCohortPercentile()!= null) ? String.valueOf(metaData.getTmbCohortPercentile()) : "NA";
         this.cvrTmbScore = (metaData.getTmbScore()!= null) ? String.valueOf(metaData.getTmbScore()) : "NA";
