@@ -80,7 +80,6 @@ public class DDPSortTasklet implements Tasklet {
     private Integer currentDemographicsRecCount;
 
     private final double DEMOGRAPHIC_RECORD_DROP_THRESHOLD = 0.9;
-    private int recordsWritten;
 
     private final Logger LOG = Logger.getLogger(DDPSortTasklet.class);
 
