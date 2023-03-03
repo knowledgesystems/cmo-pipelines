@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2023 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -58,7 +58,6 @@ public class CVRUtilities {
     public static final String NONSIGNEDOUT_MUTATION_FILE = "data_nonsignedout_mutations.txt";
     public static final String DEFAULT_CLINICAL_FILE = "data_clinical.txt";
     public static final String SEQ_DATE_CLINICAL_FILE = "cvr/seq_date.txt";
-    public static final String DDP_AGE_FILE = "ddp/ddp_age.txt";
     public static final String CORRESPONDING_ID_FILE = "cvr/linked_cases.txt";
     public static final String CNA_FILE = "data_CNA.txt";
     public static final String SEG_FILE = "_data_cna_hg19.seg";
@@ -402,36 +401,6 @@ public class CVRUtilities {
             variant += record.getREFERENCE_ALLELE() + ">" + record.getTUMOR_SEQ_ALLELE2();
         }
         return variant;
-    }
-
-    /**
-     * Calculates the age at seq report for a list of CVRClinical records given a patient age
-     * and the reference calculation date.
-     * @param referenceCalculationDate
-     * @param records
-     * @param patientAge
-     * @throws ParseException
-     */
-    public void calculateAgeAtSeqReportedYearsForPatient(Date referenceCalculationDate, List<CVRClinicalRecord> records, String patientAge) throws ParseException {
-        for (CVRClinicalRecord record : records) {
-            if (record.getSEQ_DATE() != null && !record.getSEQ_DATE().isEmpty() && !record.getSEQ_DATE().equals("NA")) {
-                Date cvrDateSequenced = CVR_DATE_FORMAT.parse(record.getSEQ_DATE());
-                // We know age of patient now from darwin, and the time at which the patient was sequenced.
-                // The age of the patient when sequenced is therefore AGE_NOW - YEARS_SINCE_SEQUENCING
-                // This converts the date arithmetic from miliseconds to years.
-                // 1000ms -> 1s, 60s -> 1m, 60m -> 1h, 24h -> 1d, 365.2422d -> 1y
-                Double diffYears = (referenceCalculationDate.getTime() - cvrDateSequenced.getTime()) / 1000L / 60L / 60L / 24L / 365.2422;
-                Double ageAtSeqReport = Math.ceil(Integer.parseInt(patientAge) - diffYears);
-                if (ageAtSeqReport > 90) {
-                    record.setAGE_AT_SEQ_REPORTED_YEARS(">90");
-                } else {
-                    record.setAGE_AT_SEQ_REPORTED_YEARS(String.valueOf(ageAtSeqReport.intValue()));
-                }
-            }
-            else {
-                record.setAGE_AT_SEQ_REPORTED_YEARS("NA");
-            }
-        }
     }
 
     public String convertWhitespace(String s) {

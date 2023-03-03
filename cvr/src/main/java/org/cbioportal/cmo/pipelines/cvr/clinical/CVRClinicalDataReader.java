@@ -95,9 +95,6 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
         if (CVRUtilities.SUPPORTED_SEQ_DATE_STUDY_IDS.contains(studyId)) {
             processSeqDateFile(ec);
         }
-        if (studyId.equals("mskimpact")) {
-            processAgeFile(ec);
-        }
         // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
         // portalSamples list is only updated if threshold check for max num samples to remove passes
         cvrSampleListUtil.updateSampleLists();
@@ -185,52 +182,6 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             records.add(record);
             patientToRecordMap.put(record.getPATIENT_ID(), records);
             clinicalRecords.add(record);
-        }
-    }
-
-    private void processAgeFile(ExecutionContext ec) {
-        File mskimpactAgeFile = new File(stagingDirectory, CVRUtilities.DDP_AGE_FILE);
-        if (!mskimpactAgeFile.exists()) {
-            log.error("File does not exist - skipping data loading from age file: " + mskimpactAgeFile.getName());
-            return;
-        }
-        // get file creation date as reference time to use for calculating age at seq report
-        Date fileCreationDate;
-        try {
-            BasicFileAttributes attributes = Files.readAttributes(mskimpactAgeFile.toPath(), BasicFileAttributes.class);
-            fileCreationDate = new Date(attributes.creationTime().toMillis());
-        }
-        catch (IOException e) {
-            log.error("Error getting file creation date from: " + mskimpactAgeFile.getName());
-            throw new ItemStreamException(e);
-        }
-
-        log.info("Loading age data from : " + mskimpactAgeFile.getName());
-        DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
-        DefaultLineMapper<MskimpactAge> mapper = new DefaultLineMapper<>();
-        mapper.setLineTokenizer(tokenizer);
-        mapper.setFieldSetMapper(new MskimpactAgeFieldSetMapper());
-        FlatFileItemReader<MskimpactAge> reader = new FlatFileItemReader<>();
-        reader.setResource(new FileSystemResource(mskimpactAgeFile));
-        reader.setLineMapper(mapper);
-        reader.setLinesToSkip(1);
-        reader.open(ec);
-
-        try {
-            MskimpactAge mskimpactAge;
-            while ((mskimpactAge = reader.read()) != null) {
-                if (patientToRecordMap.keySet().contains(mskimpactAge.getPATIENT_ID())) {
-                    cvrUtilities.calculateAgeAtSeqReportedYearsForPatient(fileCreationDate,
-                            patientToRecordMap.get(mskimpactAge.getPATIENT_ID()), mskimpactAge.getAGE());
-                }
-            }
-        }
-        catch (Exception e) {
-            log.error("Error reading data from age file: " + mskimpactAgeFile.getName());
-            throw new ItemStreamException(e);
-        }
-        finally {
-            reader.close();
         }
     }
 

@@ -314,14 +314,6 @@ public class CVRClinicalRecord {
         this.seqDate = seqDate;
     }
 
-    public String getAGE_AT_SEQ_REPORTED_YEARS() {
-        return ageAtSeqReportedYears != null ? ageAtSeqReportedYears : "NA";
-    }
-
-    public void setAGE_AT_SEQ_REPORTED_YEARS(String ageAtSeqReportedYears) {
-        this.ageAtSeqReportedYears = ageAtSeqReportedYears;
-    }
-
     public String getARCHER() {
         return archer != null ? archer : "NO";
     }
@@ -415,7 +407,6 @@ public class CVRClinicalRecord {
         fieldNames.add("MSI_TYPE");
         fieldNames.add("INSTITUTE");
         fieldNames.add("SOMATIC_STATUS");
-        fieldNames.add("AGE_AT_SEQ_REPORTED_YEARS");
         fieldNames.add("ARCHER");
         fieldNames.add("CVR_TMB_COHORT_PERCENTILE");
         fieldNames.add("CVR_TMB_SCORE");
