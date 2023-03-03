@@ -33,7 +33,6 @@
 package org.mskcc.cmo.ks.ddp.pipeline;
 
 import org.mskcc.cmo.ks.ddp.source.DDPDataSource;
-import org.mskcc.cmo.ks.ddp.source.util.AuthenticationUtil;
 import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 import org.mskcc.cmo.ks.ddp.source.model.CohortPatient;
 import org.mskcc.cmo.ks.ddp.source.model.PatientIdentifiers;
@@ -48,7 +47,6 @@ import org.springframework.batch.item.*;
 import org.springframework.beans.factory.annotation.*;
 
 import java.util.concurrent.CompletableFuture;
-import org.apache.commons.lang.StringUtils;
 /**
  *
  * @author ochoaa
@@ -75,9 +73,6 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
 
     @Autowired
     private DDPPatientListUtil ddpPatientListUtil;
-
-    @Autowired
-    private AuthenticationUtil authenticationUtil;
 
     private List<DDPCompositeRecord> ddpCompositeRecordList;
     private Set<String> excludedPatientIds = new HashSet<>();
@@ -232,7 +227,7 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
         for (Map.Entry<String, DDPCompositeRecord> entry: compositeRecords.entrySet()) {
             entry.getValue().setCohortPatient(cohortPatientRecords.get(entry.getKey()));
         }
-	return new ArrayList<>(compositeRecords.values());
+        return new ArrayList<>(compositeRecords.values());
     }
 
     /**
@@ -274,12 +269,11 @@ public class DDPReader implements ItemStreamReader<DDPCompositeRecord> {
      * Removes records matching patient ids in 'excludedPatientIds' if necessary.
      *
      * @param patientIds
-     * @param records CohortPatient records, might be null
      * @return
      */
     private List<DDPCompositeRecord> getDDPCompositeRecordsByPatientIds(Set<String> patientIds) throws Exception {
         Map<String, DDPCompositeRecord> compositeRecords = getDDPCompositeRecords(patientIds);
-	return new ArrayList<>(compositeRecords.values());
+        return new ArrayList<>(compositeRecords.values());
     }
 
     /**
