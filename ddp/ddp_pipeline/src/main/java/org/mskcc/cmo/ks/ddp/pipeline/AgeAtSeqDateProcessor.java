@@ -54,7 +54,6 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
     @Override
     public List<String> process(DDPCompositeRecord compositeRecord) throws Exception {
         List<AgeAtSeqDateRecord> ageAtSeqDateRecords = convertAgeAtSeqDateRecord(compositeRecord.getDmpPatientId(), compositeRecord.getDmpSampleIds(), compositeRecord.getPatientBirthDate());
-        // TODO MEW make sure the ageAtSeqDateRecord actually has an age at seq, otherwise don't include record?
         // construct records into strings for writing to output file
         List<String> records = new ArrayList<>();
         for (AgeAtSeqDateRecord ageAtSeqDateRecord : ageAtSeqDateRecords) {

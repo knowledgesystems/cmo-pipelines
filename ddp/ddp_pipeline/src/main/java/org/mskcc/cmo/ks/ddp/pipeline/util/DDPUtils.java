@@ -175,37 +175,19 @@ public class DDPUtils {
     }
 
     /**
-     * Resolve and anonymize patient age at seq.
+     * Resolve and anonymize patient age in years at date of sequencing. If either
+     * the patient date of birth or the date of sequencing is null this returns null.
      *
-     * @param compositeRecord
-     * @return
+     * @param sampleId
+     * @param patientBirthDate String date of birth
+     * @return age in years at sequencing, null if we don't know patient date of birth or sequencing date
      * @throws ParseException
      */
     public static String resolveAgeAtSeqDate(String sampleId, String patientBirthDate) throws ParseException {
-        // TODO MEW do we use current age if we don't have birth date?
-        // if patient birth date is null/empty then use current age value
-        /*if (Strings.isNullOrEmpty(compositeRecord.getPatientBirthDate())) {
-            return anonymizePatientAge(compositeRecord.getPatientAge());
-        }*/
-        for (String sample : sampleSeqDateMap.keySet()) {
-            LOG.error("MEW: sample '" + sample + "' has date '" + sampleSeqDateMap.get(sample) + "'");
-        }
-        LOG.error("MEW: in resolveAgeAtSeqDate for sample '" + sampleId + "' birth date '" + patientBirthDate + "'");
-        LOG.error("MEW: number of sequencing dates in map: " + sampleSeqDateMap.size());
         Long birthDateInDays = getDateInDays(patientBirthDate);
-        Date referenceDate = sampleSeqDateMap.get(sampleId); // TODO MEW does this throw exception?
-        Long referenceDateInDays = null;
-        // use current date as reference date if patient not deceased, otherwise use date of death
-        if (referenceDate != null) {
-            referenceDateInDays = getDateInDays(referenceDate);
-        } else {
-            // TODO MEW what do we do here?
-            LOG.error("MEW: Sequencing date is null for sample");
-        }
-        LOG.error("MEW: referenceDateInDays '" + referenceDateInDays + "' and birthDateInDays '" + birthDateInDays + "' DAYS_TO_YEARS_CONVERSION '" + DAYS_TO_YEARS_CONVERSION + "'");
-        // TODO MEW check referenceDateInDays cannot be or is not null and birthDateInDays
+        Long referenceDateInDays = getDateInDays(sampleSeqDateMap.get(sampleId));
+        // if either date is null do not calculate age at sequencing date
         Double age = (referenceDateInDays == null || birthDateInDays == null) ? null : (referenceDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
-        LOG.error("MEW: age '" + age + "'");
         return (age == null) ? null : anonymizePatientAge(age.intValue());
     }
 
@@ -242,27 +224,6 @@ public class DDPUtils {
     public static String resolveIntervalInDays(String date1, String date2) throws ParseException {
         return resolveIntervalInDays(date1, date2, false);
     }
-
-    /**
-     * Resolve and anonymize patient age at diagnosis.
-     *
-     * If birth year is null/empty then return anonymized patient age.
-     * Otherwise calculate from difference between current date and birth date.
-     *
-     * @param compositeRecord
-     * @return
-     * @throws ParseException
-     */
-    /*public static String resolvePatientAgeAtDiagnosis(DDPCompositeRecord compositeRecord) throws ParseException {
-        // if patient birth date is null/empty then use current age value
-        if (Strings.isNullOrEmpty(compositeRecord.getPatientBirthDate())) {
-            return anonymizePatientAge(compositeRecord.getPatientAge());
-        }
-        Long birthDateInDays = getDateInDays(compositeRecord.getPatientBirthDate());
-        Long currentDateInDays = getDateInDays(new Date());
-        Double age = (currentDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
-        return anonymizePatientAge(age.intValue());
-    }*/ // TODO remove this, it isn't used anymore (except in tests)
 
     /**
      * Returns anonymized patient age as string.
