@@ -121,5 +121,4 @@ public class DDPSeqDateTaskletTest {
         expectedSampleSeqDateMap.put("PATIENT_3-SAMPLE_9", simpleDateFormat.parse("Fri, 14 Feb 2014 17:21:03 GMT"));
         Assert.assertEquals(expectedSampleSeqDateMap, actualSampleSeqDateMap);
     }
-
 }
