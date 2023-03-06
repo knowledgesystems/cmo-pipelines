@@ -45,7 +45,6 @@ public class CompositeResult {
     private List<String> timelineChemoResults;
     private List<String> timelineSurgeryResults;
     private String suppVitalStatusResult;
-    private String suppAgeResult;
     private String suppNaccrMappingsResult;
 
     public CompositeResult(){}
@@ -132,20 +131,6 @@ public class CompositeResult {
      */
     public void setSuppVitalStatusResult(String suppVitalStatusResult) {
         this.suppVitalStatusResult = suppVitalStatusResult;
-    }
-
-    /**
-     * @return the suppAgeResult
-     */
-    public String getSuppAgeResult() {
-        return suppAgeResult;
-    }
-
-    /**
-     * @param suppAgeResult the suppAgeResult to set
-     */
-    public void setSuppAgeResult(String suppAgeResult) {
-        this.suppAgeResult = suppAgeResult;
     }
 
     /**

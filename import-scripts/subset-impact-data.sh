@@ -101,14 +101,6 @@ if [ $STUDY_ID == "genie" ]; then
             exit 2
         fi
 
-        # add age at seq report using cvr/seq_date.txt
-        echo "Adding AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt"
-        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --seq-date-file="$INPUT_DIRECTORY/cvr/seq_date.txt" --age-file="$INPUT_DIRECTORY/ddp/ddp_age.txt" --convert-to-days="true"
-        if [ $? -gt 0 ] ; then
-            echo "Failed to add AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt using $INPUT_DIRECTORY/cvr/seq_date.txt. Exiting..."
-            exit 2l
-        fi
-
         # rename GENE_PANEL to SEQ_ASSAY_ID in data_clinical_supp_sample.txt
         sed -i.bak 's/GENE_PANEL/SEQ_ASSAY_ID/' $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt
         # remove temp files created
