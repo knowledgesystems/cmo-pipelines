@@ -97,9 +97,6 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
     private SuppVitalStatusProcessor suppVitalStatusProcessor;
 
     @Autowired
-    private SuppAgeProcessor suppAgeProcessor;
-
-    @Autowired
     private SuppNaaccrMappingsProcessor suppNaaccrMappingsProcessor;
 
     private final Logger LOG = Logger.getLogger(DDPCompositeProcessor.class);
@@ -169,7 +166,6 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
         // provided to genie (vital status, age as years since birth, naaccr codes)
         if (DDPUtils.isMskimpactCohort(cohortName)) {
             compositeResult.setSuppVitalStatusResult(suppVitalStatusProcessor.process(compositeRecord));
-            compositeResult.setSuppAgeResult(suppAgeProcessor.process(compositeRecord));
             compositeResult.setSuppNaccrMappingsResult(suppNaaccrMappingsProcessor.process(compositeRecord));
         }
         return compositeResult;

@@ -203,8 +203,6 @@ function import_mskimpact_ddp_to_redcap {
     return $return_value
 }
 
-
-
 # Function for importing hemepact cvr files to redcap
 function import_hemepact_cvr_to_redcap {
     return_value=0

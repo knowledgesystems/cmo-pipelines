@@ -179,12 +179,6 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public SuppAgeProcessor suppAgeProcessor() {
-        return new SuppAgeProcessor();
-    }
-
-    @Bean
-    @StepScope
     public SuppNaaccrMappingsProcessor suppNaaccrMappingsProcessor() {
         return new SuppNaaccrMappingsProcessor();
     }
@@ -225,14 +219,6 @@ public class BatchConfiguration {
         return new SuppVitalStatusWriter();
     }
 
-
-    @Bean
-    @StepScope
-    public ItemStreamWriter<CompositeResult> suppAgeWriter() {
-        return new SuppAgeWriter();
-    }
-
-
     @Bean
     @StepScope
     public ItemStreamWriter<CompositeResult> suppNaaccrMappingsWriter() {
@@ -250,7 +236,6 @@ public class BatchConfiguration {
         delegates.add(timelineChemoWriter());
         delegates.add(timelineSurgeryWriter());
         delegates.add(suppVitalStatusWriter());
-        delegates.add(suppAgeWriter());
         delegates.add(suppNaaccrMappingsWriter());
         writer.setDelegates(delegates);
         return writer;
