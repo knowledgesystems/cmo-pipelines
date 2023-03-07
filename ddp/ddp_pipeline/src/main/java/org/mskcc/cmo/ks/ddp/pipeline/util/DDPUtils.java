@@ -174,11 +174,11 @@ public class DDPUtils {
         return anonymizePatientAge(age.intValue());
     }
 
-    public static String getAgeAtSeqDateLogging(String sampleId, String ageAtSeqDate, Long referenceInDays) {
+    public static String getAgeAtSeqDateNullLogging(String sampleId, String ageAtSeqDate, Long sampleSeqDateInDays) {
         StringBuilder builder = new StringBuilder();
         builder.append("Sample '").append(sampleId).append("' resolves AGE_AT_SEQ_REPORTED_YEARS to null':  ")
                 .append("( AGE_AT_SEQ_REPORTED_YEARS=").append(ageAtSeqDate)
-                .append(", REFERENCE_DATE_DAYS=").append(referenceInDays)
+                .append(", SAMPLE_SEQ_DATE_IN_DAYS=").append(sampleSeqDateInDays)
                 .append(" )");
         return builder.toString();
     }
@@ -194,21 +194,22 @@ public class DDPUtils {
      */
     public static String resolveAgeAtSeqDate(String sampleId, String patientBirthDate) throws ParseException {
         Long birthDateInDays = getDateInDays(patientBirthDate);
-        Long referenceDateInDays = getDateInDays(sampleSeqDateMap.get(sampleId));
+        Long sampleSeqDateInDays = getDateInDays(sampleSeqDateMap.get(sampleId));
         // if either date is null do not calculate age at sequencing date
-        Double age = (referenceDateInDays == null || birthDateInDays == null) ? null : (referenceDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
+        Double age = (sampleSeqDateInDays == null || birthDateInDays == null) ? null : (sampleSeqDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
         if (age == null) {
             // log cases where AGE_AT_SEQ_REPORTED_YEARS is null because required values are null
-            String osMonthsLogMessage = getAgeAtSeqDateLogging(sampleId, String.valueOf(age), referenceDateInDays);
+            String osMonthsLogMessage = getAgeAtSeqDateNullLogging(sampleId, String.valueOf(age), sampleSeqDateInDays);
             LOG.debug(osMonthsLogMessage);
+            return null;
         }
-        else if (age < 0) {
+        if (age < 0) {
             // log cases where AGE_AT_SEQ_REPORTED_YEARS is null because it calculates to a negative value
-            String ageAtSeqLogMessage = getAgeAtSeqDateLogging(sampleId, String.valueOf(age), referenceDateInDays);
+            String ageAtSeqLogMessage = getAgeAtSeqDateNullLogging(sampleId, String.valueOf(age), sampleSeqDateInDays);
             LOG.warn(ageAtSeqLogMessage);
-            age = null;
+            return null;
         }
-        return (age == null) ? null : anonymizePatientAge(age.intValue());
+        return anonymizePatientAge(age.intValue());
     }
 
     /**
