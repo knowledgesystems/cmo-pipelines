@@ -210,7 +210,7 @@ function import_hemepact_cvr_to_redcap {
     return $return_value
 }
 
-# Fucntion for importing hemepact supp date files to redcap
+# Function for importing hemepact supp date files to redcap
 function import_hemepact_supp_date_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical_supp_date.txt hemepact_data_clinical_supp_date ; then return_value=1 ; fi
