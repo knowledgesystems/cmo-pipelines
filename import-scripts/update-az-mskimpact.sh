@@ -82,7 +82,7 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[data_mutations_manual.txt]+=1
     filenames_to_deliver[data_nonsignedout_mutations.txt]+=1
     filenames_to_deliver[data_sv.txt]+=1
-    filenames_to_deliver[mskimpact_data_cna_hg19.seg]+=1
+    filenames_to_deliver[az_mskimpact_data_cna_hg19.seg]+=1
     filenames_to_deliver[case_lists]+=1
 
     # Meta files to deliver
@@ -93,7 +93,7 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[meta_mutations_extended.txt]+=1
     filenames_to_deliver[meta_study.txt]+=1
     filenames_to_deliver[meta_sv.txt]+=1
-    filenames_to_deliver[mskimpact_meta_cna_hg19_seg.txt]+=1
+    filenames_to_deliver[az_mskimpact_meta_cna_hg19_seg.txt]+=1
 
     # Remove any files/directories that are not specified above
     for filepath in $AZ_MSK_IMPACT_DATA_HOME/* ; do
