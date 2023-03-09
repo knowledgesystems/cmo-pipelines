@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 - 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -56,6 +56,9 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
 
     @Value("#{jobParameters[includeDiagnosis]}")
     private Boolean includeDiagnosis;
+
+    @Value("#{jobParameters[includeAgeAtSeqDate]}")
+    private Boolean includeAgeAtSeqDate;
 
     @Value("#{jobParameters[includeRadiation]}")
     private Boolean includeRadiation;

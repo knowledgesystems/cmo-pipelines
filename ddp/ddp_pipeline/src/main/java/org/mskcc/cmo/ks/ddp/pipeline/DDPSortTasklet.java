@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 - 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -70,6 +70,8 @@ public class DDPSortTasklet implements Tasklet {
     private String timelineSurgeryFilename;
     @Value("#{jobParameters[includeDiagnosis]}")
     private Boolean includeDiagnosis;
+    @Value("#{jobParameters[includeAgeAtSeqDate]}")
+    private Boolean includeAgeAtSeqDate;
     @Value("#{jobParameters[includeRadiation]}")
     private Boolean includeRadiation;
     @Value("#{jobParameters[includeChemotherapy]}")
@@ -91,8 +93,10 @@ public class DDPSortTasklet implements Tasklet {
         validateDemographicsRecordCount(clinicalFilePath.toString());
         sortAndOverwriteFile(clinicalFilePath, ClinicalRecord.getFieldNames(includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery));
 
-        Path ageAtSeqDateFilePath = Paths.get(outputDirectory, ageAtSeqDateFilename);
-        sortAndOverwriteFile(ageAtSeqDateFilePath, AgeAtSeqDateRecord.getFieldNames());
+        if (includeAgeAtSeqDate) {
+            Path ageAtSeqDateFilePath = Paths.get(outputDirectory, ageAtSeqDateFilename);
+            sortAndOverwriteFile(ageAtSeqDateFilePath, AgeAtSeqDateRecord.getFieldNames());
+        }
 
         // sort and overwrite timeline files if applicable
         if (includeChemotherapy) {

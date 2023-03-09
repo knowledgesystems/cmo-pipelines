@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 - 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -58,7 +58,7 @@ public class DDPPipeline {
     private static Options getOptions(Map<String, Integer> ddpCohortMap, String[] args) {
         Options options = new Options();
         options.addOption("h", "help", false, "Shows this help document and quits.")
-                .addOption("f", "fetch_data", true, "List of comma delimited additional data to fetch [diagnosis,radiation,chemotherapy,surgery,survival] (demographics is always included)") // TODO do not hard code this
+                .addOption("f", "fetch_data", true, "List of comma delimited additional data to fetch [diagnosis,ageAtSeqDate,radiation,chemotherapy,surgery,survival] (demographics is always included)") // TODO do not hard code this
                 .addOption("o", "output_directory", true, "Output directory")
                 .addOption("c", "cohort_name", true, "Cohort name [" + StringUtils.join(ddpCohortMap.keySet(), " | ") + "]")
                 .addOption("p", "patient_subset_file", true, "File containing patient ID's to subset by")
@@ -84,6 +84,7 @@ public class DDPPipeline {
                 String currentDemographicsRecCount,
                 Boolean testMode,
                 Boolean includeDiagnosis,
+                Boolean includeAgeAtSeqDate,
                 Boolean includeRadiation,
                 Boolean includeChemotherapy,
                 Boolean includeSurgery,
@@ -102,6 +103,7 @@ public class DDPPipeline {
                 .addString("currentDemographicsRecCount", currentDemographicsRecCount)
                 .addString("testMode", String.valueOf(testMode))
                 .addString("includeDiagnosis", String.valueOf(includeDiagnosis))
+                .addString("includeAgeAtSeqDate", String.valueOf(includeAgeAtSeqDate))
                 .addString("includeRadiation", String.valueOf(includeRadiation))
                 .addString("includeChemotherapy", String.valueOf(includeChemotherapy))
                 .addString("includeSurgery", String.valueOf(includeSurgery))
@@ -156,6 +158,7 @@ public class DDPPipeline {
         String currentDemographicsRecCount = commandLine.hasOption("r") ? commandLine.getOptionValue("r") : "0";
         boolean foundInvalidFetchOption = false;
         boolean includeDiagnosis = false;
+        boolean includeAgeAtSeqDate = false;
         boolean includeRadiation = false;
         boolean includeChemotherapy = false;
         boolean includeSurgery = false;
@@ -164,6 +167,8 @@ public class DDPPipeline {
         for (String fetchOption : fetchOptions) {
             if ("diagnosis".equals(fetchOption)) {
                 includeDiagnosis = true;
+            } else if ("ageAtSeqDate".equals(fetchOption)) {
+                includeAgeAtSeqDate = true;
             } else if ("radiation".equals(fetchOption)) {
                 includeRadiation = true;
             } else if ("chemotherapy".equals(fetchOption)) {
@@ -192,6 +197,10 @@ public class DDPPipeline {
             System.out.println("No such file: " + seqDateFilename);
             help(options, 2);
         }
+        if (includeAgeAtSeqDate && !commandLine.hasOption("s")) {
+            System.out.println("Fetch option 'ageAtSeqDate' must be run with a seq_date_file (-s)");
+            help(options, 2);
+        }
         if (includeSurvival && !includeDiagnosis && !commandLine.hasOption("s")) {
             System.out.println("Fetch option 'survival' must be run with either fetch option 'diagnosis' or with a seq_date_file (-s)");
             help(options, 2);
@@ -208,6 +217,6 @@ public class DDPPipeline {
             help(options, 2);
         }
         launchJob(ctx, args, cohortName, subsetFilename, seqDateFilename, excludedPatientsFilename, outputDirectory, currentDemographicsRecCount, 
-            commandLine.hasOption("t"), includeDiagnosis, includeRadiation, includeChemotherapy, includeSurgery, includeSurvival);
+            commandLine.hasOption("t"), includeDiagnosis, includeAgeAtSeqDate, includeRadiation, includeChemotherapy, includeSurgery, includeSurvival);
     }
 }
