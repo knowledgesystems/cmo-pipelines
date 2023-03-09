@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -79,13 +79,12 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
         for (String sampleId : sampleIds) {
             AgeAtSeqDateRecord record;
             try {
-                record = new AgeAtSeqDateRecord(patientId, sampleId, patientBirthDate);
+                ageAtSeqDateRecords.add(new AgeAtSeqDateRecord(patientId, sampleId, patientBirthDate));
             }
             catch (ParseException e) {
                 LOG.error("Error creating age at seq date record: " + sampleId);
                 continue;
             }
-            ageAtSeqDateRecords.add(record);
         }
         return ageAtSeqDateRecords;
     }
