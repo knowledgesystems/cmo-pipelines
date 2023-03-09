@@ -54,22 +54,26 @@ public class AgeAtSeqDateWriter implements ItemStreamWriter<CompositeResult> {
     private String outputDirectory;
     @Value("${ddp.age_at_seq_date_filename}")
     private String ageAtSeqDateFilename;
+    @Value("#{jobParameters[includeAgeAtSeqDate]}")
+    private Boolean includeAgeAtSeqDate;
 
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(outputDirectory, ageAtSeqDateFilename);
-        LineAggregator<String> aggr = new PassThroughLineAggregator<>();
-        flatFileItemWriter.setLineAggregator(aggr);
-        flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
-            @Override
-            public void writeHeader(Writer writer) throws IOException {
-                writer.write(StringUtils.join(AgeAtSeqDateRecord.getFieldNames(), "\t"));
-            }
-        });
-        flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
-        flatFileItemWriter.open(ec);
+        if (includeAgeAtSeqDate) {
+            File stagingFile = new File(outputDirectory, ageAtSeqDateFilename);
+            LineAggregator<String> aggr = new PassThroughLineAggregator<>();
+            flatFileItemWriter.setLineAggregator(aggr);
+            flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
+                @Override
+                public void writeHeader(Writer writer) throws IOException {
+                    writer.write(StringUtils.join(AgeAtSeqDateRecord.getFieldNames(), "\t"));
+                }
+            });
+            flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
+            flatFileItemWriter.open(ec);
+        }
     }
 
     @Override
@@ -77,18 +81,22 @@ public class AgeAtSeqDateWriter implements ItemStreamWriter<CompositeResult> {
 
     @Override
     public void close() throws ItemStreamException {
-        flatFileItemWriter.close();
+        if (includeAgeAtSeqDate) {
+            flatFileItemWriter.close();
+        }
     }
 
     @Override
     public void write(List<? extends CompositeResult> compositeResults) throws Exception {
-        List<String> records = new ArrayList<>();
-        for (CompositeResult result : compositeResults) {
-            if (result.getAgeAtSeqDateResults() == null || result.getAgeAtSeqDateResults().isEmpty()) {
-                continue;
+        if (includeAgeAtSeqDate) {
+            List<String> records = new ArrayList<>();
+            for (CompositeResult result : compositeResults) {
+                if (result.getAgeAtSeqDateResults() == null || result.getAgeAtSeqDateResults().isEmpty()) {
+                    continue;
+                }
+                records.addAll(result.getAgeAtSeqDateResults());
             }
-            records.addAll(result.getAgeAtSeqDateResults());
+            flatFileItemWriter.write(records);
         }
-        flatFileItemWriter.write(records);
     }
 }

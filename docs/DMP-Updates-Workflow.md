@@ -485,7 +485,6 @@ fi
 *Modified files*
 * DDP Demographics files:
     * `$MSK_IMPACT_DATA_HOME/ddp/ddp_vital_status.txt`
-    * `$MSK_IMPACT_DATA_HOME/ddp/ddp_age.txt`
     * `$MSK_IMPACT_DATA_HOME/ddp/ddp_naaccr.txt`
 
 *Untracked files*
