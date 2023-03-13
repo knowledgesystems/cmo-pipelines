@@ -61,11 +61,10 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
                 records.add(DDPUtils.constructRecord(ageAtSeqDateRecord));
             }
             catch (NullPointerException e) {
-                LOG.error("Error converting ageAtSeqDateRecord record to record string: " + ageAtSeqDateRecord.toString());
+                LOG.error("Error converting AgeAtSeqDateRecord to string: " + ageAtSeqDateRecord.toString());
             }
         }
         return records;
-
     }
 
     /**
@@ -77,12 +76,11 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
     private List<AgeAtSeqDateRecord> convertAgeAtSeqDateRecord(String patientId, List<String> sampleIds, String patientBirthDate) {
         List<AgeAtSeqDateRecord> ageAtSeqDateRecords = new ArrayList<>();
         for (String sampleId : sampleIds) {
-            AgeAtSeqDateRecord record;
             try {
                 ageAtSeqDateRecords.add(new AgeAtSeqDateRecord(patientId, sampleId, patientBirthDate));
             }
             catch (ParseException e) {
-                LOG.error("Error creating age at seq date record: " + sampleId);
+                LOG.error("Error creating AgeAtSeqDateRecord: " + sampleId);
                 continue;
             }
         }
