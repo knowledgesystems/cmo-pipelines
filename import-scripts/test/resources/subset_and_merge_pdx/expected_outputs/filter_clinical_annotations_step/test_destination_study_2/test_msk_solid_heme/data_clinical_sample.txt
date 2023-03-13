@@ -1,5 +1,5 @@
 #Sample Identifier	Patient Identifier	Oncotree Code	Neoplasm Histologic Grade
-#A unique sample identifier.	Identifier to uniquely specify a patient.	Oncotree Code	Numeric value to express the degree of abnormality of cancer cells, a measure of differentiation and aggressiveness.
+#A unique sample identifier.	Identifier to uniquely specify a patient.	The assigned Oncotree code of the sample as defined by the Oncotree cancer classification system for precision oncology.	Numeric value to express the degree of abnormality of cancer cells, a measure of differentiation and aggressiveness.
 #STRING	STRING	STRING	STRING
 #1	1	1	1
 SAMPLE_ID	PATIENT_ID	ONCOTREE_CODE	GRADE

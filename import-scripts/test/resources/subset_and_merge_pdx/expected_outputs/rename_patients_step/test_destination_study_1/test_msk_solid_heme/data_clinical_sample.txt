@@ -1,5 +1,5 @@
 #Sample Identifier	Patient Identifier	Oncotree Code	MSK Slide ID
-#A unique sample identifier.	Identifier to uniquely specify a patient.	Oncotree Code	MSK Slide ID
+#A unique sample identifier.	Identifier to uniquely specify a patient.	The assigned Oncotree code of the sample as defined by the Oncotree cancer classification system for precision oncology.	MSK Slide ID
 #STRING	STRING	STRING	STRING
 #1	1	1	1
 SAMPLE_ID	PATIENT_ID	ONCOTREE_CODE	MSK_SLIDE_ID

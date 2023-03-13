@@ -1,5 +1,5 @@
 #Patient Identifier	Sample Identifier	Oncotree Code
-#Identifier to uniquely specify a patient.	A unique sample identifier.	Oncotree Code
+#Identifier to uniquely specify a patient.	A unique sample identifier.	The assigned Oncotree code of the sample as defined by the Oncotree cancer classification system for precision oncology.
 #STRING	STRING	STRING
 #1	1	1
 PATIENT_ID	SAMPLE_ID	ONCOTREE_CODE
