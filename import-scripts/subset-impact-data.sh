@@ -87,8 +87,7 @@ if [ $STUDY_ID == "genie" ]; then
     else
         # starting in Nov 2018 releases, all vital status information will be removed from patient file and placed in a separate file:
         # get the patients from the filtered set of patients from the generate-clinical-subset.py call and expand file with the vital status columns
-        cut -f1 $OUTPUT_DIRECTORY/data_clinical_supp_patient.txt > $OUTPUT_DIRECTORY/vital_status.txt
-        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/expand-clinical-data.py --study-id="genie" --clinical-file="$OUTPUT_DIRECTORY/vital_status.txt" --clinical-supp-file="$INPUT_DIRECTORY/ddp/ddp_vital_status.txt" --fields="YEAR_CONTACT,YEAR_DEATH,INT_CONTACT,INT_DOD,DEAD" --identifier-column-name="PATIENT_ID"
+        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/expand-clinical-data.py --study-id="genie" --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_patient.txt" --clinical-supp-file="$INPUT_DIRECTORY/ddp/ddp_vital_status.txt" --fields="YEAR_CONTACT,YEAR_DEATH,INT_CONTACT,INT_DOD,DEAD" --identifier-column-name="PATIENT_ID"
         if [ $? -gt 0 ] ; then
             echo "Failed to expand $OUTPUT_DIRECTORY/vital_status.txt with YEAR_CONTACT, YEAR_DEATH, INT_CONTACT, INT_DOD, DEAD from $INPUT_DIRECTORY/ddp/ddp_vital_status.txt. Exiting..."
             exit 2
@@ -106,7 +105,7 @@ if [ $STUDY_ID == "genie" ]; then
         $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --seq-date-file="$INPUT_DIRECTORY/cvr/seq_date.txt" --age-file="$INPUT_DIRECTORY/ddp/ddp_age.txt" --convert-to-days="true"
         if [ $? -gt 0 ] ; then
             echo "Failed to add AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt using $INPUT_DIRECTORY/cvr/seq_date.txt. Exiting..."
-            exit 2l
+            exit 2
         fi
 
         # rename GENE_PANEL to SEQ_ASSAY_ID in data_clinical_supp_sample.txt
@@ -124,6 +123,20 @@ if [ $STUDY_ID == "genie" ]; then
             grep -v "GERMLINE" $OUTPUT_DIRECTORY/data_mutations_extended.txt > $OUTPUT_DIRECTORY/data_mutations_extended.txt.tmp
             grep "^Hugo_Symbol" $OUTPUT_DIRECTORY/data_mutations_extended.txt.tmp > $OUTPUT_DIRECTORY/data_mutations_extended.txt
             grep -E -v "^#|^Hugo_Symbol" $OUTPUT_DIRECTORY/data_mutations_extended.txt.tmp | sort | uniq >> $OUTPUT_DIRECTORY/data_mutations_extended.txt
+        fi
+		
+		# merge duplicate variants from maf
+        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/remove-duplicate-maf-variants.py --input-maf-file="$OUTPUT_DIRECTORY/data_mutations_extended.txt"
+        if [ $? -gt 0 ] ; then
+            echo "Failed to merge duplicate CNA records in $OUTPUT_DIRECTORY/data_CNA.txt. Exiting.."
+            exit 2
+        fi
+		
+		# merge CNA records for certain gene duplicates    
+        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/merge-cna-records.py --input-cnafile="$OUTPUT_DIRECTORY/data_CNA.txt" --output-cna-filepath="$OUTPUT_DIRECTORY/"
+        if [ $? -gt 0 ] ; then
+            echo "Failed to merge duplicate CNA records in $OUTPUT_DIRECTORY/data_CNA.txt. Exiting.."
+            exit 2
         fi
     fi
 else

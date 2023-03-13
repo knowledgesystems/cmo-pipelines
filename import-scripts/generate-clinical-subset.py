@@ -121,11 +121,20 @@ def filter_patient_clinical_data(clin_patient_file, study_id):
 	data_file = open(clin_patient_file, 'rU')
 	data_reader = [line for line in data_file.readlines() if not line.startswith('#')][1:]
 	output_data = ['\t'.join(header)]
+	
+	SUPPLEMENTAL_PATIENT_CLINICAL_DATA = {}
 	for line in data_reader:
 		data = dict(zip(header, map(str.strip, line.split('\t'))))
-		if not data['PATIENT_ID'] in FILTERED_PATIENT_IDS:
-			continue
-		formatted_data = map(lambda v: data.get(v,''), header)
+		if data['PATIENT_ID'] in FILTERED_PATIENT_IDS: SUPPLEMENTAL_PATIENT_CLINICAL_DATA[data['PATIENT_ID']] = data
+
+	for patient_id in FILTERED_PATIENT_IDS:
+		if not patient_id in SUPPLEMENTAL_PATIENT_CLINICAL_DATA:
+			SUPPLEMENTAL_PATIENT_CLINICAL_DATA[patient_id] = dict(zip(header, map(lambda v: (patient_id if v=='PATIENT_ID' else 'NA'), header)))
+	
+	normalized_supplemental_patient_data = normalize_genie_patient_attributes(SUPPLEMENTAL_PATIENT_CLINICAL_DATA)
+	
+	for patient in normalized_supplemental_patient_data:
+		formatted_data = map(lambda v: normalized_supplemental_patient_data[patient].get(v,''), header)
 		output_data.append('\t'.join(formatted_data))
 	data_file.close()
 
@@ -134,6 +143,23 @@ def filter_patient_clinical_data(clin_patient_file, study_id):
 	output_file.write('\n'.join(output_data))
 	output_file.close()
 	print >> OUTPUT_FILE, 'Input patient clinical data filtered by patient id for study: ' + study_id
+
+def normalize_genie_patient_attributes(data):
+	for patient_id in data:
+		if 'NAACCR_SEX_CODE' in data[patient_id] and data[patient_id]['NAACCR_SEX_CODE'].strip() == 'NA':
+			data[patient_id]['NAACCR_SEX_CODE'] = '9'
+		if 'NAACCR_RACE_CODE_PRIMARY' in data[patient_id] and data[patient_id]['NAACCR_RACE_CODE_PRIMARY'].strip() == 'NA':
+			data[patient_id]['NAACCR_RACE_CODE_PRIMARY'] = '99'
+		if 'NAACCR_RACE_CODE_SECONDARY' in data[patient_id] and data[patient_id]['NAACCR_RACE_CODE_SECONDARY'].strip() == 'NA':
+			data[patient_id]['NAACCR_RACE_CODE_SECONDARY'] = '99'
+		if 'NAACCR_RACE_CODE_TERTIARY' in data[patient_id] and data[patient_id]['NAACCR_RACE_CODE_TERTIARY'].strip() == 'NA':
+			data[patient_id]['NAACCR_RACE_CODE_TERTIARY'] = '99'
+		if 'NAACCR_ETHNICITY_CODE' in data[patient_id] and data[patient_id]['NAACCR_ETHNICITY_CODE'].strip() == 'NA':
+			data[patient_id]['NAACCR_ETHNICITY_CODE'] = '9'
+		if 'BIRTH_YEAR' in data[patient_id] and data[patient_id]['BIRTH_YEAR'].strip() == 'NA':
+			data[patient_id]['BIRTH_YEAR'] = 'Unknown'
+	return data
+
 
 def generate_sample_subset_file(subset_filename):
 	""" Writes subset of sample ids to output directory. """
