@@ -200,7 +200,7 @@ public class DDPUtils {
         if (age == null) {
             // log cases where AGE_AT_SEQ_REPORTED_YEARS is null because required values are null
             String osMonthsLogMessage = getAgeAtSeqDateNullLogging(sampleId, String.valueOf(age), sampleSeqDateInDays);
-            LOG.debug(osMonthsLogMessage);
+            LOG.warn(osMonthsLogMessage);
             return null;
         }
         if (age < 0) {
