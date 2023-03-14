@@ -174,18 +174,9 @@ public class DDPUtils {
         return anonymizePatientAge(age.intValue());
     }
 
-    public static String getAgeAtSeqDateNullLogging(String sampleId, String ageAtSeqDate, Long sampleSeqDateInDays) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("Sample '").append(sampleId).append("' resolves AGE_AT_SEQ_REPORTED_YEARS to null':  ")
-                .append("( AGE_AT_SEQ_REPORTED_YEARS=").append(ageAtSeqDate)
-                .append(", SAMPLE_SEQ_DATE_IN_DAYS=").append(sampleSeqDateInDays)
-                .append(" )");
-        return builder.toString();
-    }
-
     /**
      * Resolve and anonymize patient age in years at date of sequencing. If either
-     * the patient date of birth or the date of sequencing is null this returns null.
+     * the patient date of birth or the date of sequencing is null this function returns null.
      *
      * @param sampleId
      * @param patientBirthDate String date of birth
@@ -197,16 +188,7 @@ public class DDPUtils {
         Long sampleSeqDateInDays = getDateInDays(sampleSeqDateMap.get(sampleId));
         // if either date is null do not calculate age at sequencing date
         Double age = (sampleSeqDateInDays == null || birthDateInDays == null) ? null : (sampleSeqDateInDays - birthDateInDays) / (DAYS_TO_YEARS_CONVERSION);
-        if (age == null) {
-            // log cases where AGE_AT_SEQ_REPORTED_YEARS is null because required values are null
-            String osMonthsLogMessage = getAgeAtSeqDateNullLogging(sampleId, String.valueOf(age), sampleSeqDateInDays);
-            LOG.warn(osMonthsLogMessage);
-            return null;
-        }
-        if (age < 0) {
-            // log cases where AGE_AT_SEQ_REPORTED_YEARS is null because it calculates to a negative value
-            String ageAtSeqLogMessage = getAgeAtSeqDateNullLogging(sampleId, String.valueOf(age), sampleSeqDateInDays);
-            LOG.warn(ageAtSeqLogMessage);
+        if (age == null || age < 0) {
             return null;
         }
         return anonymizePatientAge(age.intValue());

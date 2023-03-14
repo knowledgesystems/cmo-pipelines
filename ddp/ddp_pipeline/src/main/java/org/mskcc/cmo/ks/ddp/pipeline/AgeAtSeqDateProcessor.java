@@ -61,7 +61,7 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
                 records.add(DDPUtils.constructRecord(ageAtSeqDateRecord));
             }
             catch (NullPointerException e) {
-                LOG.error("Error converting AgeAtSeqDateRecord to string: " + ageAtSeqDateRecord.toString());
+                continue;
             }
         }
         return records;
@@ -80,7 +80,6 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
                 ageAtSeqDateRecords.add(new AgeAtSeqDateRecord(patientId, sampleId, patientBirthDate));
             }
             catch (ParseException e) {
-                LOG.error("Error creating AgeAtSeqDateRecord: " + sampleId);
                 continue;
             }
         }
