@@ -195,7 +195,7 @@ function import_mskimpact_supp_date_to_redcap {
 function import_mskimpact_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp.txt mskimpact_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskimpact_clinical_ddp_age_at_seq ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskimpact_data_clinical_ddp_age_at_seq ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_pediatrics.txt mskimpact_data_clinical_ddp_demographics_pediatrics ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskimpact_timeline_chemotherapy_ddp; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_ddp_radiation.txt mskimpact_timeline_radiation_ddp ; then return_value=1 ; fi
@@ -221,7 +221,7 @@ function import_hemepact_supp_date_to_redcap {
 function import_hemepact_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_clinical_ddp.txt hemepact_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskimpact_clinical_ddp_age_at_seq ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_clinical_ddp_age_at_seq.txt hemepact_data_clinical_ddp_age_at_seq ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_chemotherapy.txt hemepact_timeline_chemotherapy_ddp; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_radiation.txt hemepact_timeline_radiation_ddp ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_surgery.txt hemepact_data_timeline_surgery_ddp ; then return_value=1 ; fi
@@ -246,7 +246,7 @@ function import_archer_supp_date_to_redcap {
 function import_archer_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_ddp.txt mskarcher_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskimpact_clinical_ddp_age_at_seq ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskarcher_data_clinical_ddp_age_at_seq ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskarcher_timeline_chemotherapy_ddp; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_radiation.txt mskarcher_timeline_radiation_ddp ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_surgery.txt mskarcher_data_timeline_surgery_ddp ; then return_value=1 ; fi
@@ -271,7 +271,7 @@ function import_access_supp_date_to_redcap {
 function import_access_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_ddp.txt mskaccess_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskimpact_clinical_ddp_age_at_seq ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskaccess_data_clinical_ddp_age_at_seq ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskaccess_timeline_chemotherapy_ddp; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_radiation.txt mskaccess_timeline_radiation_ddp ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_surgery.txt mskaccess_data_timeline_surgery_ddp ; then return_value=1 ; fi
