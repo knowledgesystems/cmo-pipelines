@@ -40,7 +40,9 @@ function validateRedcapExportForStudy {
     # go through each data file that was exported and check that file contains more than one line (more than just a header)
     for f in $input_directory/data*; do
         if [ ! $(wc -l < $f) -gt 1 ]; then
-            invalid_files="$invalid_files\t$f\n"
+	    if [[ "$f" != *data_clinical_mskarcher_data_clinical_ddp_age_at_seq.txt ]]; then
+                invalid_files="$invalid_files\t$f\n"
+            fi
         fi
     done
 
