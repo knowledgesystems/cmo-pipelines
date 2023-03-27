@@ -19,6 +19,28 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         exit 1
     fi
 
+    # inhibit import attempt if db mismatch occurred recently
+    inhibit_counter=0
+    if [ -f "$GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME" ] ; then
+        unset inhibit_counter_line
+        read inhibit_counter_line < $GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME
+        COUNTER_RE='([0-9]+)'
+        if [[ $inhibit_counter_line =~ $COUNTER_RE ]] ; then
+            inhibit_counter=${BASH_REMATCH[0]}
+        else
+            # inhibit file is corrupted (no counter on first line)
+            rm -f "$GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME"
+        fi
+    fi
+    if [ $inhibit_counter -ne 0 ] ; then
+        # decrease inhibit counter and exit
+        echo $(($inhibit_counter-1)) > "$GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME"
+        exit 1
+    else
+        # clean up inhibit file with zero counter
+        rm -f "$GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME"
+    fi
+
     if ! [ -f "$START_GENIE_IMPORT_TRIGGER_FILENAME" ] ; then
         # no start trigger for import, so exit
         exit 1
@@ -37,6 +59,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         rm -rf "$tmp"/*
     fi
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
+    VERSION_MISMATCH_EMAIL_INHIBIT_COUNTER_START=120 # inhibition cycle count after sending db version mismatch error email
     now=$(date "+%Y-%m-%d-%H-%M-%S")
     IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/genie-aws-importer.jar"
     ENABLE_DEBUGGING=0
@@ -53,6 +76,10 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         oncotree_version_to_use=oncotree_2019_12_01
     fi
     CLEAR_PERSISTENCE_CACHE=0 # 0 = do not clear cache, non-0 = clear cache
+
+    # import is beginning - create status file showing "in_progress", and remove trigger
+    rm -f "$START_GENIE_IMPORT_TRIGGER_FILENAME"
+    touch "$GENIE_IMPORT_IN_PROGRESS_FILENAME"
 
     echo $now : starting import
     CDD_ONCOTREE_RECACHE_FAIL=0
@@ -131,13 +158,19 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
 
     # send email if db version isn't compatible
     if [ $DB_VERSION_FAIL -gt 0 ]; then
-        EMAIL_BODY="The genie database version is incompatible. Imports will be skipped until database is updated."
+        EMAIL_BODY="The genie database version is incompatible. Imports will be skipped until database is updated, and file $GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME has been created to inhibit imports for the next $VERSION_MISMATCH_EMAIL_INHIBIT_COUNTER_START minutes."
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "GENIE Update Failure: DB version is incompatible" $PIPELINES_EMAIL_LIST
+        echo -e "Inhibiting import attempts for $VERSION_MISMATCH_EMAIL_INHIBIT_COUNTER_START cycles/minutes"
+        echo $VERSION_MISMATCH_EMAIL_INHIBIT_COUNTER_START > "$GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME"
     fi
 
     $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal genie-portal --notification-file "$genie_portal_notification_file"
 
-    echo "Cleaning up any untracked files from MSK-TRIAGE import..."
+    echo "Cleaning up any untracked files from GENIE import..."
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/genie
+
+    # import is done - remove status file showing "in_progress"
+    rm -f "$GENIE_IMPORT_IN_PROGRESS_FILENAME"
+
 ) {flock_fd}>$FLOCK_FILEPATH

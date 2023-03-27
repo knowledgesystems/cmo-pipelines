@@ -86,6 +86,7 @@ export START_GENIE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/genie-imp
 export KILL_GENIE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/genie-import-kill-request
 export GENIE_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/genie-import-in-progress
 export GENIE_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/genie-import-killing
+export GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME=$PORTAL_HOME/import-trigger/genie-import-version-email-inhibit
 export START_TRIAGE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/triage-import-start-request
 export KILL_TRIAGE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/triage-import-kill-request
 export TRIAGE_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/triage-import-in-progress
