@@ -236,7 +236,7 @@ public class CVRUtilities {
         String nRefCount = record.getN_REF_COUNT();
         String tAltCount = record.getT_ALT_COUNT();
         String nAltCount = record.getN_ALT_COUNT();
-        Map<String ,String> additionalProperties = record.getAdditionalProperties();
+        Map<String, String> additionalProperties = record.getAdditionalProperties();
         return new AnnotatedRecord(hugoSymbol, entrezGeneId, center, ncbiBuild, chromosome,
                 startPosition, endPosition, strand, variantClassification, variantType, referenceAllele,
                 tumorSeqAllele1, tumorSeqAllele2, dbSnpRs, dbSnpValStatus, tumorSampleBarcode,
@@ -285,7 +285,7 @@ public class CVRUtilities {
         String nRefCount = String.valueOf(snp.getNormalDp() - snp.getNormalAd());
         String tAltCount = String.valueOf(snp.getTumorAd());
         String nAltCount = String.valueOf(snp.getNormalAd());
-        Map<String ,String> additionalProperties = new LinkedHashMap<>();
+        Map<String, String> additionalProperties = new LinkedHashMap<>();
         return new MutationRecord(hugoSymbol, entrezGeneId, center, ncbiBuild, chromosome,
                 startPosition, endPosition, strand, variantClassification, variantType, referenceAllele,
                 tumorSeqAllele1, tumorSeqAllele2, dbSnpRs, dbSnpValStatus, tumorSampleBarcode,
@@ -321,7 +321,7 @@ public class CVRUtilities {
         String matchNormValidationAllele2 = "";
         String verificationStatus = "";
         String validationStatus = VALIDATION_STATUS_UNKNOWN;
-        String mutationStatus = StringUtils.isEmpty(snp.getPathScore()) ? "GERMLINE" : "GERMLINE - " + snp.getPathScore();
+        String mutationStatus = "GERMLINE";
         String sequencingPhase = "";
         String sequencingSource = "";
         String validationMethod = "";
@@ -338,8 +338,10 @@ public class CVRUtilities {
         String aminoAcidChange = snp.getAaChange();
         String transcript = snp.getTranscriptId();
         String comments = (snp.getInterpretation() != null ? snp.getInterpretation() : "").replaceAll("\r\n", " ").replaceAll("\t", " ").replaceAll("\n", " ").replaceAll("\r", " ");
-        Map<String ,String> additionalProperties = new LinkedHashMap<>();
+        String pathScore = snp.getPathScore();
+        Map<String, String> additionalProperties = new LinkedHashMap<>();
         additionalProperties.put("COMMENTS", comments);
+        additionalProperties.put("PATH_SCORE", pathScore);
         return new MutationRecord(hugoSymbol, entrezGeneId, center, ncbiBuild, chromosome,
                 startPosition, endPosition, strand, variantClassification, variantType, referenceAllele,
                 tumorSeqAllele1, tumorSeqAllele2, dbSnpRs, dbSnpValStatus, tumorSampleBarcode,

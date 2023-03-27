@@ -27,8 +27,6 @@ class EventType(Enum):
 class LineProcessor:
     """Handles the processing of each line - filtering for somatic events only"""
 
-    acceptedEventStatuses = set(['somatic', 'unknown', 'germline - pathogenic', 'germline - likely pathogenic'])
-
     def __init__(self, event_type, col_indices, output_file_handle):
         self.event_type = event_type
         self.col_indices = col_indices
@@ -65,19 +63,34 @@ class LineProcessor:
             self.header_was_written = True
             return
 
-        col_index = None
-        if event_type == EventType.MUTATION:
+        cols = line.split('\t')
+
+        # Event status column is required for both mutation and SV event types
+        event_status_col_index = -1
+        if self.event_type == EventType.MUTATION:
             if 'Mutation_Status' not in self.col_indices:
                 raise IndexError('Unable to find Mutation_status column in event file')
-            col_index = self.col_indices['Mutation_Status']
-        elif event_type == EventType.STRUCTURAL_VARIANT:
+            event_status_col_index = self.col_indices['Mutation_Status']
+        elif self.event_type == EventType.STRUCTURAL_VARIANT:
             if 'SV_Status' not in self.col_indices:
                 raise IndexError('Unable to find SV_Status column in event file')
-            col_index = self.col_indices['SV_Status']
+            event_status_col_index = self.col_indices['SV_Status']
+        event_status_value = cols[event_status_col_index].rstrip('\n')
 
-        cols = line.split('\t')
-        value = cols[col_index].rstrip('\n')
-        if value.casefold() in LineProcessor.acceptedEventStatuses:
+        # PATH_SCORE col is only provided for mutation event types, and shouldn't error if not found for SV event types
+        path_score_col_index = self.col_indices.get('PATH_SCORE')
+        path_score_value = cols[path_score_col_index].rstrip('\n') if path_score_col_index else ''
+
+        # Filter out germline events that are not pathogenic/likely pathogenic
+        # This means that all germline SV events will be filtered out until we have a PATH_SCORE column for SV
+        if (
+            event_status_value.casefold() == 'somatic'
+            or event_status_value.casefold() == 'unknown'
+            or (
+                event_status_value.casefold() == 'germline'
+                and path_score_value.casefold() in ('likely pathogenic', 'pathogenic')
+            )
+        ):
             self.output_file_handle.write(line)
 
 
@@ -89,12 +102,12 @@ class FilteredFileWriter:
         self.output_file_path = output_file_path
         self.event_type = event_type
         self.data_handler = DataHandler(input_file_path)
-        self.col_indices = self.data_handler.get_col_indices({"Mutation_Status", "SV_Status"})
+        self.col_indices = self.data_handler.get_col_indices({"Mutation_Status", "SV_Status", "PATH_SCORE"})
 
     def write(self):
         """Processes the input file and writes out a filtered version including only somatic events"""
-        with open(input_file_path, "r") as input_file_handle:
-            with open(output_file_path, "w") as output_file_handle:
+        with open(self.input_file_path, "r") as input_file_handle:
+            with open(self.output_file_path, "w") as output_file_handle:
                 line_processor = LineProcessor(self.event_type, self.col_indices, output_file_handle)
                 for line in input_file_handle:
                     line_processor.process(line)
