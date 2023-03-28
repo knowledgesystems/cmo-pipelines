@@ -59,7 +59,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         rm -rf "$tmp"/*
     fi
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-    VERSION_MISMATCH_EMAIL_INHIBIT_COUNTER_START=120 # inhibition cycle count after sending db version mismatch error email
+    VERSION_MISMATCH_EMAIL_INHIBIT_COUNTER_START=10 # inhibition cycle count after sending db version mismatch error email
     now=$(date "+%Y-%m-%d-%H-%M-%S")
     IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/genie-aws-importer.jar"
     ENABLE_DEBUGGING=0
