@@ -103,9 +103,9 @@ if [ $STUDY_ID == "genie" ]; then
 
         # add age at seq report using cvr/seq_date.txt
         echo "Adding AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt"
-        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --seq-date-file="$INPUT_DIRECTORY/cvr/seq_date.txt" --age-file="$INPUT_DIRECTORY/ddp/ddp_age.txt" --convert-to-days="true"
+        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --sample-file="$INPUT_DIRECTORY/data_clinical_sample.txt" --convert-to-days="true"
         if [ $? -gt 0 ] ; then
-            echo "Failed to add AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt using $INPUT_DIRECTORY/cvr/seq_date.txt. Exiting..."
+            echo "Failed to add AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt using $INPUT_DIRECTORY/data_clinical_sample.txt. Exiting..."
             exit 2l
         fi
 

@@ -1,55 +1,49 @@
+#!/usr/bin/env python
+
 import sys
 import optparse
 import csv
 import os
 import math
-from datetime import datetime
 
 ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
 
 # globals
 AGE_AT_SEQ_REPORT_FIELD = 'AGE_AT_SEQ_REPORT'
-AGE_FIELD = 'AGE'
-SEQ_DATE_FIELD = 'SEQ_DATE'
+AGE_AT_SEQ_REPORTED_YEARS_FIELD = 'AGE_AT_SEQ_REPORTED_YEARS'
 AVERAGE_DAYS_PER_YEAR = 365.2422
 
 PATIENT_SAMPLE_MAP = {}
-SAMPLE_SEQ_DATE_MAP = {}
-PATIENT_AGE = {}
+SAMPLE_AGE_AT_SEQ_REPORT_MAP = {}
 
 
-def load_sample_seq_date(seq_date_file, convert_to_days):
-	""" Loads SEQ_DATE from seq date file provided. """
-	data_file = open(seq_date_file, 'rU')
-	data_reader = csv.DictReader(data_file, dialect = 'excel-tab')
+def read_sample_file(sample_file):
+    """ Generator function that yields all non-commented lines from the clinical sample file. """
+    with open(sample_file, 'rU') as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            yield line
 
+
+def load_age_at_seq_reported_years(sample_file, convert_to_days):
+	""" Loads AGE_AT_SEQ_REPORTED_YEARS from clinical sample file and converts it to days. """
+
+	data_reader = csv.DictReader(read_sample_file(sample_file), dialect = 'excel-tab')
 	for line in data_reader:
+		sample_id = line['SAMPLE_ID']
 		# skip samples not found in the clinical file
-		if not line['SAMPLE_ID'] in PATIENT_SAMPLE_MAP.keys():
+		if not sample_id in PATIENT_SAMPLE_MAP.keys():
 			continue
-		seq_date = datetime.strptime(line['SEQ_DATE'], '%a, %d %b %Y %H:%M:%S %Z')
-		difference_in_years = int(math.ceil(((datetime.now() - seq_date).days)/AVERAGE_DAYS_PER_YEAR))
+		age_at_seq_reported_years = line[AGE_AT_SEQ_REPORTED_YEARS_FIELD]
 		try:
-			age_at_seq_report_value = (PATIENT_AGE[line['PATIENT_ID']] - difference_in_years)
 			if convert_to_days:
-				age_at_seq_report_value = age_at_seq_report_value*AVERAGE_DAYS_PER_YEAR
-			SAMPLE_SEQ_DATE_MAP[line['SAMPLE_ID']] = str(int(math.ceil(age_at_seq_report_value)))
-		except KeyError:
-			print "Patient age not found for '" + line['PATIENT_ID'] + "'"
-			SAMPLE_SEQ_DATE_MAP[line['SAMPLE_ID']] = 'NA'
-
-
-def load_patient_age(age_file):
-	""" Loads AGE from age file. """
-	data_file = open(age_file, 'rU')
-	data_reader = csv.DictReader(data_file, dialect = 'excel-tab')
-
-	for line in data_reader:
-		# skip records not found in clinical file 
-		if not line['PATIENT_ID'] in PATIENT_SAMPLE_MAP.values():
-			continue
-		PATIENT_AGE[line['PATIENT_ID']] = int(line['AGE'])
+				age_at_seq_report_value = int(age_at_seq_reported_years) * AVERAGE_DAYS_PER_YEAR
+			SAMPLE_AGE_AT_SEQ_REPORT_MAP[sample_id] = str(int(math.floor(age_at_seq_report_value)))
+		except ValueError:
+			print AGE_AT_SEQ_REPORTED_YEARS_FIELD + " not found for '" + sample_id + "'"
+			SAMPLE_AGE_AT_SEQ_REPORT_MAP[sample_id] = 'NA'
 
 
 def load_patient_sample_mapping(clinical_file):
@@ -64,7 +58,7 @@ def load_patient_sample_mapping(clinical_file):
 def add_age_at_seq_report(clinical_file):
 	header = get_file_header(clinical_file)
 
-	# add age at seq report column in not already present
+	# add age at seq report column if not already present
 	if not AGE_AT_SEQ_REPORT_FIELD in header:
 		header.append(AGE_AT_SEQ_REPORT_FIELD)
 	output_data = ['\t'.join(header)]
@@ -72,7 +66,7 @@ def add_age_at_seq_report(clinical_file):
 	data_file = open(clinical_file, 'rU')
 	data_reader = csv.DictReader(data_file, dialect = 'excel-tab')
 	for line in data_reader:
-		line[AGE_AT_SEQ_REPORT_FIELD] = SAMPLE_SEQ_DATE_MAP[line['SAMPLE_ID']]
+		line[AGE_AT_SEQ_REPORT_FIELD] = SAMPLE_AGE_AT_SEQ_REPORT_MAP[line['SAMPLE_ID']]
 		formatted_data = map(lambda x: line.get(x, ''), header)
 		output_data.append('\t'.join(formatted_data))
 	data_file.close()
@@ -97,52 +91,45 @@ def validate_file_header(filename, key_column):
 		print >> ERROR_FILE, "Could not find key column '" + key_column + "' in file header for: " + filename + "! Please make sure this column exists before running script."
 		usage()
 
+
 def usage():
-	print >> OUTPUT_FILE, "add-age-at-seq-report.py --clinical-file [path/to/clinical/file] --seq-date-file [path/to/seq/date/file] --age-file [path/to/age/file] --convert-to-days [true|false]"
+	print >> OUTPUT_FILE, "add-age-at-seq-report.py --clinical-file [path/to/clinical/file] --sample-file [path/to/sample/file] --convert-to-days [true|false]"
 	sys.exit(2)
+
 
 def main():
 	# get command line stuff
 	parser = optparse.OptionParser()
 	parser.add_option('-f', '--clinical-file', action = 'store', dest = 'clinfile')
-	parser.add_option('-s', '--seq-date-file', action = 'store', dest = 'seqdatefile')
-	parser.add_option('-a', '--age-file', action = 'store', dest = 'agefile')
+	parser.add_option('-s', '--sample-file', action = 'store', dest = 'samplefile')
 	parser.add_option('-c', '--convert-to-days', action = 'store', dest = 'convertdays')
 
 	(options, args) = parser.parse_args()
 	clinical_file = options.clinfile
-	seq_date_file = options.seqdatefile
-	age_file = options.agefile
+	sample_file = options.samplefile
 	convert_to_days_flag = options.convertdays
 
-
-	if not clinical_file or not seq_date_file or not age_file:
-		print >> ERROR_FILE, "Clinical file, seq date file, and age file must be provided."
+	if not clinical_file or not sample_file:
+		print >> ERROR_FILE, "Clinical file and sample file must be provided."
 		usage()
 
 	if not os.path.exists(clinical_file):
 		print >> ERROR_FILE, "No such file: " + clinical_file
 		usage()
 
-	if not os.path.exists(seq_date_file):
-		print >> ERROR_FILE, "No such file: " + seq_date_file
-		uage()
-
-	if not os.path.exists(age_file):
-		print >> ERROR_FILE, "No such file: " + age_file
+	if not os.path.exists(sample_file):
+		print >> ERROR_FILE, "No such file: " + sample_file
 		usage()
 
 	# validate file headers
-	validate_file_header(seq_date_file, SEQ_DATE_FIELD)
-	validate_file_header(age_file, AGE_FIELD)
+	validate_file_header(sample_file, AGE_AT_SEQ_REPORTED_YEARS_FIELD)
 
 	convert_to_days = False
 	if convert_to_days_flag != None and convert_to_days_flag != '' and convert_to_days_flag.lower() == 'true':
 		convert_to_days = True
 
 	load_patient_sample_mapping(clinical_file)
-	load_patient_age(age_file)
-	load_sample_seq_date(seq_date_file, convert_to_days)
+	load_age_at_seq_reported_years(sample_file, convert_to_days)
 	add_age_at_seq_report(clinical_file)
 
 
