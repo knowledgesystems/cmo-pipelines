@@ -80,6 +80,8 @@ def load_age_at_seq_reported_years(clinical_sample_file, convert_to_days):
 
 		# Convert AGE_AT_SEQ_REPORTED_YEARS to days and store the value
 		# Default to NA if type conversion fails
+		# Note that we are performing the reverse of this calculation to keep the age at seq year value consistent:
+		# https://github.com/Sage-Bionetworks/Genie/blob/53db39ccb6e423743df49c1f0e115c9a7576af69/genie/database_to_staging.py#L1133-L1138
 		try:
 			age_at_seq_report_value = int(age_at_seq_reported_years)
 			if convert_to_days:
