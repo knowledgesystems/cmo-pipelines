@@ -28,7 +28,7 @@ PATIENT_ID_FIELD = 'PATIENT_ID'
 SAMPLE_ID_FIELD = 'SAMPLE_ID'
 AGE_AT_SEQ_REPORTED_YEARS_FIELD = 'AGE_AT_SEQ_REPORTED_YEARS'
 AGE_AT_SEQ_REPORT_FIELD = 'AGE_AT_SEQ_REPORT'
-AVERAGE_DAYS_PER_YEAR = 365.2422
+AVERAGE_DAYS_PER_YEAR = 365.25
 
 PATIENT_SAMPLE_MAP = {}
 SAMPLE_AGE_AT_SEQ_REPORT_MAP = {}
@@ -81,9 +81,10 @@ def load_age_at_seq_reported_years(clinical_sample_file, convert_to_days):
 		# Convert AGE_AT_SEQ_REPORTED_YEARS to days and store the value
 		# Default to NA if type conversion fails
 		try:
+			age_at_seq_report_value = int(age_at_seq_reported_years)
 			if convert_to_days:
-				age_at_seq_report_value = int(age_at_seq_reported_years) * AVERAGE_DAYS_PER_YEAR
-			SAMPLE_AGE_AT_SEQ_REPORT_MAP[sample_id] = str(int(math.floor(age_at_seq_report_value)))
+				age_at_seq_report_value = age_at_seq_report_value * AVERAGE_DAYS_PER_YEAR
+			SAMPLE_AGE_AT_SEQ_REPORT_MAP[sample_id] = str(int(math.ceil(age_at_seq_report_value)))
 		except ValueError:
 			print AGE_AT_SEQ_REPORTED_YEARS_FIELD + " not found for '" + sample_id + "'"
 			SAMPLE_AGE_AT_SEQ_REPORT_MAP[sample_id] = 'NA'
