@@ -1,11 +1,10 @@
-import json
 import os
 import sys
 import csv
 import optparse
 from datetime import datetime, date
 
-DATE_ADDED_FILE_HEADER = ['SAMPLE_ID', 'PATIENT_ID', 'DATE_ADDED', 'MONTH_ADDED', 'WEEK_ADDED']
+DATE_ADDED_FILE_HEADER = ['SAMPLE_ID', 'PATIENT_ID', 'MONTH_ADDED', 'WEEK_ADDED']
 DATE_ADDED_DATA = {}
 EXISTING_SAMPLES = set()
 EXISTING_DATE_ADDED_DATA = {}
@@ -59,9 +58,8 @@ def load_existing_added_data(date_added_file):
 	data_file.close()
 
 def generate_todays_date_added_data():
-	""" Formats today's date into MONTH_ADDED, DATE_ADDED, AND WEEK_ADDED attributes. """
+	""" Formats today's date into MONTH_ADDED AND WEEK_ADDED attributes. """
 	now = datetime.now()
-	date_added = datetime.strftime(now, '%Y/%m/%d')
 	month_added = datetime.strftime(now, '%Y/%m')
 
 	# handle special cases where samples added to the portal in late december or early
@@ -74,7 +72,7 @@ def generate_todays_date_added_data():
 			week_added = str(now.year) + ', Wk. 01'
 	else:
 		week_added = str(now.year) + ', Wk. ' + date(now.year, now.month, now.day).strftime('%V')
-	DATE_ADDED_DATA.update({'DATE_ADDED':date_added, 'MONTH_ADDED':month_added, 'WEEK_ADDED':week_added})
+	DATE_ADDED_DATA.update({'MONTH_ADDED':month_added, 'WEEK_ADDED':week_added})
 
 def usage():
 	print 'python update-date-added.py --clinical-file [path/to/clinical/file] --date-added-file [path/to/date/added/file]'

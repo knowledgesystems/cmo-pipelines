@@ -5,7 +5,6 @@ from email.Utils import COMMASPACE, formatdate
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import argparse
-import datetime
 import fileinput
 import smtplib
 import sys
@@ -13,7 +12,7 @@ import sys
 # Use: Filter out samples which are dropped from masterlist but still in supp files before importing (from data_clinical_sample.txt)
 #      Filter out patients which no longer have samples on the masterlist (from data_clinical_patient.txt/data_timeline.txt)
 #
-# Script filters out samples based on whether or not value is found in DATE_ADDED column (valid samples should have this since it is generated daily)
+# Script filters out samples based on whether or not sample is found in sample masterlist
 # Patients with valid samples are added to a masterlist which is used for filtering patients
 # Email is sent out with general report (number of dropped samples/patients) and text attachments with specific dropped sample/patient lists
 #--------------------------------------------------------------------------------------------------
@@ -39,11 +38,10 @@ def generate_sample_masterlist(filtered_samples_file):
             sample_masterlist.add(sample_id.rstrip())
     return sample_masterlist
 
-# Filters out samples based on whether DATE_ADDED column is filled
-# Samples with a DATE_ADDED value have their patients added to patient_masterlist dictionary
+# Filters out samples based on whether the sample ID is in the sample_masterlist
+# Samples in the sample_masterlist have their patients added to patient_masterlist dictionary
 def filter_dropped_samples(sample_file, patient_masterlist, dropped_sample_list, sample_masterlist):
     header = get_header(sample_file)
-    date_added_index = header.index("DATE_ADDED")
     patient_id_index = header.index("PATIENT_ID")
     sample_id_index = header.index("SAMPLE_ID")
 
