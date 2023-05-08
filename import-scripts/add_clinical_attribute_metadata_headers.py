@@ -25,7 +25,7 @@ COLUMN_HEADER_KEY = 'column_header'
 ATTRIBUTE_TYPE_KEY = 'attribute_type'
 PRIORITY_KEY = 'priority'
 OVERRIDDEN_STUDY_NAME_KEY = 'name'
-DEFAULT_URL = "http://oncotree.mskcc.org/cdd/api/"
+DEFAULT_URL = "http://cdd.cbioportal.mskcc.org/api/"
 
 PATIENT_CLINICAL_FILE_PATTERN = "data_clinical_patient.txt"
 SAMPLE_CLINICAL_FILE_PATTERN = "data_clinical_sample.txt"
@@ -103,7 +103,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--files", nargs = "+", help = "file(s) to add metadata headers", required = True)
     parser.add_argument("-s", "--study-id", help = "study id for specific overrides", required = False)
-    parser.add_argument("-c", "--cdd-url", help = "the url for the cdd web application, default is http://oncotree.mskcc.org/cdd/api/", required = False)
+    parser.add_argument("-c", "--cdd-url", help = "the url for the cdd web application, default is http://cdd.cbioportal.mskcc.org/api/", required = False)
     args = parser.parse_args()
     clinical_files = args.files
     study_id = args.study_id
