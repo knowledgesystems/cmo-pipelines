@@ -78,7 +78,7 @@ def load_linked_archer_cases(linked_archer_cases_filename, study_id):
 def get_existing_structural_variants(structural_variants_filename):
 	"""
 		Process the msk structural variants file to get all current structural variants, and to populate the SEEN_SV_EVENTS set to prevent duplicates
-		The columns that need to be looked at are the SampleId, the Event_Info, the Site1_Gene, and the Site2_Gene columns. If these are the same,
+		The columns that need to be looked at are the Sample_ID, the Event_Info, the Site1_Gene, and the Site2_Gene columns. If these are the same,
 		the two structural variants are identical from the perspective of the importer/portal.
 	"""
 	header = get_header(structural_variants_filename)
