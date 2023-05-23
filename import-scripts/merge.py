@@ -362,6 +362,12 @@ def data_okay_to_add(is_clinical_or_timeline_file, file_header, reference_set, d
                 return patient_id in PATIENT_SAMPLE_MAP.keys()
             found = (sample_id in reference_set)
     elif len([True for val in data_values if val in reference_set]) > 0:
+        # NOTE: This comparison looks for matches against any of the data values in the row. If any value in the row
+        # matches something in the reference set, we keep the row. This means that we're not using a specific
+        # key column to compare to the reference set. This caused an issue when a blank line in the subset list
+        # file was stored in the reference set as an empty string. Any empty string in the data row matched the
+        # reference set and extraneous rows were kept. We fixed this issue by ignoring blank lines in the subset
+        # and excluded list files, but this comparison can still be risky as it can match against any value in the row.
         found = True
     return (keep_match == found)
 
@@ -907,9 +913,9 @@ def main():
     sublist = []
     excluded_samples_list = []
     if subsetlist is not None:
-        sublist = [line.strip() for line in open(subsetlist,'rU').readlines()]
+        sublist = [line.strip() for line in open(subsetlist,'rU').readlines() if line.strip() != '']
     if excluded_samples is not None:
-        excluded_samples_list = [line.strip() for line in open(excluded_samples, 'rU').readlines()]
+        excluded_samples_list = [line.strip() for line in open(excluded_samples, 'rU').readlines() if line.strip() != '']
 
     if subsetlist is not None and excluded_samples is not None:
         print >> ERROR_FILE, 'Cannot specify a subset list and an exclude samples list! Please use one option or the other.'
