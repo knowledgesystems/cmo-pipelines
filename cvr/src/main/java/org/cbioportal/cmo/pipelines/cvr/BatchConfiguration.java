@@ -112,7 +112,11 @@ public class BatchConfiguration {
 
     @Bean
     public Gateway messagingGateway() throws Exception {
-        messagingGateway.connect();
+        try {
+            messagingGateway.connect();
+        } catch (Exception e) {
+            log.warn("Unable to connect to NATS server, no samples will be published.");
+        }
         return messagingGateway;
     }
 

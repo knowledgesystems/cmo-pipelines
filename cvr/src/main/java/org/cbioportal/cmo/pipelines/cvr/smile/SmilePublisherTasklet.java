@@ -50,6 +50,11 @@ public class SmilePublisherTasklet implements Tasklet {
             return RepeatStatus.FINISHED;
         }
 
+        if (!messagingGateway.isConnected()) {
+            log.info("Unable to conenct to SMILE, samples will not be published.");
+            return RepeatStatus.FINISHED;
+        }
+
         // nothing to do if our reference list is empty
         if (cvrSampleListUtil.getSmileSamplesToPublishList().isEmpty()) {
             log.info("No samples to publish to SMILE");
