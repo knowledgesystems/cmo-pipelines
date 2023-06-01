@@ -25,7 +25,7 @@ COLUMN_HEADER_KEY = 'column_header'
 ATTRIBUTE_TYPE_KEY = 'attribute_type'
 PRIORITY_KEY = 'priority'
 OVERRIDDEN_STUDY_NAME_KEY = 'name'
-DEFAULT_URL = "http://oncotree.mskcc.org/cdd/api/"
+DEFAULT_URL = "http://cdd.cbioportal.mskcc.org/api/"
 
 PATIENT_CLINICAL_FILE_PATTERN = "data_clinical_patient.txt"
 SAMPLE_CLINICAL_FILE_PATTERN = "data_clinical_sample.txt"
