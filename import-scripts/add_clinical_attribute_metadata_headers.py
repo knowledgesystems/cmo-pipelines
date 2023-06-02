@@ -25,7 +25,7 @@ COLUMN_HEADER_KEY = 'column_header'
 ATTRIBUTE_TYPE_KEY = 'attribute_type'
 PRIORITY_KEY = 'priority'
 OVERRIDDEN_STUDY_NAME_KEY = 'name'
-DEFAULT_URL = "http://cdd.cbioportal.mskcc.org/api/"
+DEFAULT_URL = "https://cdd.cbioportal.mskcc.org/api/"
 
 PATIENT_CLINICAL_FILE_PATTERN = "data_clinical_patient.txt"
 SAMPLE_CLINICAL_FILE_PATTERN = "data_clinical_sample.txt"
@@ -129,9 +129,14 @@ def main():
     # get a set of attributes used across all input files
     for clinical_file in clinical_files:
         all_attributes = all_attributes.union(get_header(clinical_file))
+    print >> ERROR_FILE, "uhhhhhhh"
+    print >> ERROR_FILE, len(all_attributes)
     metadata_dictionary = get_clinical_attribute_metadata_from_cdd(study_id, all_attributes, base_cdd_url)
+    print >> ERROR_FILE, len(metadata_dictionary)
     # check metadata is defined for all attributes in CDD
     if len(metadata_dictionary.keys()) != len(all_attributes):
+        print >> ERROR_FILE, set(all_attributes)
+        print >> ERROR_FILE, set(metadata_dictionary.keys())
         print >> ERROR_FILE, 'Error, metadata not found for attribute(s): ' + ', '.join(all_attributes.difference(metadata_dictionary.keys()))
     for clinical_file in clinical_files:
         # create temp file to write to
