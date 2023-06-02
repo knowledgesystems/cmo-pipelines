@@ -103,7 +103,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--files", nargs = "+", help = "file(s) to add metadata headers", required = True)
     parser.add_argument("-s", "--study-id", help = "study id for specific overrides", required = False)
-    parser.add_argument("-c", "--cdd-url", help = "the url for the cdd web application, default is http://cdd.cbioportal.mskcc.org/api/", required = False)
+    parser.add_argument("-c", "--cdd-url", help = "the url for the cdd web application, default is https://.cbioportal.mskcc.org/api/", required = False)
     args = parser.parse_args()
     clinical_files = args.files
     study_id = args.study_id

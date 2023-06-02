@@ -226,7 +226,7 @@ function filter_clinical_attribute_columns() {
 
 function add_metadata_headers() {
     # Calling merge.py strips out metadata headers from our clinical files - add them back in
-    CDD_URL="http://cdd.cbioportal.mskcc.org/api/"
+    CDD_URL="https://cdd.cbioportal.mskcc.org/api/"
     INPUT_FILENAMES="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt $AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
 }

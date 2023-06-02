@@ -17,7 +17,7 @@ from clinicalfile_utils import *
 ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
 
-DEFAULT_CDD_BASE_URL = "http://cdd.cbioportal.mskcc.org/api/"
+DEFAULT_CDD_BASE_URL = "https://cdd.cbioportal.mskcc.org/api/"
 ATTRIBUTE_TYPE_FIELD = "attribute_type"
 COLUMN_HEADER_FIELD = "column_header"
 DATATYPE_FIELD = "datatype"
