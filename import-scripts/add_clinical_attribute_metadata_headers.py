@@ -132,6 +132,8 @@ def main():
     metadata_dictionary = get_clinical_attribute_metadata_from_cdd(study_id, all_attributes, base_cdd_url)
     # check metadata is defined for all attributes in CDD
     if len(metadata_dictionary.keys()) != len(all_attributes):
+        print >> ERROR_FILE, all_attributes
+        print >> ERROR_FILE, metadata_dictionary.keys()
         print >> ERROR_FILE, 'Error, metadata not found for attribute(s): ' + ', '.join(all_attributes.difference(metadata_dictionary.keys()))
     for clinical_file in clinical_files:
         # create temp file to write to
