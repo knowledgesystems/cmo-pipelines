@@ -51,7 +51,7 @@ public class SmilePublisherTasklet implements Tasklet {
         }
 
         if (!messagingGateway.isConnected()) {
-            log.info("Unable to conenct to SMILE, samples will not be published.");
+            log.info("Unable to connect to SMILE, samples will not be published.");
             return RepeatStatus.FINISHED;
         }
 
