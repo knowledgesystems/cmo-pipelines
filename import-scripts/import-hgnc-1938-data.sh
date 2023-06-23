@@ -107,8 +107,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-hgnc-1938-data.lock"
         # clear persistence cache
         if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
             echo "'$num_studies_updated' studies have been updated, clearing persistence cache for hgnc 19-38 portal..."
-            if ! clearPersistenceCachesForHgncPortals ; then
-                sendClearCacheFailureMessage hgnc-1938 import-data-hgnc-1938.sh
+            if ! clearPersistenceCachesForHgnc1938Portals ; then
+                sendClearCacheFailureMessage "hgnc-1938(msk-beta)" import-data-hgnc-1938.sh
             fi
         else
             echo "No studies have been updated, not clearing persistence cache for hgnc 19-38 portal..."

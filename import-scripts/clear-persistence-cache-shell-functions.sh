@@ -49,7 +49,7 @@ function clearPersistenceCachesForHgncPortals() {
 }
 
 function clearPersistenceCachesForHgnc1938Portals() {
-    all_hgnc_1938_portals="hgnc-1938"
+    all_hgnc_1938_portals="msk-beta"
     clearPersistenceCachesForPortals "$all_hgnc_1938_portals"
 }
 
