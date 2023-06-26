@@ -9,12 +9,12 @@ MAILTO=cbioportal-pipelines@cbioportal.org
 ##########################
 # Monitors
 ##########################
-0 0 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-stalled-jobs.sh >> /data/portal-cron/logs/monitor-stalled-jobs.log 2>&1 || echo "Failure in crontab: monitor-stalled-jobs.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
-0 0 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-crontab-version.sh >> /data/portal-cron/logs/monitor-crontab-version.log 2>&1 || echo "Failure in crontab: monitor-crontab-version.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
+0 0 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-stalled-jobs.sh >> /data/portal-cron/logs/monitor-stalled-jobs.log 2>&1 || echo "Failure in crontab ($HOSTNAME): monitor-stalled-jobs.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab ($HOSTNAME)" cbioportal-pipelines@cbioportal.org
+0 0 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/monitor-crontab-version.sh >> /data/portal-cron/logs/monitor-crontab-version.log 2>&1 || echo "Failure in crontab ($HOSTNAME): monitor-crontab-version.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab ($HOSTNAME)" cbioportal-pipelines@cbioportal.org
 
 ##########################
 # Miscellaneous
 ##########################
 0 0 * * * /usr/sbin/logrotate -f -s /data/portal-cron/logrotate.status /data/portal-cron/portal-cron-logrotate
 # make sure we can execute all scripts, execute daily at midnight
-55 23 * * * chmod u+x /data/portal-cron/scripts/*.sh /data/portal-cron/scripts/*.py || echo "Failure in crontab: chmod exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab" cbioportal-pipelines@cbioportal.org
+55 23 * * * chmod u+x /data/portal-cron/scripts/*.sh /data/portal-cron/scripts/*.py || echo "Failure in crontab ($HOSTNAME): chmod exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab ($HOSTNAME)" cbioportal-pipelines@cbioportal.org
