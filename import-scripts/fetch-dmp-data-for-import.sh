@@ -107,8 +107,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
     fi
 
-    # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields
-    bash $PORTAL_HOME/scripts/consume_samples_with_null_dp_ad_fields.sh
+    # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN Archer gene-panel
+    bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh
 
     # fetch clinical data from data repository
     echo "fetching updates from dmp repository..."
