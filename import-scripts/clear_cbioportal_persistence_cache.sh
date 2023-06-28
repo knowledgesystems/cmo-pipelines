@@ -41,9 +41,9 @@ portal_to_deployment_map["sclc"]="eks-sclc"
 
 unset portal_to_cache_service_list
 declare -A portal_to_cache_service_list
-portal_to_cache_service_list["public"]="cbioportal-public-persistence-redis-master cbioportal-public-persistence-redis-slave"
-portal_to_cache_service_list["genie-public"]="cbioportal-persistence-redis-genie-master cbioportal-persistence-redis-genie-slave"
-portal_to_cache_service_list["genie-private"]="cbioportal-persistence-redis-genie-master cbioportal-persistence-redis-genie-slave"
+portal_to_cache_service_list["public"]="cbioportal-public-persistence-redis-master cbioportal-public-persistence-redis-replicas"
+portal_to_cache_service_list["genie-public"]="cbioportal-persistence-redis-genie-master cbioportal-persistence-redis-genie-replicas"
+portal_to_cache_service_list["genie-private"]="cbioportal-persistence-redis-genie-master cbioportal-persistence-redis-genie-replicas"
 portal_to_cache_service_list["genie-archive"]=""
 portal_to_cache_service_list["triage"]="triage-cbioportal-persistence-redis-master triage-cbioportal-persistence-redis-replicas"
 portal_to_cache_service_list["hgnc"]=""
