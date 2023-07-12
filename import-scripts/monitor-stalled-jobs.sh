@@ -41,7 +41,7 @@ checked_process_list=(
 
 # Stalled times
 mt_users_genie=$(( 5 * 60 )) # import_portal_users_genie.sh: 5 minutes
-mt_import_users=$(( 15 * 60 )) # importUsers.py: 15 minutes
+mt_import_users=$(( 30 * 60 )) # importUsers.py: 30 minutes
 mt_import_dmp=$(( 10 * 60 * 60 )) # import-dmp-impact-data.sh: 10 hours
 mt_import_temp_study=$(( 3 * 60 * 60 )) # import-temp-study.sh: 3 hours
 mt_oncokb_annotator=$(( 4 * 60 * 60 )) # oncokb-annotator.sh: 4 hours
