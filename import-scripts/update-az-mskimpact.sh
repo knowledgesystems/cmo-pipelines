@@ -421,14 +421,6 @@ if [ $? -gt 0 ] ; then
 fi
 mv $mutation_filtered_filepath $mutation_filepath
 
-mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
-mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt.filtered"
-$PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to filter germline events from nonsignedout mutation file for AstraZeneca MSK-IMPACT. Exiting."
-fi
-mv $mutation_filtered_filepath $mutation_filepath
-
 sv_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt"
 sv_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
 $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $sv_filepath $sv_filtered_filepath --event-type structural_variant
