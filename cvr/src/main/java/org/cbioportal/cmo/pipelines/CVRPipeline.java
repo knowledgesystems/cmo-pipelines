@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, 2019, 2020, 2021, 2022 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2017, 2018, 2019, 2020, 2021, 2022, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -32,15 +32,19 @@
 
 package org.cbioportal.cmo.pipelines;
 
+import java.time.Instant;
 import java.util.*;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
+import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;
 import org.cbioportal.cmo.pipelines.cvr.BatchConfiguration;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.SessionConfiguration;
+import org.cbioportal.cmo.pipelines.cvr.SessionFactory;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
@@ -70,7 +74,8 @@ public class CVRPipeline {
             .addOption("m", "master_list_does_not_exclude_samples", false, "Flag to cause samples to be accepted/kept even when they are not on the master list")
             .addOption("f", "force_annotation", false, "Flag for forcing reannotation of samples")
             .addOption("b", "block_zero_variant_warnings", false, "Flag to turn off warnings for samples with no variants")
-            .addOption("n", "name_of_clinical_file", true, "Clinical filename.  Default is data_clinical.txt");
+            .addOption("n", "name_of_clinical_file", true, "Clinical filename.  Default is data_clinical.txt")
+            .addOption("z", "drop_dead_instant", true, "Timepoint when http requests should cease and the fetch should quit/fail. e.g. 'Tue Aug 15 10:13:53 EDT 2023' default value is in the distant future");
         return options;
     }
 
@@ -80,31 +85,30 @@ public class CVRPipeline {
         System.exit(exitStatus);
     }
 
-    private static void launchCvrPipelineJob(String[] args, String directory, String privateDirectory, String studyId, Boolean json, Boolean gml,
-            Boolean skipSeg, boolean testingMode, Integer maxNumSamplesToRemove, boolean masterListDoesNotExcludeSamples, Boolean forceAnnotation,
-            String clinicalFilename, Boolean stopZeroVariantWarnings) throws Exception {
+    private static int runCvrPipelineJob(String[] args, String directory, String privateDirectory, String studyId, Boolean json, Boolean gml,
+            Boolean skipSeg, boolean testingMode, String dropDeadInstantString, Integer maxNumSamplesToRemove, boolean masterListDoesNotExcludeSamples, Boolean forceAnnotation, String clinicalFilename,
+            Boolean stopZeroVariantWarnings) throws Exception {
         // log wether in testing mode or not
         if (testingMode) {
             log.warn("CvrPipelineJob running in TESTING MODE - samples will NOT be requeued.");
-        }
-        else {
+        } else {
             log.warn("CvrPipelineJob running in PRODUCTION MODE - samples will be requeued.");
         }
         if (masterListDoesNotExcludeSamples) {
             log.warn("CvrPipelineJob using masterListDoesNotExcludeSamples - samples accepted/kept even when they are not on the master list.");
         }
+        // create app and get context (needed for bean access)
         SpringApplication app = new SpringApplication(CVRPipeline.class);
         app.setWebApplicationType(WebApplicationType.NONE);
-        ConfigurableApplicationContext ctx= app.run(args);
-        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
-
+        ConfigurableApplicationContext ctx = app.run(args);
+        // configure job
         // Job description from the BatchConfiguration
-        String jobName;
         JobParametersBuilder builder = new JobParametersBuilder();
         builder.addString("stagingDirectory", directory)
                 .addString("privateDirectory", privateDirectory)
                 .addString("studyId", studyId)
                 .addString("testingMode", String.valueOf(testingMode))
+                .addString("dropDeadInstantString", dropDeadInstantString)
                 .addString("maxNumSamplesToRemove", String.valueOf(maxNumSamplesToRemove))
                 .addString("masterListDoesNotExcludeSamples", String.valueOf(masterListDoesNotExcludeSamples))
                 .addString("forceAnnotation", String.valueOf(forceAnnotation))
@@ -112,40 +116,41 @@ public class CVRPipeline {
                 .addString("stopZeroVariantWarnings", String.valueOf(stopZeroVariantWarnings))
                 .addString("jsonMode", String.valueOf(json))
                 .addString("gmlMode", String.valueOf(gml));
+        String jobName;
         if (json) {
             if (gml) {
                 jobName = BatchConfiguration.GML_JSON_JOB;
-            }
-            else {
+            } else {
                 jobName = BatchConfiguration.JSON_JOB;
             }
-        }
-        else if (gml) {
-            // SessionID is gotten from a spring bean in the SessionConfiguration and passed through here as a param
-            // add session id from somatic server for calling master list endpoint as well
-            builder.addString("sessionId", ctx.getBean(SessionConfiguration.GML_SESSION, String.class));
-            builder.addString("gmlMasterListSessionId", ctx.getBean(SessionConfiguration.SESSION_ID, String.class));
+        } else if (gml) {
+            SessionFactory sessionFactory = ctx.getBean(SessionFactory.class);
+            String sessionIdValue = sessionFactory.createGmlSessionAndGetId(dropDeadInstantString);
+            String gmlMasterListSessionIdValue = sessionFactory.createCvrSessionAndGetId(dropDeadInstantString);
+            builder.addString("sessionId", sessionIdValue);
+            builder.addString("gmlMasterListSessionId", gmlMasterListSessionIdValue);
             jobName = BatchConfiguration.GML_JOB;
-        }
-        else {
-            // SessionID is gotten from a spring bean in the SessionConfiguration and passed through here as a param
-            builder.addString("sessionId", ctx.getBean(SessionConfiguration.SESSION_ID, String.class))
-                    .addString("skipSeg", String.valueOf(skipSeg));
+        } else {
+            SessionFactory sessionFactory = ctx.getBean(SessionFactory.class);
+            String sessionIdValue = sessionFactory.createCvrSessionAndGetId(dropDeadInstantString);
+            builder.addString("sessionId", sessionIdValue);
+            builder.addString("skipSeg", String.valueOf(skipSeg));
             jobName = BatchConfiguration.CVR_JOB;
         }
-        // configure job and run
-        Job cvrJob = ctx.getBean(jobName, Job.class);
+        // run job
         JobParameters jobParameters = builder.toJobParameters();
+        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
+        Job cvrJob = ctx.getBean(jobName, Job.class);
         JobExecution jobExecution = jobLauncher.run(cvrJob, jobParameters);
         if (!testingMode) {
             EmailUtil emailUtil = ctx.getBean(BatchConfiguration.EMAIL_UTIL, EmailUtil.class);
             checkExceptions(jobExecution, jobParameters, emailUtil);
         }
         log.info("Shutting down CVR Pipeline");
-        System.exit(SpringApplication.exit(ctx));
+        return SpringApplication.exit(ctx);
     }
 
-    private static void launchConsumeSamplesJob(String[] args, String jsonFilename, boolean testingMode, boolean gml) throws Exception {
+    private static int runConsumeSamplesJob(String[] args, String jsonFilename, boolean testingMode, String dropDeadInstantString, boolean gml) throws Exception {
         // log wether in testing mode or not
         if (testingMode) {
             log.warn("ConsumeSamplesJob running in TESTING MODE - samples will NOT be consumed.");
@@ -153,29 +158,34 @@ public class CVRPipeline {
         else {
             log.warn("ConsumeSamplesJob running in PRODUCTION MODE - samples will be consumed.");
         }
-
+        // create app and get context (needed for bean access)
         SpringApplication app = new SpringApplication(CVRPipeline.class);
-        ConfigurableApplicationContext ctx= app.run(args);
-        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
+        app.setWebApplicationType(WebApplicationType.NONE);
+        ConfigurableApplicationContext ctx = app.run(args);
+        // configure job
         JobParametersBuilder builder = new JobParametersBuilder()
                 .addString("jsonFilename", jsonFilename)
                 .addString("testingMode", String.valueOf(testingMode))
+                .addString("dropDeadInstantString", dropDeadInstantString)
                 .addString("gmlMode", String.valueOf(gml));
+        SessionFactory sessionFactory = ctx.getBean(SessionFactory.class);
         if (jsonFilename.contains(CVRUtilities.CVR_FILE)) {
-            builder.addString("sessionId", ctx.getBean(SessionConfiguration.SESSION_ID, String.class));
-        }
-        else {
-            builder.addString("sessionId", ctx.getBean(SessionConfiguration.GML_SESSION, String.class));
+            String sessionIdValue = sessionFactory.createCvrSessionAndGetId(dropDeadInstantString);
+            builder.addString("sessionId", sessionIdValue);
+        } else {
+            String gmlMasterListSessionIdValue = sessionFactory.createGmlSessionAndGetId(dropDeadInstantString);
+            builder.addString("sessionId", gmlMasterListSessionIdValue);
         }
         JobParameters jobParameters = builder.toJobParameters();
         Job consumeJob = ctx.getBean(BatchConfiguration.CONSUME_SAMPLES_JOB, Job.class);
+        JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
         JobExecution jobExecution = jobLauncher.run(consumeJob, jobParameters);
         if (!testingMode) {
             EmailUtil emailUtil = ctx.getBean(BatchConfiguration.EMAIL_UTIL, EmailUtil.class);
             checkExceptions(jobExecution, jobParameters, emailUtil);
         }
         log.info("Shutting down Consume Sample Job");
-        System.exit(SpringApplication.exit(ctx));
+        return SpringApplication.exit(ctx);
     }
 
     private static void checkExceptions(JobExecution jobExecution, JobParameters jobParameters, EmailUtil emailUtil) {
@@ -186,43 +196,72 @@ public class CVRPipeline {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        Options options = CVRPipeline.getOptions(args);
-        CommandLineParser parser = new DefaultParser();
-        CommandLine commandLine = parser.parse(options, args);
-        if (commandLine.hasOption("h") ||
-                ((!commandLine.hasOption("d") || !commandLine.hasOption("p") || !commandLine.hasOption("i")) && !commandLine.hasOption("c"))) {
+    // any command line argument validity issues are handled here (with exception or exit through help()
+    public static void validateArguments(Options options, CommandLine commandLine) {
+        if (commandLine.hasOption("h")) {
             help(options, 0);
         }
         if (commandLine.hasOption("c")) {
             for (Option option : commandLine.getOptions()) {
-                if (!option.getOpt().equals("t") && !option.getOpt().equals("c") && !option.getOpt().equals("g")) {
-                    String error_message = "The --consume_samples option is only compatible with the --test and --gml options. " +
-                                    "You used an incompatible option (--" + option.getLongOpt() + "/-" + option.getOpt() + ")";
+                if (!option.getOpt().equals("t") && !option.getOpt().equals("c") && !option.getOpt().equals("g") && !option.getOpt().equals("z")) {
+                    String error_message = String.format("The --consume_samples option is only compatible with the --test and --gml and --drop_dead_instant options. You used an incompatible option (--%s/-$s)", option.getLongOpt(), option.getOpt());
                     log.error(error_message);
-                    help(options,1);
+                    help(options, 1);
                 }
             }
-            launchConsumeSamplesJob(args, commandLine.getOptionValue("c"), commandLine.hasOption("t"), commandLine.hasOption("g"));
+        } else {
+            // unless we are doing a consume job (which only requires a json filename) check for required arguments
+            if (!commandLine.hasOption("d") || !commandLine.hasOption("p") || !commandLine.hasOption("i")) {
+                help(options, 0);
+            }
+            if (commandLine.hasOption("r")) {
+                try {
+                    Integer.valueOf(commandLine.getOptionValue("r"));
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    throw new RuntimeException("Cannot parse argument as integer: " + commandLine.getOptionValue("r"));
+                }
+            }
         }
-        else {
-            Integer maxNumSamplesToRemove = CVRUtilities.DEFAULT_MAX_NUM_SAMPLES_TO_REMOVE;
-            try {
-                if (commandLine.hasOption("r")) {
-                    maxNumSamplesToRemove = Integer.valueOf(commandLine.getOptionValue("r"));
-                }
+        if (commandLine.hasOption("z")) {
+            String dateString = commandLine.getOptionValue("z");
+            String dropDeadInstantString = InstantStringUtil.convertToIsoInstantFormat(dateString);
+            if (dropDeadInstantString == null) {
+                throw new RuntimeException("Cannot parse argument as valid date string for --drop_dead_instant: " + commandLine.getOptionValue("z"));
             }
-            catch (NumberFormatException e) {
-                e.printStackTrace();
-                throw new RuntimeException("Cannot parse argument as integer: " + commandLine.getOptionValue("r"));
+            Instant instant = InstantStringUtil.createInstant(dropDeadInstantString);
+            if (instant == null) {
+                throw new RuntimeException("Instant could not be creatd from ISO_INSTANT formatted date time string : " + dropDeadInstantString);
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Options options = CVRPipeline.getOptions(args);
+        CommandLineParser parser = new DefaultParser();
+        CommandLine commandLine = parser.parse(options, args);
+        validateArguments(options, commandLine);
+        String dropDeadInstantString = "";
+        if (commandLine.hasOption("z")) {
+            String dateString = commandLine.getOptionValue("z");
+            dropDeadInstantString = InstantStringUtil.convertToIsoInstantFormat(dateString);
+        }
+        int return_status = 0;
+        if (commandLine.hasOption("c")) {
+            return_status = runConsumeSamplesJob(args, commandLine.getOptionValue("c"), commandLine.hasOption("t"), dropDeadInstantString, commandLine.hasOption("g"));
+        } else {
+            Integer maxNumSamplesToRemove = CVRUtilities.DEFAULT_MAX_NUM_SAMPLES_TO_REMOVE;
+            if (commandLine.hasOption("r")) {
+                maxNumSamplesToRemove = Integer.valueOf(commandLine.getOptionValue("r"));
             }
             String clinicalFilename = CVRUtilities.DEFAULT_CLINICAL_FILE;
             if (commandLine.hasOption("n")) {
                 clinicalFilename = commandLine.getOptionValue("n");
             }
-            launchCvrPipelineJob(args, commandLine.getOptionValue("d"), commandLine.getOptionValue("p"), commandLine.getOptionValue("i"),
-                commandLine.hasOption("j"), commandLine.hasOption("g"), commandLine.hasOption("s"), commandLine.hasOption("t"),
-                maxNumSamplesToRemove, commandLine.hasOption("m"), commandLine.hasOption("f"), clinicalFilename, commandLine.hasOption("b"));
+            return_status = runCvrPipelineJob(args, commandLine.getOptionValue("d"), commandLine.getOptionValue("p"), commandLine.getOptionValue("i"),
+                commandLine.hasOption("j"), commandLine.hasOption("g"), commandLine.hasOption("s"),
+                commandLine.hasOption("t"), dropDeadInstantString, maxNumSamplesToRemove, commandLine.hasOption("m"), commandLine.hasOption("f"), clinicalFilename, commandLine.hasOption("b"));
         }
+        System.exit(return_status);
     }
 }

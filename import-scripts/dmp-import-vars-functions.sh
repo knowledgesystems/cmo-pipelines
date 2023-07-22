@@ -16,6 +16,7 @@ JAVA_CVR_FETCHER_ARGS="-Xmx64g -jar $CVR_FETCHER_JAR_FILENAME"
 JAVA_DARWIN_FETCHER_ARGS="-jar $DARWIN_FETCHER_JAR_FILENAME"
 JAVA_DDP_FETCHER_ARGS="-Xmx48g $JAVA_SSL_ARGS -jar $DDP_FETCHER_JAR_FILENAME"
 JAVA_REDCAP_PIPELINE_ARGS="$JAVA_SSL_ARGS -jar $REDCAP_PIPELINE_JAR_FILENAME"
+# the cvr server safety lockouts are no longer in use now that cvr timeout/retry loops are in effect
 CVR_TUMOR_SERVER_SAFETY_LOCKOUT_PERIOD_START_HOUR_MINUTES=0115 #HHMM
 CVR_TUMOR_SERVER_SAFETY_LOCKOUT_PERIOD_DURATION_MINUTES=75
 CVR_GERMLINE_SERVER_SAFETY_LOCKOUT_PERIOD_START_HOUR_MINUTES=0115 #HHMM
@@ -120,7 +121,7 @@ function addDateAddedData {
 function import_project_to_redcap {
     FILENAME=$1
     PROJECT_TITLE=$2
-    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -i --filename $FILENAME --redcap-project-title $PROJECT_TITLE
+    $JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -i --filename $FILENAME --redcap-project-title $PROJECT_TITLE
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to import file $FILENAME into redcap project $PROJECT_TITLE"
@@ -132,7 +133,7 @@ function import_project_to_redcap {
 function export_project_from_redcap {
     DIRECTORY=$1
     PROJECT_TITLE=$2
-    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -d $DIRECTORY --redcap-project-title $PROJECT_TITLE
+    $JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -d $DIRECTORY --redcap-project-title $PROJECT_TITLE
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to export project $PROJECT_TITLE from redcap into directory $DIRECTORY"
@@ -149,7 +150,7 @@ function export_stable_id_from_redcap {
     if [ ! -z $IGNORED_PROJECTS_LIST ] ; then
         IGNORED_PROJECTS_ARGUMENT="-m $IGNORED_PROJECTS_LIST"
     fi
-    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -s $STABLE_ID -d $DIRECTORY $IGNORED_PROJECTS_ARGUMENT
+    $JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -s $STABLE_ID -d $DIRECTORY $IGNORED_PROJECTS_ARGUMENT
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to export stable_id $STABLE_ID from REDCap into directory $DIRECTORY"
@@ -317,37 +318,45 @@ function waitOutDmpGermlineServerInstabilityPeriod() {
     return 0
 }
 
+# Function for selecting the earlier of two instants in ISO 8601 format (which can be compared lexigraphically if both have the same timzone offset)
+function find_earlier_instant() {
+    instant1="$1"
+    instant2="$2"
+    if [[ "$instant1" < "$instant2" ]] ; then
+        echo "$instant1"
+    else
+        echo "$instant2"
+    fi
+}
+
 # Function for consuming fetched samples after successful import
 function consumeSamplesAfterSolidHemeImport {
+    drop_dead_instant_string=$(date --date="+3hours" -Iseconds) # 3 hours from now
     if [ -f $MSK_IMPACT_CONSUME_TRIGGER ] ; then
-        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming mskimpact tumor samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json
-        waitOutDmpGermlineServerInstabilityPeriod
+        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         echo "Consuming mskimpact germline samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json
+        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json -z $drop_dead_instant_string
         rm -f $MSK_IMPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_HEMEPACT_CONSUME_TRIGGER ] ; then
-        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming mskimpact_heme samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json
+        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_HEMEPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_ACCESS_CONSUME_TRIGGER ] ; then
-        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming mskaccess samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json
+        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_ACCESS_CONSUME_TRIGGER
     fi
 }
 
 # Function for consuming fetched samples after successful archer import
 function consumeSamplesAfterArcherImport {
+    drop_dead_instant_string=$(date --date="+3hour" -Iseconds) # 3 hour from now
     if [ -f $MSK_ARCHER_CONSUME_TRIGGER ] ; then
-        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming archer samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json
+        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_ARCHER_CONSUME_TRIGGER
     fi
 }

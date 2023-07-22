@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2017, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,23 +32,25 @@
 
 package org.cbioportal.cmo.pipelines.cvr.consume;
 
+import java.time.Instant;
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
+import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
+import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRConsumeSample;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.util.LinkedMultiValueMap;
 
 /**
  *
@@ -68,6 +70,15 @@ public class ConsumeSampleWriter implements ItemStreamWriter<String> {
     @Value("${dmp.tokens.consume_gml_sample}")
     private String dmpConsumeGmlSample;
 
+    @Value("${dmp.consume_sample_initial_response_timeout}")
+    private Integer dmpConsumeInitialResponseTimeout;
+
+    @Value("${dmp.consume_sample_maximum_response_timeout}")
+    private Integer dmpConsumeMaximumResponseTimeout;
+
+    @Value("#{jobParameters[dropDeadInstantString]}")
+    private String dropDeadInstantString;
+
     @Value("#{jobParameters[sessionId]}")
     private String sessionId;
 
@@ -85,7 +96,7 @@ public class ConsumeSampleWriter implements ItemStreamWriter<String> {
 
     private String dmpConsumeUrl;
 
-    Logger log = Logger.getLogger(ConsumeSampleWriter.class);
+    private Logger log = Logger.getLogger(ConsumeSampleWriter.class);
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
@@ -116,44 +127,53 @@ public class ConsumeSampleWriter implements ItemStreamWriter<String> {
         }
     }
 
+    private void logConsumeSampleFailure(String sampleId, int numberOfRequestsAttempted, String message) {
+        log.error(String.format("Error consuming sample %s (after %d attempts) %s", sampleId, numberOfRequestsAttempted, message));
+    }
+
     private void consumeSample(String sampleId) {
-        HttpEntity requestEntity = getRequestEntity();
-        RestTemplate restTemplate = new RestTemplate();
-        SimpleClientHttpRequestFactory requestFactory =
-            (SimpleClientHttpRequestFactory) restTemplate.getRequestFactory();
-        requestFactory.setReadTimeout(10000);
-        requestFactory.setConnectTimeout(10000);
-        ResponseEntity<CVRConsumeSample> responseEntity;
-        try {
-            responseEntity = restTemplate.exchange(dmpConsumeUrl + sampleId, HttpMethod.GET, requestEntity, CVRConsumeSample.class);
-            if (responseEntity.getBody().getaffectedRows()==0) {
-                String message = "No consumption for sample " + sampleId;
-                log.warn(message);
-            }
-            if (responseEntity.getBody().getaffectedRows()>1) {
-                String message = "Multiple samples consumed (" + responseEntity.getBody().getaffectedRows() + ") for sample " + sampleId;
-                log.warn(message);
-            }
-            if (responseEntity.getBody().getaffectedRows()==1) {
-                String message = "Sample "+ sampleId +" consumed succesfully";
-                log.info(message);
-                // skip adding gml samples to this list since it is for smile only
-                // and smile is not taking in gml sample metadata
-                if (!gmlMode) {
-                    cvrSampleListUtil.updateSmileSamplesToPublishList(sampleId);
+        HttpEntity<LinkedMultiValueMap<String,Object>> requestEntity = getRequestEntity();
+        HttpClientWithTimeoutAndRetry client = new HttpClientWithTimeoutAndRetry(
+                dmpConsumeInitialResponseTimeout,
+                dmpConsumeMaximumResponseTimeout,
+                InstantStringUtil.createInstant(dropDeadInstantString),
+                false); // on a server error response, stop trying and fail/log (but continue on to other samples)
+        ResponseEntity<CVRConsumeSample> responseEntity = client.exchange(dmpConsumeUrl + sampleId, HttpMethod.GET, requestEntity, null, CVRConsumeSample.class);
+        if (responseEntity == null) {
+            String message = "";
+            if (client.getLastResponseBodyStringAfterException() != null) {
+                message = String.format("final response body was: '%s'", client.getLastResponseBodyStringAfterException());
+            } else {
+                if (client.getLastRestClientException() != null) {
+                    message = String.format("final exception was: (%s)", client.getLastRestClientException());
                 }
             }
-        } catch (org.springframework.web.client.RestClientResponseException e) {
-            log.error("Error consuming sample " + sampleId + " response body is: '" + e.getResponseBodyAsString() + "'");
-        } catch (org.springframework.web.client.RestClientException e) {
-            log.error("Error consuming sample " + sampleId + "(" + e + ")");
+            logConsumeSampleFailure(sampleId, client.getNumberOfRequestsAttempted(), message);
+            return; // a failure to consume does not prevent continuation of the run
+        }
+        if (responseEntity.getBody().getaffectedRows()==0) {
+            String message = String.format("No consumption for sample %s", sampleId);
+            log.warn(message);
+        }
+        if (responseEntity.getBody().getaffectedRows()>1) {
+            String message = String.format("Multiple samples consumed (%d) for sample %s", responseEntity.getBody().getaffectedRows(), sampleId);
+            log.warn(message);
+        }
+        if (responseEntity.getBody().getaffectedRows()==1) {
+            String message = String.format("Sample %s consumed successfully", sampleId);
+            log.info(message);
+            // skip adding gml samples to this list since it is for smile only
+            // and smile is not taking in gml sample metadata
+            if (!gmlMode) {
+                cvrSampleListUtil.updateSmileSamplesToPublishList(sampleId);
+            }
         }
     }
 
-    private HttpEntity getRequestEntity() {
+    private HttpEntity<LinkedMultiValueMap<String,Object>> getRequestEntity() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        return new HttpEntity<Object>(headers);
+        return new HttpEntity<LinkedMultiValueMap<String,Object>>(headers);
     }
 
 }

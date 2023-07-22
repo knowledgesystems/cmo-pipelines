@@ -1,35 +1,59 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright (c) 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
+ * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
+ * obligations to provide maintenance, support, updates, enhancements or
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
+ * liable to any party for direct, indirect, special, incidental or
+ * consequential damages, including lost profits, arising out of the use of this
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
+ * Center has been advised of the possibility of such damage.
  */
+
+/*
+ * This file is part of cBioPortal CMO-Pipelines.
+ *
+ * cBioPortal is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package org.cbioportal.cmo.pipelines.cvr.samplelist;
 
-import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRMasterList;
-
-import org.apache.log4j.Logger;
 import java.io.*;
+import java.time.Instant;
 import java.util.*;
 import javax.annotation.Resource;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRData;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRMergedResult;
-import org.cbioportal.cmo.pipelines.cvr.model.GMLData;
-import org.cbioportal.cmo.pipelines.cvr.model.GMLResult;
+import org.apache.log4j.Logger;
+import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
+import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;
+import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRData;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRMasterList;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRMergedResult;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLData;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLResult;
-import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
 /**
  *
@@ -48,6 +72,15 @@ public class CvrSampleListsTasklet implements Tasklet {
 
     @Value("${dmp.tokens.retrieve_master_list.route}")
     private String dmpRetrieveMasterListRoute;
+
+    @Value("${dmp.get_masterlist_initial_response_timeout}")
+    private Integer dmpMasterListInitialResponseTimeout;
+
+    @Value("${dmp.get_masterlist_maximum_response_timeout}")
+    private Integer dmpMasterListMaximumResponseTimeout;
+
+    @Value("#{jobParameters[dropDeadInstantString]}")
+    private String dropDeadInstantString;
 
     @Value("#{jobParameters[studyId]}")
     private String studyId;
@@ -76,7 +109,7 @@ public class CvrSampleListsTasklet implements Tasklet {
     @Resource(name="masterListTokensMap")
     private Map<String, String> masterListTokensMap;
 
-    Logger log = Logger.getLogger(CvrSampleListsTasklet.class);
+    private Logger log = Logger.getLogger(CvrSampleListsTasklet.class);
 
     @Override
     public RepeatStatus execute(StepContribution sc, ChunkContext cc) throws Exception {
@@ -87,12 +120,10 @@ public class CvrSampleListsTasklet implements Tasklet {
             dmpMasterList = generateDmpMasterList();
             if (dmpMasterList.size() > 0) {
                 log.info("DMP master list for " + studyId + " contains " + String.valueOf(dmpMasterList.size()) + " samples");
-            }
-            else {
+            } else {
                 log.warn("No sample IDs were returned using DMP master list endpoint for study " + studyId);
             }
-        }
-        catch (HttpClientErrorException e) {
+        } catch (HttpClientErrorException e) {
             log.warn("Error occurred while retrieving master list for " + studyId + " - the default master list will be set to samples already in portal.\n"
                     + e.getLocalizedMessage());
         }
@@ -100,16 +131,14 @@ public class CvrSampleListsTasklet implements Tasklet {
         Set<String> whitedListedSamplesWithZeroVariants = new HashSet<>();
         try {
             whitedListedSamplesWithZeroVariants = loadWhitelistedSamplesWithZeroVariants();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.warn("Error loading whitelisted samples with zero variants from: " + CVRUtilities.ZERO_VARIANT_WHITELIST_FILE + "\n" + e.getLocalizedMessage());
         }
         // init new dmp samples (or patients) list if running in json/gmlJson mode
         if (jsonMode) {
             if (gmlMode) {
                 initNewDmpGmlPatientsForJsonMode();
-            }
-            else {
+            } else {
                 initNewDmpSamplesForJsonMode();
             }
         }
@@ -162,8 +191,7 @@ public class CvrSampleListsTasklet implements Tasklet {
         File whitelistedSamplesFile = new File(stagingDirectory, CVRUtilities.ZERO_VARIANT_WHITELIST_FILE);
         if (!whitelistedSamplesFile.exists()) {
             log.info("File does not exist - skipping data loading from whitelisted samples file: " + CVRUtilities.ZERO_VARIANT_WHITELIST_FILE);
-        }
-        else {
+        } else {
             Scanner reader = new Scanner(whitelistedSamplesFile);
             while (reader.hasNext()) {
                 whitedListedSamplesWithZeroVariants.add(reader.nextLine().trim());
@@ -172,50 +200,65 @@ public class CvrSampleListsTasklet implements Tasklet {
             // log warning if whitelisted samples file exists but empty or nothing loaded from it
             if (whitedListedSamplesWithZeroVariants.isEmpty()) {
                 log.warn("White listed file exists but nothing loaded from: " + CVRUtilities.ZERO_VARIANT_WHITELIST_FILE);
-            }
-            else {
+            } else {
                 log.info("Loaded " + whitedListedSamplesWithZeroVariants.size() + " whitelisted samples with zero variants from: " + CVRUtilities.ZERO_VARIANT_WHITELIST_FILE);
             }
         }
         return whitedListedSamplesWithZeroVariants;
     }
 
-    private Set<String> generateDmpMasterList() {
-        String dmpUrl = dmpServerName + dmpRetrieveMasterListRoute + "/";
-        if (gmlMode) {
-            dmpUrl += gmlMasterListSessionId;
-        } else {
-            dmpUrl += sessionId;
-        }
-        dmpUrl += "/" + masterListTokensMap.get(studyId);
+    private void logRetrieveMasterListFailure(int numberOfRequestsAttempted, String message) {
+        log.error(String.format("Error fetching CVR master list for study %s (after %d attempts) %s", studyId, numberOfRequestsAttempted, message));
+    }
 
-        RestTemplate restTemplate = new RestTemplate();
+    private Set<String> generateDmpMasterList() {
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity();
-        ResponseEntity<CVRMasterList> responseEntity;
-        Set<String> dmpSamples = new HashSet<>();
-        try {
-            responseEntity = restTemplate.exchange(dmpUrl, HttpMethod.GET, requestEntity, CVRMasterList.class);
-            for (Map<String, String> samples : responseEntity.getBody().getSamples()) {
-                // there is only one pair per Map
-                if (samples.entrySet().iterator().hasNext()) {
-                    Map.Entry pair = (Map.Entry) samples.entrySet().iterator().next();
-                    String sample = (String) pair.getValue();
-                    log.debug("open(): sample '" + sample + "' in master list");
-                    dmpSamples.add(sample);
+        String activeSessionId;
+        if (gmlMode) {
+            activeSessionId = gmlMasterListSessionId;
+        } else {
+            activeSessionId = sessionId;
+        }
+        String studyRetrieveMasterListEndpoint = masterListTokensMap.get(studyId);
+        String dmpUrl = String.format("%s%s/%s/%s", dmpServerName, dmpRetrieveMasterListRoute, activeSessionId, studyRetrieveMasterListEndpoint);
+        HttpClientWithTimeoutAndRetry client = new HttpClientWithTimeoutAndRetry(
+                dmpMasterListInitialResponseTimeout,
+                dmpMasterListMaximumResponseTimeout,
+                InstantStringUtil.createInstant(dropDeadInstantString),
+                false); // on a server error response, stop trying and move on. We continue processing even when there is no retrieved master list
+        Set<String> dmpSamples = new HashSet<String>();
+        ResponseEntity<CVRMasterList> responseEntity = client.exchange(dmpUrl, HttpMethod.GET, requestEntity, null, CVRMasterList.class);
+        if (responseEntity == null) {
+            String message = "";
+            if (client.getLastResponseBodyStringAfterException() != null) {
+                message = String.format("final response body was: '%s'", client.getLastResponseBodyStringAfterException());
+            } else {
+                if (client.getLastRestClientException() != null) {
+                    message = String.format("final exception was: (%s)", client.getLastRestClientException());
                 }
             }
-        } catch (org.springframework.web.client.RestClientResponseException e) {
-            log.error("Error fetching CVR master list, response body is: '" + e.getResponseBodyAsString() + "'");
-        } catch (org.springframework.web.client.RestClientException e) {
-            log.error("Error fetching CVR master list");
+            logRetrieveMasterListFailure(client.getNumberOfRequestsAttempted(), message);
+            //TODO : consider failing if master list retrieval fails. Otherwise, all samples will be deleted from the study and we will fail validation during import <wasted time>
+            //       throw new RuntimeException(String.format("Error retrieving master list for study %s : %s", studyId, message)); // crash
+            return dmpSamples; // continue without master list
+        }
+        CVRMasterList cvrMasterList = responseEntity.getBody();
+        for (Map<String, String> samples : cvrMasterList.getSamples()) {
+            // there is only one pair per Map
+            if (samples.entrySet().iterator().hasNext()) {
+                Map.Entry pair = (Map.Entry) samples.entrySet().iterator().next();
+                String sample = (String) pair.getValue();
+                log.debug("open(): sample '" + sample + "' in master list");
+                dmpSamples.add(sample);
+            }
         }
         return dmpSamples;
     }
 
-    private HttpEntity getRequestEntity() {
+    private HttpEntity<LinkedMultiValueMap<String, Object>> getRequestEntity() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        return new HttpEntity<Object>(headers);
+        return new HttpEntity<LinkedMultiValueMap<String, Object>>(headers);
     }
 
 }

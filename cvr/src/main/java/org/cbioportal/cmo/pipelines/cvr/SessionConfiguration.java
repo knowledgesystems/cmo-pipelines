@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,9 +32,13 @@
 
 package org.cbioportal.cmo.pipelines.cvr;
 
+import java.time.Instant;
 import java.util.*;
 import org.apache.log4j.Logger;
+import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
+import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRSession;
+import org.cbioportal.cmo.pipelines.cvr.SessionFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,7 +48,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.web.client.RestTemplate;
 
 /**
  *
@@ -54,99 +57,46 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class SessionConfiguration {
 
-    @Value("${dmp.server_name}")
-    private String dmpServerName;
-
-    @Value("${dmp.gml_server_name}")
-    private String gmlServerName;
-
-    @Value("${dmp.user_name}")
-    private String dmpUserName;
-
-    @Value("${dmp.password}")
-    private String dmpPassword;
-
-    @Value("${dmp.tokens.create_session}")
-    private String dmpCreateSession;
-
-    @Value("${dmp.tokens.create_gml_session}")
-    private String gmlCreateSession;
-    
     @Value("${dmp.tokens.retrieve_variants.impact}")
     private String retrieveVariantsImpact;
-    
+
     @Value("${dmp.tokens.retrieve_variants.rdts}")
     private String retrieveVariantsRaindance;
-    
+
     @Value("${dmp.tokens.retrieve_variants.heme}")
     private String retrieveVariantsHeme;
-    
+
     @Value("${dmp.tokens.retrieve_variants.archer}")
     private String retrieveVariantsArcher;
 
     @Value("${dmp.tokens.retrieve_variants.access}")
     private String retrieveVariantsAccess;
-    
+
     @Value("${dmp.tokens.retrieve_master_list.impact}")
     private String dmpMasterListImpact;
-    
+
     @Value("${dmp.tokens.retrieve_master_list.rdts}")
     private String dmpMasterListRaindance;
-    
+
     @Value("${dmp.tokens.retrieve_master_list.heme}")
     private String dmpMasterListHeme;
-    
+
     @Value("${dmp.tokens.retrieve_master_list.archer}")
     private String dmpMasterListArcher;
 
     @Value("${dmp.tokens.retrieve_master_list.access}")
     private String dmpMasterListAccess;
 
-    Logger log = Logger.getLogger(SessionConfiguration.class);
-
-    public final static String SESSION_ID = "cvrSessionId";
-    public final static String GML_SESSION = "gmlSessionId";
-
-    /*
-    * FULL URL: server_name/create_session/user_name/password/TYPE
-    * The TYPE can be 0 or 1, 0 is de-identified, 1 is identified (for clinical information)
-    * for CVR fetch for the portal, use 0
-    */
-    private String dmpUrl;
-    private String gmlUrl;
-
-    // Gets the sessionId from CVR
-    @Bean
-    public String cvrSessionId() {
-        try {
-            dmpUrl = dmpServerName + dmpCreateSession + "/" + dmpUserName + "/" + dmpPassword + "/0";
-            RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity();
-            ResponseEntity<CVRSession> responseEntity = restTemplate.exchange(dmpUrl, HttpMethod.POST, requestEntity, CVRSession.class);
-            return responseEntity.getBody().getSessionId();
-        } catch (Exception e) {
-            log.error("Unable to secure connection");
-            return "NA";
-        }
-    }
+    private Logger log = Logger.getLogger(SessionConfiguration.class);
 
     @Bean
-    public String gmlSessionId() {
-        try {
-            gmlUrl = gmlServerName + gmlCreateSession + "/" + dmpUserName + "/" + dmpPassword + "/0";
-            RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity();
-            ResponseEntity<CVRSession> responseEntity = restTemplate.exchange(gmlUrl, HttpMethod.POST, requestEntity, CVRSession.class);
-            return responseEntity.getBody().getSessionId();
-        } catch (Exception e) {
-            log.error("Unable to secure connection");
-            return "NA";
-        }
+    public SessionFactory sessionFactory() {
+        return new SessionFactory();
     }
-    
+
     /**
      * Maps a study id to it's dmp retrieve variants token.
-     * @return 
+     * @return
      */
     @Bean(name="retrieveVariantTokensMap")
     public Map<String, String> retrieveVariantTokensMap() {
@@ -156,10 +106,10 @@ public class SessionConfiguration {
         map.put("mskimpact_heme", retrieveVariantsHeme);
         map.put("mskarcher", retrieveVariantsArcher);
         map.put("mskaccess", retrieveVariantsAccess);
-        
+
         return map;
     }
-    
+
     @Bean(name="masterListTokensMap")
     public Map<String, String> masterListTokensMap() {
         Map<String, String> map = new HashMap<>();
@@ -168,13 +118,8 @@ public class SessionConfiguration {
         map.put("mskimpact_heme", dmpMasterListHeme);
         map.put("mskarcher", dmpMasterListArcher);
         map.put("mskaccess", dmpMasterListAccess);
-        
+
         return map;
     }
 
-    private HttpEntity getRequestEntity() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        return new HttpEntity<Object>(headers);
-    }
 }

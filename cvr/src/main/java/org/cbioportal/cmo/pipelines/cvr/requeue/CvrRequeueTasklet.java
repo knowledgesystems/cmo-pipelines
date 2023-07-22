@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2017, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,19 +32,20 @@
 
 package org.cbioportal.cmo.pipelines.cvr.requeue;
 
-import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
-import org.cbioportal.cmo.pipelines.cvr.model.CVRRequeueRecord;
-
+import java.time.Instant;
 import java.util.*;
 import org.apache.log4j.Logger;
-import org.springframework.batch.core.StepContribution;
+import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
+import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;
+import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRRequeueRecord;
 import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.web.client.RestTemplate;
 
 /**
  *
@@ -67,79 +68,93 @@ public class CvrRequeueTasklet implements Tasklet {
     @Value("#{jobParameters[testingMode]}")
     private boolean testingMode;
 
+    @Value("${dmp.requeue_sample_initial_response_timeout}")
+    private Integer dmpRequeueSampleInitialResponseTimeout;
+
+    @Value("${dmp.requeue_sample_maximum_response_timeout}")
+    private Integer dmpRequeueSampleMaximumResponseTimeout;
+
+    @Value("#{jobParameters[dropDeadInstantString]}")
+    private String dropDeadInstantString;
+
     @Autowired
     private CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CVRRequeueRecord> failedRequeue = new ArrayList();
-
-    Logger log = Logger.getLogger(CvrRequeueTasklet.class);
+    private Logger log = Logger.getLogger(CvrRequeueTasklet.class);
 
     @Override
     public RepeatStatus execute(StepContribution sc, ChunkContext cc) throws Exception {
+        List<CVRRequeueRecord> failedRequeue = new ArrayList();
         if (cvrSampleListUtil.getDmpSamplesNotInPortal().isEmpty()) {
-            String message = "No samples to requeue for study: " + studyId;
+            String message = String.format("No samples to requeue for study: %s", studyId);
             if (testingMode) {
-                message = "[TESTING MODE]: " + message;
+                message = String.format("[TESTING MODE]: %s", message);
             }
             log.info(message);
-        }
-        else {
+        } else {
             if (testingMode) {
-                log.info("[TESTING MODE]: samples will not be requeued (" + String.valueOf(cvrSampleListUtil.getDmpSamplesNotInPortal().size()) + " samples)");
-            }
-            else {
-                this.failedRequeue = requeueSamples();
+                log.info(String.format("[TESTING MODE]: samples will not be requeued (%d samples)", cvrSampleListUtil.getDmpSamplesNotInPortal().size()));
+            } else {
+                failedRequeue = requeueSamples();
             }
         }
         // add failed requeue samples to execution context for listener
         cc.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put("failedToRequeueSamples", failedRequeue);
-
         return RepeatStatus.FINISHED;
     }
 
     private List<CVRRequeueRecord> requeueSamples() {
         List<CVRRequeueRecord> failedRequeueList = new ArrayList();
-
         // if sample fails to requeue then add to list
         for (String sampleId : cvrSampleListUtil.getDmpSamplesNotInPortal()) {
-            CVRRequeueRecord requeuedSample = requeue(sampleId);
+            CVRRequeueRecord requeuedSample = requeueSample(sampleId);
             if (requeuedSample.getResult() != 1) {
                 failedRequeueList.add(requeuedSample);
             }
         }
-
         return failedRequeueList;
     }
 
-    private CVRRequeueRecord requeue(String sampleId) {
-        log.info("Requeueing '" + sampleId + "'");
-        String dmpRequeueUrl = dmpServerName + dmpRequeue + "/" + sessionId + "/" + sampleId;
-        RestTemplate restTemplate = new RestTemplate();
+    private void logRequeueSampleFailure(String sampleId, int numberOfRequestsAttempted, String message) {
+        log.error(String.format("Error requeueing sample %s (after %d attempts) %s", sampleId, numberOfRequestsAttempted, message));
+    }
+
+    private CVRRequeueRecord makeFailureCVRRequeueRecord(String sampleId) {
+        return new CVRRequeueRecord("This record was generated by " + CvrRequeueTasklet.class,
+                "Error requeuing sample (request failed to return result)",
+                0,
+                sampleId);
+    }
+
+    private CVRRequeueRecord requeueSample(String sampleId) {
+        log.info(String.format("Requeueing '%s'", sampleId));
         HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = getRequestEntity();
-        ResponseEntity<CVRRequeueRecord> responseEntity;
-        try {
-            responseEntity = restTemplate.exchange(dmpRequeueUrl, HttpMethod.GET, requestEntity, CVRRequeueRecord.class);
-        } catch (org.springframework.web.client.RestClientResponseException e) {
-            log.error("Error requeueing sample " + sampleId + " response body is: '" + e.getResponseBodyAsString() + "'");
-            return new CVRRequeueRecord("This record was generated by " + CvrRequeueTasklet.class,
-                "Error requeuing sample (request failed to return result)",
-                0,
-                sampleId);
-        } catch (org.springframework.web.client.RestClientException e) {
-            String message = "Error getting requeuing sample: " + sampleId;
-            log.error(message);
-            return new CVRRequeueRecord("This record was generated by " + CvrRequeueTasklet.class,
-                "Error requeuing sample (request failed to return result)",
-                0,
-                sampleId);
+        HttpClientWithTimeoutAndRetry client = new HttpClientWithTimeoutAndRetry(
+                dmpRequeueSampleInitialResponseTimeout,
+                dmpRequeueSampleMaximumResponseTimeout,
+                InstantStringUtil.createInstant(dropDeadInstantString),
+                false); // on a server error response, stop trying and fail/log (but continue on to other samples)
+        String dmpRequeueUrl = String.format("%s%s/%s/%s", dmpServerName, dmpRequeue, sessionId, sampleId);
+        ResponseEntity<CVRRequeueRecord> responseEntity = client.exchange(dmpRequeueUrl, HttpMethod.GET, requestEntity, null, CVRRequeueRecord.class);
+        if (responseEntity == null) {
+            String message = "";
+            if (client.getLastResponseBodyStringAfterException() != null) {
+                message = String.format("final response body was: '%s'", client.getLastResponseBodyStringAfterException());
+            } else {
+                if (client.getLastRestClientException() != null) {
+                    message = String.format("final exception was: (%s)", client.getLastRestClientException());
+                }
+            }
+            logRequeueSampleFailure(sampleId, client.getNumberOfRequestsAttempted(), message);
+            return makeFailureCVRRequeueRecord(sampleId); // a failure to requeue does not prevent continuation of the run
         }
         return responseEntity.getBody();
     }
 
-    private HttpEntity getRequestEntity() {
+    private HttpEntity<LinkedMultiValueMap<String, Object>> getRequestEntity() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        return new HttpEntity<Object>(headers);
+        return new HttpEntity<LinkedMultiValueMap<String, Object>>(headers);
     }
 
 }

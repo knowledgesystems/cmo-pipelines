@@ -49,9 +49,19 @@ function export_java_home() {
 # general paths/options for system executables
 #######################
 export_java_home "AUTODETECT"
-#export_java_home "/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.302.b08-0.amzn2.0.1.x86_64"
 export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
-export JAVA_BINARY=$JAVA_HOME/bin/java
+# the legacy environment variable "JAVA_BINARY" is maintained for older personal scripts. All production scripts now use JAVA_8_BINARY or JAVA_11_BINARY when launching java
+export JAVA_BINARY="$JAVA_HOME/bin/java"
+export JAVA_8_HOME="/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.302.b08-0.amzn2.0.1.x86_64"
+export JAVA_8_BINARY="$JAVA_8_HOME/jre/bin/java"
+export JAVA_19_HOME="/usr/lib/jdk-19.0.2"
+export JAVA_19_BINARY="$JAVA_19_HOME/bin/java"
+export JAVA_BINARY_FOR_CRDB="$JAVA_8_BINARY"
+export JAVA_BINARY_FOR_CVR="$JAVA_19_BINARY"
+export JAVA_BINARY_FOR_DARWIN="$JAVA_8_BINARY"
+export JAVA_BINARY_FOR_DDP="$JAVA_8_BINARY"
+export JAVA_BINARY_FOR_REDCAP="$JAVA_19_BINARY"
+export JAVA_BINARY_FOR_IMPORTER="$JAVA_8_BINARY"
 export PYTHON_BINARY=/usr/bin/python
 export PYTHON3_BINARY=/usr/bin/python3
 export MAVEN_BINARY=/opt/apache-maven-3.8.3/bin/mvn

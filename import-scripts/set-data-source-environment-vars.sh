@@ -49,7 +49,7 @@ function fetch_updates_in_data_source {
     email_recipient=$7
 
     echo $start_log_msg
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source $data_source --run-date latest $extra_importer_args
+    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source $data_source --run-date latest $extra_importer_args
     if [ $? -ne 0 ]; then
         echo $failure_log_msg
         echo -e "Sending email $email_body"
