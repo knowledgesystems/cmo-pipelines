@@ -187,6 +187,9 @@ export MSK_EXTRACT_COHORT_DATA_HOME=$MSK_MIND_DATA_HOME/datahub/msk_extract_coho
 export MSK_SPECTRUM_COHORT_DATA_HOME=$MSK_SHAHLAB_DATA_HOME/msk_spectrum
 # read-only data directories
 export FMI_BATLEVI_DATA_HOME=$FOUNDATION_DATA_HOME/mixed/lymphoma/mskcc/foundation/lymph_landscape_fmi_201611
+# other data directories
+export CMO_ACCESS_TMPDIR=$PORTAL_HOME/tmp/import-cron-cmo-access
+export CMO_ACCESS_DATA_HOME=$PORTAL_DATA_HOME/cmo-access/mixed_MSK_cfDNA_RESEARCH_ACCESS
 
 #######################
 # environment variables used in the backup-redcap-data.sh script
