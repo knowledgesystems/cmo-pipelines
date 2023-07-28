@@ -2,6 +2,7 @@
 
 MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-and-import-dmp-data-wrapper.lock"
 
+SKIP_OVER_ALL_DMP_COHORT_PROCESSING=0
 SKIP_DMP_IMPORT_AFTER_HHMM=0700
 SKIP_DMP_IMPORT_BEFORE_HHMM=2000
 
@@ -15,16 +16,18 @@ SKIP_DMP_IMPORT_BEFORE_HHMM=2000
 
     day_of_week_at_process_start=$(date +%u)
 
-    date
-    echo executing fetch-dmp-data-for-import.sh
-    /data/portal-cron/scripts/fetch-dmp-data-for-import.sh
-    # we don't want to start dmp imports too late (after 07:00), and we also do not want to exit prematurely once the script has started
-    current_time=$(date +"%H%M")
-    if [ "$current_time" -gt "$SKIP_DMP_IMPORT_AFTER_HHMM" ] && [ "$current_time" -lt "$SKIP_DMP_IMPORT_BEFORE_HHMM" ] ; then
-        echo "skipping import-dmp-impact-data.sh"
-    else
-        echo "executing import-dmp-impact-data.sh"
-        /data/portal-cron/scripts/import-dmp-impact-data.sh
+    if [[ -z "$SKIP_OVER_ALL_DMP_COHORT_PROCESSING" || "$SKIP_OVER_ALL_DMP_COHORT_PROCESSING" == 0 ]] ; then
+        date
+        echo executing fetch-dmp-data-for-import.sh
+        /data/portal-cron/scripts/fetch-dmp-data-for-import.sh
+        # we don't want to start dmp imports too late (after 07:00), and we also do not want to exit prematurely once the script has started
+        current_time=$(date +"%H%M")
+        if [ "$current_time" -gt "$SKIP_DMP_IMPORT_AFTER_HHMM" ] && [ "$current_time" -lt "$SKIP_DMP_IMPORT_BEFORE_HHMM" ] ; then
+            echo "skipping import-dmp-impact-data.sh"
+        else
+            echo "executing import-dmp-impact-data.sh"
+            /data/portal-cron/scripts/import-dmp-impact-data.sh
+        fi
     fi
     date
     # cmo data msk imports now start after dmp imports are done
