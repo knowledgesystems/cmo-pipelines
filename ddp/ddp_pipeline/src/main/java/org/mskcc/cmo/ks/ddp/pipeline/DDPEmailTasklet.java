@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018, 2019, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -29,24 +29,22 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.ddp.pipeline;
 
+import java.util.*;
+import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
-
-import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
-import org.apache.commons.lang.StringUtils;
 
 /**
  *
@@ -91,7 +89,7 @@ public class DDPEmailTasklet implements Tasklet {
             body.append("Found ")
                     .append(patientsWithNegativeOsMOnths.size())
                     .append(" patients with negative OS_MONTHS - see DDP fetcher log for further details:\n")
-                    .append(StringUtils.join(patientsWithNegativeOsMOnths, "\n\t"));
+                    .append(String.join("\n\t", patientsWithNegativeOsMOnths));
         }
         if (!body.toString().isEmpty()) {
             emailUtil.sendEmailToDefaultRecipient(subject, body.toString());

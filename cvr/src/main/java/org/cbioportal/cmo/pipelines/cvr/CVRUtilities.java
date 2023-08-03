@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,16 +32,14 @@
 
 package org.cbioportal.cmo.pipelines.cvr;
 
-import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.*;
-import org.cbioportal.models.*;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.text.*;
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.cbioportal.cmo.pipelines.cvr.model.*;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
+import org.cbioportal.models.*;
 
 /**
  *
@@ -367,7 +365,7 @@ public class CVRUtilities {
     }
 
     private String resolveVariantType(String refAllele, String altAllele) {
-        if (!StringUtils.isEmpty(refAllele) && !StringUtils.isEmpty(altAllele)) {
+        if (refAllele != null && !refAllele.isEmpty() && altAllele != null && !altAllele.isEmpty()) {
             if (refAllele.equals("-")) {
                 return "INS";
             }
@@ -392,11 +390,13 @@ public class CVRUtilities {
         if (record.getVARIANT_TYPE().equalsIgnoreCase("INS") || record.getVARIANT_TYPE().equalsIgnoreCase("DEL")) {
             variant += "_" + record.getEND_POSITION();
             // want to capture INDEL details, so modify variant string with both if applicable
-            if (!StringUtils.isEmpty(record.getTUMOR_SEQ_ALLELE2()) && !record.getTUMOR_SEQ_ALLELE2().equals("-")) {
-                variant += "ins" + record.getTUMOR_SEQ_ALLELE2();
+            String tumorSeqAllele2 = record.getTUMOR_SEQ_ALLELE2();
+            String referenceAllele = record.getREFERENCE_ALLELE();
+            if (tumorSeqAllele2 != null && !tumorSeqAllele2.isEmpty() && !tumorSeqAllele2.equals("-")) {
+                variant += "ins" + tumorSeqAllele2;
             }
-            if (!StringUtils.isEmpty(record.getREFERENCE_ALLELE()) && !record.getREFERENCE_ALLELE().equals("-")) {
-                variant += "del" + record.getREFERENCE_ALLELE();
+            if (referenceAllele != null && !referenceAllele.isEmpty() && !referenceAllele.equals("-")) {
+                variant += "del" + referenceAllele;
             }
         }
         else {

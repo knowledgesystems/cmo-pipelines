@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -29,6 +29,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.darwin.pipeline.model;
 
 import java.util.ArrayList;
@@ -37,7 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang.builder.ToStringBuilder;
-import org.apache.commons.lang.StringUtils;
+import org.cbioportal.cmo.pipelines.common.util.ClinicalValueUtil;
 
 /**
  *
@@ -101,32 +102,32 @@ public class MskimpactBrainSpineTimeline {
             String DIAGNOSTIC_TYPE,
             String DIAGNOSTIC_TYPE_DETAILED,
             String SOURCE) {
-        this.DMT_PATIENT_ID_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMT_PATIENT_ID_BRAINSPINETMLN) ? DMT_PATIENT_ID_BRAINSPINETMLN : "NA";
-        this.DMP_PATIENT_ID_MIN_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMP_PATIENT_ID_MIN_BRAINSPINETMLN) ? DMP_PATIENT_ID_MIN_BRAINSPINETMLN : "NA";
-        this.DMP_PATIENT_ID_MAX_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMP_PATIENT_ID_MAX_BRAINSPINETMLN) ? DMP_PATIENT_ID_MAX_BRAINSPINETMLN : "NA";
-        this.DMP_PATIENT_ID_COUNT_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMP_PATIENT_ID_COUNT_BRAINSPINETMLN) ? DMP_PATIENT_ID_COUNT_BRAINSPINETMLN : "NA";
-        this.DMP_PATIENT_ID_ALL_BRAINSPINETMLN  =  StringUtils.isNotEmpty(DMP_PATIENT_ID_ALL_BRAINSPINETMLN) ? DMP_PATIENT_ID_ALL_BRAINSPINETMLN : "NA";
-        this.START_DATE  =  StringUtils.isNotEmpty(START_DATE) ? START_DATE : "NA";
-        this.STOP_DATE  =  StringUtils.isNotEmpty(STOP_DATE) ? STOP_DATE : "NA";
-        this.EVENT_TYPE  =  StringUtils.isNotEmpty(EVENT_TYPE) ? EVENT_TYPE : "NA";
-        this.TREATMENT_TYPE  =  StringUtils.isNotEmpty(TREATMENT_TYPE) ? TREATMENT_TYPE : "NA";
-        this.SUBTYPE  =  StringUtils.isNotEmpty(SUBTYPE) ? SUBTYPE : "NA";
-        this.AGENT  =  StringUtils.isNotEmpty(AGENT) ? AGENT : "NA";
-        this.SPECIMEN_REFERENCE_NUMBER =  StringUtils.isNotEmpty(SPECIMEN_REFERENCE_NUMBER) ? SPECIMEN_REFERENCE_NUMBER : "NA";
-        this.SPECIMEN_SITE =  StringUtils.isNotEmpty(SPECIMEN_SITE) ? SPECIMEN_SITE : "NA";
-        this.SPECIMEN_TYPE =  StringUtils.isNotEmpty(SPECIMEN_TYPE) ? SPECIMEN_TYPE : "NA";
-        this.STATUS =  StringUtils.isNotEmpty(STATUS) ? STATUS : "NA";
-        this.KARNOFSKY_PERFORMANCE_SCORE =  StringUtils.isNotEmpty(KARNOFSKY_PERFORMANCE_SCORE) ? KARNOFSKY_PERFORMANCE_SCORE : "NA";
-        this.SURGERY_DETAILS =  StringUtils.isNotEmpty(SURGERY_DETAILS) ? SURGERY_DETAILS : "NA";
-        this.EVENT_TYPE_DETAILED =  StringUtils.isNotEmpty(EVENT_TYPE_DETAILED) ? EVENT_TYPE_DETAILED : "NA";
-        this.HISTOLOGY =  StringUtils.isNotEmpty(HISTOLOGY) ? HISTOLOGY : "NA";
-        this.WHO_GRADE =  StringUtils.isNotEmpty(WHO_GRADE) ? WHO_GRADE : "NA";
-        this.MGMT_STATUS =  StringUtils.isNotEmpty(MGMT_STATUS) ? MGMT_STATUS : "NA";
-        this.SOURCE_PATHOLOGY =  StringUtils.isNotEmpty(SOURCE_PATHOLOGY) ? SOURCE_PATHOLOGY : "NA";
-        this.NOTE =  StringUtils.isNotEmpty(NOTE) ? NOTE : "NA";
-        this.DIAGNOSTIC_TYPE =  StringUtils.isNotEmpty(DIAGNOSTIC_TYPE) ? DIAGNOSTIC_TYPE : "NA";
-        this.DIAGNOSTIC_TYPE_DETAILED =  StringUtils.isNotEmpty(DIAGNOSTIC_TYPE_DETAILED) ? DIAGNOSTIC_TYPE_DETAILED : "NA";
-        this.SOURCE =  StringUtils.isNotEmpty(SOURCE) ? SOURCE : "NA";
+        this.DMT_PATIENT_ID_BRAINSPINETMLN  =  ClinicalValueUtil.defaultWithNA(DMT_PATIENT_ID_BRAINSPINETMLN);
+        this.DMP_PATIENT_ID_MIN_BRAINSPINETMLN  =  ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_MIN_BRAINSPINETMLN);
+        this.DMP_PATIENT_ID_MAX_BRAINSPINETMLN  =  ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_MAX_BRAINSPINETMLN);
+        this.DMP_PATIENT_ID_COUNT_BRAINSPINETMLN  =  ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_COUNT_BRAINSPINETMLN);
+        this.DMP_PATIENT_ID_ALL_BRAINSPINETMLN  =  ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_ALL_BRAINSPINETMLN);
+        this.START_DATE  =  ClinicalValueUtil.defaultWithNA(START_DATE);
+        this.STOP_DATE  =  ClinicalValueUtil.defaultWithNA(STOP_DATE);
+        this.EVENT_TYPE  =  ClinicalValueUtil.defaultWithNA(EVENT_TYPE);
+        this.TREATMENT_TYPE  =  ClinicalValueUtil.defaultWithNA(TREATMENT_TYPE);
+        this.SUBTYPE  =  ClinicalValueUtil.defaultWithNA(SUBTYPE);
+        this.AGENT  =  ClinicalValueUtil.defaultWithNA(AGENT);
+        this.SPECIMEN_REFERENCE_NUMBER =  ClinicalValueUtil.defaultWithNA(SPECIMEN_REFERENCE_NUMBER);
+        this.SPECIMEN_SITE =  ClinicalValueUtil.defaultWithNA(SPECIMEN_SITE);
+        this.SPECIMEN_TYPE =  ClinicalValueUtil.defaultWithNA(SPECIMEN_TYPE);
+        this.STATUS =  ClinicalValueUtil.defaultWithNA(STATUS);
+        this.KARNOFSKY_PERFORMANCE_SCORE =  ClinicalValueUtil.defaultWithNA(KARNOFSKY_PERFORMANCE_SCORE);
+        this.SURGERY_DETAILS =  ClinicalValueUtil.defaultWithNA(SURGERY_DETAILS);
+        this.EVENT_TYPE_DETAILED =  ClinicalValueUtil.defaultWithNA(EVENT_TYPE_DETAILED);
+        this.HISTOLOGY =  ClinicalValueUtil.defaultWithNA(HISTOLOGY);
+        this.WHO_GRADE =  ClinicalValueUtil.defaultWithNA(WHO_GRADE);
+        this.MGMT_STATUS =  ClinicalValueUtil.defaultWithNA(MGMT_STATUS);
+        this.SOURCE_PATHOLOGY =  ClinicalValueUtil.defaultWithNA(SOURCE_PATHOLOGY);
+        this.NOTE =  ClinicalValueUtil.defaultWithNA(NOTE);
+        this.DIAGNOSTIC_TYPE =  ClinicalValueUtil.defaultWithNA(DIAGNOSTIC_TYPE);
+        this.DIAGNOSTIC_TYPE_DETAILED =  ClinicalValueUtil.defaultWithNA(DIAGNOSTIC_TYPE_DETAILED);
+        this.SOURCE =  ClinicalValueUtil.defaultWithNA(SOURCE);
     }
 
     public String getDMT_PATIENT_ID_BRAINSPINETMLN() {
@@ -134,7 +135,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setDMT_PATIENT_ID_BRAINSPINETMLN(String DMT_PATIENT_ID_BRAINSPINETMLN) {
-        this.DMT_PATIENT_ID_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMT_PATIENT_ID_BRAINSPINETMLN)  ? DMT_PATIENT_ID_BRAINSPINETMLN : "NA" ;
+        this.DMT_PATIENT_ID_BRAINSPINETMLN =  ClinicalValueUtil.defaultWithNA(DMT_PATIENT_ID_BRAINSPINETMLN);
     }
 
     public String getDMP_PATIENT_ID_MIN_BRAINSPINETMLN() {
@@ -142,7 +143,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setDMP_PATIENT_ID_MIN_BRAINSPINETMLN(String DMP_PATIENT_ID_MIN_BRAINSPINETMLN) {
-        this.DMP_PATIENT_ID_MIN_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_MIN_BRAINSPINETMLN)  ? DMP_PATIENT_ID_MIN_BRAINSPINETMLN : "NA" ;
+        this.DMP_PATIENT_ID_MIN_BRAINSPINETMLN =  ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_MIN_BRAINSPINETMLN);
     }
 
     public String getDMP_PATIENT_ID_MAX_BRAINSPINETMLN() {
@@ -150,7 +151,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setDMP_PATIENT_ID_MAX_BRAINSPINETMLN(String DMP_PATIENT_ID_MAX_BRAINSPINETMLN) {
-        this.DMP_PATIENT_ID_MAX_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_MAX_BRAINSPINETMLN)  ? DMP_PATIENT_ID_MAX_BRAINSPINETMLN : "NA" ;
+        this.DMP_PATIENT_ID_MAX_BRAINSPINETMLN =  ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_MAX_BRAINSPINETMLN);
     }
 
     public String getDMP_PATIENT_ID_COUNT_BRAINSPINETMLN() {
@@ -158,7 +159,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setDMP_PATIENT_ID_COUNT_BRAINSPINETMLN(String DMP_PATIENT_ID_COUNT_BRAINSPINETMLN) {
-        this.DMP_PATIENT_ID_COUNT_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_COUNT_BRAINSPINETMLN)  ? DMP_PATIENT_ID_COUNT_BRAINSPINETMLN : "NA" ;
+        this.DMP_PATIENT_ID_COUNT_BRAINSPINETMLN =  ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_COUNT_BRAINSPINETMLN);
     }
 
     public String getDMP_PATIENT_ID_ALL_BRAINSPINETMLN() {
@@ -166,7 +167,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setDMP_PATIENT_ID_ALL_BRAINSPINETMLN(String DMP_PATIENT_ID_ALL_BRAINSPINETMLN) {
-        this.DMP_PATIENT_ID_ALL_BRAINSPINETMLN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_ALL_BRAINSPINETMLN)  ? DMP_PATIENT_ID_ALL_BRAINSPINETMLN : "NA" ;
+        this.DMP_PATIENT_ID_ALL_BRAINSPINETMLN =  ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_ALL_BRAINSPINETMLN);
     }
 
     public String getSTART_DATE() {
@@ -174,7 +175,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSTART_DATE(String START_DATE) {
-        this.START_DATE =  StringUtils.isNotEmpty(START_DATE)  ? START_DATE : "NA" ;
+        this.START_DATE =  ClinicalValueUtil.defaultWithNA(START_DATE);
     }
 
     public String getSTOP_DATE() {
@@ -182,7 +183,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSTOP_DATE(String STOP_DATE) {
-        this.STOP_DATE =  StringUtils.isNotEmpty(STOP_DATE)  ? STOP_DATE : "NA" ;
+        this.STOP_DATE =  ClinicalValueUtil.defaultWithNA(STOP_DATE);
     }
 
     public String getEVENT_TYPE() {
@@ -190,7 +191,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setEVENT_TYPE(String EVENT_TYPE) {
-        this.EVENT_TYPE =  StringUtils.isNotEmpty(EVENT_TYPE)  ? EVENT_TYPE : "NA" ;
+        this.EVENT_TYPE =  ClinicalValueUtil.defaultWithNA(EVENT_TYPE);
     }
 
     public String getTREATMENT_TYPE() {
@@ -198,7 +199,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setTREATMENT_TYPE(String TREATMENT_TYPE) {
-        this.TREATMENT_TYPE =  StringUtils.isNotEmpty(TREATMENT_TYPE)  ? TREATMENT_TYPE : "NA" ;
+        this.TREATMENT_TYPE =  ClinicalValueUtil.defaultWithNA(TREATMENT_TYPE);
     }
 
     public String getSUBTYPE() {
@@ -206,7 +207,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSUBTYPE(String SUBTYPE) {
-        this.SUBTYPE =  StringUtils.isNotEmpty(SUBTYPE)  ? SUBTYPE : "NA" ;
+        this.SUBTYPE =  ClinicalValueUtil.defaultWithNA(SUBTYPE);
     }
 
     public String getAGENT() {
@@ -214,7 +215,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setAGENT(String AGENT) {
-        this.AGENT =  StringUtils.isNotEmpty(AGENT)  ? AGENT : "NA" ;
+        this.AGENT =  ClinicalValueUtil.defaultWithNA(AGENT);
     }
 
     public String getSPECIMEN_REFERENCE_NUMBER() {
@@ -222,7 +223,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSPECIMEN_REFERENCE_NUMBER(String SPECIMEN_REFERENCE_NUMBER) {
-        this.SPECIMEN_REFERENCE_NUMBER =  StringUtils.isNotEmpty(SPECIMEN_REFERENCE_NUMBER)  ? SPECIMEN_REFERENCE_NUMBER : "NA" ;
+        this.SPECIMEN_REFERENCE_NUMBER =  ClinicalValueUtil.defaultWithNA(SPECIMEN_REFERENCE_NUMBER);
     }
 
     public String getSPECIMEN_SITE() {
@@ -230,7 +231,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSPECIMEN_SITE(String SPECIMEN_SITE) {
-        this.SPECIMEN_SITE =  StringUtils.isNotEmpty(SPECIMEN_SITE)  ? SPECIMEN_SITE : "NA" ;
+        this.SPECIMEN_SITE =  ClinicalValueUtil.defaultWithNA(SPECIMEN_SITE);
     }
 
     public String getSPECIMEN_TYPE() {
@@ -238,7 +239,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSPECIMEN_TYPE(String SPECIMEN_TYPE) {
-        this.SPECIMEN_TYPE =  StringUtils.isNotEmpty(SPECIMEN_TYPE)  ? SPECIMEN_TYPE : "NA" ;
+        this.SPECIMEN_TYPE =  ClinicalValueUtil.defaultWithNA(SPECIMEN_TYPE);
     }
 
     public String getSTATUS() {
@@ -246,7 +247,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSTATUS(String STATUS) {
-        this.STATUS =  StringUtils.isNotEmpty(STATUS)  ? STATUS : "NA" ;
+        this.STATUS =  ClinicalValueUtil.defaultWithNA(STATUS);
     }
 
     public String getKARNOFSKY_PERFORMANCE_SCORE() {
@@ -254,7 +255,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setKARNOFSKY_PERFORMANCE_SCORE(String KARNOFSKY_PERFORMANCE_SCORE) {
-        this.KARNOFSKY_PERFORMANCE_SCORE =  StringUtils.isNotEmpty(KARNOFSKY_PERFORMANCE_SCORE)  ? KARNOFSKY_PERFORMANCE_SCORE : "NA" ;
+        this.KARNOFSKY_PERFORMANCE_SCORE =  ClinicalValueUtil.defaultWithNA(KARNOFSKY_PERFORMANCE_SCORE);
     }
 
     public String getSURGERY_DETAILS() {
@@ -262,7 +263,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSURGERY_DETAILS(String SURGERY_DETAILS) {
-        this.SURGERY_DETAILS =  StringUtils.isNotEmpty(SURGERY_DETAILS)  ? SURGERY_DETAILS : "NA" ;
+        this.SURGERY_DETAILS =  ClinicalValueUtil.defaultWithNA(SURGERY_DETAILS);
     }
 
     public String getEVENT_TYPE_DETAILED() {
@@ -270,7 +271,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setEVENT_TYPE_DETAILED(String EVENT_TYPE_DETAILED) {
-        this.EVENT_TYPE_DETAILED =  StringUtils.isNotEmpty(EVENT_TYPE_DETAILED)  ? EVENT_TYPE_DETAILED : "NA" ;
+        this.EVENT_TYPE_DETAILED =  ClinicalValueUtil.defaultWithNA(EVENT_TYPE_DETAILED);
     }
 
     public String getHISTOLOGY() {
@@ -278,7 +279,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setHISTOLOGY(String HISTOLOGY) {
-        this.HISTOLOGY =  StringUtils.isNotEmpty(HISTOLOGY)  ? HISTOLOGY : "NA" ;
+        this.HISTOLOGY =  ClinicalValueUtil.defaultWithNA(HISTOLOGY);
     }
 
     public String getWHO_GRADE() {
@@ -286,7 +287,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setWHO_GRADE(String WHO_GRADE) {
-        this.WHO_GRADE =  StringUtils.isNotEmpty(WHO_GRADE)  ? WHO_GRADE : "NA" ;
+        this.WHO_GRADE =  ClinicalValueUtil.defaultWithNA(WHO_GRADE);
     }
 
     public String getMGMT_STATUS() {
@@ -294,7 +295,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setMGMT_STATUS(String MGMT_STATUS) {
-        this.MGMT_STATUS =  StringUtils.isNotEmpty(MGMT_STATUS)  ? MGMT_STATUS : "NA" ;
+        this.MGMT_STATUS =  ClinicalValueUtil.defaultWithNA(MGMT_STATUS);
     }
 
     public String getSOURCE_PATHOLOGY() {
@@ -302,7 +303,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSOURCE_PATHOLOGY(String SOURCE_PATHOLOGY) {
-        this.SOURCE_PATHOLOGY =  StringUtils.isNotEmpty(SOURCE_PATHOLOGY)  ? SOURCE_PATHOLOGY : "NA" ;
+        this.SOURCE_PATHOLOGY =  ClinicalValueUtil.defaultWithNA(SOURCE_PATHOLOGY);
     }
 
     public String getNOTE() {
@@ -310,7 +311,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setNOTE(String NOTE) {
-        this.NOTE =  StringUtils.isNotEmpty(NOTE)  ? NOTE : "NA" ;
+        this.NOTE =  ClinicalValueUtil.defaultWithNA(NOTE);
     }
 
     public String getDIAGNOSTIC_TYPE() {
@@ -318,7 +319,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setDIAGNOSTIC_TYPE(String DIAGNOSTIC_TYPE) {
-        this.DIAGNOSTIC_TYPE =  StringUtils.isNotEmpty(DIAGNOSTIC_TYPE)  ? DIAGNOSTIC_TYPE : "NA" ;
+        this.DIAGNOSTIC_TYPE =  ClinicalValueUtil.defaultWithNA(DIAGNOSTIC_TYPE);
     }
 
     public String getDIAGNOSTIC_TYPE_DETAILED() {
@@ -326,7 +327,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setDIAGNOSTIC_TYPE_DETAILED(String DIAGNOSTIC_TYPE_DETAILED) {
-        this.DIAGNOSTIC_TYPE_DETAILED =  StringUtils.isNotEmpty(DIAGNOSTIC_TYPE_DETAILED)  ? DIAGNOSTIC_TYPE_DETAILED : "NA" ;
+        this.DIAGNOSTIC_TYPE_DETAILED =  ClinicalValueUtil.defaultWithNA(DIAGNOSTIC_TYPE_DETAILED);
     }
 
     public String getSOURCE() {
@@ -334,7 +335,7 @@ public class MskimpactBrainSpineTimeline {
     }
 
     public void setSOURCE(String SOURCE) {
-        this.SOURCE =  StringUtils.isNotEmpty(SOURCE)  ? SOURCE : "NA" ;
+        this.SOURCE =  ClinicalValueUtil.defaultWithNA(SOURCE);
     }
 
     public Map<String, Object> getAditionalProperties() {

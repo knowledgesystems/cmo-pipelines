@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016-2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2018, 2023  Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -29,22 +29,21 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package org.mskcc.cmo.ks.darwin.pipeline.mskimpactbrainspinetimeline;
 
-import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactBrainSpineTimeline;
-import org.mskcc.cmo.ks.darwin.pipeline.util.DarwinSampleListUtil;
+package org.mskcc.cmo.ks.darwin.pipeline.mskimpactbrainspinetimeline;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.sql.SQLQueryFactory;
-
-import org.springframework.batch.item.*;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
-import org.apache.log4j.Logger;
-
 import java.util.*;
+import org.apache.log4j.Logger;
+import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactBrainSpineTimeline;
+import org.mskcc.cmo.ks.darwin.pipeline.util.DarwinSampleListUtil;
+import org.springframework.batch.item.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 import static com.querydsl.core.alias.Alias.*;
+
 /**
  *
  * @author jake
@@ -69,6 +68,11 @@ public class MskimpactTimelineBrainSpineReader implements ItemStreamReader<Mskim
         if (darwinTimelineResults == null || darwinTimelineResults.isEmpty()) {
             throw new ItemStreamException("Error fetching records from Darwin Brain Spine Timeline Views");
         }
+    }
+
+    // This method was added for unit testing of the read() method. An upgrade of mockito and jvp seems to not allow use of mocked objects (instantiated classes) into @Transactional blocks.
+    public void openForTestingAndSetDarwinTimelineResults(List<MskimpactBrainSpineTimeline> testingDarwinTimelineResults) {
+        darwinTimelineResults = testingDarwinTimelineResults;
     }
 
     @Transactional

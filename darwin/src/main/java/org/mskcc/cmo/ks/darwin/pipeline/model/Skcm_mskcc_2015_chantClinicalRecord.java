@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2018, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -33,8 +33,8 @@
 package org.mskcc.cmo.ks.darwin.pipeline.model;
 
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.cbioportal.cmo.pipelines.common.util.ClinicalValueUtil;
 
 /**
  *
@@ -114,12 +114,12 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     private String melmsSiteTypeDesc;
     private String melmsSiteDesc;
     private String melmsSiteYear;
-    
-    private Map<String, Object> additionalProperties;    
-    
+
+    private Map<String, Object> additionalProperties;
+
     public Skcm_mskcc_2015_chantClinicalRecord() {
     }
-    
+
     public Skcm_mskcc_2015_chantClinicalRecord(String melspcPtid,
             String  melspcStageYear,
             String melspcStgGrpName,
@@ -191,79 +191,79 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
             String melmsSiteTypeDesc,
             String melmsSiteDesc,
             String melmsSiteYear) {
-        this.melspcPtid = StringUtils.isNotEmpty(melspcPtid) ? melspcPtid : "NA";
-        this.melspcStageYear = StringUtils.isNotEmpty(melspcStageYear) ? melspcStageYear : "NA";
-        this.melspcStgGrpName = StringUtils.isNotEmpty(melspcStgGrpName) ? melspcStgGrpName : "NA";
-        this.melgPtid = StringUtils.isNotEmpty(melgPtid) ? melgPtid : "NA";
-        this.melgStsDesc = StringUtils.isNotEmpty(melgStsDesc) ? melgStsDesc : "NA";
-        this.melgStsSrcDesc = StringUtils.isNotEmpty(melgStsSrcDesc) ? melgStsSrcDesc : "NA";
-        this.melgActvStsDesc = StringUtils.isNotEmpty(melgActvStsDesc) ? melgActvStsDesc : "NA";
-        this.melgDermagrphxDesc = StringUtils.isNotEmpty(melgDermagrphxDesc) ? melgDermagrphxDesc : "NA";
-        this.melgPresStgYear = StringUtils.isNotEmpty(melgPresStgYear) ? melgPresStgYear : "NA";
-        this.melgFamilyHxDesc = StringUtils.isNotEmpty(melgFamilyHxDesc) ? melgFamilyHxDesc : "NA";
-        this.melg1stRecurYear = StringUtils.isNotEmpty(melg1stRecurYear) ? melg1stRecurYear : "NA";
-        this.melgLocalDesc = StringUtils.isNotEmpty(melgLocalDesc) ? melgLocalDesc : "NA";
-        this.melgNodalDesc = StringUtils.isNotEmpty(melgNodalDesc) ? melgNodalDesc : "NA";
-        this.melgIntransitDesc = StringUtils.isNotEmpty(melgIntransitDesc) ? melgIntransitDesc : "NA";
-        this.melgSysDesc = StringUtils.isNotEmpty(melgSysDesc) ? melgSysDesc : "NA";
-        this.melgRecurNdszDesc = StringUtils.isNotEmpty(melgRecurNdszDesc) ? melgRecurNdszDesc : "NA";
-        this.melgRecurNodalNo = StringUtils.isNotEmpty(melgRecurNodalNo) ? melgRecurNodalNo : "NA";
-        this.melgLdh = StringUtils.isNotEmpty(melgLdh) ? melgLdh : "NA";
-        this.melgLdhYear = StringUtils.isNotEmpty(melgLdhYear) ? melgLdhYear : "NA";
-        this.melgMetsDesc = StringUtils.isNotEmpty(melgMetsDesc) ? melgMetsDesc : "NA";
-        this.melgAdjvntTxDesc = StringUtils.isNotEmpty(melgAdjvntTxDesc) ? melgAdjvntTxDesc : "NA";
-        this.melgSysTxDesc = StringUtils.isNotEmpty(melgSysTxDesc) ? melgSysTxDesc : "NA";
-        this.melgRadTxDesc = StringUtils.isNotEmpty(melgRadTxDesc) ? melgRadTxDesc : "NA";
-        this.melgSurgDesc = StringUtils.isNotEmpty(melgSurgDesc) ? melgSurgDesc : "NA";
-        this.melgTissueBankAvail = StringUtils.isNotEmpty(melgTissueBankAvail) ? melgTissueBankAvail : "NA";
-        this.melpPtid = StringUtils.isNotEmpty(melpPtid) ? melpPtid : "NA";
-        this.melpPrimSeq = StringUtils.isNotEmpty(melpPrimSeq) ? melpPrimSeq : "NA";
-        this.melpDxYear = StringUtils.isNotEmpty(melpDxYear) ? melpDxYear : "NA";
-        this.melpMskReviewDesc = StringUtils.isNotEmpty(melpMskReviewDesc) ? melpMskReviewDesc : "NA";
-        this.melpThicknessMm = StringUtils.isNotEmpty(melpThicknessMm) ? melpThicknessMm : "NA";
-        this.melpClarkLvlDesc = StringUtils.isNotEmpty(melpClarkLvlDesc) ? melpClarkLvlDesc : "NA";
-        this.melpUlcerationDesc = StringUtils.isNotEmpty(melpUlcerationDesc) ? melpUlcerationDesc : "NA";
-        this.melpSiteDesc = StringUtils.isNotEmpty(melpSiteDesc) ? melpSiteDesc : "NA";
-        this.melpSubSiteDesc = StringUtils.isNotEmpty(melpSubSiteDesc) ? melpSubSiteDesc : "NA";
-        this.melpTilsDesc = StringUtils.isNotEmpty(melpTilsDesc) ? melpTilsDesc : "NA";
-        this.melpRegressionDesc = StringUtils.isNotEmpty(melpRegressionDesc) ? melpRegressionDesc : "NA";
-        this.melpMarginsDesc = StringUtils.isNotEmpty(melpMarginsDesc) ? melpMarginsDesc : "NA";
-        this.melpMitidxUnkDesc = StringUtils.isNotEmpty(melpMitidxUnkDesc) ? melpMitidxUnkDesc : "NA";
-        this.melpHistTypeDesc = StringUtils.isNotEmpty(melpHistTypeDesc) ? melpHistTypeDesc : "NA";
-        this.melpSatellitesDesc = StringUtils.isNotEmpty(melpSatellitesDesc) ? melpSatellitesDesc : "NA";
-        this.melpExtSlidesDesc = StringUtils.isNotEmpty(melpExtSlidesDesc) ? melpExtSlidesDesc : "NA";
-        this.melpLnorgDxDesc = StringUtils.isNotEmpty(melpLnorgDxDesc) ? melpLnorgDxDesc : "NA";
-        this.melpLnclinStsDesc = StringUtils.isNotEmpty(melpLnclinStsDesc) ? melpLnclinStsDesc : "NA";
-        this.melpLnsentinbxDesx = StringUtils.isNotEmpty(melpLnsentinbxDesx) ? melpLnsentinbxDesx : "NA";
-        this.melpLnsentinbxYear = StringUtils.isNotEmpty(melpLnsentinbxYear) ? melpLnsentinbxYear : "NA";
-        this.melpLnprolysctDesc = StringUtils.isNotEmpty(melpLnprolysctDesc) ? melpLnprolysctDesc : "NA";
-        this.melpLnprosuccDesc = StringUtils.isNotEmpty(melpLnprosuccDesc) ? melpLnprosuccDesc : "NA";
-        this.melpLndsctCmpDesc = StringUtils.isNotEmpty(melpLndsctCmpDesc) ? melpLndsctCmpDesc : "NA";
-        this.melpLndsctYear = StringUtils.isNotEmpty(melpLndsctYear) ? melpLndsctYear : "NA";
-        this.melpLnmattedDesc = StringUtils.isNotEmpty(melpLnmattedDesc) ? melpLnmattedDesc : "NA";
-        this.LnextnodstDesc = StringUtils.isNotEmpty(LnextnodstDesc) ? LnextnodstDesc : "NA";
-        this.LnintrmetsDesc = StringUtils.isNotEmpty(LnintrmetsDesc) ? LnintrmetsDesc : "NA";
-        this.melpLnsize = StringUtils.isNotEmpty(melpLnsize) ? melpLnsize : "NA";
-        this.melpLnsizeUnkDesc = StringUtils.isNotEmpty(melpLnsizeUnkDesc) ? melpLnsizeUnkDesc : "NA";
-        this.melpLnslnlargSize = StringUtils.isNotEmpty(melpLnslnlargSize) ? melpLnslnlargSize : "NA";
-        this.melpLnihcDesc = StringUtils.isNotEmpty(melpLnihcDesc) ? melpLnihcDesc : "NA";
-        this.melpLnimmS100Desc = StringUtils.isNotEmpty(melpLnimmS100Desc) ? melpLnimmS100Desc : "NA";
-        this.melpLnimmhmb45Desc = StringUtils.isNotEmpty(melpLnimmhmb45Desc) ? melpLnimmhmb45Desc : "NA";
-        this.melpLnimmMelaDesc = StringUtils.isNotEmpty(melpLnimmMelaDesc) ? melpLnimmMelaDesc : "NA";
-        this.meliPtid = StringUtils.isNotEmpty(meliPtid) ? meliPtid : "NA";
-        this.meliDmpPatientId = StringUtils.isNotEmpty(meliDmpPatientId) ? meliDmpPatientId : "NA";
-        this.meliDmpSampleId = StringUtils.isNotEmpty(meliDmpSampleId) ? meliDmpSampleId : "NA";
-        this.meliReportYear = StringUtils.isNotEmpty(meliReportYear)  ? meliReportYear : "NA";
-        this.meliProcedureYear = StringUtils.isNotEmpty(meliProcedureYear) ? meliProcedureYear : "NA";
-        this.meliTumorType = StringUtils.isNotEmpty(meliTumorType) ? meliTumorType : "NA";
-        this.meliPrimarySite = StringUtils.isNotEmpty(meliPrimarySite) ? meliPrimarySite : "NA";
-        this.meliMetSite = StringUtils.isNotEmpty(meliMetSite) ? meliMetSite : "NA";
-        this.melmsPtid = StringUtils.isNotEmpty(melmsPtid) ? melmsPtid : "NA";
-        this.melmsSiteTypeDesc = StringUtils.isNotEmpty(melmsSiteTypeDesc) ? melmsSiteTypeDesc : "NA";
-        this.melmsSiteDesc = StringUtils.isNotEmpty(melmsSiteDesc) ? melmsSiteDesc : "NA";
-        this.melmsSiteYear = StringUtils.isNotEmpty(melmsSiteYear) ? melmsSiteYear : "NA";
+        this.melspcPtid = ClinicalValueUtil.defaultWithNA(melspcPtid);
+        this.melspcStageYear = ClinicalValueUtil.defaultWithNA(melspcStageYear);
+        this.melspcStgGrpName = ClinicalValueUtil.defaultWithNA(melspcStgGrpName);
+        this.melgPtid = ClinicalValueUtil.defaultWithNA(melgPtid);
+        this.melgStsDesc = ClinicalValueUtil.defaultWithNA(melgStsDesc);
+        this.melgStsSrcDesc = ClinicalValueUtil.defaultWithNA(melgStsSrcDesc);
+        this.melgActvStsDesc = ClinicalValueUtil.defaultWithNA(melgActvStsDesc);
+        this.melgDermagrphxDesc = ClinicalValueUtil.defaultWithNA(melgDermagrphxDesc);
+        this.melgPresStgYear = ClinicalValueUtil.defaultWithNA(melgPresStgYear);
+        this.melgFamilyHxDesc = ClinicalValueUtil.defaultWithNA(melgFamilyHxDesc);
+        this.melg1stRecurYear = ClinicalValueUtil.defaultWithNA(melg1stRecurYear);
+        this.melgLocalDesc = ClinicalValueUtil.defaultWithNA(melgLocalDesc);
+        this.melgNodalDesc = ClinicalValueUtil.defaultWithNA(melgNodalDesc);
+        this.melgIntransitDesc = ClinicalValueUtil.defaultWithNA(melgIntransitDesc);
+        this.melgSysDesc = ClinicalValueUtil.defaultWithNA(melgSysDesc);
+        this.melgRecurNdszDesc = ClinicalValueUtil.defaultWithNA(melgRecurNdszDesc);
+        this.melgRecurNodalNo = ClinicalValueUtil.defaultWithNA(melgRecurNodalNo);
+        this.melgLdh = ClinicalValueUtil.defaultWithNA(melgLdh);
+        this.melgLdhYear = ClinicalValueUtil.defaultWithNA(melgLdhYear);
+        this.melgMetsDesc = ClinicalValueUtil.defaultWithNA(melgMetsDesc);
+        this.melgAdjvntTxDesc = ClinicalValueUtil.defaultWithNA(melgAdjvntTxDesc);
+        this.melgSysTxDesc = ClinicalValueUtil.defaultWithNA(melgSysTxDesc);
+        this.melgRadTxDesc = ClinicalValueUtil.defaultWithNA(melgRadTxDesc);
+        this.melgSurgDesc = ClinicalValueUtil.defaultWithNA(melgSurgDesc);
+        this.melgTissueBankAvail = ClinicalValueUtil.defaultWithNA(melgTissueBankAvail);
+        this.melpPtid = ClinicalValueUtil.defaultWithNA(melpPtid);
+        this.melpPrimSeq = ClinicalValueUtil.defaultWithNA(melpPrimSeq);
+        this.melpDxYear = ClinicalValueUtil.defaultWithNA(melpDxYear);
+        this.melpMskReviewDesc = ClinicalValueUtil.defaultWithNA(melpMskReviewDesc);
+        this.melpThicknessMm = ClinicalValueUtil.defaultWithNA(melpThicknessMm);
+        this.melpClarkLvlDesc = ClinicalValueUtil.defaultWithNA(melpClarkLvlDesc);
+        this.melpUlcerationDesc = ClinicalValueUtil.defaultWithNA(melpUlcerationDesc);
+        this.melpSiteDesc = ClinicalValueUtil.defaultWithNA(melpSiteDesc);
+        this.melpSubSiteDesc = ClinicalValueUtil.defaultWithNA(melpSubSiteDesc);
+        this.melpTilsDesc = ClinicalValueUtil.defaultWithNA(melpTilsDesc);
+        this.melpRegressionDesc = ClinicalValueUtil.defaultWithNA(melpRegressionDesc);
+        this.melpMarginsDesc = ClinicalValueUtil.defaultWithNA(melpMarginsDesc);
+        this.melpMitidxUnkDesc = ClinicalValueUtil.defaultWithNA(melpMitidxUnkDesc);
+        this.melpHistTypeDesc = ClinicalValueUtil.defaultWithNA(melpHistTypeDesc);
+        this.melpSatellitesDesc = ClinicalValueUtil.defaultWithNA(melpSatellitesDesc);
+        this.melpExtSlidesDesc = ClinicalValueUtil.defaultWithNA(melpExtSlidesDesc);
+        this.melpLnorgDxDesc = ClinicalValueUtil.defaultWithNA(melpLnorgDxDesc);
+        this.melpLnclinStsDesc = ClinicalValueUtil.defaultWithNA(melpLnclinStsDesc);
+        this.melpLnsentinbxDesx = ClinicalValueUtil.defaultWithNA(melpLnsentinbxDesx);
+        this.melpLnsentinbxYear = ClinicalValueUtil.defaultWithNA(melpLnsentinbxYear);
+        this.melpLnprolysctDesc = ClinicalValueUtil.defaultWithNA(melpLnprolysctDesc);
+        this.melpLnprosuccDesc = ClinicalValueUtil.defaultWithNA(melpLnprosuccDesc);
+        this.melpLndsctCmpDesc = ClinicalValueUtil.defaultWithNA(melpLndsctCmpDesc);
+        this.melpLndsctYear = ClinicalValueUtil.defaultWithNA(melpLndsctYear);
+        this.melpLnmattedDesc = ClinicalValueUtil.defaultWithNA(melpLnmattedDesc);
+        this.LnextnodstDesc = ClinicalValueUtil.defaultWithNA(LnextnodstDesc);
+        this.LnintrmetsDesc = ClinicalValueUtil.defaultWithNA(LnintrmetsDesc);
+        this.melpLnsize = ClinicalValueUtil.defaultWithNA(melpLnsize);
+        this.melpLnsizeUnkDesc = ClinicalValueUtil.defaultWithNA(melpLnsizeUnkDesc);
+        this.melpLnslnlargSize = ClinicalValueUtil.defaultWithNA(melpLnslnlargSize);
+        this.melpLnihcDesc = ClinicalValueUtil.defaultWithNA(melpLnihcDesc);
+        this.melpLnimmS100Desc = ClinicalValueUtil.defaultWithNA(melpLnimmS100Desc);
+        this.melpLnimmhmb45Desc = ClinicalValueUtil.defaultWithNA(melpLnimmhmb45Desc);
+        this.melpLnimmMelaDesc = ClinicalValueUtil.defaultWithNA(melpLnimmMelaDesc);
+        this.meliPtid = ClinicalValueUtil.defaultWithNA(meliPtid);
+        this.meliDmpPatientId = ClinicalValueUtil.defaultWithNA(meliDmpPatientId);
+        this.meliDmpSampleId = ClinicalValueUtil.defaultWithNA(meliDmpSampleId);
+        this.meliReportYear = ClinicalValueUtil.defaultWithNA(meliReportYear);
+        this.meliProcedureYear = ClinicalValueUtil.defaultWithNA(meliProcedureYear);
+        this.meliTumorType = ClinicalValueUtil.defaultWithNA(meliTumorType);
+        this.meliPrimarySite = ClinicalValueUtil.defaultWithNA(meliPrimarySite);
+        this.meliMetSite = ClinicalValueUtil.defaultWithNA(meliMetSite);
+        this.melmsPtid = ClinicalValueUtil.defaultWithNA(melmsPtid);
+        this.melmsSiteTypeDesc = ClinicalValueUtil.defaultWithNA(melmsSiteTypeDesc);
+        this.melmsSiteDesc = ClinicalValueUtil.defaultWithNA(melmsSiteDesc);
+        this.melmsSiteYear = ClinicalValueUtil.defaultWithNA(melmsSiteYear);
     }
-    
+
     public String getPATIENT_ID() {
         if (patientId != null) {
             return patientId;
@@ -279,21 +279,21 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
         }
         return melmsPtid;
     }
-    
+
     public void setPATIENT_ID(String patientId) {
         this.patientId = patientId;
     }
-    
+
     public String getSAMPLE_ID() {
         if (sampleId != null) {
             return sampleId;
         }
         if (!meliDmpSampleId.equals("NA")) {
             return meliDmpSampleId;
-        }        
+        }
         if (!melpPrimSeq.equals("NA")) {
             return melpPtid + "_" + melpPrimSeq;
-        }        
+        }
         if (!melspcPtid.equals("NA")) {
             return melspcPtid;
         }
@@ -302,151 +302,151 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
         }
         return melmsPtid;
     }
-    
+
     public void setSAMPLE_ID(String sampleId) {
         this.sampleId = sampleId;
     }
-    
+
     public String getMELSPC_PTID() {
         return melspcPtid;
     }
-    
+
     public void setMELSPC_PTID(String melspcPtid) {
         this.melspcPtid = melspcPtid;
-    }    
-    
+    }
+
     public String getMELSPC_STAGE_YEAR() {
         return melspcStageYear;
     }
-    
+
     public void setMELSPC_STAGE_YEAR(String melspcStageYear) {
         this.melspcStageYear = melspcStageYear;
-    }  
-    
+    }
+
     public String getMELSPC_STG_GRP_NAME() {
         return melspcStgGrpName;
     }
-    
+
     public void setMELSPC_STG_GRP_NAME(String melspcStgGrpName) {
         this.melspcStgGrpName = melspcStgGrpName;
-    }      
-    
+    }
+
     public String getMELG_PTID() {
         return melgPtid;
     }
-    
+
     public void setMELG_PTID(String melgPtid) {
         this.melgPtid = melgPtid;
-    }        
-    
+    }
+
     public String getMELG_STS_DESC() {
         return melgStsDesc;
     }
-    
+
     public void setMELG_STS_DESC(String melgStsDesc) {
         this.melgStsDesc = melgStsDesc;
-    }      
-    
+    }
+
     public String getMELG_STS_SRCE_DESC() {
         return melgStsSrcDesc;
     }
-    
+
     public void setMELG_STS_SRCE_DESC(String melgStsSrcDesc) {
         this.melgStsSrcDesc = melgStsSrcDesc;
-    }  
+    }
 
     public String getMELG_ACTV_STS_DESC() {
         return melgActvStsDesc;
     }
-    
+
     public void setMELG_ACTV_STS_DESC(String melgActvStsDesc) {
         this.melgActvStsDesc = melgActvStsDesc;
-    }  
+    }
 
     public String getMELG_DERMAGRPHX_DESC() {
         return melgDermagrphxDesc;
     }
-    
+
     public void setMELG_DERMAGRPHX_DESC(String melgDermagrphxDesc) {
         this.melgDermagrphxDesc = melgDermagrphxDesc;
-    }  
+    }
 
     public String getMELG_PRES_STG_YEAR() {
         return melgPresStgYear;
     }
-    
+
     public void setMELG_PRES_STG_YEAR(String melgPresStgYear) {
         this.melgPresStgYear = melgPresStgYear;
-    }  
+    }
 
     public String getMELG_FAMILY_HX_DESC() {
         return melgFamilyHxDesc;
     }
-    
+
     public void setMELG_FAMILY_HX_DESC(String melgFamilyHxDesc) {
         this.melgFamilyHxDesc = melgFamilyHxDesc;
-    }  
+    }
 
     public String getMELG_1ST_RECUR_YEAR() {
         return melg1stRecurYear;
     }
-    
+
     public void setMELG_1ST_RECUR_YEAR(String melg1stRecurYear) {
         this.melg1stRecurYear = melg1stRecurYear;
-    }  
+    }
 
     public String getMELG_LOCAL_DESC() {
         return melgLocalDesc;
     }
-    
+
     public void setMELG_LOCAL_DESC(String melgLocalDesc) {
         this.melgLocalDesc = melgLocalDesc;
-    }  
+    }
 
     public String getMELG_NODAL_DESC() {
         return melgNodalDesc;
     }
-    
+
     public void setMELG_NODAL_DESC(String melgNodalDesc) {
         this.melgNodalDesc = melgNodalDesc;
-    }  
+    }
 
     public String getMELG_INTRANSIT_DESC() {
         return melgIntransitDesc;
     }
-    
+
     public void setMELG_INTRANSIT_DESC(String melgIntransitDesc) {
         this.melgIntransitDesc = melgIntransitDesc;
-    }  
+    }
 
     public String getMELG_SYS_DESC() {
         return melgSysDesc;
     }
-    
+
     public void setMELG_SYS_DESC(String melgSysDesc) {
         this.melgSysDesc = melgSysDesc;
-    }  
+    }
 
     public String getMELG_RECUR_NDSZ_DESC() {
         return melgRecurNdszDesc;
     }
-    
+
     public void setMELG_RECUR_NDSZ_DESC(String melgRecurNdszDesc) {
         this.melgRecurNdszDesc = melgRecurNdszDesc;
-    }  
+    }
 
     public String getMELG_RECUR_NODAL_NO() {
         return melgRecurNodalNo;
     }
-    
+
     public void setMELG_RECUR_NODAL_NO(String melgRecurNodalNo) {
         this.melgRecurNodalNo = melgRecurNodalNo;
-    }  
+    }
 
     public String getMELG_LDH() {
         return melgLdh;
     }
-    
+
     public void setMELG_LDH(String melgLdh) {
         this.melgLdh = melgLdh;
     }
@@ -454,7 +454,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELG_LDH_YEAR() {
         return melgLdhYear;
     }
-    
+
     public void setMELG_LDH_YEAR(String melgLdhYear) {
         this.melgLdhYear = melgLdhYear;
     }
@@ -462,7 +462,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELG_METS_DESC() {
         return melgMetsDesc;
     }
-    
+
     public void setMELG_METS_DESC(String melgMetsDesc) {
         this.melgMetsDesc = melgMetsDesc;
     }
@@ -470,7 +470,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELG_ADJVNT_TX_DESC() {
         return melgAdjvntTxDesc;
     }
-    
+
     public void setMELG_ADJVNT_TX_DESC(String melgAdjvntTxDesc) {
         this.melgAdjvntTxDesc = melgAdjvntTxDesc;
     }
@@ -478,7 +478,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELG_SYS_TX_DESC() {
         return melgSysTxDesc;
     }
-    
+
     public void setMELG_SYS_TX_DESC(String melgSysTxDesc) {
         this.melgSysTxDesc = melgSysTxDesc;
     }
@@ -486,7 +486,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELG_RAD_TX_DESC() {
         return melgRadTxDesc;
     }
-    
+
     public void setMELG_RAD_TX_DESC(String melgRadTxDesc) {
         this.melgRadTxDesc = melgRadTxDesc;
     }
@@ -494,39 +494,39 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELG_SURG_DESC() {
         return melgSurgDesc;
     }
-    
+
     public void setMELG_SURG_DESC(String melgSurgDesc) {
         this.melgSurgDesc = melgSurgDesc;
-    }    
-    
+    }
+
     public String getMELG_TISSUE_BANK_AVAIL() {
         return melgTissueBankAvail;
     }
-    
+
     public void setMELG_TISSUE_BANK_AVAIL(String melgTissueBankAvail) {
         this.melgTissueBankAvail = melgTissueBankAvail;
     }
-    
+
     public String getMELP_PTID() {
         return melpPtid;
     }
-    
+
     public void setMELP_PTID(String melpPtid) {
         this.melpPtid = melpPtid;
-    }        
-    
+    }
+
     public String getMELP_PRIM_SEQ() {
         return melpPrimSeq;
     }
-    
+
     public void setMELP_PRIM_SEQ(String melpPrimSeq) {
         this.melpPrimSeq = melpPrimSeq;
     }
-    
+
     public String getMELP_DX_YEAR() {
         return melpDxYear;
     }
-    
+
     public void setMELP_DX_YEAR(String melpDxYear) {
         this.melpDxYear = melpDxYear;
     }
@@ -534,7 +534,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_MSK_REVIEW_DESC() {
         return melpMskReviewDesc;
     }
-    
+
     public void setMELP_MSK_REVIEW_DESC(String melpMskReviewDesc) {
         this.melpMskReviewDesc = melpMskReviewDesc;
     }
@@ -542,7 +542,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_THICKNESS_MM() {
         return melpThicknessMm;
     }
-    
+
     public void setMELP_THICKNESS_MM(String melpThicknessMm) {
         this.melpThicknessMm = melpThicknessMm;
     }
@@ -550,7 +550,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_CLARK_LVL_DESC() {
         return melpClarkLvlDesc;
     }
-    
+
     public void setMELP_CLARK_LVL_DESC(String melpClarkLvlDesc) {
         this.melpClarkLvlDesc = melpClarkLvlDesc;
     }
@@ -558,7 +558,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_ULCERATION_DESC() {
         return melpUlcerationDesc;
     }
-    
+
     public void setMELP_ULCERATION_DESC(String melpUlcerationDesc) {
         this.melpUlcerationDesc = melpUlcerationDesc;
     }
@@ -566,7 +566,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_SITE_DESC() {
         return melpSiteDesc;
     }
-    
+
     public void setMELP_SITE_DESC(String melpSiteDesc) {
         this.melpSiteDesc = melpSiteDesc;
     }
@@ -574,7 +574,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_SUB_SITE_DESC() {
         return melpSubSiteDesc;
     }
-    
+
     public void setMELP_SUB_SITE_DESC(String melpSubSiteDesc) {
         this.melpSubSiteDesc = melpSubSiteDesc;
     }
@@ -582,7 +582,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_TILS_DESC() {
         return melpTilsDesc;
     }
-    
+
     public void setMELP_TILS_DESC(String melpTilsDesc) {
         this.melpTilsDesc = melpTilsDesc;
     }
@@ -590,7 +590,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_REGRESSION_DESC() {
         return melpRegressionDesc;
     }
-    
+
     public void setMELP_REGRESSION_DESC(String melpRegressionDesc) {
         this.melpRegressionDesc = melpRegressionDesc;
     }
@@ -598,7 +598,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_MARGINS_DESC() {
         return melpMarginsDesc;
     }
-    
+
     public void setMELP_MARGINS_DESC(String melpMarginsDesc) {
         this.melpMarginsDesc = melpMarginsDesc;
     }
@@ -606,7 +606,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_MITIDX_UNK_DESC() {
         return melpMitidxUnkDesc;
     }
-    
+
     public void setMELP_MITIDX_UNK_DESC(String melpMitidxUnkDesc) {
         this.melpMitidxUnkDesc = melpMitidxUnkDesc;
     }
@@ -614,7 +614,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_HIST_TYPE_DESC() {
         return melpHistTypeDesc;
     }
-    
+
     public void setMELP_HIST_TYPE_DESC(String melpHistTypeDesc) {
         this.melpHistTypeDesc = melpHistTypeDesc;
     }
@@ -622,7 +622,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_SATELLITES_DESC() {
         return melpSatellitesDesc;
     }
-    
+
     public void setMELP_SATELLITES_DESC(String melpSatellitesDesc) {
         this.melpSatellitesDesc = melpSatellitesDesc;
     }
@@ -630,7 +630,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_EXT_SLIDES_DESC() {
         return melpExtSlidesDesc;
     }
-    
+
     public void setMELP_EXT_SLIDES_DESC(String melpExtSlidesDesc) {
         this.melpExtSlidesDesc = melpExtSlidesDesc;
     }
@@ -638,7 +638,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNORG_DX_DESC() {
         return melpLnorgDxDesc;
     }
-    
+
     public void setMELP_LNORG_DX_DESC(String melpLnorgDxDesc) {
         this.melpLnorgDxDesc = melpLnorgDxDesc;
     }
@@ -646,7 +646,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNCLIN_STS_DESC() {
         return melpLnclinStsDesc;
     }
-    
+
     public void setMELP_LNCLIN_STS_DESC(String melpLnclinStsDesc) {
         this.melpLnclinStsDesc = melpLnclinStsDesc;
     }
@@ -654,7 +654,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNSENTINBX_DESC() {
         return melpLnsentinbxDesx;
     }
-    
+
     public void setMELP_LNSENTINBX_DESC(String melpLnsentinbxDesx) {
         this.melpLnsentinbxDesx = melpLnsentinbxDesx;
     }
@@ -662,7 +662,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNSENTINBX_YEAR() {
         return melpLnsentinbxYear;
     }
-    
+
     public void setMELP_LNSENTINBX_YEAR(String melpLnsentinbxYear) {
         this.melpLnsentinbxYear = melpLnsentinbxYear;
     }
@@ -670,7 +670,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNPROLYSCT_DESC() {
         return melpLnprolysctDesc;
     }
-    
+
     public void setMELP_LNPROLYSCT_DESC(String melpLnprolysctDesc) {
         this.melpLnprolysctDesc = melpLnprolysctDesc;
     }
@@ -678,7 +678,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNPROSUCC_DESC() {
         return melpLnprosuccDesc;
     }
-    
+
     public void setMELP_LNPROSUCC_DESC(String melpLnprosuccDesc) {
         this.melpLnprosuccDesc = melpLnprosuccDesc;
     }
@@ -686,7 +686,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNDSCT_CMP_DESC() {
         return melpLndsctCmpDesc;
     }
-    
+
     public void setMELP_LNDSCT_CMP_DESC(String melpLndsctCmpDesc) {
         this.melpLndsctCmpDesc = melpLndsctCmpDesc;
     }
@@ -694,15 +694,15 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNDSCT_YEAR() {
         return melpLndsctYear;
     }
-    
+
     public void setMELP_LNDSCT_YEAR(String melpLndsctYear) {
         this.melpLndsctYear = melpLndsctYear;
-    }    
-    
+    }
+
     public String getMELP_LNMATTED_DESC() {
         return melpLnmattedDesc;
     }
-    
+
     public void setMELP_LNMATTED_DESC(String melpLnmattedDesc) {
         this.melpLnmattedDesc = melpLnmattedDesc;
     }
@@ -710,7 +710,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNEXTNODST_DESC() {
         return LnextnodstDesc;
     }
-    
+
     public void setMELP_LNEXTNODST_DESC(String LnextnodstDesc) {
         this.LnextnodstDesc = LnextnodstDesc;
     }
@@ -718,7 +718,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNINTRMETS_DESC() {
         return LnintrmetsDesc;
     }
-    
+
     public void setMELP_LNINTRMETS_DESC(String LnintrmetsDesc) {
         this.LnintrmetsDesc = LnintrmetsDesc;
     }
@@ -726,7 +726,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNSIZE() {
         return melpLnsize;
     }
-    
+
     public void setMELP_LNSIZE(String melpLnsize) {
         this.melpLnsize = melpLnsize;
     }
@@ -734,7 +734,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNSIZE_UNK_DESC() {
         return melpLnsizeUnkDesc;
     }
-    
+
     public void setMELP_LNSIZE_UNK_DESC(String melpLnsizeUnkDesc) {
         this.melpLnsizeUnkDesc = melpLnsizeUnkDesc;
     }
@@ -742,7 +742,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNSLNLARG_SIZE() {
         return melpLnslnlargSize;
     }
-    
+
     public void setMELP_LNSLNLARG_SIZE(String melpLnslnlargSize) {
         this.melpLnslnlargSize = melpLnslnlargSize;
     }
@@ -750,15 +750,15 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNIHC_DESC() {
         return melpLnihcDesc;
     }
-    
+
     public void setMELP_LNIHC_DESC(String melpLnihcDesc) {
         this.melpLnihcDesc = melpLnihcDesc;
-    }   
-    
+    }
+
     public String getMELP_LNIMM_S100_DESC() {
         return melpLnimmS100Desc;
     }
-    
+
     public void setMELP_LNIMM_S100_DESC(String melpLnimmS100Desc) {
         this.melpLnimmS100Desc = melpLnimmS100Desc;
     }
@@ -766,7 +766,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNIMMHMB45_DESC() {
         return melpLnimmhmb45Desc;
     }
-    
+
     public void setMELP_LNIMMHMB45_DESC(String melpLnimmhmb45Desc) {
         this.melpLnimmhmb45Desc = melpLnimmhmb45Desc;
     }
@@ -774,55 +774,55 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELP_LNIMM_MELA_DESC() {
         return melpLnimmMelaDesc;
     }
-    
+
     public void setMELP_LNIMM_MELA_DESC(String melpLnimmMelaDesc) {
         this.melpLnimmMelaDesc = melpLnimmMelaDesc;
-    }    
-    
+    }
+
     public String getMELI_PTID() {
         return meliPtid;
     }
-    
+
     public void setMELI_PTID(String meliPtid) {
         this.meliPtid = meliPtid;
-    }  
+    }
 
     public String getMELI_DMP_PATIENT_ID() {
         return meliDmpPatientId;
     }
-    
+
     public void setMELI_DMP_PATIENT_ID(String meliDmpPatientId) {
         this.meliDmpPatientId = meliDmpPatientId;
-    }  
+    }
 
     public String getMELI_DMP_SAMPLE_ID() {
         return meliDmpSampleId;
     }
-    
+
     public void setMELI_DMP_SAMPLE_ID(String meliDmpSampleId) {
         this.meliDmpSampleId = meliDmpSampleId;
-    }   
-    
+    }
+
     public String getMELI_REPORT_YEAR() {
         return meliReportYear;
     }
-    
+
     public void setMELI_REPORT_YEAR(String meliReportYear) {
         this.meliReportYear = meliReportYear;
-    }    
+    }
 
     public String getMELI_PROCEDURE_YEAR() {
         return meliProcedureYear;
     }
-    
+
     public void setMELI_PROCEDURE_YEAR(String meliProcedureYear) {
         this.meliProcedureYear = meliProcedureYear;
-    }        
-    
+    }
+
     public String getMELI_TUMOR_TYPE() {
         return meliTumorType;
     }
-    
+
     public void setMELI_TUMOR_TYPE(String meliTumorType) {
         this.meliTumorType = meliTumorType;
     }
@@ -830,7 +830,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELI_PRIMARY_SITE() {
         return meliPrimarySite;
     }
-    
+
     public void setMELI_PRIMARY_SITE(String meliPrimarySite) {
         this.meliPrimarySite = meliPrimarySite;
     }
@@ -838,31 +838,31 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELI_MET_SITE() {
         return meliMetSite;
     }
-    
+
     public void setMELI_MET_SITE(String meliMetSite) {
         this.meliMetSite = meliMetSite;
     }
-    
+
     public String getMELMS_PTID() {
         return melmsPtid;
     }
-    
+
     public void setMELMS_PTID(String melmsPtid) {
         this.melmsPtid = melmsPtid;
     }
-    
+
     public String getMELMS_SITE_TYPE_DESC() {
         return melmsSiteTypeDesc;
     }
-    
+
     public void setMELMS_SITE_TYPE_DESC(String melmsSiteTypeDesc) {
         this.melmsSiteTypeDesc = melmsSiteTypeDesc;
     }
-    
+
     public String getMELMS_SITE_DESC() {
         return melmsSiteDesc;
     }
-    
+
     public void setMELMS_SITE_DESC(String melmsSiteDesc) {
         this.melmsSiteDesc = melmsSiteDesc;
     }
@@ -870,11 +870,11 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
     public String getMELMS_SITE_YEAR() {
         return melmsSiteYear;
     }
-    
+
     public void setMELMS_SITE_YEAR(String melmsSiteYear) {
         this.melmsSiteYear = melmsSiteYear;
-    }    
-    
+    }
+
     @Override
     public String toString() {
         return ToStringBuilder.reflectionToString(this);
@@ -919,13 +919,13 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
         fieldNames.add("MELP_REGRESSION_DESC");
         fieldNames.add("MELP_MARGINS_DESC");
         fieldNames.add("MELP_MITIDX_UNK_DESC");
-        fieldNames.add("MELP_HIST_TYPE_DESC");        
+        fieldNames.add("MELP_HIST_TYPE_DESC");
         fieldNames.add("MELP_SATELLITES_DESC");
         fieldNames.add("MELP_EXT_SLIDES_DESC");
         fieldNames.add("MELP_LNORG_DX_DESC");
         fieldNames.add("MELP_LNCLIN_STS_DESC");
         fieldNames.add("MELP_LNSENTINBX_DESC");
-        fieldNames.add("MELP_LNSENTINBX_YEAR"); 
+        fieldNames.add("MELP_LNSENTINBX_YEAR");
         fieldNames.add("MELP_LNPROLYSCT_DESC");
         fieldNames.add("MELP_LNPROSUCC_DESC");
         fieldNames.add("MELP_LNDSCT_CMP_DESC");
@@ -951,7 +951,7 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
 
         return fieldNames;
     }
-    
+
     public List<String> getAllVariables() {
         List<String> fieldNames = getFieldNames();
         fieldNames.add("MELSPC_PTID");
@@ -959,16 +959,16 @@ public class Skcm_mskcc_2015_chantClinicalRecord {
         fieldNames.add("MELG_PTID");
         fieldNames.add("MELI_PTID");
         fieldNames.add("MELMS_PTID");
-        
+
         return fieldNames;
     }
-    
+
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
     }
 
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
-    }    
-    
+    }
+
 }

@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2018 - 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2018, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,18 +32,16 @@
 
 package org.mskcc.cmo.ks.ddp;
 
-import org.mskcc.cmo.ks.ddp.pipeline.BatchConfiguration;
-
 import com.google.common.base.Strings;
 import java.io.File;
 import java.util.*;
 import org.apache.commons.cli.*;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.mskcc.cmo.ks.ddp.pipeline.BatchConfiguration;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
@@ -60,11 +58,11 @@ public class DDPPipeline {
         options.addOption("h", "help", false, "Shows this help document and quits.")
                 .addOption("f", "fetch_data", true, "List of comma delimited additional data to fetch [diagnosis,ageAtSeqDate,radiation,chemotherapy,surgery,survival] (demographics is always included)") // TODO do not hard code this
                 .addOption("o", "output_directory", true, "Output directory")
-                .addOption("c", "cohort_name", true, "Cohort name [" + StringUtils.join(ddpCohortMap.keySet(), " | ") + "]")
+                .addOption("c", "cohort_name", true, "Cohort name [" + String.join(" | ", ddpCohortMap.keySet()) + "]")
                 .addOption("p", "patient_subset_file", true, "File containing patient ID's to subset by")
                 .addOption("s", "seq_date_file", true, "File containing patient sequence dates for OS_MONTHS")
                 .addOption("e", "excluded_patients_file", true, "File containg patient ID's to exclude")
-                .addOption("r", "current_demographics_rec_count", true, "Count of records in current demographics file. Used to sanity check num of records in latest demographics data fetch.")            
+                .addOption("r", "current_demographics_rec_count", true, "Count of records in current demographics file. Used to sanity check num of records in latest demographics data fetch.")
                 .addOption("t", "test", false, "Run pipeline in test mode");
         return options;
     }
@@ -216,7 +214,7 @@ public class DDPPipeline {
             System.out.println("No such directory: " + outputDirectory);
             help(options, 2);
         }
-        launchJob(ctx, args, cohortName, subsetFilename, seqDateFilename, excludedPatientsFilename, outputDirectory, currentDemographicsRecCount, 
+        launchJob(ctx, args, cohortName, subsetFilename, seqDateFilename, excludedPatientsFilename, outputDirectory, currentDemographicsRecCount,
             commandLine.hasOption("t"), includeDiagnosis, includeAgeAtSeqDate, includeRadiation, includeChemotherapy, includeSurgery, includeSurvival);
     }
 }

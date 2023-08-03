@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -36,7 +36,6 @@ import org.cbioportal.cmo.pipelines.cvr.*;
 
 import java.io.*;
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -63,7 +62,7 @@ public class CVRMutationDataWriter implements ItemStreamWriter<String> {
 
     @Autowired
     public CVRUtilities cvrUtilities;
-    
+
     @Autowired
     private CvrSampleListUtil cvrSampleListUtil;
 
@@ -82,15 +81,15 @@ public class CVRMutationDataWriter implements ItemStreamWriter<String> {
                 if  (commentLines != null && !commentLines.isEmpty()) {
                     for (String comment : commentLines) {
                         if (comment.startsWith("#sequenced_samples")) {
-                            comment = "#sequenced_samples: " + StringUtils.join(cvrSampleListUtil.getPortalSamples(), " ") + "\n";
+                            comment = "#sequenced_samples: " + String.join(" ", cvrSampleListUtil.getPortalSamples()) + "\n";
                         }
                         writer.write(comment);
                     }
                 } else {
-                    String comment = "#sequenced_samples: " + StringUtils.join(cvrSampleListUtil.getPortalSamples(), " ") + "\n";
+                    String comment = "#sequenced_samples: " + String.join(" ", cvrSampleListUtil.getPortalSamples()) + "\n";
                     writer.write(comment);
                 }
-                writer.write(StringUtils.join(header , "\t"));
+                writer.write(String.join("\t", header));
             }
         });
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));

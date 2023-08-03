@@ -188,7 +188,7 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         // annotate with GenomeNexusImpl annotator from genome nexus annotation pipeline
         // records will be partitioned inside annotator client
         // records which do not get a response back will automatically be defaulted to an AnnotatedRecord(record)
-        List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate);
+        List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE);
         for (AnnotatedRecord ar : annotatedRecords) {
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             mutationRecords.add(ar);

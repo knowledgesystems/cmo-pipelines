@@ -189,7 +189,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
         File mskimpactSeqDateFile = new File(stagingDirectory, CVRUtilities.SEQ_DATE_CLINICAL_FILE);
         if (!mskimpactSeqDateFile.exists()) {
             log.error("File does not exist - skipping data loading from seq date file: " + mskimpactSeqDateFile.getName());
-			return;
+            return;
         }
         log.info("Loading seq date data from: " + mskimpactSeqDateFile.getName());
         DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);

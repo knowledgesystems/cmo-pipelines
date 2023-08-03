@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -29,11 +29,13 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.darwin.pipeline.model;
 
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.cbioportal.cmo.pipelines.common.util.ClinicalValueUtil;
+
 /**
  *
  * @author jake
@@ -48,12 +50,12 @@ public class MskimpactBrainSpineClinical {
     private String OS_MONTHS;
     private String DFS_STATUS;
     private String DFS_MONTHS;
-    private String HISTOLOGY; 
+    private String HISTOLOGY;
     private String WHO_GRADE;
     private String MGMT_STATUS;
-    
+
     public MskimpactBrainSpineClinical(){}
-    
+
     public MskimpactBrainSpineClinical(
             String DMP_PATIENT_ID_BRAINSPINECLIN,
             String DMP_SAMPLE_ID_BRAINSPINECLIN,
@@ -66,28 +68,26 @@ public class MskimpactBrainSpineClinical {
             String HISTOLOGY,
             String WHO_GRADE,
             String MGMT_STATUS){
-        
-        this.DMP_PATIENT_ID_BRAINSPINECLIN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_BRAINSPINECLIN) ? DMP_PATIENT_ID_BRAINSPINECLIN : "NA";
-        this.DMP_SAMPLE_ID_BRAINSPINECLIN =  StringUtils.isNotEmpty(DMP_SAMPLE_ID_BRAINSPINECLIN) ? DMP_SAMPLE_ID_BRAINSPINECLIN : "NA";
-        this.AGE =  StringUtils.isNotEmpty(AGE) ? AGE : "NA";
-        this.SEX =  StringUtils.isNotEmpty(SEX) ? SEX : "NA";
-        this.OS_STATUS =  StringUtils.isNotEmpty(OS_STATUS) ? OS_STATUS : "NA";
-        this.OS_MONTHS =  StringUtils.isNotEmpty(OS_MONTHS) ? OS_MONTHS : "NA";
-        this.DFS_STATUS =  StringUtils.isNotEmpty(DFS_STATUS) ? DFS_STATUS : "NA";
-        this.DFS_MONTHS =  StringUtils.isNotEmpty(DFS_MONTHS) ? DFS_MONTHS : "NA";
-        this.HISTOLOGY =  StringUtils.isNotEmpty(HISTOLOGY) ? HISTOLOGY : "NA";
-        this.WHO_GRADE =  StringUtils.isNotEmpty(WHO_GRADE) ? WHO_GRADE : "NA";
-        this.MGMT_STATUS =  StringUtils.isNotEmpty(MGMT_STATUS) ? MGMT_STATUS : "NA";
+
+        this.DMP_PATIENT_ID_BRAINSPINECLIN = ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_BRAINSPINECLIN);
+        this.DMP_SAMPLE_ID_BRAINSPINECLIN = ClinicalValueUtil.defaultWithNA(DMP_SAMPLE_ID_BRAINSPINECLIN);
+        this.AGE = ClinicalValueUtil.defaultWithNA(AGE);
+        this.SEX = ClinicalValueUtil.defaultWithNA(SEX);
+        this.OS_STATUS = ClinicalValueUtil.defaultWithNA(OS_STATUS);
+        this.OS_MONTHS = ClinicalValueUtil.defaultWithNA(OS_MONTHS);
+        this.DFS_STATUS = ClinicalValueUtil.defaultWithNA(DFS_STATUS);
+        this.DFS_MONTHS = ClinicalValueUtil.defaultWithNA(DFS_MONTHS);
+        this.HISTOLOGY = ClinicalValueUtil.defaultWithNA(HISTOLOGY);
+        this.WHO_GRADE = ClinicalValueUtil.defaultWithNA(WHO_GRADE);
+        this.MGMT_STATUS = ClinicalValueUtil.defaultWithNA(MGMT_STATUS);
     }
-    
-   
 
     public String getDMP_PATIENT_ID_BRAINSPINECLIN() {
         return DMP_PATIENT_ID_BRAINSPINECLIN;
     }
 
     public void setDMP_PATIENT_ID_BRAINSPINECLIN(String DMP_PATIENT_ID_BRAINSPINECLIN) {
-        this.DMP_PATIENT_ID_BRAINSPINECLIN =  StringUtils.isNotEmpty(DMP_PATIENT_ID_BRAINSPINECLIN) ? DMP_PATIENT_ID_BRAINSPINECLIN : "NA";
+        this.DMP_PATIENT_ID_BRAINSPINECLIN = ClinicalValueUtil.defaultWithNA(DMP_PATIENT_ID_BRAINSPINECLIN);
     }
 
     public String getDMP_SAMPLE_ID_BRAINSPINECLIN() {
@@ -95,7 +95,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setDMP_SAMPLE_ID_BRAINSPINECLIN(String DMP_SAMPLE_ID_BRAINSPINECLIN) {
-        this.DMP_SAMPLE_ID_BRAINSPINECLIN =  StringUtils.isNotEmpty(DMP_SAMPLE_ID_BRAINSPINECLIN) ? DMP_SAMPLE_ID_BRAINSPINECLIN : "NA";
+        this.DMP_SAMPLE_ID_BRAINSPINECLIN = ClinicalValueUtil.defaultWithNA(DMP_SAMPLE_ID_BRAINSPINECLIN);
     }
 
     public String getAGE() {
@@ -103,7 +103,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setAGE(String AGE) {
-        this.AGE =  StringUtils.isNotEmpty(AGE) ? AGE : "NA";
+        this.AGE = ClinicalValueUtil.defaultWithNA(AGE);
     }
 
     public String getSEX() {
@@ -111,7 +111,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setSEX(String SEX) {
-        this.SEX =  StringUtils.isNotEmpty(SEX) ? SEX : "NA";
+        this.SEX = ClinicalValueUtil.defaultWithNA(SEX);
     }
 
     public String getOS_STATUS() {
@@ -119,7 +119,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setOS_STATUS(String OS_STATUS) {
-        this.OS_STATUS =  StringUtils.isNotEmpty(OS_STATUS) ? OS_STATUS : "NA";
+        this.OS_STATUS = ClinicalValueUtil.defaultWithNA(OS_STATUS);
     }
 
     public String getOS_MONTHS() {
@@ -127,7 +127,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setOS_MONTHS(String OS_MONTHS) {
-        this.OS_MONTHS =  StringUtils.isNotEmpty(OS_MONTHS) ? OS_MONTHS : "NA";
+        this.OS_MONTHS = ClinicalValueUtil.defaultWithNA(OS_MONTHS);
     }
 
     public String getDFS_STATUS() {
@@ -135,7 +135,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setDFS_STATUS(String DFS_STATUS) {
-        this.DFS_STATUS =  StringUtils.isNotEmpty(DFS_STATUS) ? DFS_STATUS : "NA";
+        this.DFS_STATUS = ClinicalValueUtil.defaultWithNA(DFS_STATUS);
     }
 
     public String getDFS_MONTHS() {
@@ -143,7 +143,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setDFS_MONTHS(String DFS_MONTHS) {
-        this.DFS_MONTHS =  StringUtils.isNotEmpty(DFS_MONTHS) ? DFS_MONTHS : "NA";
+        this.DFS_MONTHS = ClinicalValueUtil.defaultWithNA(DFS_MONTHS);
     }
 
     public String getHISTOLOGY() {
@@ -151,7 +151,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setHISTOLOGY(String HISTOLOGY) {
-        this.HISTOLOGY =  StringUtils.isNotEmpty(HISTOLOGY) ? HISTOLOGY : "NA";
+        this.HISTOLOGY = ClinicalValueUtil.defaultWithNA(HISTOLOGY);
     }
 
     public String getWHO_GRADE() {
@@ -159,7 +159,7 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setWHO_GRADE(String WHO_GRADE) {
-        this.WHO_GRADE =  StringUtils.isNotEmpty(WHO_GRADE) ? WHO_GRADE : "NA";
+        this.WHO_GRADE = ClinicalValueUtil.defaultWithNA(WHO_GRADE);
     }
 
     public String getMGMT_STATUS() {
@@ -167,14 +167,14 @@ public class MskimpactBrainSpineClinical {
     }
 
     public void setMGMT_STATUS(String MGMT_STATUS) {
-        this.MGMT_STATUS =  StringUtils.isNotEmpty(MGMT_STATUS) ? MGMT_STATUS : "NA";
+        this.MGMT_STATUS = ClinicalValueUtil.defaultWithNA(MGMT_STATUS);
     }
-    
+
     @Override
     public String toString(){
         return ToStringBuilder.reflectionToString(this);
     }
-    
+
     public List<String> getFieldNames(){
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add("DMP_SAMPLE_ID_BRAINSPINECLIN");
@@ -188,9 +188,10 @@ public class MskimpactBrainSpineClinical {
         fieldNames.add("WHO_GRADE");
         fieldNames.add("MGMT_STATUS");
         fieldNames.add("DMP_PATIENT_ID_BRAINSPINECLIN");
-        
+
         return fieldNames;
     }
+
     public List<String> getHeaders(){
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add("SAMPLE_ID");
@@ -204,9 +205,8 @@ public class MskimpactBrainSpineClinical {
         fieldNames.add("WHO_GRADE");
         fieldNames.add("MGMT_STATUS");
         fieldNames.add("PATIENT_ID");
-        
+
         return fieldNames;
     }
-
 
 }

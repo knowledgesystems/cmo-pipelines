@@ -32,16 +32,14 @@
 
 package org.mskcc.cmo.ks.darwin;
 
+import java.util.ArrayList;
 import java.util.Set;
-
 import org.junit.Assert;
-import org.junit.Test;
 import org.junit.runner.RunWith;
-
+import org.junit.Test;
 import org.mskcc.cmo.ks.darwin.pipeline.model.MskimpactBrainSpineTimeline;
+import org.mskcc.cmo.ks.darwin.pipeline.mskimpactbrainspinetimeline.MskimpactTimelineBrainSpineReader;
 import org.mskcc.cmo.ks.darwin.pipeline.util.DarwinSampleListUtil;
-
-import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -56,16 +54,15 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 public class MskimpactTimelineBrainSpineReaderTest {
 
     @Autowired
-    private ItemStreamReader<MskimpactBrainSpineTimeline> mskimpactTimelineBrainSpineReader;
+    private MskimpactTimelineBrainSpineReader mskimpactTimelineBrainSpineReader;
 
     @Autowired
     private DarwinSampleListUtil darwinSampleListUtil;
 
     @Test
     public void testReadFiltersNAStartDate() {
-        mskimpactTimelineBrainSpineReader.open(new ExecutionContext());
-        try { // to make sure we close mskimpactTimelineBrainSpineReader
-
+        mskimpactTimelineBrainSpineReader.openForTestingAndSetDarwinTimelineResults(makeMockMskimpactBrainSpineTimelineResults());
+        try {
             // confirm DarwinSampleListUtil.filteredMskimpactBrainSpineTimelineSet is empty before we start reading
             Set<MskimpactBrainSpineTimeline> filteredMskimpactBrainSpineTimelineSet = darwinSampleListUtil.getFilteredMskimpactBrainSpineTimelineSet();
             Assert.assertTrue("filteredMskimpactBrainSpineTimelineSet should be empty but contains " +
@@ -116,6 +113,28 @@ public class MskimpactTimelineBrainSpineReaderTest {
         } finally {
             mskimpactTimelineBrainSpineReader.close();
         }
+    }
+
+    private ArrayList<MskimpactBrainSpineTimeline> makeMockMskimpactBrainSpineTimelineResults() {
+        ArrayList<MskimpactBrainSpineTimeline> mskimpactBrainSpineTimelineResults = new ArrayList<MskimpactBrainSpineTimeline>();
+
+        MskimpactBrainSpineTimeline mskimpactBrainSpineTimelineNAStartDate = new MskimpactBrainSpineTimeline();
+        mskimpactBrainSpineTimelineNAStartDate.setDMP_PATIENT_ID_ALL_BRAINSPINETMLN("P-0000001");
+        mskimpactBrainSpineTimelineNAStartDate.setSTART_DATE("NA");
+
+        MskimpactBrainSpineTimeline mskimpactBrainSpineTimelineNullStartDate = new MskimpactBrainSpineTimeline();
+        mskimpactBrainSpineTimelineNullStartDate.setDMP_PATIENT_ID_ALL_BRAINSPINETMLN("P-0000002");
+        mskimpactBrainSpineTimelineNullStartDate.setSTART_DATE(null);
+
+        MskimpactBrainSpineTimeline mskimpactBrainSpineTimelineValidStartDate = new MskimpactBrainSpineTimeline();
+        mskimpactBrainSpineTimelineValidStartDate.setDMP_PATIENT_ID_ALL_BRAINSPINETMLN("P-0000003");
+        mskimpactBrainSpineTimelineValidStartDate.setSTART_DATE("757");
+
+        mskimpactBrainSpineTimelineResults.add(mskimpactBrainSpineTimelineNAStartDate); // should be filtered by MskimpactTimelineBrainSpineReader.read()
+        mskimpactBrainSpineTimelineResults.add(mskimpactBrainSpineTimelineNullStartDate); // should be filtered by MskimpactTimelineBrainSpineReader.read()
+        mskimpactBrainSpineTimelineResults.add(mskimpactBrainSpineTimelineValidStartDate); // should not be filtered by MskimpactTimelineBrainSpineReader.read()
+
+        return mskimpactBrainSpineTimelineResults;
     }
 
 }

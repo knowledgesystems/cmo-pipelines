@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2019 - 2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2019, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -29,17 +29,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.ddp.pipeline;
-
-import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.scope.context.ChunkContext;
-import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -47,6 +38,13 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import org.apache.log4j.Logger;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  *
@@ -69,7 +67,7 @@ public class DDPSeqDateTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
-        if (!StringUtils.isEmpty(seqDateFilename)) {
+        if (seqDateFilename != null && !seqDateFilename.isEmpty()) {
             LOG.debug("Seq date file is: " + seqDateFilename);
             BufferedReader reader = new BufferedReader(new FileReader(seqDateFilename));
             // pass reader as parameter so we can mock it in tests
@@ -98,7 +96,7 @@ public class DDPSeqDateTasklet implements Tasklet {
             DDPUtils.setSampleSeqDateMap(sampleSeqDateMap); // empty map
             DDPUtils.setPatientFirstSeqDateMap(patientFirstSeqDateMap); // empty map
             return;
-        } 
+        }
         // e.g. Wed, 16 Mar 2016 18:09:02 GMT
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
         String line;
@@ -108,7 +106,7 @@ public class DDPSeqDateTasklet implements Tasklet {
             String dmpSampleId = record[dmpSampleIdColumnIndex];
             String dmpPatientId = record[dmpPatientIdColumnIndex];
             String seqDateString = record[seqDateColumnIndex];
-            if (!StringUtils.isEmpty(seqDateString)) {
+            if (seqDateString != null && !seqDateString.isEmpty()) {
                 try {
                     Date parsedRecordSeqDate = simpleDateFormat.parse(seqDateString);
                     sampleSeqDateMap.put(dmpSampleId, parsedRecordSeqDate);
@@ -127,7 +125,7 @@ public class DDPSeqDateTasklet implements Tasklet {
         if (warnings.size() > 0) {
             LOG.warn(warnings.size() + " sample(s) found with invalid records.  The first " + MAX_ERRORS_TO_SHOW + " are listed below:");
             for (int w = 0; w < warnings.size() && w < MAX_ERRORS_TO_SHOW; w++) {
-                LOG.warn(warnings.get(w)); 
+                LOG.warn(warnings.get(w));
             }
         }
         DDPUtils.setSampleSeqDateMap(sampleSeqDateMap);

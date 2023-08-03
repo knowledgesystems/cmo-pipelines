@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,15 +32,13 @@
 
 package org.cbioportal.cmo.pipelines.cvr.cna;
 
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
-import org.cbioportal.cmo.pipelines.cvr.*;
-import org.cbioportal.cmo.pipelines.cvr.model.*;
-
 import java.io.*;
 import java.util.*;
 import org.apache.commons.collections.map.MultiKeyMap;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.cbioportal.cmo.pipelines.cvr.*;
+import org.cbioportal.cmo.pipelines.cvr.model.*;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
 import org.springframework.batch.item.*;
 import org.springframework.beans.factory.annotation.*;
 
@@ -154,7 +152,7 @@ public class CVRCnaDataReader implements ItemStreamReader<CompositeCnaRecord>{
     }
 
     private void makeRecordsList() {
-        cnaRecords.add(new CompositeCnaRecord("",cvrUtilities.CNA_HEADER_HUGO_SYMBOL + "\t" + StringUtils.join(samples,"\t")));
+        cnaRecords.add(new CompositeCnaRecord("",cvrUtilities.CNA_HEADER_HUGO_SYMBOL + "\t" + String.join("\t", samples)));
         for (String gene : genes) {
             String line = gene;
             for (String sample : samples) {
@@ -170,7 +168,7 @@ public class CVRCnaDataReader implements ItemStreamReader<CompositeCnaRecord>{
     }
 
     private void makeNewRecordsList() {
-        cnaRecords.add(new CompositeCnaRecord(cvrUtilities.CNA_HEADER_HUGO_SYMBOL + "\t" + StringUtils.join(newSamples,"\t"), ""));
+        cnaRecords.add(new CompositeCnaRecord(cvrUtilities.CNA_HEADER_HUGO_SYMBOL + "\t" + String.join("\t", newSamples), ""));
         for (String gene : genes) {
             String line = gene;
             for (String sample : newSamples) {

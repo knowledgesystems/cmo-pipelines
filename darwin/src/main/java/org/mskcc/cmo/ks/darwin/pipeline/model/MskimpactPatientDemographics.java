@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -29,11 +29,12 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.darwin.pipeline.model;
 
-import org.apache.commons.lang.StringUtils;
 import java.util.*;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.cbioportal.cmo.pipelines.common.util.ClinicalValueUtil;
 
 /**
  *
@@ -76,12 +77,12 @@ public class MskimpactPatientDemographics {
     public MskimpactPatientDemographics() {}
 
     public MskimpactPatientDemographics(String DMP_ID_DEMO, String PT_NAACCR_SEX_CODE, String PT_NAACCR_RACE_CODE_PRIMARY, String PT_NAACCR_ETHNICITY_CODE, String RELIGION, String PT_VITAL_STATUS, Integer PT_BIRTH_YEAR, Integer PT_DEATH_YEAR, Integer TM_DX_YEAR, Integer AGE_AT_LAST_KNOWN_ALIVE_IN_DAYS, Integer AGE_AT_TM_DX_DATE_IN_DAYS, Integer AGE_AT_DATE_OF_DEATH_IN_DAYS, String PED_IND, String SAMPLE_ID_PATH_DMP, Integer LAST_CONTACT_YEAR, Integer AGE_AT_LAST_CONTACT_YEAR_IN_DAYS){
-        this.DMP_ID_DEMO =  StringUtils.isNotEmpty(DMP_ID_DEMO) ? DMP_ID_DEMO : "NA";
-        this.PT_NAACCR_SEX_CODE =  StringUtils.isNotEmpty(PT_NAACCR_SEX_CODE) ? PT_NAACCR_SEX_CODE : "-1";
-        this.PT_NAACCR_RACE_CODE_PRIMARY =  StringUtils.isNotEmpty(PT_NAACCR_RACE_CODE_PRIMARY) ? PT_NAACCR_RACE_CODE_PRIMARY : "-1";
-        this.PT_NAACCR_ETHNICITY_CODE =  StringUtils.isNotEmpty(PT_NAACCR_ETHNICITY_CODE) ? PT_NAACCR_ETHNICITY_CODE : "-1";
-        this.RELIGION =  StringUtils.isNotEmpty(RELIGION) ? RELIGION : "NA";
-        this.PT_VITAL_STATUS =  StringUtils.isNotEmpty(PT_VITAL_STATUS) ? PT_VITAL_STATUS : "NA";
+        this.DMP_ID_DEMO = ClinicalValueUtil.defaultWithNA(DMP_ID_DEMO);
+        this.PT_NAACCR_SEX_CODE = ClinicalValueUtil.defaultWithNegativeOne(PT_NAACCR_SEX_CODE);
+        this.PT_NAACCR_RACE_CODE_PRIMARY = ClinicalValueUtil.defaultWithNegativeOne(PT_NAACCR_RACE_CODE_PRIMARY);
+        this.PT_NAACCR_ETHNICITY_CODE = ClinicalValueUtil.defaultWithNegativeOne(PT_NAACCR_ETHNICITY_CODE);
+        this.RELIGION = ClinicalValueUtil.defaultWithNA(RELIGION);
+        this.PT_VITAL_STATUS = ClinicalValueUtil.defaultWithNA(PT_VITAL_STATUS);
         this.TM_DX_YEAR = TM_DX_YEAR != null ? TM_DX_YEAR : -1;
         this.PT_BIRTH_YEAR = PT_BIRTH_YEAR != null ? PT_BIRTH_YEAR : -1;
         this.PT_DEATH_YEAR = PT_DEATH_YEAR != null ? PT_DEATH_YEAR : -1;
@@ -96,7 +97,7 @@ public class MskimpactPatientDemographics {
     }
 
     public MskimpactPatientDemographics(String DMP_ID_DEMO, Integer PT_BIRTH_YEAR, Integer PT_DEATH_YEAR) {
-        this.DMP_ID_DEMO = StringUtils.isNotEmpty(DMP_ID_DEMO) ? DMP_ID_DEMO : "NA";
+        this.DMP_ID_DEMO = ClinicalValueUtil.defaultWithNA(DMP_ID_DEMO);
         this.PT_BIRTH_YEAR = PT_BIRTH_YEAR != null ? PT_BIRTH_YEAR : -1;
         this.PT_DEATH_YEAR = PT_DEATH_YEAR != null ? PT_DEATH_YEAR : -1;
     }
@@ -130,7 +131,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setPT_ID_DEMO(String PT_ID_DEMO) {
-        this.PT_ID_DEMO =  StringUtils.isNotEmpty(PT_ID_DEMO) ? PT_ID_DEMO : "NA";
+        this.PT_ID_DEMO = ClinicalValueUtil.defaultWithNA(PT_ID_DEMO);
     }
 
     public String getDMP_ID_DEMO() {
@@ -138,7 +139,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setDMP_ID_DEMO(String DMP_ID_DEMO) {
-        this.DMP_ID_DEMO =  StringUtils.isNotEmpty(DMP_ID_DEMO) ? DMP_ID_DEMO : "NA";
+        this.DMP_ID_DEMO = ClinicalValueUtil.defaultWithNA(DMP_ID_DEMO);
     }
 
     public String getGENDER() {
@@ -146,7 +147,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setGENDER(String GENDER) {
-        this.GENDER =  StringUtils.isNotEmpty(GENDER) ? GENDER : "NA";
+        this.GENDER = ClinicalValueUtil.defaultWithNA(GENDER);
     }
 
     public String getRACE() {
@@ -154,7 +155,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setRACE(String RACE) {
-        this.RACE =  StringUtils.isNotEmpty(RACE) ? RACE : "NA";
+        this.RACE = ClinicalValueUtil.defaultWithNA(RACE);
     }
 
     public String getRELIGION() {
@@ -162,7 +163,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setRELIGION(String RELIGION) {
-        this.RELIGION =  StringUtils.isNotEmpty(RELIGION) ? RELIGION : "NA";
+        this.RELIGION = ClinicalValueUtil.defaultWithNA(RELIGION);
     }
 
     public Integer getAGE_AT_DATE_OF_DEATH_IN_DAYS() {
@@ -194,7 +195,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setDEATH_SOURCE_DESCRIPTION(String DEATH_SOURCE_DESCRIPTION) {
-        this.DEATH_SOURCE_DESCRIPTION =  StringUtils.isNotEmpty(DEATH_SOURCE_DESCRIPTION) ? DEATH_SOURCE_DESCRIPTION : "NA";
+        this.DEATH_SOURCE_DESCRIPTION = ClinicalValueUtil.defaultWithNA(DEATH_SOURCE_DESCRIPTION);
     }
 
     public String getPT_COUNTRY() {
@@ -202,7 +203,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setPT_COUNTRY(String PT_COUNTRY) {
-        this.PT_COUNTRY =  StringUtils.isNotEmpty(PT_COUNTRY) ? PT_COUNTRY : "NA";
+        this.PT_COUNTRY = ClinicalValueUtil.defaultWithNA(PT_COUNTRY);
     }
 
     public String getPT_STATE() {
@@ -210,7 +211,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setPT_STATE(String PT_STATE) {
-        this.PT_STATE =  StringUtils.isNotEmpty(PT_STATE) ? PT_STATE : "NA";
+        this.PT_STATE = ClinicalValueUtil.defaultWithNA(PT_STATE);
     }
 
     public String getPT_ZIP3_CD() {
@@ -218,7 +219,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setPT_ZIP3_CD(String PT_ZIP3_CD) {
-        this.PT_ZIP3_CD =  StringUtils.isNotEmpty(PT_ZIP3_CD) ? PT_ZIP3_CD : "NA";
+        this.PT_ZIP3_CD = ClinicalValueUtil.defaultWithNA(PT_ZIP3_CD);
     }
 
     public Integer getPT_BIRTH_YEAR() {
@@ -234,7 +235,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setPT_SEX_DESC(String PT_SEX_DESC) {
-        this.PT_SEX_DESC =  StringUtils.isNotEmpty(PT_SEX_DESC) ? PT_SEX_DESC : "NA";
+        this.PT_SEX_DESC = ClinicalValueUtil.defaultWithNA(PT_SEX_DESC);
     }
 
     public String getPT_VITAL_STATUS() {
@@ -242,7 +243,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setPT_VITAL_STATUS(String PT_VITAL_STATUS) {
-        this.PT_VITAL_STATUS =  StringUtils.isNotEmpty(PT_VITAL_STATUS) ? PT_VITAL_STATUS : "NA";
+        this.PT_VITAL_STATUS = ClinicalValueUtil.defaultWithNA(PT_VITAL_STATUS);
     }
 
     public String getPT_MARITAL_STS_DESC() {
@@ -250,7 +251,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setPT_MARITAL_STS_DESC(String PT_MARITAL_STS_DESC) {
-        this.PT_MARITAL_STS_DESC =  StringUtils.isNotEmpty(PT_MARITAL_STS_DESC) ? PT_MARITAL_STS_DESC : "NA";
+        this.PT_MARITAL_STS_DESC = ClinicalValueUtil.defaultWithNA(PT_MARITAL_STS_DESC);
     }
 
     public Integer getPT_DEATH_YEAR() {
@@ -266,7 +267,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setPT_MRN_CREATE_YEAR(String PT_MRN_CREATE_YEAR) {
-        this.PT_MRN_CREATE_YEAR =  StringUtils.isNotEmpty(PT_MRN_CREATE_YEAR) ? PT_MRN_CREATE_YEAR : "NA";
+        this.PT_MRN_CREATE_YEAR = ClinicalValueUtil.defaultWithNA(PT_MRN_CREATE_YEAR);
     }
 
     public String getOS_STATUS(){
@@ -274,7 +275,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setOS_STATUS(String OS_STATUS) {
-        this.OS_STATUS = StringUtils.isNotEmpty(OS_STATUS) ? OS_STATUS.trim() : "NA";
+        this.OS_STATUS = ClinicalValueUtil.defaultWithNA(OS_STATUS);
     }
 
     public String getOS_MONTHS() {
@@ -296,7 +297,7 @@ public class MskimpactPatientDemographics {
     }
 
     public void setOS_MONTHS() {
-        this.OS_MONTHS = StringUtils.isNotEmpty(OS_MONTHS) ? OS_MONTHS : "NA";
+        this.OS_MONTHS = ClinicalValueUtil.defaultWithNA(OS_MONTHS);
     }
 
     public String getDARWIN_PATIENT_AGE(){

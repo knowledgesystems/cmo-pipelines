@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2018 - 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2018, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -29,26 +29,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.ddp.pipeline;
 
 import java.io.IOException;
+import java.nio.file.*;
+import java.util.*;
+import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.ddp.pipeline.model.AgeAtSeqDateRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineChemoRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineRadiationRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineSurgeryRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
-
-import org.apache.log4j.Logger;
-import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
-
-import org.apache.commons.lang.StringUtils;
-import java.nio.file.*;
-import java.util.*;
 
 /**
  *
@@ -101,7 +99,7 @@ public class DDPSortTasklet implements Tasklet {
         // sort and overwrite timeline files if applicable
         if (includeChemotherapy) {
             String timelineChemotherapyFilePath = Paths.get(outputDirectory, timelineChemotherapyFilename).toString();
-            String timelineChemotherapyHeader = StringUtils.join(TimelineChemoRecord.getFieldNames(), "\t");
+            String timelineChemotherapyHeader = String.join("\t", TimelineChemoRecord.getFieldNames());
             LOG.info("Sorting and overwriting " + timelineChemotherapyFilePath);
             DDPUtils.sortAndWrite(timelineChemotherapyFilePath, timelineChemotherapyHeader);
         }
@@ -130,6 +128,6 @@ public class DDPSortTasklet implements Tasklet {
 
     private void sortAndOverwriteFile(Path filePath, List<String> fieldNames) throws IOException {
         LOG.info("Sorting and overwriting file:" + filePath.toString());
-        DDPUtils.sortAndWrite(filePath.toString(), StringUtils.join(fieldNames, "\t"));
+        DDPUtils.sortAndWrite(filePath.toString(), String.join("\t", fieldNames));
     }
 }
