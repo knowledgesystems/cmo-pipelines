@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2019, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,12 +32,10 @@
 
 package org.mskcc.cmo.ks.crdb.pipeline;
 
-import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXTimelineDataset;
-import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
-
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
+import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXTimelineDataset;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
@@ -86,9 +84,9 @@ public class CRDBPDXTimelineListener implements StepExecutionListener {
             Set<String> records = new HashSet<>();
             for (CRDBPDXTimelineDataset record : nullStartDateTimelinePatients) {
                 String[] recordDetails = {record.getPATIENT_ID(), record.getPDX_ID(), record.getEVENT_TYPE(), record.getEVENT_TYPE_DETAILED()};
-                records.add(StringUtils.join(recordDetails, "\t"));
+                records.add(String.join("\t", recordDetails));
             }
-            body.append(StringUtils.join(records, "\n"))
+            body.append(String.join("\n", records))
                 .append("\n");
             emailUtil.sendEmail(sender, new String[]{pdxRecipient, defaultRecipient}, pdxEmailSubject, body.toString());
         }

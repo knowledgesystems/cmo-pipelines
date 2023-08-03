@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2019, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,14 +32,12 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline;
 
-import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
-import org.mskcc.cmo.ks.ddp.pipeline.model.SuppNaaccrMappingsRecord;
-import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
-
 import com.google.common.base.Strings;
 import java.io.*;
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
+import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
+import org.mskcc.cmo.ks.ddp.pipeline.model.SuppNaaccrMappingsRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.*;
@@ -75,7 +73,7 @@ public class SuppNaaccrMappingsWriter implements ItemStreamWriter<CompositeResul
             flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
                 @Override
                 public void writeHeader(Writer writer) throws IOException {
-                    writer.write(StringUtils.join(SuppNaaccrMappingsRecord.getFieldNames(), "\t"));
+                    writer.write(String.join("\t", SuppNaaccrMappingsRecord.getFieldNames()));
                 }
             });
             flatFileItemWriter.setResource(new FileSystemResource(stagingFile));

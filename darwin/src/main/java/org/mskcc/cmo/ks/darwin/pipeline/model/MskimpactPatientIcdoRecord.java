@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -29,11 +29,13 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 package org.mskcc.cmo.ks.darwin.pipeline.model;
 
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.cbioportal.cmo.pipelines.common.util.ClinicalValueUtil;
+
 /**
  *
  * @author jake
@@ -137,91 +139,91 @@ public class MskimpactPatientIcdoRecord {
     private String REASON_NO_SURG_DESC;
     private String TM_PRIM_SURGEON;
     private String TM_PRIM_SURGEON_NAME;
-    private String TM_ATN_DR_NO; 
-    private String TM_ATN_DR_NAME; 
-    private String TM_REASON_NO_RAD; 
-    private String TM_REASON_NO_RAD_DESC; 
-    private String TM_RAD_STRT_YEAR; 
-    private String AGE_AT_TM_RAD_STRT_DATE_IN_DAYS; 
-    private String TM_RAD_END_YEAR; 
-    private String AGE_AT_TM_RAD_END_DATE_IN_DAYS; 
-    private String TM_RAD_TX_MOD; 
-    private String TM_RAD_TX_MOD_DESC; 
-    private String TM_BOOST_RAD_MOD; 
-    private String TM_BOOST_RAD_MOD_DESC; 
-    private String TM_LOC_RAD_TX; 
-    private String TM_LOC_RAD_TX_DESC; 
-    private String TM_RAD_TX_VOL; 
-    private String TM_RAD_TX_VOL_DESC; 
-    private String TM_NUM_TX_THIS_VOL; 
-    private String TM_NUM_TX_THIS_VOL_DESC; 
-    private String TM_REG_RAD_DOSE; 
-    private String TM_REG_RAD_DOSE_DESC; 
-    private String TM_BOOST_RAD_DOSE; 
-    private String TM_BOOST_RAD_DOSE_DESC; 
-    private String TM_RAD_SURG_SEQ; 
-    private String TM_RAD_SURG_SEQ_DESC; 
-    private String TM_RAD_MD; 
-    private String TM_RAD_MD_NAME; 
-    private String TM_SYST_STRT_YEAR; 
-    private String AGE_AT_TM_SYST_STRT_DATE_IN_DAYS; 
-    private String TM_OTH_STRT_YEAR; 
-    private String AGE_AT_TM_OTH_STRT_DATE_IN_DAYS; 
-    private String TM_CHEM_SUM; 
-    private String TM_CHEM_SUM_DESC; 
-    private String TM_CHEM_SUM_MSK; 
-    private String TM_CHEM_SUM_MSK_DESC; 
-    private String TM_TUMOR_SEQ; 
-    private String TM_HORM_SUM; 
-    private String TM_HORM_SUM_DESC; 
-    private String TM_HORM_SUM_MSK; 
-    private String TM_HORM_SUM_MSK_DESC; 
-    private String TM_BRM_SUM; 
-    private String TM_BRM_SUM_DESC; 
-    private String TM_BRM_SUM_MSK; 
-    private String TM_BRM_SUM_MSK_DESC; 
-    private String TM_OTH_SUM; 
-    private String TM_OTH_SUM_DESC; 
-    private String TM_OTH_SUM_MSK; 
-    private String TM_OTH_SUM_MSK_DESC; 
-    private String TM_PALLIA_PROC; 
-    private String TM_PALLIA_PROC_DESC; 
-    private String TM_PALLIA_PROC_MSK; 
-    private String TM_PALLIA_PROC_MSK_DESC; 
-    private String TM_ONCOLOGY_MD; 
-    private String TM_ONCOLOGY_MD_NAME; 
-    private String TM_PRCS_YEAR; 
-    private String AGE_AT_TM_PRCS_DATE_IN_DAYS; 
-    private String TM_PATH_TEXT; 
-    private String TM_SURG_TEXT; 
-    private String TM_OVERRIDE_COM; 
-    private String TM_CSSIZE; 
-    private String TM_CSEXT; 
-    private String TM_CSEXTEV; 
-    private String TM_CSLMND; 
-    private String TM_CSRGNEV; 
-    private String TM_CSMETDX; 
-    private String TM_CSMETEV; 
-    private String TM_TSTAGE; 
-    private String TM_TSTAGE_DESC; 
-    private String TM_NSTAGE; 
-    private String TM_NSTAGE_DESC; 
-    private String TM_MSTAGE; 
-    private String TM_MSTAGE_DESC; 
-    private String TM_TBASIS; 
-    private String TM_TBASIS_DESC; 
-    private String TM_NBASIS; 
-    private String TM_NBASIS_DESC; 
-    private String TM_MBASIS; 
-    private String TM_MBASIS_DESC; 
-    private String TM_AJCC; 
+    private String TM_ATN_DR_NO;
+    private String TM_ATN_DR_NAME;
+    private String TM_REASON_NO_RAD;
+    private String TM_REASON_NO_RAD_DESC;
+    private String TM_RAD_STRT_YEAR;
+    private String AGE_AT_TM_RAD_STRT_DATE_IN_DAYS;
+    private String TM_RAD_END_YEAR;
+    private String AGE_AT_TM_RAD_END_DATE_IN_DAYS;
+    private String TM_RAD_TX_MOD;
+    private String TM_RAD_TX_MOD_DESC;
+    private String TM_BOOST_RAD_MOD;
+    private String TM_BOOST_RAD_MOD_DESC;
+    private String TM_LOC_RAD_TX;
+    private String TM_LOC_RAD_TX_DESC;
+    private String TM_RAD_TX_VOL;
+    private String TM_RAD_TX_VOL_DESC;
+    private String TM_NUM_TX_THIS_VOL;
+    private String TM_NUM_TX_THIS_VOL_DESC;
+    private String TM_REG_RAD_DOSE;
+    private String TM_REG_RAD_DOSE_DESC;
+    private String TM_BOOST_RAD_DOSE;
+    private String TM_BOOST_RAD_DOSE_DESC;
+    private String TM_RAD_SURG_SEQ;
+    private String TM_RAD_SURG_SEQ_DESC;
+    private String TM_RAD_MD;
+    private String TM_RAD_MD_NAME;
+    private String TM_SYST_STRT_YEAR;
+    private String AGE_AT_TM_SYST_STRT_DATE_IN_DAYS;
+    private String TM_OTH_STRT_YEAR;
+    private String AGE_AT_TM_OTH_STRT_DATE_IN_DAYS;
+    private String TM_CHEM_SUM;
+    private String TM_CHEM_SUM_DESC;
+    private String TM_CHEM_SUM_MSK;
+    private String TM_CHEM_SUM_MSK_DESC;
+    private String TM_TUMOR_SEQ;
+    private String TM_HORM_SUM;
+    private String TM_HORM_SUM_DESC;
+    private String TM_HORM_SUM_MSK;
+    private String TM_HORM_SUM_MSK_DESC;
+    private String TM_BRM_SUM;
+    private String TM_BRM_SUM_DESC;
+    private String TM_BRM_SUM_MSK;
+    private String TM_BRM_SUM_MSK_DESC;
+    private String TM_OTH_SUM;
+    private String TM_OTH_SUM_DESC;
+    private String TM_OTH_SUM_MSK;
+    private String TM_OTH_SUM_MSK_DESC;
+    private String TM_PALLIA_PROC;
+    private String TM_PALLIA_PROC_DESC;
+    private String TM_PALLIA_PROC_MSK;
+    private String TM_PALLIA_PROC_MSK_DESC;
+    private String TM_ONCOLOGY_MD;
+    private String TM_ONCOLOGY_MD_NAME;
+    private String TM_PRCS_YEAR;
+    private String AGE_AT_TM_PRCS_DATE_IN_DAYS;
+    private String TM_PATH_TEXT;
+    private String TM_SURG_TEXT;
+    private String TM_OVERRIDE_COM;
+    private String TM_CSSIZE;
+    private String TM_CSEXT;
+    private String TM_CSEXTEV;
+    private String TM_CSLMND;
+    private String TM_CSRGNEV;
+    private String TM_CSMETDX;
+    private String TM_CSMETEV;
+    private String TM_TSTAGE;
+    private String TM_TSTAGE_DESC;
+    private String TM_NSTAGE;
+    private String TM_NSTAGE_DESC;
+    private String TM_MSTAGE;
+    private String TM_MSTAGE_DESC;
+    private String TM_TBASIS;
+    private String TM_TBASIS_DESC;
+    private String TM_NBASIS;
+    private String TM_NBASIS_DESC;
+    private String TM_MBASIS;
+    private String TM_MBASIS_DESC;
+    private String TM_AJCC;
     private String TM_AJCC_DESC;
     private String TM_MSK_STG;
     private Integer AGE_AT_LAST_KNOWN_ALIVE_IN_DAYS;
     private Integer AGE_AT_DATE_OF_DEATH_IN_DAYS;
-    
+
     public MskimpactPatientIcdoRecord(){}
-    
+
     public MskimpactPatientIcdoRecord(
             Integer TUMOR_YEAR,
             String PT_ID_ICDO,
@@ -402,195 +404,195 @@ public class MskimpactPatientIcdoRecord {
             String TM_AJCC_DESC,
             String TM_MSK_STG){
         this.TUMOR_YEAR = TUMOR_YEAR != null ? TUMOR_YEAR : -1;
-        this.PT_ID_ICDO =  StringUtils.isNotEmpty(PT_ID_ICDO) ? PT_ID_ICDO : "NA";
-        this.DMP_ID_ICDO =  StringUtils.isNotEmpty(DMP_ID_ICDO) ? DMP_ID_ICDO : "NA";
-        this.TM_TUMOR_SEQ_DESC =  StringUtils.isNotEmpty(TM_TUMOR_SEQ_DESC) ? TM_TUMOR_SEQ_DESC : "NA";
-        this.TM_ACC_YEAR =  StringUtils.isNotEmpty(TM_ACC_YEAR) ? TM_ACC_YEAR : "NA";
-        this.TM_FIRST_MSK_YEAR =  StringUtils.isNotEmpty(TM_FIRST_MSK_YEAR) ? TM_FIRST_MSK_YEAR : "NA";
-        this.AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS) ? AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS : "NA";
-        this.TM_CASE_STS =  StringUtils.isNotEmpty(TM_CASE_STS) ? TM_CASE_STS : "NA";
-        this.TM_CASE_STS_DESC =  StringUtils.isNotEmpty(TM_CASE_STS_DESC) ? TM_CASE_STS_DESC : "NA";
-        this.TM_CASE_EFF_YEAR =  StringUtils.isNotEmpty(TM_CASE_EFF_YEAR) ? TM_CASE_EFF_YEAR : "NA";
-        this.AGE_AT_TM_CASE_EFF_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_CASE_EFF_DATE_IN_DAYS) ? AGE_AT_TM_CASE_EFF_DATE_IN_DAYS : "NA";
-        this.TM_STATE_AT_DX =  StringUtils.isNotEmpty(TM_STATE_AT_DX) ? TM_STATE_AT_DX : "NA";
-        this.TM_SMOKING_HX =  StringUtils.isNotEmpty(TM_SMOKING_HX) ? TM_SMOKING_HX : "NA";
-        this.TM_SMOKING_HX_DESC =  StringUtils.isNotEmpty(TM_SMOKING_HX_DESC) ? TM_SMOKING_HX_DESC : "NA";
-        this.TM_OCCUPATION =  StringUtils.isNotEmpty(TM_OCCUPATION) ? TM_OCCUPATION : "NA";
-        this.TM_OCCUPATION_DESC =  StringUtils.isNotEmpty(TM_OCCUPATION_DESC) ? TM_OCCUPATION_DESC : "NA";
-        this.TM_FACILITY_FROM =  StringUtils.isNotEmpty(TM_FACILITY_FROM) ? TM_FACILITY_FROM : "NA";
-        this.FACILITY_FROM_DESC =  StringUtils.isNotEmpty(FACILITY_FROM_DESC) ? FACILITY_FROM_DESC : "NA";
-        this.TM_FACILITY_TO =  StringUtils.isNotEmpty(TM_FACILITY_TO) ? TM_FACILITY_TO : "NA";
-        this.FACILITY_TO_DESC =  StringUtils.isNotEmpty(FACILITY_TO_DESC) ? FACILITY_TO_DESC : "NA";
+        this.PT_ID_ICDO =  ClinicalValueUtil.defaultWithNA(PT_ID_ICDO);
+        this.DMP_ID_ICDO =  ClinicalValueUtil.defaultWithNA(DMP_ID_ICDO);
+        this.TM_TUMOR_SEQ_DESC =  ClinicalValueUtil.defaultWithNA(TM_TUMOR_SEQ_DESC);
+        this.TM_ACC_YEAR =  ClinicalValueUtil.defaultWithNA(TM_ACC_YEAR);
+        this.TM_FIRST_MSK_YEAR =  ClinicalValueUtil.defaultWithNA(TM_FIRST_MSK_YEAR);
+        this.AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS);
+        this.TM_CASE_STS =  ClinicalValueUtil.defaultWithNA(TM_CASE_STS);
+        this.TM_CASE_STS_DESC =  ClinicalValueUtil.defaultWithNA(TM_CASE_STS_DESC);
+        this.TM_CASE_EFF_YEAR =  ClinicalValueUtil.defaultWithNA(TM_CASE_EFF_YEAR);
+        this.AGE_AT_TM_CASE_EFF_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_CASE_EFF_DATE_IN_DAYS);
+        this.TM_STATE_AT_DX =  ClinicalValueUtil.defaultWithNA(TM_STATE_AT_DX);
+        this.TM_SMOKING_HX =  ClinicalValueUtil.defaultWithNA(TM_SMOKING_HX);
+        this.TM_SMOKING_HX_DESC =  ClinicalValueUtil.defaultWithNA(TM_SMOKING_HX_DESC);
+        this.TM_OCCUPATION =  ClinicalValueUtil.defaultWithNA(TM_OCCUPATION);
+        this.TM_OCCUPATION_DESC =  ClinicalValueUtil.defaultWithNA(TM_OCCUPATION_DESC);
+        this.TM_FACILITY_FROM =  ClinicalValueUtil.defaultWithNA(TM_FACILITY_FROM);
+        this.FACILITY_FROM_DESC =  ClinicalValueUtil.defaultWithNA(FACILITY_FROM_DESC);
+        this.TM_FACILITY_TO =  ClinicalValueUtil.defaultWithNA(TM_FACILITY_TO);
+        this.FACILITY_TO_DESC =  ClinicalValueUtil.defaultWithNA(FACILITY_TO_DESC);
         this.TM_DX_YEAR = TM_DX_YEAR != null ? TM_DX_YEAR : 0;
         this.AGE_AT_TM_DX_DATE_IN_DAYS =  AGE_AT_TM_DX_DATE_IN_DAYS != null ? AGE_AT_TM_DX_DATE_IN_DAYS : -1;
-        this.TM_SITE_CD =  StringUtils.isNotEmpty(TM_SITE_CD) ? TM_SITE_CD : "NA";
-        this.TM_SITE_DESC =  StringUtils.isNotEmpty(TM_SITE_DESC) ? TM_SITE_DESC : "NA";
-        this.TM_LATERALITY_CD =  StringUtils.isNotEmpty(TM_LATERALITY_CD) ? TM_LATERALITY_CD : "NA";
-        this.TM_LATERALITY_DESC =  StringUtils.isNotEmpty(TM_LATERALITY_DESC) ? TM_LATERALITY_DESC : "NA";
-        this.TM_HIST_CD =  StringUtils.isNotEmpty(TM_HIST_CD) ? TM_HIST_CD : "NA";
-        this.TM_HIST_DESC =  StringUtils.isNotEmpty(TM_HIST_DESC) ? TM_HIST_DESC : "NA";
-        this.TM_DX_CONFRM_CD =  StringUtils.isNotEmpty(TM_DX_CONFRM_CD) ? TM_DX_CONFRM_CD : "NA";
-        this.TM_DX_CONFRM_DESC =  StringUtils.isNotEmpty(TM_DX_CONFRM_DESC) ? TM_DX_CONFRM_DESC : "NA";
-        this.TM_REGNODE_EXM_NO =  StringUtils.isNotEmpty(TM_REGNODE_EXM_NO) ? TM_REGNODE_EXM_NO : "NA";
-        this.TM_REGNODE_POS_NO =  StringUtils.isNotEmpty(TM_REGNODE_POS_NO) ? TM_REGNODE_POS_NO : "NA";
-        this.TM_TUMOR_SIZE =  StringUtils.isNotEmpty(TM_TUMOR_SIZE) ? TM_TUMOR_SIZE : "NA";
-        this.TM_RESID_TUMOR_CD =  StringUtils.isNotEmpty(TM_RESID_TUMOR_CD) ? TM_RESID_TUMOR_CD : "NA";
-        this.TM_RESID_TUMOR_DESC =  StringUtils.isNotEmpty(TM_RESID_TUMOR_DESC) ? TM_RESID_TUMOR_DESC : "NA";
-        this.TM_GENERAL_STG =  StringUtils.isNotEmpty(TM_GENERAL_STG) ? TM_GENERAL_STG : "NA";
-        this.TM_GENERAL_STG_DESC =  StringUtils.isNotEmpty(TM_GENERAL_STG_DESC) ? TM_GENERAL_STG_DESC : "NA";
-        this.TM_TNM_EDITION =  StringUtils.isNotEmpty(TM_TNM_EDITION) ? TM_TNM_EDITION : "NA";
-        this.TM_TNM_EDITION_DESC =  StringUtils.isNotEmpty(TM_TNM_EDITION_DESC) ? TM_TNM_EDITION_DESC : "NA";
-        this.TM_CLIN_TNM_T =  StringUtils.isNotEmpty(TM_CLIN_TNM_T) ? TM_CLIN_TNM_T : "NA";
-        this.TM_CLIN_TNM_T_DESC =  StringUtils.isNotEmpty(TM_CLIN_TNM_T_DESC) ? TM_CLIN_TNM_T_DESC : "NA";
-        this.TM_CLIN_TNM_N =  StringUtils.isNotEmpty(TM_CLIN_TNM_N) ? TM_CLIN_TNM_N : "NA";
-        this.TM_CLIN_TNM_N_DESC =  StringUtils.isNotEmpty(TM_CLIN_TNM_N_DESC) ? TM_CLIN_TNM_N_DESC : "NA";
-        this.TM_CLIN_TNM_M =  StringUtils.isNotEmpty(TM_CLIN_TNM_M) ? TM_CLIN_TNM_M : "NA";
-        this.TM_CLIN_TNM_M_DESC =  StringUtils.isNotEmpty(TM_CLIN_TNM_M_DESC) ? TM_CLIN_TNM_M_DESC : "NA";
-        this.TM_CLIN_STG_GRP =  StringUtils.isNotEmpty(TM_CLIN_STG_GRP) ? TM_CLIN_STG_GRP : "NA";
-        this.TM_PATH_TNM_T =  StringUtils.isNotEmpty(TM_PATH_TNM_T) ? TM_PATH_TNM_T : "NA";
-        this.TM_PATH_TNM_T_DESC =  StringUtils.isNotEmpty(TM_PATH_TNM_T_DESC) ? TM_PATH_TNM_T_DESC : "NA";
-        this.TM_PATH_TNM_N =  StringUtils.isNotEmpty(TM_PATH_TNM_N) ? TM_PATH_TNM_N : "NA";
-        this.TM_PATH_TNM_N_DESC =  StringUtils.isNotEmpty(TM_PATH_TNM_N_DESC) ? TM_PATH_TNM_N_DESC : "NA";
-        this.TM_PATH_TNM_M =  StringUtils.isNotEmpty(TM_PATH_TNM_M) ? TM_PATH_TNM_M : "NA";
-        this.TM_PATH_TNM_M_DESC =  StringUtils.isNotEmpty(TM_PATH_TNM_M_DESC) ? TM_PATH_TNM_M_DESC : "NA";
-        this.TM_PATH_STG_GRP =  StringUtils.isNotEmpty(TM_PATH_STG_GRP) ? TM_PATH_STG_GRP : "NA";
-        this.TM_PATH_RPT_AV =  StringUtils.isNotEmpty(TM_PATH_RPT_AV) ? TM_PATH_RPT_AV : "NA";
-        this.TM_CA_STS_AT_ACC =  StringUtils.isNotEmpty(TM_CA_STS_AT_ACC) ? TM_CA_STS_AT_ACC : "NA";
-        this.TM_FIRST_RECUR_YEAR =  StringUtils.isNotEmpty(TM_FIRST_RECUR_YEAR) ? TM_FIRST_RECUR_YEAR : "NA";
-        this.AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS) ? AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS : "NA";
-        this.TM_FIRST_RECUR_TYP =  StringUtils.isNotEmpty(TM_FIRST_RECUR_TYP) ? TM_FIRST_RECUR_TYP : "NA";
-        this.TM_ADM_YEAR =  StringUtils.isNotEmpty(TM_ADM_YEAR) ? TM_ADM_YEAR : "NA";
-        this.AGE_AT_TM_ADM_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_ADM_DATE_IN_DAYS) ? AGE_AT_TM_ADM_DATE_IN_DAYS : "NA";
-        this.TM_DSCH_YEAR =  StringUtils.isNotEmpty(TM_DSCH_YEAR) ? TM_DSCH_YEAR : "NA";
-        this.AGE_AT_TM_DSCH_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_DSCH_DATE_IN_DAYS) ? AGE_AT_TM_DSCH_DATE_IN_DAYS : "NA";
-        this.TM_SURG_DSCH_YEAR =  StringUtils.isNotEmpty(TM_SURG_DSCH_YEAR) ? TM_SURG_DSCH_YEAR : "NA";
-        this.AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS) ? AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS : "NA";
-        this.TM_READM_WTHN_30D =  StringUtils.isNotEmpty(TM_READM_WTHN_30D) ? TM_READM_WTHN_30D : "NA";
-        this.TM_FIRST_TX_YEAR =  StringUtils.isNotEmpty(TM_FIRST_TX_YEAR) ? TM_FIRST_TX_YEAR : "NA";
-        this.AGE_AT_TM_FIRST_TX_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_FIRST_TX_DATE_IN_DAYS) ? AGE_AT_TM_FIRST_TX_DATE_IN_DAYS : "NA";
-        this.TM_NON_CA_SURG_SUM =  StringUtils.isNotEmpty(TM_NON_CA_SURG_SUM) ? TM_NON_CA_SURG_SUM : "NA";
-        this.TM_NON_CA_SURG_SUM_DESC =  StringUtils.isNotEmpty(TM_NON_CA_SURG_SUM_DESC) ? TM_NON_CA_SURG_SUM_DESC : "NA";
-        this.TM_NON_CA_SURG_MSK =  StringUtils.isNotEmpty(TM_NON_CA_SURG_MSK) ? TM_NON_CA_SURG_MSK : "NA";
-        this.TM_NON_CA_SURG_YEAR =  StringUtils.isNotEmpty(TM_NON_CA_SURG_YEAR) ? TM_NON_CA_SURG_YEAR : "NA";
-        this.AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS) ? AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS : "NA";
-        this.TM_CA_SURG_98 =  StringUtils.isNotEmpty(TM_CA_SURG_98) ? TM_CA_SURG_98 : "NA";
-        this.TM_CA_SURG_98_MSK =  StringUtils.isNotEmpty(TM_CA_SURG_98_MSK) ? TM_CA_SURG_98_MSK : "NA";
-        this.TM_CA_SURG_03 =  StringUtils.isNotEmpty(TM_CA_SURG_03) ? TM_CA_SURG_03 : "NA";
-        this.TM_CA_SURG_03_MSK =  StringUtils.isNotEmpty(TM_CA_SURG_03_MSK) ? TM_CA_SURG_03_MSK : "NA";
-        this.TM_OTH_SURG_98 =  StringUtils.isNotEmpty(TM_OTH_SURG_98) ? TM_OTH_SURG_98 : "NA";
-        this.TM_OTH_SURG_98_MSK =  StringUtils.isNotEmpty(TM_OTH_SURG_98_MSK) ? TM_OTH_SURG_98_MSK : "NA";
-        this.TM_OTH_SURG_03 =  StringUtils.isNotEmpty(TM_OTH_SURG_03) ? TM_OTH_SURG_03 : "NA";
-        this.TM_OTH_SURG_03_MSK =  StringUtils.isNotEmpty(TM_OTH_SURG_03_MSK) ? TM_OTH_SURG_03_MSK : "NA";
-        this.TM_OTH_SURG_CD =  StringUtils.isNotEmpty(TM_OTH_SURG_CD) ? TM_OTH_SURG_CD : "NA";
-        this.TM_OTH_SURG_CD_DESC =  StringUtils.isNotEmpty(TM_OTH_SURG_CD_DESC) ? TM_OTH_SURG_CD_DESC : "NA";
-        this.TM_RGN_SCOP_98 =  StringUtils.isNotEmpty(TM_RGN_SCOP_98) ? TM_RGN_SCOP_98 : "NA";
-        this.TM_RGN_SCOP_98_MSK =  StringUtils.isNotEmpty(TM_RGN_SCOP_98_MSK) ? TM_RGN_SCOP_98_MSK : "NA";
-        this.TM_RGN_SCOP_03 =  StringUtils.isNotEmpty(TM_RGN_SCOP_03) ? TM_RGN_SCOP_03 : "NA";
-        this.TM_RGN_SCOP_03_MSK =  StringUtils.isNotEmpty(TM_RGN_SCOP_03_MSK) ? TM_RGN_SCOP_03_MSK : "NA";
-        this.TM_REGNODE_SCOP_CD =  StringUtils.isNotEmpty(TM_REGNODE_SCOP_CD) ? TM_REGNODE_SCOP_CD : "NA";
-        this.TM_REGNODE_SCOP_DESC =  StringUtils.isNotEmpty(TM_REGNODE_SCOP_DESC) ? TM_REGNODE_SCOP_DESC : "NA";
-        this.TM_RECON_SURG =  StringUtils.isNotEmpty(TM_RECON_SURG) ? TM_RECON_SURG : "NA";
-        this.TM_RECON_SURG_DESC =  StringUtils.isNotEmpty(TM_RECON_SURG_DESC) ? TM_RECON_SURG_DESC : "NA";
-        this.TM_CA_SURG_YEAR =  StringUtils.isNotEmpty(TM_CA_SURG_YEAR) ? TM_CA_SURG_YEAR : "NA";
-        this.AGE_AT_TM_CA_SURG_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_CA_SURG_DATE_IN_DAYS) ? AGE_AT_TM_CA_SURG_DATE_IN_DAYS : "NA";
-        this.TM_SURG_DEF_YEAR =  StringUtils.isNotEmpty(TM_SURG_DEF_YEAR) ? TM_SURG_DEF_YEAR : "NA";
-        this.AGE_AT_TM_SURG_DEF_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_SURG_DEF_DATE_IN_DAYS) ? AGE_AT_TM_SURG_DEF_DATE_IN_DAYS : "NA";
-        this.TM_REASON_NO_SURG =  StringUtils.isNotEmpty(TM_REASON_NO_SURG) ? TM_REASON_NO_SURG : "NA";
-        this.REASON_NO_SURG_DESC =  StringUtils.isNotEmpty(REASON_NO_SURG_DESC) ? REASON_NO_SURG_DESC : "NA";
-        this.TM_PRIM_SURGEON =  StringUtils.isNotEmpty(TM_PRIM_SURGEON) ? TM_PRIM_SURGEON : "NA";
-        this.TM_PRIM_SURGEON_NAME =  StringUtils.isNotEmpty(TM_PRIM_SURGEON_NAME) ? TM_PRIM_SURGEON_NAME : "NA";
-        this.TM_ATN_DR_NO =  StringUtils.isNotEmpty(TM_ATN_DR_NO) ? TM_ATN_DR_NO : "NA";
-        this.TM_ATN_DR_NAME =  StringUtils.isNotEmpty(TM_ATN_DR_NAME) ? TM_ATN_DR_NAME : "NA";
-        this.TM_REASON_NO_RAD =  StringUtils.isNotEmpty(TM_REASON_NO_RAD) ? TM_REASON_NO_RAD : "NA";
-        this.TM_REASON_NO_RAD_DESC =  StringUtils.isNotEmpty(TM_REASON_NO_RAD_DESC) ? TM_REASON_NO_RAD_DESC : "NA";
-        this.TM_RAD_STRT_YEAR =  StringUtils.isNotEmpty(TM_RAD_STRT_YEAR) ? TM_RAD_STRT_YEAR : "NA";
-        this.AGE_AT_TM_RAD_STRT_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_RAD_STRT_DATE_IN_DAYS) ? AGE_AT_TM_RAD_STRT_DATE_IN_DAYS : "NA";
-        this.TM_RAD_END_YEAR =  StringUtils.isNotEmpty(TM_RAD_END_YEAR) ? TM_RAD_END_YEAR : "NA";
-        this.AGE_AT_TM_RAD_END_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_RAD_END_DATE_IN_DAYS) ? AGE_AT_TM_RAD_END_DATE_IN_DAYS : "NA";
-        this.TM_RAD_TX_MOD =  StringUtils.isNotEmpty(TM_RAD_TX_MOD) ? TM_RAD_TX_MOD : "NA";
-        this.TM_RAD_TX_MOD_DESC =  StringUtils.isNotEmpty(TM_RAD_TX_MOD_DESC) ? TM_RAD_TX_MOD_DESC : "NA";
-        this.TM_BOOST_RAD_MOD =  StringUtils.isNotEmpty(TM_BOOST_RAD_MOD) ? TM_BOOST_RAD_MOD : "NA";
-        this.TM_BOOST_RAD_MOD_DESC =  StringUtils.isNotEmpty(TM_BOOST_RAD_MOD_DESC) ? TM_BOOST_RAD_MOD_DESC : "NA";
-        this.TM_LOC_RAD_TX =  StringUtils.isNotEmpty(TM_LOC_RAD_TX) ? TM_LOC_RAD_TX : "NA";
-        this.TM_LOC_RAD_TX_DESC =  StringUtils.isNotEmpty(TM_LOC_RAD_TX_DESC) ? TM_LOC_RAD_TX_DESC : "NA";
-        this.TM_RAD_TX_VOL =  StringUtils.isNotEmpty(TM_RAD_TX_VOL) ? TM_RAD_TX_VOL : "NA";
-        this.TM_RAD_TX_VOL_DESC =  StringUtils.isNotEmpty(TM_RAD_TX_VOL_DESC) ? TM_RAD_TX_VOL_DESC : "NA";
-        this.TM_NUM_TX_THIS_VOL =  StringUtils.isNotEmpty(TM_NUM_TX_THIS_VOL) ? TM_NUM_TX_THIS_VOL : "NA";
-        this.TM_NUM_TX_THIS_VOL_DESC =  StringUtils.isNotEmpty(TM_NUM_TX_THIS_VOL_DESC) ? TM_NUM_TX_THIS_VOL_DESC : "NA";
-        this.TM_REG_RAD_DOSE =  StringUtils.isNotEmpty(TM_REG_RAD_DOSE) ? TM_REG_RAD_DOSE : "NA";
-        this.TM_REG_RAD_DOSE_DESC =  StringUtils.isNotEmpty(TM_REG_RAD_DOSE_DESC) ? TM_REG_RAD_DOSE_DESC : "NA";
-        this.TM_BOOST_RAD_DOSE =  StringUtils.isNotEmpty(TM_BOOST_RAD_DOSE) ? TM_BOOST_RAD_DOSE : "NA";
-        this.TM_BOOST_RAD_DOSE_DESC =  StringUtils.isNotEmpty(TM_BOOST_RAD_DOSE_DESC) ? TM_BOOST_RAD_DOSE_DESC : "NA";
-        this.TM_RAD_SURG_SEQ =  StringUtils.isNotEmpty(TM_RAD_SURG_SEQ) ? TM_RAD_SURG_SEQ : "NA";
-        this.TM_RAD_SURG_SEQ_DESC =  StringUtils.isNotEmpty(TM_RAD_SURG_SEQ_DESC) ? TM_RAD_SURG_SEQ_DESC : "NA";
-        this.TM_RAD_MD =  StringUtils.isNotEmpty(TM_RAD_MD) ? TM_RAD_MD : "NA";
-        this.TM_RAD_MD_NAME =  StringUtils.isNotEmpty(TM_RAD_MD_NAME) ? TM_RAD_MD_NAME : "NA";
-        this.TM_SYST_STRT_YEAR =  StringUtils.isNotEmpty(TM_SYST_STRT_YEAR) ? TM_SYST_STRT_YEAR : "NA";
-        this.AGE_AT_TM_SYST_STRT_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_SYST_STRT_DATE_IN_DAYS) ? AGE_AT_TM_SYST_STRT_DATE_IN_DAYS : "NA";
-        this.TM_OTH_STRT_YEAR =  StringUtils.isNotEmpty(TM_OTH_STRT_YEAR) ? TM_OTH_STRT_YEAR : "NA";
-        this.AGE_AT_TM_OTH_STRT_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_OTH_STRT_DATE_IN_DAYS) ? AGE_AT_TM_OTH_STRT_DATE_IN_DAYS : "NA";
-        this.TM_CHEM_SUM =  StringUtils.isNotEmpty(TM_CHEM_SUM) ? TM_CHEM_SUM : "NA";
-        this.TM_CHEM_SUM_DESC =  StringUtils.isNotEmpty(TM_CHEM_SUM_DESC) ? TM_CHEM_SUM_DESC : "NA";
-        this.TM_CHEM_SUM_MSK =  StringUtils.isNotEmpty(TM_CHEM_SUM_MSK) ? TM_CHEM_SUM_MSK : "NA";
-        this.TM_CHEM_SUM_MSK_DESC =  StringUtils.isNotEmpty(TM_CHEM_SUM_MSK_DESC) ? TM_CHEM_SUM_MSK_DESC : "NA";
-        this.TM_TUMOR_SEQ =  StringUtils.isNotEmpty(TM_TUMOR_SEQ) ? TM_TUMOR_SEQ : "NA";
-        this.TM_HORM_SUM =  StringUtils.isNotEmpty(TM_HORM_SUM) ? TM_HORM_SUM : "NA";
-        this.TM_HORM_SUM_DESC =  StringUtils.isNotEmpty(TM_HORM_SUM_DESC) ? TM_HORM_SUM_DESC : "NA";
-        this.TM_HORM_SUM_MSK =  StringUtils.isNotEmpty(TM_HORM_SUM_MSK) ? TM_HORM_SUM_MSK : "NA";
-        this.TM_HORM_SUM_MSK_DESC =  StringUtils.isNotEmpty(TM_HORM_SUM_MSK_DESC) ? TM_HORM_SUM_MSK_DESC : "NA";
-        this.TM_BRM_SUM =  StringUtils.isNotEmpty(TM_BRM_SUM) ? TM_BRM_SUM : "NA";
-        this.TM_BRM_SUM_DESC =  StringUtils.isNotEmpty(TM_BRM_SUM_DESC) ? TM_BRM_SUM_DESC : "NA";
-        this.TM_BRM_SUM_MSK =  StringUtils.isNotEmpty(TM_BRM_SUM_MSK) ? TM_BRM_SUM_MSK : "NA";
-        this.TM_BRM_SUM_MSK_DESC =  StringUtils.isNotEmpty(TM_BRM_SUM_MSK_DESC) ? TM_BRM_SUM_MSK_DESC : "NA";
-        this.TM_OTH_SUM =  StringUtils.isNotEmpty(TM_OTH_SUM) ? TM_OTH_SUM : "NA";
-        this.TM_OTH_SUM_DESC =  StringUtils.isNotEmpty(TM_OTH_SUM_DESC) ? TM_OTH_SUM_DESC : "NA";
-        this.TM_OTH_SUM_MSK =  StringUtils.isNotEmpty(TM_OTH_SUM_MSK) ? TM_OTH_SUM_MSK : "NA";
-        this.TM_OTH_SUM_MSK_DESC =  StringUtils.isNotEmpty(TM_OTH_SUM_MSK_DESC) ? TM_OTH_SUM_MSK_DESC : "NA";
-        this.TM_PALLIA_PROC =  StringUtils.isNotEmpty(TM_PALLIA_PROC) ? TM_PALLIA_PROC : "NA";
-        this.TM_PALLIA_PROC_DESC =  StringUtils.isNotEmpty(TM_PALLIA_PROC_DESC) ? TM_PALLIA_PROC_DESC : "NA";
-        this.TM_PALLIA_PROC_MSK =  StringUtils.isNotEmpty(TM_PALLIA_PROC_MSK) ? TM_PALLIA_PROC_MSK : "NA";
-        this.TM_PALLIA_PROC_MSK_DESC =  StringUtils.isNotEmpty(TM_PALLIA_PROC_MSK_DESC) ? TM_PALLIA_PROC_MSK_DESC : "NA";
-        this.TM_ONCOLOGY_MD =  StringUtils.isNotEmpty(TM_ONCOLOGY_MD) ? TM_ONCOLOGY_MD : "NA";
-        this.TM_ONCOLOGY_MD_NAME =  StringUtils.isNotEmpty(TM_ONCOLOGY_MD_NAME) ? TM_ONCOLOGY_MD_NAME : "NA";
-        this.TM_PRCS_YEAR =  StringUtils.isNotEmpty(TM_PRCS_YEAR) ? TM_PRCS_YEAR : "NA";
-        this.AGE_AT_TM_PRCS_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_PRCS_DATE_IN_DAYS) ? AGE_AT_TM_PRCS_DATE_IN_DAYS : "NA";
-        this.TM_PATH_TEXT =  StringUtils.isNotEmpty(TM_PATH_TEXT) ? TM_PATH_TEXT : "NA";
-        this.TM_SURG_TEXT =  StringUtils.isNotEmpty(TM_SURG_TEXT) ? TM_SURG_TEXT : "NA";
-        this.TM_OVERRIDE_COM =  StringUtils.isNotEmpty(TM_OVERRIDE_COM) ? TM_OVERRIDE_COM : "NA";
-        this.TM_CSSIZE =  StringUtils.isNotEmpty(TM_CSSIZE) ? TM_CSSIZE : "NA";
-        this.TM_CSEXT =  StringUtils.isNotEmpty(TM_CSEXT) ? TM_CSEXT : "NA";
-        this.TM_CSEXTEV =  StringUtils.isNotEmpty(TM_CSEXTEV) ? TM_CSEXTEV : "NA";
-        this.TM_CSLMND =  StringUtils.isNotEmpty(TM_CSLMND) ? TM_CSLMND : "NA";
-        this.TM_CSRGNEV =  StringUtils.isNotEmpty(TM_CSRGNEV) ? TM_CSRGNEV : "NA";
-        this.TM_CSMETDX =  StringUtils.isNotEmpty(TM_CSMETDX) ? TM_CSMETDX : "NA";
-        this.TM_CSMETEV =  StringUtils.isNotEmpty(TM_CSMETEV) ? TM_CSMETEV : "NA";
-        this.TM_TSTAGE =  StringUtils.isNotEmpty(TM_TSTAGE) ? TM_TSTAGE : "NA";
-        this.TM_TSTAGE_DESC =  StringUtils.isNotEmpty(TM_TSTAGE_DESC) ? TM_TSTAGE_DESC : "NA";
-        this.TM_NSTAGE =  StringUtils.isNotEmpty(TM_NSTAGE) ? TM_NSTAGE : "NA";
-        this.TM_NSTAGE_DESC =  StringUtils.isNotEmpty(TM_NSTAGE_DESC) ? TM_NSTAGE_DESC : "NA";
-        this.TM_MSTAGE =  StringUtils.isNotEmpty(TM_MSTAGE) ? TM_MSTAGE : "NA";
-        this.TM_MSTAGE_DESC =  StringUtils.isNotEmpty(TM_MSTAGE_DESC) ? TM_MSTAGE_DESC : "NA";
-        this.TM_TBASIS =  StringUtils.isNotEmpty(TM_TBASIS) ? TM_TBASIS : "NA";
-        this.TM_TBASIS_DESC =  StringUtils.isNotEmpty(TM_TBASIS_DESC) ? TM_TBASIS_DESC : "NA";
-        this.TM_NBASIS =  StringUtils.isNotEmpty(TM_NBASIS) ? TM_NBASIS : "NA";
-        this.TM_NBASIS_DESC =  StringUtils.isNotEmpty(TM_NBASIS_DESC) ? TM_NBASIS_DESC : "NA";
-        this.TM_MBASIS =  StringUtils.isNotEmpty(TM_MBASIS) ? TM_MBASIS : "NA";
-        this.TM_MBASIS_DESC =  StringUtils.isNotEmpty(TM_MBASIS_DESC) ? TM_MBASIS_DESC : "NA";
-        this.TM_AJCC =  StringUtils.isNotEmpty(TM_AJCC) ? TM_AJCC : "NA";
-        this.TM_AJCC_DESC =  StringUtils.isNotEmpty(TM_AJCC_DESC) ? TM_AJCC_DESC : "NA";
-        this.TM_MSK_STG =  StringUtils.isNotEmpty(TM_MSK_STG) ? TM_MSK_STG : "NA";
+        this.TM_SITE_CD =  ClinicalValueUtil.defaultWithNA(TM_SITE_CD);
+        this.TM_SITE_DESC =  ClinicalValueUtil.defaultWithNA(TM_SITE_DESC);
+        this.TM_LATERALITY_CD =  ClinicalValueUtil.defaultWithNA(TM_LATERALITY_CD);
+        this.TM_LATERALITY_DESC =  ClinicalValueUtil.defaultWithNA(TM_LATERALITY_DESC);
+        this.TM_HIST_CD =  ClinicalValueUtil.defaultWithNA(TM_HIST_CD);
+        this.TM_HIST_DESC =  ClinicalValueUtil.defaultWithNA(TM_HIST_DESC);
+        this.TM_DX_CONFRM_CD =  ClinicalValueUtil.defaultWithNA(TM_DX_CONFRM_CD);
+        this.TM_DX_CONFRM_DESC =  ClinicalValueUtil.defaultWithNA(TM_DX_CONFRM_DESC);
+        this.TM_REGNODE_EXM_NO =  ClinicalValueUtil.defaultWithNA(TM_REGNODE_EXM_NO);
+        this.TM_REGNODE_POS_NO =  ClinicalValueUtil.defaultWithNA(TM_REGNODE_POS_NO);
+        this.TM_TUMOR_SIZE =  ClinicalValueUtil.defaultWithNA(TM_TUMOR_SIZE);
+        this.TM_RESID_TUMOR_CD =  ClinicalValueUtil.defaultWithNA(TM_RESID_TUMOR_CD);
+        this.TM_RESID_TUMOR_DESC =  ClinicalValueUtil.defaultWithNA(TM_RESID_TUMOR_DESC);
+        this.TM_GENERAL_STG =  ClinicalValueUtil.defaultWithNA(TM_GENERAL_STG);
+        this.TM_GENERAL_STG_DESC =  ClinicalValueUtil.defaultWithNA(TM_GENERAL_STG_DESC);
+        this.TM_TNM_EDITION =  ClinicalValueUtil.defaultWithNA(TM_TNM_EDITION);
+        this.TM_TNM_EDITION_DESC =  ClinicalValueUtil.defaultWithNA(TM_TNM_EDITION_DESC);
+        this.TM_CLIN_TNM_T =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_T);
+        this.TM_CLIN_TNM_T_DESC =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_T_DESC);
+        this.TM_CLIN_TNM_N =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_N);
+        this.TM_CLIN_TNM_N_DESC =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_N_DESC);
+        this.TM_CLIN_TNM_M =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_M);
+        this.TM_CLIN_TNM_M_DESC =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_M_DESC);
+        this.TM_CLIN_STG_GRP =  ClinicalValueUtil.defaultWithNA(TM_CLIN_STG_GRP);
+        this.TM_PATH_TNM_T =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_T);
+        this.TM_PATH_TNM_T_DESC =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_T_DESC);
+        this.TM_PATH_TNM_N =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_N);
+        this.TM_PATH_TNM_N_DESC =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_N_DESC);
+        this.TM_PATH_TNM_M =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_M);
+        this.TM_PATH_TNM_M_DESC =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_M_DESC);
+        this.TM_PATH_STG_GRP =  ClinicalValueUtil.defaultWithNA(TM_PATH_STG_GRP);
+        this.TM_PATH_RPT_AV =  ClinicalValueUtil.defaultWithNA(TM_PATH_RPT_AV);
+        this.TM_CA_STS_AT_ACC =  ClinicalValueUtil.defaultWithNA(TM_CA_STS_AT_ACC);
+        this.TM_FIRST_RECUR_YEAR =  ClinicalValueUtil.defaultWithNA(TM_FIRST_RECUR_YEAR);
+        this.AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS);
+        this.TM_FIRST_RECUR_TYP =  ClinicalValueUtil.defaultWithNA(TM_FIRST_RECUR_TYP);
+        this.TM_ADM_YEAR =  ClinicalValueUtil.defaultWithNA(TM_ADM_YEAR);
+        this.AGE_AT_TM_ADM_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_ADM_DATE_IN_DAYS);
+        this.TM_DSCH_YEAR =  ClinicalValueUtil.defaultWithNA(TM_DSCH_YEAR);
+        this.AGE_AT_TM_DSCH_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_DSCH_DATE_IN_DAYS);
+        this.TM_SURG_DSCH_YEAR =  ClinicalValueUtil.defaultWithNA(TM_SURG_DSCH_YEAR);
+        this.AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS);
+        this.TM_READM_WTHN_30D =  ClinicalValueUtil.defaultWithNA(TM_READM_WTHN_30D);
+        this.TM_FIRST_TX_YEAR =  ClinicalValueUtil.defaultWithNA(TM_FIRST_TX_YEAR);
+        this.AGE_AT_TM_FIRST_TX_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_FIRST_TX_DATE_IN_DAYS);
+        this.TM_NON_CA_SURG_SUM =  ClinicalValueUtil.defaultWithNA(TM_NON_CA_SURG_SUM);
+        this.TM_NON_CA_SURG_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_NON_CA_SURG_SUM_DESC);
+        this.TM_NON_CA_SURG_MSK =  ClinicalValueUtil.defaultWithNA(TM_NON_CA_SURG_MSK);
+        this.TM_NON_CA_SURG_YEAR =  ClinicalValueUtil.defaultWithNA(TM_NON_CA_SURG_YEAR);
+        this.AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS);
+        this.TM_CA_SURG_98 =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_98);
+        this.TM_CA_SURG_98_MSK =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_98_MSK);
+        this.TM_CA_SURG_03 =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_03);
+        this.TM_CA_SURG_03_MSK =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_03_MSK);
+        this.TM_OTH_SURG_98 =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_98);
+        this.TM_OTH_SURG_98_MSK =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_98_MSK);
+        this.TM_OTH_SURG_03 =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_03);
+        this.TM_OTH_SURG_03_MSK =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_03_MSK);
+        this.TM_OTH_SURG_CD =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_CD);
+        this.TM_OTH_SURG_CD_DESC =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_CD_DESC);
+        this.TM_RGN_SCOP_98 =  ClinicalValueUtil.defaultWithNA(TM_RGN_SCOP_98);
+        this.TM_RGN_SCOP_98_MSK =  ClinicalValueUtil.defaultWithNA(TM_RGN_SCOP_98_MSK);
+        this.TM_RGN_SCOP_03 =  ClinicalValueUtil.defaultWithNA(TM_RGN_SCOP_03);
+        this.TM_RGN_SCOP_03_MSK =  ClinicalValueUtil.defaultWithNA(TM_RGN_SCOP_03_MSK);
+        this.TM_REGNODE_SCOP_CD =  ClinicalValueUtil.defaultWithNA(TM_REGNODE_SCOP_CD);
+        this.TM_REGNODE_SCOP_DESC =  ClinicalValueUtil.defaultWithNA(TM_REGNODE_SCOP_DESC);
+        this.TM_RECON_SURG =  ClinicalValueUtil.defaultWithNA(TM_RECON_SURG);
+        this.TM_RECON_SURG_DESC =  ClinicalValueUtil.defaultWithNA(TM_RECON_SURG_DESC);
+        this.TM_CA_SURG_YEAR =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_YEAR);
+        this.AGE_AT_TM_CA_SURG_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_CA_SURG_DATE_IN_DAYS);
+        this.TM_SURG_DEF_YEAR =  ClinicalValueUtil.defaultWithNA(TM_SURG_DEF_YEAR);
+        this.AGE_AT_TM_SURG_DEF_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_SURG_DEF_DATE_IN_DAYS);
+        this.TM_REASON_NO_SURG =  ClinicalValueUtil.defaultWithNA(TM_REASON_NO_SURG);
+        this.REASON_NO_SURG_DESC =  ClinicalValueUtil.defaultWithNA(REASON_NO_SURG_DESC);
+        this.TM_PRIM_SURGEON =  ClinicalValueUtil.defaultWithNA(TM_PRIM_SURGEON);
+        this.TM_PRIM_SURGEON_NAME =  ClinicalValueUtil.defaultWithNA(TM_PRIM_SURGEON_NAME);
+        this.TM_ATN_DR_NO =  ClinicalValueUtil.defaultWithNA(TM_ATN_DR_NO);
+        this.TM_ATN_DR_NAME =  ClinicalValueUtil.defaultWithNA(TM_ATN_DR_NAME);
+        this.TM_REASON_NO_RAD =  ClinicalValueUtil.defaultWithNA(TM_REASON_NO_RAD);
+        this.TM_REASON_NO_RAD_DESC =  ClinicalValueUtil.defaultWithNA(TM_REASON_NO_RAD_DESC);
+        this.TM_RAD_STRT_YEAR =  ClinicalValueUtil.defaultWithNA(TM_RAD_STRT_YEAR);
+        this.AGE_AT_TM_RAD_STRT_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_RAD_STRT_DATE_IN_DAYS);
+        this.TM_RAD_END_YEAR =  ClinicalValueUtil.defaultWithNA(TM_RAD_END_YEAR);
+        this.AGE_AT_TM_RAD_END_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_RAD_END_DATE_IN_DAYS);
+        this.TM_RAD_TX_MOD =  ClinicalValueUtil.defaultWithNA(TM_RAD_TX_MOD);
+        this.TM_RAD_TX_MOD_DESC =  ClinicalValueUtil.defaultWithNA(TM_RAD_TX_MOD_DESC);
+        this.TM_BOOST_RAD_MOD =  ClinicalValueUtil.defaultWithNA(TM_BOOST_RAD_MOD);
+        this.TM_BOOST_RAD_MOD_DESC =  ClinicalValueUtil.defaultWithNA(TM_BOOST_RAD_MOD_DESC);
+        this.TM_LOC_RAD_TX =  ClinicalValueUtil.defaultWithNA(TM_LOC_RAD_TX);
+        this.TM_LOC_RAD_TX_DESC =  ClinicalValueUtil.defaultWithNA(TM_LOC_RAD_TX_DESC);
+        this.TM_RAD_TX_VOL =  ClinicalValueUtil.defaultWithNA(TM_RAD_TX_VOL);
+        this.TM_RAD_TX_VOL_DESC =  ClinicalValueUtil.defaultWithNA(TM_RAD_TX_VOL_DESC);
+        this.TM_NUM_TX_THIS_VOL =  ClinicalValueUtil.defaultWithNA(TM_NUM_TX_THIS_VOL);
+        this.TM_NUM_TX_THIS_VOL_DESC =  ClinicalValueUtil.defaultWithNA(TM_NUM_TX_THIS_VOL_DESC);
+        this.TM_REG_RAD_DOSE =  ClinicalValueUtil.defaultWithNA(TM_REG_RAD_DOSE);
+        this.TM_REG_RAD_DOSE_DESC =  ClinicalValueUtil.defaultWithNA(TM_REG_RAD_DOSE_DESC);
+        this.TM_BOOST_RAD_DOSE =  ClinicalValueUtil.defaultWithNA(TM_BOOST_RAD_DOSE);
+        this.TM_BOOST_RAD_DOSE_DESC =  ClinicalValueUtil.defaultWithNA(TM_BOOST_RAD_DOSE_DESC);
+        this.TM_RAD_SURG_SEQ =  ClinicalValueUtil.defaultWithNA(TM_RAD_SURG_SEQ);
+        this.TM_RAD_SURG_SEQ_DESC =  ClinicalValueUtil.defaultWithNA(TM_RAD_SURG_SEQ_DESC);
+        this.TM_RAD_MD =  ClinicalValueUtil.defaultWithNA(TM_RAD_MD);
+        this.TM_RAD_MD_NAME =  ClinicalValueUtil.defaultWithNA(TM_RAD_MD_NAME);
+        this.TM_SYST_STRT_YEAR =  ClinicalValueUtil.defaultWithNA(TM_SYST_STRT_YEAR);
+        this.AGE_AT_TM_SYST_STRT_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_SYST_STRT_DATE_IN_DAYS);
+        this.TM_OTH_STRT_YEAR =  ClinicalValueUtil.defaultWithNA(TM_OTH_STRT_YEAR);
+        this.AGE_AT_TM_OTH_STRT_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_OTH_STRT_DATE_IN_DAYS);
+        this.TM_CHEM_SUM =  ClinicalValueUtil.defaultWithNA(TM_CHEM_SUM);
+        this.TM_CHEM_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_CHEM_SUM_DESC);
+        this.TM_CHEM_SUM_MSK =  ClinicalValueUtil.defaultWithNA(TM_CHEM_SUM_MSK);
+        this.TM_CHEM_SUM_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_CHEM_SUM_MSK_DESC);
+        this.TM_TUMOR_SEQ =  ClinicalValueUtil.defaultWithNA(TM_TUMOR_SEQ);
+        this.TM_HORM_SUM =  ClinicalValueUtil.defaultWithNA(TM_HORM_SUM);
+        this.TM_HORM_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_HORM_SUM_DESC);
+        this.TM_HORM_SUM_MSK =  ClinicalValueUtil.defaultWithNA(TM_HORM_SUM_MSK);
+        this.TM_HORM_SUM_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_HORM_SUM_MSK_DESC);
+        this.TM_BRM_SUM =  ClinicalValueUtil.defaultWithNA(TM_BRM_SUM);
+        this.TM_BRM_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_BRM_SUM_DESC);
+        this.TM_BRM_SUM_MSK =  ClinicalValueUtil.defaultWithNA(TM_BRM_SUM_MSK);
+        this.TM_BRM_SUM_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_BRM_SUM_MSK_DESC);
+        this.TM_OTH_SUM =  ClinicalValueUtil.defaultWithNA(TM_OTH_SUM);
+        this.TM_OTH_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_OTH_SUM_DESC);
+        this.TM_OTH_SUM_MSK =  ClinicalValueUtil.defaultWithNA(TM_OTH_SUM_MSK);
+        this.TM_OTH_SUM_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_OTH_SUM_MSK_DESC);
+        this.TM_PALLIA_PROC =  ClinicalValueUtil.defaultWithNA(TM_PALLIA_PROC);
+        this.TM_PALLIA_PROC_DESC =  ClinicalValueUtil.defaultWithNA(TM_PALLIA_PROC_DESC);
+        this.TM_PALLIA_PROC_MSK =  ClinicalValueUtil.defaultWithNA(TM_PALLIA_PROC_MSK);
+        this.TM_PALLIA_PROC_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_PALLIA_PROC_MSK_DESC);
+        this.TM_ONCOLOGY_MD =  ClinicalValueUtil.defaultWithNA(TM_ONCOLOGY_MD);
+        this.TM_ONCOLOGY_MD_NAME =  ClinicalValueUtil.defaultWithNA(TM_ONCOLOGY_MD_NAME);
+        this.TM_PRCS_YEAR =  ClinicalValueUtil.defaultWithNA(TM_PRCS_YEAR);
+        this.AGE_AT_TM_PRCS_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_PRCS_DATE_IN_DAYS);
+        this.TM_PATH_TEXT =  ClinicalValueUtil.defaultWithNA(TM_PATH_TEXT);
+        this.TM_SURG_TEXT =  ClinicalValueUtil.defaultWithNA(TM_SURG_TEXT);
+        this.TM_OVERRIDE_COM =  ClinicalValueUtil.defaultWithNA(TM_OVERRIDE_COM);
+        this.TM_CSSIZE =  ClinicalValueUtil.defaultWithNA(TM_CSSIZE);
+        this.TM_CSEXT =  ClinicalValueUtil.defaultWithNA(TM_CSEXT);
+        this.TM_CSEXTEV =  ClinicalValueUtil.defaultWithNA(TM_CSEXTEV);
+        this.TM_CSLMND =  ClinicalValueUtil.defaultWithNA(TM_CSLMND);
+        this.TM_CSRGNEV =  ClinicalValueUtil.defaultWithNA(TM_CSRGNEV);
+        this.TM_CSMETDX =  ClinicalValueUtil.defaultWithNA(TM_CSMETDX);
+        this.TM_CSMETEV =  ClinicalValueUtil.defaultWithNA(TM_CSMETEV);
+        this.TM_TSTAGE =  ClinicalValueUtil.defaultWithNA(TM_TSTAGE);
+        this.TM_TSTAGE_DESC =  ClinicalValueUtil.defaultWithNA(TM_TSTAGE_DESC);
+        this.TM_NSTAGE =  ClinicalValueUtil.defaultWithNA(TM_NSTAGE);
+        this.TM_NSTAGE_DESC =  ClinicalValueUtil.defaultWithNA(TM_NSTAGE_DESC);
+        this.TM_MSTAGE =  ClinicalValueUtil.defaultWithNA(TM_MSTAGE);
+        this.TM_MSTAGE_DESC =  ClinicalValueUtil.defaultWithNA(TM_MSTAGE_DESC);
+        this.TM_TBASIS =  ClinicalValueUtil.defaultWithNA(TM_TBASIS);
+        this.TM_TBASIS_DESC =  ClinicalValueUtil.defaultWithNA(TM_TBASIS_DESC);
+        this.TM_NBASIS =  ClinicalValueUtil.defaultWithNA(TM_NBASIS);
+        this.TM_NBASIS_DESC =  ClinicalValueUtil.defaultWithNA(TM_NBASIS_DESC);
+        this.TM_MBASIS =  ClinicalValueUtil.defaultWithNA(TM_MBASIS);
+        this.TM_MBASIS_DESC =  ClinicalValueUtil.defaultWithNA(TM_MBASIS_DESC);
+        this.TM_AJCC =  ClinicalValueUtil.defaultWithNA(TM_AJCC);
+        this.TM_AJCC_DESC =  ClinicalValueUtil.defaultWithNA(TM_AJCC_DESC);
+        this.TM_MSK_STG =  ClinicalValueUtil.defaultWithNA(TM_MSK_STG);
     }
-    
+
     public String getPT_ID_ICDO(){
-	return PT_ID_ICDO;
+        return PT_ID_ICDO;
     }
 
     public void setPT_ID_ICDO(String PT_ID_ICDO) {
-        this.PT_ID_ICDO =  StringUtils.isNotEmpty(PT_ID_ICDO) ? PT_ID_ICDO : "NA";
+        this.PT_ID_ICDO =  ClinicalValueUtil.defaultWithNA(PT_ID_ICDO);
     }
-    
+
     public Integer getTUMOR_YEAR(){
-	return TUMOR_YEAR;
+        return TUMOR_YEAR;
     }
 
     public void setTUMOR_YEAR(Integer TUMOR_YEAR) {
@@ -602,7 +604,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setDMP_ID_ICDO(String DMP_ID_ICDO) {
-        this.DMP_ID_ICDO =  StringUtils.isNotEmpty(DMP_ID_ICDO) ? DMP_ID_ICDO : "NA";
+        this.DMP_ID_ICDO =  ClinicalValueUtil.defaultWithNA(DMP_ID_ICDO);
     }
 
     public String getTM_TUMOR_SEQ_DESC() {
@@ -610,7 +612,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TUMOR_SEQ_DESC(String TM_TUMOR_SEQ_DESC) {
-        this.TM_TUMOR_SEQ_DESC =  StringUtils.isNotEmpty(TM_TUMOR_SEQ_DESC) ? TM_TUMOR_SEQ_DESC : "NA";
+        this.TM_TUMOR_SEQ_DESC =  ClinicalValueUtil.defaultWithNA(TM_TUMOR_SEQ_DESC);
     }
 
     public String getTM_ACC_YEAR() {
@@ -618,7 +620,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_ACC_YEAR(String TM_ACC_YEAR) {
-        this.TM_ACC_YEAR =  StringUtils.isNotEmpty(TM_ACC_YEAR) ? TM_ACC_YEAR : "NA";
+        this.TM_ACC_YEAR =  ClinicalValueUtil.defaultWithNA(TM_ACC_YEAR);
     }
 
     public String getTM_FIRST_MSK_YEAR() {
@@ -626,7 +628,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_FIRST_MSK_YEAR(String TM_FIRST_MSK_YEAR) {
-        this.TM_FIRST_MSK_YEAR =  StringUtils.isNotEmpty(TM_FIRST_MSK_YEAR) ? TM_FIRST_MSK_YEAR : "NA";
+        this.TM_FIRST_MSK_YEAR =  ClinicalValueUtil.defaultWithNA(TM_FIRST_MSK_YEAR);
     }
 
     public String getAGE_AT_TM_FIRST_MSK_DATE_IN_DAYS() {
@@ -634,7 +636,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_FIRST_MSK_DATE_IN_DAYS(String AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS) {
-        this.AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS) ? AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_FIRST_MSK_DATE_IN_DAYS);
     }
 
     public String getTM_CASE_STS() {
@@ -642,7 +644,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CASE_STS(String TM_CASE_STS) {
-        this.TM_CASE_STS =  StringUtils.isNotEmpty(TM_CASE_STS) ? TM_CASE_STS : "NA";
+        this.TM_CASE_STS =  ClinicalValueUtil.defaultWithNA(TM_CASE_STS);
     }
 
     public String getTM_CASE_STS_DESC() {
@@ -650,7 +652,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CASE_STS_DESC(String TM_CASE_STS_DESC) {
-        this.TM_CASE_STS_DESC =  StringUtils.isNotEmpty(TM_CASE_STS_DESC) ? TM_CASE_STS_DESC : "NA";
+        this.TM_CASE_STS_DESC =  ClinicalValueUtil.defaultWithNA(TM_CASE_STS_DESC);
     }
 
     public String getTM_CASE_EFF_YEAR() {
@@ -658,7 +660,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CASE_EFF_YEAR(String TM_CASE_EFF_YEAR) {
-        this.TM_CASE_EFF_YEAR =  StringUtils.isNotEmpty(TM_CASE_EFF_YEAR) ? TM_CASE_EFF_YEAR : "NA";
+        this.TM_CASE_EFF_YEAR =  ClinicalValueUtil.defaultWithNA(TM_CASE_EFF_YEAR);
     }
 
     public String getAGE_AT_TM_CASE_EFF_DATE_IN_DAYS() {
@@ -666,7 +668,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_CASE_EFF_DATE_IN_DAYS(String AGE_AT_TM_CASE_EFF_DATE_IN_DAYS) {
-        this.AGE_AT_TM_CASE_EFF_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_CASE_EFF_DATE_IN_DAYS) ? AGE_AT_TM_CASE_EFF_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_CASE_EFF_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_CASE_EFF_DATE_IN_DAYS);
     }
 
     public String getTM_STATE_AT_DX() {
@@ -674,7 +676,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_STATE_AT_DX(String TM_STATE_AT_DX) {
-        this.TM_STATE_AT_DX =  StringUtils.isNotEmpty(TM_STATE_AT_DX) ? TM_STATE_AT_DX : "NA";
+        this.TM_STATE_AT_DX =  ClinicalValueUtil.defaultWithNA(TM_STATE_AT_DX);
     }
 
     public String getTM_SMOKING_HX() {
@@ -682,7 +684,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_SMOKING_HX(String TM_SMOKING_HX) {
-        this.TM_SMOKING_HX =  StringUtils.isNotEmpty(TM_SMOKING_HX) ? TM_SMOKING_HX : "NA";
+        this.TM_SMOKING_HX =  ClinicalValueUtil.defaultWithNA(TM_SMOKING_HX);
     }
 
     public String getTM_SMOKING_HX_DESC() {
@@ -690,7 +692,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_SMOKING_HX_DESC(String TM_SMOKING_HX_DESC) {
-        this.TM_SMOKING_HX_DESC =  StringUtils.isNotEmpty(TM_SMOKING_HX_DESC) ? TM_SMOKING_HX_DESC : "NA";
+        this.TM_SMOKING_HX_DESC =  ClinicalValueUtil.defaultWithNA(TM_SMOKING_HX_DESC);
     }
 
     public String getTM_OCCUPATION() {
@@ -698,7 +700,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OCCUPATION(String TM_OCCUPATION) {
-        this.TM_OCCUPATION =  StringUtils.isNotEmpty(TM_OCCUPATION) ? TM_OCCUPATION : "NA";
+        this.TM_OCCUPATION =  ClinicalValueUtil.defaultWithNA(TM_OCCUPATION);
     }
 
     public String getTM_OCCUPATION_DESC() {
@@ -706,7 +708,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OCCUPATION_DESC(String TM_OCCUPATION_DESC) {
-        this.TM_OCCUPATION_DESC =  StringUtils.isNotEmpty(TM_OCCUPATION_DESC) ? TM_OCCUPATION_DESC : "NA";
+        this.TM_OCCUPATION_DESC =  ClinicalValueUtil.defaultWithNA(TM_OCCUPATION_DESC);
     }
 
     public String getTM_FACILITY_FROM() {
@@ -714,7 +716,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_FACILITY_FROM(String TM_FACILITY_FROM) {
-        this.TM_FACILITY_FROM =  StringUtils.isNotEmpty(TM_FACILITY_FROM) ? TM_FACILITY_FROM : "NA";
+        this.TM_FACILITY_FROM =  ClinicalValueUtil.defaultWithNA(TM_FACILITY_FROM);
     }
 
     public String getFACILITY_FROM_DESC() {
@@ -722,7 +724,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setFACILITY_FROM_DESC(String FACILITY_FROM_DESC) {
-        this.FACILITY_FROM_DESC =  StringUtils.isNotEmpty(FACILITY_FROM_DESC) ? FACILITY_FROM_DESC : "NA";
+        this.FACILITY_FROM_DESC =  ClinicalValueUtil.defaultWithNA(FACILITY_FROM_DESC);
     }
 
     public String getTM_FACILITY_TO() {
@@ -730,7 +732,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_FACILITY_TO(String TM_FACILITY_TO) {
-        this.TM_FACILITY_TO =  StringUtils.isNotEmpty(TM_FACILITY_TO) ? TM_FACILITY_TO : "NA";
+        this.TM_FACILITY_TO =  ClinicalValueUtil.defaultWithNA(TM_FACILITY_TO);
     }
 
     public String getFACILITY_TO_DESC() {
@@ -738,7 +740,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setFACILITY_TO_DESC(String FACILITY_TO_DESC) {
-        this.FACILITY_TO_DESC =  StringUtils.isNotEmpty(FACILITY_TO_DESC) ? FACILITY_TO_DESC : "NA";
+        this.FACILITY_TO_DESC =  ClinicalValueUtil.defaultWithNA(FACILITY_TO_DESC);
     }
 
     public Integer getTM_DX_YEAR() {
@@ -762,7 +764,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_SITE_CD(String TM_SITE_CD) {
-        this.TM_SITE_CD =  StringUtils.isNotEmpty(TM_SITE_CD) ? TM_SITE_CD : "NA";
+        this.TM_SITE_CD =  ClinicalValueUtil.defaultWithNA(TM_SITE_CD);
     }
 
     public String getTM_SITE_DESC() {
@@ -770,7 +772,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_SITE_DESC(String TM_SITE_DESC) {
-        this.TM_SITE_DESC =  StringUtils.isNotEmpty(TM_SITE_DESC) ? TM_SITE_DESC : "NA";
+        this.TM_SITE_DESC =  ClinicalValueUtil.defaultWithNA(TM_SITE_DESC);
     }
 
     public String getTM_LATERALITY_CD() {
@@ -778,7 +780,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_LATERALITY_CD(String TM_LATERALITY_CD) {
-        this.TM_LATERALITY_CD =  StringUtils.isNotEmpty(TM_LATERALITY_CD) ? TM_LATERALITY_CD : "NA";
+        this.TM_LATERALITY_CD =  ClinicalValueUtil.defaultWithNA(TM_LATERALITY_CD);
     }
 
     public String getTM_LATERALITY_DESC() {
@@ -786,7 +788,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_LATERALITY_DESC(String TM_LATERALITY_DESC) {
-        this.TM_LATERALITY_DESC =  StringUtils.isNotEmpty(TM_LATERALITY_DESC) ? TM_LATERALITY_DESC : "NA";
+        this.TM_LATERALITY_DESC =  ClinicalValueUtil.defaultWithNA(TM_LATERALITY_DESC);
     }
 
     public String getTM_HIST_CD() {
@@ -794,7 +796,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_HIST_CD(String TM_HIST_CD) {
-        this.TM_HIST_CD =  StringUtils.isNotEmpty(TM_HIST_CD) ? TM_HIST_CD : "NA";
+        this.TM_HIST_CD =  ClinicalValueUtil.defaultWithNA(TM_HIST_CD);
     }
 
     public String getTM_HIST_DESC() {
@@ -802,7 +804,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_HIST_DESC(String TM_HIST_DESC) {
-        this.TM_HIST_DESC =  StringUtils.isNotEmpty(TM_HIST_DESC) ? TM_HIST_DESC : "NA";
+        this.TM_HIST_DESC =  ClinicalValueUtil.defaultWithNA(TM_HIST_DESC);
     }
 
     public String getTM_DX_CONFRM_CD() {
@@ -810,7 +812,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_DX_CONFRM_CD(String TM_DX_CONFRM_CD) {
-        this.TM_DX_CONFRM_CD =  StringUtils.isNotEmpty(TM_DX_CONFRM_CD) ? TM_DX_CONFRM_CD : "NA";
+        this.TM_DX_CONFRM_CD =  ClinicalValueUtil.defaultWithNA(TM_DX_CONFRM_CD);
     }
 
     public String getTM_DX_CONFRM_DESC() {
@@ -818,7 +820,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_DX_CONFRM_DESC(String TM_DX_CONFRM_DESC) {
-        this.TM_DX_CONFRM_DESC =  StringUtils.isNotEmpty(TM_DX_CONFRM_DESC) ? TM_DX_CONFRM_DESC : "NA";
+        this.TM_DX_CONFRM_DESC =  ClinicalValueUtil.defaultWithNA(TM_DX_CONFRM_DESC);
     }
 
     public String getTM_REGNODE_EXM_NO() {
@@ -826,7 +828,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REGNODE_EXM_NO(String TM_REGNODE_EXM_NO) {
-        this.TM_REGNODE_EXM_NO =  StringUtils.isNotEmpty(TM_REGNODE_EXM_NO) ? TM_REGNODE_EXM_NO : "NA";
+        this.TM_REGNODE_EXM_NO =  ClinicalValueUtil.defaultWithNA(TM_REGNODE_EXM_NO);
     }
 
     public String getTM_REGNODE_POS_NO() {
@@ -834,7 +836,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REGNODE_POS_NO(String TM_REGNODE_POS_NO) {
-        this.TM_REGNODE_POS_NO =  StringUtils.isNotEmpty(TM_REGNODE_POS_NO) ? TM_REGNODE_POS_NO : "NA";
+        this.TM_REGNODE_POS_NO =  ClinicalValueUtil.defaultWithNA(TM_REGNODE_POS_NO);
     }
 
     public String getTM_TUMOR_SIZE() {
@@ -842,7 +844,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TUMOR_SIZE(String TM_TUMOR_SIZE) {
-        this.TM_TUMOR_SIZE =  StringUtils.isNotEmpty(TM_TUMOR_SIZE) ? TM_TUMOR_SIZE : "NA";
+        this.TM_TUMOR_SIZE =  ClinicalValueUtil.defaultWithNA(TM_TUMOR_SIZE);
     }
 
     public String getTM_RESID_TUMOR_CD() {
@@ -850,7 +852,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RESID_TUMOR_CD(String TM_RESID_TUMOR_CD) {
-        this.TM_RESID_TUMOR_CD =  StringUtils.isNotEmpty(TM_RESID_TUMOR_CD) ? TM_RESID_TUMOR_CD : "NA";
+        this.TM_RESID_TUMOR_CD =  ClinicalValueUtil.defaultWithNA(TM_RESID_TUMOR_CD);
     }
 
     public String getTM_RESID_TUMOR_DESC() {
@@ -858,7 +860,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RESID_TUMOR_DESC(String TM_RESID_TUMOR_DESC) {
-        this.TM_RESID_TUMOR_DESC =  StringUtils.isNotEmpty(TM_RESID_TUMOR_DESC) ? TM_RESID_TUMOR_DESC : "NA";
+        this.TM_RESID_TUMOR_DESC =  ClinicalValueUtil.defaultWithNA(TM_RESID_TUMOR_DESC);
     }
 
     public String getTM_GENERAL_STG() {
@@ -866,7 +868,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_GENERAL_STG(String TM_GENERAL_STG) {
-        this.TM_GENERAL_STG =  StringUtils.isNotEmpty(TM_GENERAL_STG) ? TM_GENERAL_STG : "NA";
+        this.TM_GENERAL_STG =  ClinicalValueUtil.defaultWithNA(TM_GENERAL_STG);
     }
 
     public String getTM_GENERAL_STG_DESC() {
@@ -874,7 +876,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_GENERAL_STG_DESC(String TM_GENERAL_STG_DESC) {
-        this.TM_GENERAL_STG_DESC =  StringUtils.isNotEmpty(TM_GENERAL_STG_DESC) ? TM_GENERAL_STG_DESC : "NA";
+        this.TM_GENERAL_STG_DESC =  ClinicalValueUtil.defaultWithNA(TM_GENERAL_STG_DESC);
     }
 
     public String getTM_TNM_EDITION() {
@@ -882,7 +884,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TNM_EDITION(String TM_TNM_EDITION) {
-        this.TM_TNM_EDITION =  StringUtils.isNotEmpty(TM_TNM_EDITION) ? TM_TNM_EDITION : "NA";
+        this.TM_TNM_EDITION =  ClinicalValueUtil.defaultWithNA(TM_TNM_EDITION);
     }
 
     public String getTM_TNM_EDITION_DESC() {
@@ -890,7 +892,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TNM_EDITION_DESC(String TM_TNM_EDITION_DESC) {
-        this.TM_TNM_EDITION_DESC =  StringUtils.isNotEmpty(TM_TNM_EDITION_DESC) ? TM_TNM_EDITION_DESC : "NA";
+        this.TM_TNM_EDITION_DESC =  ClinicalValueUtil.defaultWithNA(TM_TNM_EDITION_DESC);
     }
 
     public String getTM_CLIN_TNM_T() {
@@ -898,7 +900,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CLIN_TNM_T(String TM_CLIN_TNM_T) {
-        this.TM_CLIN_TNM_T =  StringUtils.isNotEmpty(TM_CLIN_TNM_T) ? TM_CLIN_TNM_T : "NA";
+        this.TM_CLIN_TNM_T =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_T);
     }
 
     public String getTM_CLIN_TNM_T_DESC() {
@@ -906,7 +908,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CLIN_TNM_T_DESC(String TM_CLIN_TNM_T_DESC) {
-        this.TM_CLIN_TNM_T_DESC =  StringUtils.isNotEmpty(TM_CLIN_TNM_T_DESC) ? TM_CLIN_TNM_T_DESC : "NA";
+        this.TM_CLIN_TNM_T_DESC =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_T_DESC);
     }
 
     public String getTM_CLIN_TNM_N() {
@@ -914,7 +916,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CLIN_TNM_N(String TM_CLIN_TNM_N) {
-        this.TM_CLIN_TNM_N =  StringUtils.isNotEmpty(TM_CLIN_TNM_N) ? TM_CLIN_TNM_N : "NA";
+        this.TM_CLIN_TNM_N =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_N);
     }
 
     public String getTM_CLIN_TNM_N_DESC() {
@@ -922,7 +924,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CLIN_TNM_N_DESC(String TM_CLIN_TNM_N_DESC) {
-        this.TM_CLIN_TNM_N_DESC =  StringUtils.isNotEmpty(TM_CLIN_TNM_N_DESC) ? TM_CLIN_TNM_N_DESC : "NA";
+        this.TM_CLIN_TNM_N_DESC =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_N_DESC);
     }
 
     public String getTM_CLIN_TNM_M() {
@@ -930,7 +932,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CLIN_TNM_M(String TM_CLIN_TNM_M) {
-        this.TM_CLIN_TNM_M =  StringUtils.isNotEmpty(TM_CLIN_TNM_M) ? TM_CLIN_TNM_M : "NA";
+        this.TM_CLIN_TNM_M =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_M);
     }
 
     public String getTM_CLIN_TNM_M_DESC() {
@@ -938,7 +940,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CLIN_TNM_M_DESC(String TM_CLIN_TNM_M_DESC) {
-        this.TM_CLIN_TNM_M_DESC =  StringUtils.isNotEmpty(TM_CLIN_TNM_M_DESC) ? TM_CLIN_TNM_M_DESC : "NA";
+        this.TM_CLIN_TNM_M_DESC =  ClinicalValueUtil.defaultWithNA(TM_CLIN_TNM_M_DESC);
     }
 
     public String getTM_CLIN_STG_GRP() {
@@ -946,7 +948,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CLIN_STG_GRP(String TM_CLIN_STG_GRP) {
-        this.TM_CLIN_STG_GRP =  StringUtils.isNotEmpty(TM_CLIN_STG_GRP) ? TM_CLIN_STG_GRP : "NA";
+        this.TM_CLIN_STG_GRP =  ClinicalValueUtil.defaultWithNA(TM_CLIN_STG_GRP);
     }
 
     public String getTM_PATH_TNM_T() {
@@ -954,7 +956,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_TNM_T(String TM_PATH_TNM_T) {
-        this.TM_PATH_TNM_T =  StringUtils.isNotEmpty(TM_PATH_TNM_T) ? TM_PATH_TNM_T : "NA";
+        this.TM_PATH_TNM_T =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_T);
     }
 
     public String getTM_PATH_TNM_T_DESC() {
@@ -962,7 +964,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_TNM_T_DESC(String TM_PATH_TNM_T_DESC) {
-        this.TM_PATH_TNM_T_DESC =  StringUtils.isNotEmpty(TM_PATH_TNM_T_DESC) ? TM_PATH_TNM_T_DESC : "NA";
+        this.TM_PATH_TNM_T_DESC =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_T_DESC);
     }
 
     public String getTM_PATH_TNM_N() {
@@ -970,7 +972,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_TNM_N(String TM_PATH_TNM_N) {
-        this.TM_PATH_TNM_N =  StringUtils.isNotEmpty(TM_PATH_TNM_N) ? TM_PATH_TNM_N : "NA";
+        this.TM_PATH_TNM_N =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_N);
     }
 
     public String getTM_PATH_TNM_N_DESC() {
@@ -978,7 +980,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_TNM_N_DESC(String TM_PATH_TNM_N_DESC) {
-        this.TM_PATH_TNM_N_DESC =  StringUtils.isNotEmpty(TM_PATH_TNM_N_DESC) ? TM_PATH_TNM_N_DESC : "NA";
+        this.TM_PATH_TNM_N_DESC =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_N_DESC);
     }
 
     public String getTM_PATH_TNM_M() {
@@ -986,7 +988,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_TNM_M(String TM_PATH_TNM_M) {
-        this.TM_PATH_TNM_M =  StringUtils.isNotEmpty(TM_PATH_TNM_M) ? TM_PATH_TNM_M : "NA";
+        this.TM_PATH_TNM_M =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_M);
     }
 
     public String getTM_PATH_TNM_M_DESC() {
@@ -994,7 +996,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_TNM_M_DESC(String TM_PATH_TNM_M_DESC) {
-        this.TM_PATH_TNM_M_DESC =  StringUtils.isNotEmpty(TM_PATH_TNM_M_DESC) ? TM_PATH_TNM_M_DESC : "NA";
+        this.TM_PATH_TNM_M_DESC =  ClinicalValueUtil.defaultWithNA(TM_PATH_TNM_M_DESC);
     }
 
     public String getTM_PATH_STG_GRP() {
@@ -1002,7 +1004,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_STG_GRP(String TM_PATH_STG_GRP) {
-        this.TM_PATH_STG_GRP =  StringUtils.isNotEmpty(TM_PATH_STG_GRP) ? TM_PATH_STG_GRP : "NA";
+        this.TM_PATH_STG_GRP =  ClinicalValueUtil.defaultWithNA(TM_PATH_STG_GRP);
     }
 
     public String getTM_PATH_RPT_AV() {
@@ -1010,7 +1012,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_RPT_AV(String TM_PATH_RPT_AV) {
-        this.TM_PATH_RPT_AV =  StringUtils.isNotEmpty(TM_PATH_RPT_AV) ? TM_PATH_RPT_AV : "NA";
+        this.TM_PATH_RPT_AV =  ClinicalValueUtil.defaultWithNA(TM_PATH_RPT_AV);
     }
 
     public String getTM_CA_STS_AT_ACC() {
@@ -1018,7 +1020,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CA_STS_AT_ACC(String TM_CA_STS_AT_ACC) {
-        this.TM_CA_STS_AT_ACC =  StringUtils.isNotEmpty(TM_CA_STS_AT_ACC) ? TM_CA_STS_AT_ACC : "NA";
+        this.TM_CA_STS_AT_ACC =  ClinicalValueUtil.defaultWithNA(TM_CA_STS_AT_ACC);
     }
 
     public String getTM_FIRST_RECUR_YEAR() {
@@ -1026,7 +1028,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_FIRST_RECUR_YEAR(String TM_FIRST_RECUR_YEAR) {
-        this.TM_FIRST_RECUR_YEAR =  StringUtils.isNotEmpty(TM_FIRST_RECUR_YEAR) ? TM_FIRST_RECUR_YEAR : "NA";
+        this.TM_FIRST_RECUR_YEAR =  ClinicalValueUtil.defaultWithNA(TM_FIRST_RECUR_YEAR);
     }
 
     public String getAGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS() {
@@ -1034,7 +1036,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS(String AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS) {
-        this.AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS) ? AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_FIRST_RECUR_DATE_IN_DAYS);
     }
 
     public String getTM_FIRST_RECUR_TYP() {
@@ -1042,7 +1044,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_FIRST_RECUR_TYP(String TM_FIRST_RECUR_TYP) {
-        this.TM_FIRST_RECUR_TYP =  StringUtils.isNotEmpty(TM_FIRST_RECUR_TYP) ? TM_FIRST_RECUR_TYP : "NA";
+        this.TM_FIRST_RECUR_TYP =  ClinicalValueUtil.defaultWithNA(TM_FIRST_RECUR_TYP);
     }
 
     public String getTM_ADM_YEAR() {
@@ -1050,7 +1052,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_ADM_YEAR(String TM_ADM_YEAR) {
-        this.TM_ADM_YEAR =  StringUtils.isNotEmpty(TM_ADM_YEAR) ? TM_ADM_YEAR : "NA";
+        this.TM_ADM_YEAR =  ClinicalValueUtil.defaultWithNA(TM_ADM_YEAR);
     }
 
     public String getAGE_AT_TM_ADM_DATE_IN_DAYS() {
@@ -1058,7 +1060,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_ADM_DATE_IN_DAYS(String AGE_AT_TM_ADM_DATE_IN_DAYS) {
-        this.AGE_AT_TM_ADM_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_ADM_DATE_IN_DAYS) ? AGE_AT_TM_ADM_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_ADM_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_ADM_DATE_IN_DAYS);
     }
 
     public String getTM_DSCH_YEAR() {
@@ -1066,7 +1068,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_DSCH_YEAR(String TM_DSCH_YEAR) {
-        this.TM_DSCH_YEAR =  StringUtils.isNotEmpty(TM_DSCH_YEAR) ? TM_DSCH_YEAR : "NA";
+        this.TM_DSCH_YEAR =  ClinicalValueUtil.defaultWithNA(TM_DSCH_YEAR);
     }
 
     public String getAGE_AT_TM_DSCH_DATE_IN_DAYS() {
@@ -1074,7 +1076,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_DSCH_DATE_IN_DAYS(String AGE_AT_TM_DSCH_DATE_IN_DAYS) {
-        this.AGE_AT_TM_DSCH_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_DSCH_DATE_IN_DAYS) ? AGE_AT_TM_DSCH_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_DSCH_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_DSCH_DATE_IN_DAYS);
     }
 
     public String getTM_SURG_DSCH_YEAR() {
@@ -1082,7 +1084,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_SURG_DSCH_YEAR(String TM_SURG_DSCH_YEAR) {
-        this.TM_SURG_DSCH_YEAR =  StringUtils.isNotEmpty(TM_SURG_DSCH_YEAR) ? TM_SURG_DSCH_YEAR : "NA";
+        this.TM_SURG_DSCH_YEAR =  ClinicalValueUtil.defaultWithNA(TM_SURG_DSCH_YEAR);
     }
 
     public String getAGE_AT_TM_SURG_DSCH_DATE_IN_DAYS() {
@@ -1090,7 +1092,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_SURG_DSCH_DATE_IN_DAYS(String AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS) {
-        this.AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS) ? AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_SURG_DSCH_DATE_IN_DAYS);
     }
 
     public String getTM_READM_WTHN_30D() {
@@ -1098,7 +1100,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_READM_WTHN_30D(String TM_READM_WTHN_30D) {
-        this.TM_READM_WTHN_30D =  StringUtils.isNotEmpty(TM_READM_WTHN_30D) ? TM_READM_WTHN_30D : "NA";
+        this.TM_READM_WTHN_30D =  ClinicalValueUtil.defaultWithNA(TM_READM_WTHN_30D);
     }
 
     public String getTM_FIRST_TX_YEAR() {
@@ -1106,7 +1108,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_FIRST_TX_YEAR(String TM_FIRST_TX_YEAR) {
-        this.TM_FIRST_TX_YEAR =  StringUtils.isNotEmpty(TM_FIRST_TX_YEAR) ? TM_FIRST_TX_YEAR : "NA";
+        this.TM_FIRST_TX_YEAR =  ClinicalValueUtil.defaultWithNA(TM_FIRST_TX_YEAR);
     }
 
     public String getAGE_AT_TM_FIRST_TX_DATE_IN_DAYS() {
@@ -1114,7 +1116,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_FIRST_TX_DATE_IN_DAYS(String AGE_AT_TM_FIRST_TX_DATE_IN_DAYS) {
-        this.AGE_AT_TM_FIRST_TX_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_FIRST_TX_DATE_IN_DAYS) ? AGE_AT_TM_FIRST_TX_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_FIRST_TX_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_FIRST_TX_DATE_IN_DAYS);
     }
 
     public String getTM_NON_CA_SURG_SUM() {
@@ -1122,7 +1124,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NON_CA_SURG_SUM(String TM_NON_CA_SURG_SUM) {
-        this.TM_NON_CA_SURG_SUM =  StringUtils.isNotEmpty(TM_NON_CA_SURG_SUM) ? TM_NON_CA_SURG_SUM : "NA";
+        this.TM_NON_CA_SURG_SUM =  ClinicalValueUtil.defaultWithNA(TM_NON_CA_SURG_SUM);
     }
 
     public String getTM_NON_CA_SURG_SUM_DESC() {
@@ -1130,7 +1132,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NON_CA_SURG_SUM_DESC(String TM_NON_CA_SURG_SUM_DESC) {
-        this.TM_NON_CA_SURG_SUM_DESC =  StringUtils.isNotEmpty(TM_NON_CA_SURG_SUM_DESC) ? TM_NON_CA_SURG_SUM_DESC : "NA";
+        this.TM_NON_CA_SURG_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_NON_CA_SURG_SUM_DESC);
     }
 
     public String getTM_NON_CA_SURG_MSK() {
@@ -1138,7 +1140,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NON_CA_SURG_MSK(String TM_NON_CA_SURG_MSK) {
-        this.TM_NON_CA_SURG_MSK =  StringUtils.isNotEmpty(TM_NON_CA_SURG_MSK) ? TM_NON_CA_SURG_MSK : "NA";
+        this.TM_NON_CA_SURG_MSK =  ClinicalValueUtil.defaultWithNA(TM_NON_CA_SURG_MSK);
     }
 
     public String getTM_NON_CA_SURG_YEAR() {
@@ -1146,7 +1148,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NON_CA_SURG_YEAR(String TM_NON_CA_SURG_YEAR) {
-        this.TM_NON_CA_SURG_YEAR =  StringUtils.isNotEmpty(TM_NON_CA_SURG_YEAR) ? TM_NON_CA_SURG_YEAR : "NA";
+        this.TM_NON_CA_SURG_YEAR =  ClinicalValueUtil.defaultWithNA(TM_NON_CA_SURG_YEAR);
     }
 
     public String getAGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS() {
@@ -1154,7 +1156,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS(String AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS) {
-        this.AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS) ? AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_NON_CA_SURG_DATE_IN_DAYS);
     }
 
     public String getTM_CA_SURG_98() {
@@ -1162,7 +1164,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CA_SURG_98(String TM_CA_SURG_98) {
-        this.TM_CA_SURG_98 =  StringUtils.isNotEmpty(TM_CA_SURG_98) ? TM_CA_SURG_98 : "NA";
+        this.TM_CA_SURG_98 =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_98);
     }
 
     public String getTM_CA_SURG_98_MSK() {
@@ -1170,7 +1172,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CA_SURG_98_MSK(String TM_CA_SURG_98_MSK) {
-        this.TM_CA_SURG_98_MSK =  StringUtils.isNotEmpty(TM_CA_SURG_98_MSK) ? TM_CA_SURG_98_MSK : "NA";
+        this.TM_CA_SURG_98_MSK =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_98_MSK);
     }
 
     public String getTM_CA_SURG_03() {
@@ -1178,7 +1180,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CA_SURG_03(String TM_CA_SURG_03) {
-        this.TM_CA_SURG_03 =  StringUtils.isNotEmpty(TM_CA_SURG_03) ? TM_CA_SURG_03 : "NA";
+        this.TM_CA_SURG_03 =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_03);
     }
 
     public String getTM_CA_SURG_03_MSK() {
@@ -1186,7 +1188,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CA_SURG_03_MSK(String TM_CA_SURG_03_MSK) {
-        this.TM_CA_SURG_03_MSK =  StringUtils.isNotEmpty(TM_CA_SURG_03_MSK) ? TM_CA_SURG_03_MSK : "NA";
+        this.TM_CA_SURG_03_MSK =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_03_MSK);
     }
 
     public String getTM_OTH_SURG_98() {
@@ -1194,7 +1196,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SURG_98(String TM_OTH_SURG_98) {
-        this.TM_OTH_SURG_98 =  StringUtils.isNotEmpty(TM_OTH_SURG_98) ? TM_OTH_SURG_98 : "NA";
+        this.TM_OTH_SURG_98 =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_98);
     }
 
     public String getTM_OTH_SURG_98_MSK() {
@@ -1202,7 +1204,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SURG_98_MSK(String TM_OTH_SURG_98_MSK) {
-        this.TM_OTH_SURG_98_MSK =  StringUtils.isNotEmpty(TM_OTH_SURG_98_MSK) ? TM_OTH_SURG_98_MSK : "NA";
+        this.TM_OTH_SURG_98_MSK =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_98_MSK);
     }
 
     public String getTM_OTH_SURG_03() {
@@ -1210,7 +1212,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SURG_03(String TM_OTH_SURG_03) {
-        this.TM_OTH_SURG_03 =  StringUtils.isNotEmpty(TM_OTH_SURG_03) ? TM_OTH_SURG_03 : "NA";
+        this.TM_OTH_SURG_03 =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_03);
     }
 
     public String getTM_OTH_SURG_03_MSK() {
@@ -1218,7 +1220,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SURG_03_MSK(String TM_OTH_SURG_03_MSK) {
-        this.TM_OTH_SURG_03_MSK =  StringUtils.isNotEmpty(TM_OTH_SURG_03_MSK) ? TM_OTH_SURG_03_MSK : "NA";
+        this.TM_OTH_SURG_03_MSK =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_03_MSK);
     }
 
     public String getTM_OTH_SURG_CD() {
@@ -1226,7 +1228,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SURG_CD(String TM_OTH_SURG_CD) {
-        this.TM_OTH_SURG_CD =  StringUtils.isNotEmpty(TM_OTH_SURG_CD) ? TM_OTH_SURG_CD : "NA";
+        this.TM_OTH_SURG_CD =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_CD);
     }
 
     public String getTM_OTH_SURG_CD_DESC() {
@@ -1234,7 +1236,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SURG_CD_DESC(String TM_OTH_SURG_CD_DESC) {
-        this.TM_OTH_SURG_CD_DESC =  StringUtils.isNotEmpty(TM_OTH_SURG_CD_DESC) ? TM_OTH_SURG_CD_DESC : "NA";
+        this.TM_OTH_SURG_CD_DESC =  ClinicalValueUtil.defaultWithNA(TM_OTH_SURG_CD_DESC);
     }
 
     public String getTM_RGN_SCOP_98() {
@@ -1242,7 +1244,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RGN_SCOP_98(String TM_RGN_SCOP_98) {
-        this.TM_RGN_SCOP_98 =  StringUtils.isNotEmpty(TM_RGN_SCOP_98) ? TM_RGN_SCOP_98 : "NA";
+        this.TM_RGN_SCOP_98 =  ClinicalValueUtil.defaultWithNA(TM_RGN_SCOP_98);
     }
 
     public String getTM_RGN_SCOP_98_MSK() {
@@ -1250,7 +1252,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RGN_SCOP_98_MSK(String TM_RGN_SCOP_98_MSK) {
-        this.TM_RGN_SCOP_98_MSK =  StringUtils.isNotEmpty(TM_RGN_SCOP_98_MSK) ? TM_RGN_SCOP_98_MSK : "NA";
+        this.TM_RGN_SCOP_98_MSK =  ClinicalValueUtil.defaultWithNA(TM_RGN_SCOP_98_MSK);
     }
 
     public String getTM_RGN_SCOP_03() {
@@ -1258,7 +1260,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RGN_SCOP_03(String TM_RGN_SCOP_03) {
-        this.TM_RGN_SCOP_03 =  StringUtils.isNotEmpty(TM_RGN_SCOP_03) ? TM_RGN_SCOP_03 : "NA";
+        this.TM_RGN_SCOP_03 =  ClinicalValueUtil.defaultWithNA(TM_RGN_SCOP_03);
     }
 
     public String getTM_RGN_SCOP_03_MSK() {
@@ -1266,7 +1268,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RGN_SCOP_03_MSK(String TM_RGN_SCOP_03_MSK) {
-        this.TM_RGN_SCOP_03_MSK =  StringUtils.isNotEmpty(TM_RGN_SCOP_03_MSK) ? TM_RGN_SCOP_03_MSK : "NA";
+        this.TM_RGN_SCOP_03_MSK =  ClinicalValueUtil.defaultWithNA(TM_RGN_SCOP_03_MSK);
     }
 
     public String getTM_REGNODE_SCOP_CD() {
@@ -1274,7 +1276,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REGNODE_SCOP_CD(String TM_REGNODE_SCOP_CD) {
-        this.TM_REGNODE_SCOP_CD =  StringUtils.isNotEmpty(TM_REGNODE_SCOP_CD) ? TM_REGNODE_SCOP_CD : "NA";
+        this.TM_REGNODE_SCOP_CD =  ClinicalValueUtil.defaultWithNA(TM_REGNODE_SCOP_CD);
     }
 
     public String getTM_REGNODE_SCOP_DESC() {
@@ -1282,7 +1284,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REGNODE_SCOP_DESC(String TM_REGNODE_SCOP_DESC) {
-        this.TM_REGNODE_SCOP_DESC =  StringUtils.isNotEmpty(TM_REGNODE_SCOP_DESC) ? TM_REGNODE_SCOP_DESC : "NA";
+        this.TM_REGNODE_SCOP_DESC =  ClinicalValueUtil.defaultWithNA(TM_REGNODE_SCOP_DESC);
     }
 
     public String getTM_RECON_SURG() {
@@ -1290,7 +1292,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RECON_SURG(String TM_RECON_SURG) {
-        this.TM_RECON_SURG =  StringUtils.isNotEmpty(TM_RECON_SURG) ? TM_RECON_SURG : "NA";
+        this.TM_RECON_SURG =  ClinicalValueUtil.defaultWithNA(TM_RECON_SURG);
     }
 
     public String getTM_RECON_SURG_DESC() {
@@ -1298,7 +1300,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RECON_SURG_DESC(String TM_RECON_SURG_DESC) {
-        this.TM_RECON_SURG_DESC =  StringUtils.isNotEmpty(TM_RECON_SURG_DESC) ? TM_RECON_SURG_DESC : "NA";
+        this.TM_RECON_SURG_DESC =  ClinicalValueUtil.defaultWithNA(TM_RECON_SURG_DESC);
     }
 
     public String getTM_CA_SURG_YEAR() {
@@ -1306,7 +1308,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CA_SURG_YEAR(String TM_CA_SURG_YEAR) {
-        this.TM_CA_SURG_YEAR =  StringUtils.isNotEmpty(TM_CA_SURG_YEAR) ? TM_CA_SURG_YEAR : "NA";
+        this.TM_CA_SURG_YEAR =  ClinicalValueUtil.defaultWithNA(TM_CA_SURG_YEAR);
     }
 
     public String getAGE_AT_TM_CA_SURG_DATE_IN_DAYS() {
@@ -1314,7 +1316,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_CA_SURG_DATE_IN_DAYS(String AGE_AT_TM_CA_SURG_DATE_IN_DAYS) {
-        this.AGE_AT_TM_CA_SURG_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_CA_SURG_DATE_IN_DAYS) ? AGE_AT_TM_CA_SURG_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_CA_SURG_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_CA_SURG_DATE_IN_DAYS);
     }
 
     public String getTM_SURG_DEF_YEAR() {
@@ -1322,7 +1324,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_SURG_DEF_YEAR(String TM_SURG_DEF_YEAR) {
-        this.TM_SURG_DEF_YEAR =  StringUtils.isNotEmpty(TM_SURG_DEF_YEAR) ? TM_SURG_DEF_YEAR : "NA";
+        this.TM_SURG_DEF_YEAR =  ClinicalValueUtil.defaultWithNA(TM_SURG_DEF_YEAR);
     }
 
     public String getAGE_AT_TM_SURG_DEF_DATE_IN_DAYS() {
@@ -1330,7 +1332,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_SURG_DEF_DATE_IN_DAYS(String AGE_AT_TM_SURG_DEF_DATE_IN_DAYS) {
-        this.AGE_AT_TM_SURG_DEF_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_SURG_DEF_DATE_IN_DAYS) ? AGE_AT_TM_SURG_DEF_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_SURG_DEF_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_SURG_DEF_DATE_IN_DAYS);
     }
 
     public String getTM_REASON_NO_SURG() {
@@ -1338,7 +1340,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REASON_NO_SURG(String TM_REASON_NO_SURG) {
-        this.TM_REASON_NO_SURG =  StringUtils.isNotEmpty(TM_REASON_NO_SURG) ? TM_REASON_NO_SURG : "NA";
+        this.TM_REASON_NO_SURG =  ClinicalValueUtil.defaultWithNA(TM_REASON_NO_SURG);
     }
 
     public String getREASON_NO_SURG_DESC() {
@@ -1346,7 +1348,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setREASON_NO_SURG_DESC(String REASON_NO_SURG_DESC) {
-        this.REASON_NO_SURG_DESC =  StringUtils.isNotEmpty(REASON_NO_SURG_DESC) ? REASON_NO_SURG_DESC : "NA";
+        this.REASON_NO_SURG_DESC =  ClinicalValueUtil.defaultWithNA(REASON_NO_SURG_DESC);
     }
 
     public String getTM_PRIM_SURGEON() {
@@ -1354,7 +1356,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PRIM_SURGEON(String TM_PRIM_SURGEON) {
-        this.TM_PRIM_SURGEON =  StringUtils.isNotEmpty(TM_PRIM_SURGEON) ? TM_PRIM_SURGEON : "NA";
+        this.TM_PRIM_SURGEON =  ClinicalValueUtil.defaultWithNA(TM_PRIM_SURGEON);
     }
 
     public String getTM_PRIM_SURGEON_NAME() {
@@ -1362,7 +1364,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PRIM_SURGEON_NAME(String TM_PRIM_SURGEON_NAME) {
-        this.TM_PRIM_SURGEON_NAME =  StringUtils.isNotEmpty(TM_PRIM_SURGEON_NAME) ? TM_PRIM_SURGEON_NAME : "NA";
+        this.TM_PRIM_SURGEON_NAME =  ClinicalValueUtil.defaultWithNA(TM_PRIM_SURGEON_NAME);
     }
 
     public String getTM_ATN_DR_NO() {
@@ -1370,7 +1372,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_ATN_DR_NO(String TM_ATN_DR_NO) {
-        this.TM_ATN_DR_NO =  StringUtils.isNotEmpty(TM_ATN_DR_NO) ? TM_ATN_DR_NO : "NA";
+        this.TM_ATN_DR_NO =  ClinicalValueUtil.defaultWithNA(TM_ATN_DR_NO);
     }
 
     public String getTM_ATN_DR_NAME() {
@@ -1378,7 +1380,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_ATN_DR_NAME(String TM_ATN_DR_NAME) {
-        this.TM_ATN_DR_NAME =  StringUtils.isNotEmpty(TM_ATN_DR_NAME) ? TM_ATN_DR_NAME : "NA";
+        this.TM_ATN_DR_NAME =  ClinicalValueUtil.defaultWithNA(TM_ATN_DR_NAME);
     }
 
     public String getTM_REASON_NO_RAD() {
@@ -1386,7 +1388,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REASON_NO_RAD(String TM_REASON_NO_RAD) {
-        this.TM_REASON_NO_RAD =  StringUtils.isNotEmpty(TM_REASON_NO_RAD) ? TM_REASON_NO_RAD : "NA";
+        this.TM_REASON_NO_RAD =  ClinicalValueUtil.defaultWithNA(TM_REASON_NO_RAD);
     }
 
     public String getTM_REASON_NO_RAD_DESC() {
@@ -1394,7 +1396,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REASON_NO_RAD_DESC(String TM_REASON_NO_RAD_DESC) {
-        this.TM_REASON_NO_RAD_DESC =  StringUtils.isNotEmpty(TM_REASON_NO_RAD_DESC) ? TM_REASON_NO_RAD_DESC : "NA";
+        this.TM_REASON_NO_RAD_DESC =  ClinicalValueUtil.defaultWithNA(TM_REASON_NO_RAD_DESC);
     }
 
     public String getTM_RAD_STRT_YEAR() {
@@ -1402,7 +1404,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_STRT_YEAR(String TM_RAD_STRT_YEAR) {
-        this.TM_RAD_STRT_YEAR =  StringUtils.isNotEmpty(TM_RAD_STRT_YEAR) ? TM_RAD_STRT_YEAR : "NA";
+        this.TM_RAD_STRT_YEAR =  ClinicalValueUtil.defaultWithNA(TM_RAD_STRT_YEAR);
     }
 
     public String getAGE_AT_TM_RAD_STRT_DATE_IN_DAYS() {
@@ -1410,7 +1412,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_RAD_STRT_DATE_IN_DAYS(String AGE_AT_TM_RAD_STRT_DATE_IN_DAYS) {
-        this.AGE_AT_TM_RAD_STRT_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_RAD_STRT_DATE_IN_DAYS) ? AGE_AT_TM_RAD_STRT_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_RAD_STRT_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_RAD_STRT_DATE_IN_DAYS);
     }
 
     public String getTM_RAD_END_YEAR() {
@@ -1418,7 +1420,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_END_YEAR(String TM_RAD_END_YEAR) {
-        this.TM_RAD_END_YEAR =  StringUtils.isNotEmpty(TM_RAD_END_YEAR) ? TM_RAD_END_YEAR : "NA";
+        this.TM_RAD_END_YEAR =  ClinicalValueUtil.defaultWithNA(TM_RAD_END_YEAR);
     }
 
     public String getAGE_AT_TM_RAD_END_DATE_IN_DAYS() {
@@ -1426,7 +1428,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_RAD_END_DATE_IN_DAYS(String AGE_AT_TM_RAD_END_DATE_IN_DAYS) {
-        this.AGE_AT_TM_RAD_END_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_RAD_END_DATE_IN_DAYS) ? AGE_AT_TM_RAD_END_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_RAD_END_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_RAD_END_DATE_IN_DAYS);
     }
 
     public String getTM_RAD_TX_MOD() {
@@ -1434,7 +1436,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_TX_MOD(String TM_RAD_TX_MOD) {
-        this.TM_RAD_TX_MOD =  StringUtils.isNotEmpty(TM_RAD_TX_MOD) ? TM_RAD_TX_MOD : "NA";
+        this.TM_RAD_TX_MOD =  ClinicalValueUtil.defaultWithNA(TM_RAD_TX_MOD);
     }
 
     public String getTM_RAD_TX_MOD_DESC() {
@@ -1442,7 +1444,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_TX_MOD_DESC(String TM_RAD_TX_MOD_DESC) {
-        this.TM_RAD_TX_MOD_DESC =  StringUtils.isNotEmpty(TM_RAD_TX_MOD_DESC) ? TM_RAD_TX_MOD_DESC : "NA";
+        this.TM_RAD_TX_MOD_DESC =  ClinicalValueUtil.defaultWithNA(TM_RAD_TX_MOD_DESC);
     }
 
     public String getTM_BOOST_RAD_MOD() {
@@ -1450,7 +1452,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_BOOST_RAD_MOD(String TM_BOOST_RAD_MOD) {
-        this.TM_BOOST_RAD_MOD =  StringUtils.isNotEmpty(TM_BOOST_RAD_MOD) ? TM_BOOST_RAD_MOD : "NA";
+        this.TM_BOOST_RAD_MOD =  ClinicalValueUtil.defaultWithNA(TM_BOOST_RAD_MOD);
     }
 
     public String getTM_BOOST_RAD_MOD_DESC() {
@@ -1458,7 +1460,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_BOOST_RAD_MOD_DESC(String TM_BOOST_RAD_MOD_DESC) {
-        this.TM_BOOST_RAD_MOD_DESC =  StringUtils.isNotEmpty(TM_BOOST_RAD_MOD_DESC) ? TM_BOOST_RAD_MOD_DESC : "NA";
+        this.TM_BOOST_RAD_MOD_DESC =  ClinicalValueUtil.defaultWithNA(TM_BOOST_RAD_MOD_DESC);
     }
 
     public String getTM_LOC_RAD_TX() {
@@ -1466,7 +1468,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_LOC_RAD_TX(String TM_LOC_RAD_TX) {
-        this.TM_LOC_RAD_TX =  StringUtils.isNotEmpty(TM_LOC_RAD_TX) ? TM_LOC_RAD_TX : "NA";
+        this.TM_LOC_RAD_TX =  ClinicalValueUtil.defaultWithNA(TM_LOC_RAD_TX);
     }
 
     public String getTM_LOC_RAD_TX_DESC() {
@@ -1474,7 +1476,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_LOC_RAD_TX_DESC(String TM_LOC_RAD_TX_DESC) {
-        this.TM_LOC_RAD_TX_DESC =  StringUtils.isNotEmpty(TM_LOC_RAD_TX_DESC) ? TM_LOC_RAD_TX_DESC : "NA";
+        this.TM_LOC_RAD_TX_DESC =  ClinicalValueUtil.defaultWithNA(TM_LOC_RAD_TX_DESC);
     }
 
     public String getTM_RAD_TX_VOL() {
@@ -1482,7 +1484,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_TX_VOL(String TM_RAD_TX_VOL) {
-        this.TM_RAD_TX_VOL =  StringUtils.isNotEmpty(TM_RAD_TX_VOL) ? TM_RAD_TX_VOL : "NA";
+        this.TM_RAD_TX_VOL =  ClinicalValueUtil.defaultWithNA(TM_RAD_TX_VOL);
     }
 
     public String getTM_RAD_TX_VOL_DESC() {
@@ -1490,7 +1492,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_TX_VOL_DESC(String TM_RAD_TX_VOL_DESC) {
-        this.TM_RAD_TX_VOL_DESC =  StringUtils.isNotEmpty(TM_RAD_TX_VOL_DESC) ? TM_RAD_TX_VOL_DESC : "NA";
+        this.TM_RAD_TX_VOL_DESC =  ClinicalValueUtil.defaultWithNA(TM_RAD_TX_VOL_DESC);
     }
 
     public String getTM_NUM_TX_THIS_VOL() {
@@ -1498,7 +1500,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NUM_TX_THIS_VOL(String TM_NUM_TX_THIS_VOL) {
-        this.TM_NUM_TX_THIS_VOL =  StringUtils.isNotEmpty(TM_NUM_TX_THIS_VOL) ? TM_NUM_TX_THIS_VOL : "NA";
+        this.TM_NUM_TX_THIS_VOL =  ClinicalValueUtil.defaultWithNA(TM_NUM_TX_THIS_VOL);
     }
 
     public String getTM_NUM_TX_THIS_VOL_DESC() {
@@ -1506,7 +1508,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NUM_TX_THIS_VOL_DESC(String TM_NUM_TX_THIS_VOL_DESC) {
-        this.TM_NUM_TX_THIS_VOL_DESC =  StringUtils.isNotEmpty(TM_NUM_TX_THIS_VOL_DESC) ? TM_NUM_TX_THIS_VOL_DESC : "NA";
+        this.TM_NUM_TX_THIS_VOL_DESC =  ClinicalValueUtil.defaultWithNA(TM_NUM_TX_THIS_VOL_DESC);
     }
 
     public String getTM_REG_RAD_DOSE() {
@@ -1514,7 +1516,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REG_RAD_DOSE(String TM_REG_RAD_DOSE) {
-        this.TM_REG_RAD_DOSE =  StringUtils.isNotEmpty(TM_REG_RAD_DOSE) ? TM_REG_RAD_DOSE : "NA";
+        this.TM_REG_RAD_DOSE =  ClinicalValueUtil.defaultWithNA(TM_REG_RAD_DOSE);
     }
 
     public String getTM_REG_RAD_DOSE_DESC() {
@@ -1522,7 +1524,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_REG_RAD_DOSE_DESC(String TM_REG_RAD_DOSE_DESC) {
-        this.TM_REG_RAD_DOSE_DESC =  StringUtils.isNotEmpty(TM_REG_RAD_DOSE_DESC) ? TM_REG_RAD_DOSE_DESC : "NA";
+        this.TM_REG_RAD_DOSE_DESC =  ClinicalValueUtil.defaultWithNA(TM_REG_RAD_DOSE_DESC);
     }
 
     public String getTM_BOOST_RAD_DOSE() {
@@ -1530,7 +1532,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_BOOST_RAD_DOSE(String TM_BOOST_RAD_DOSE) {
-        this.TM_BOOST_RAD_DOSE =  StringUtils.isNotEmpty(TM_BOOST_RAD_DOSE) ? TM_BOOST_RAD_DOSE : "NA";
+        this.TM_BOOST_RAD_DOSE =  ClinicalValueUtil.defaultWithNA(TM_BOOST_RAD_DOSE);
     }
 
     public String getTM_BOOST_RAD_DOSE_DESC() {
@@ -1538,7 +1540,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_BOOST_RAD_DOSE_DESC(String TM_BOOST_RAD_DOSE_DESC) {
-        this.TM_BOOST_RAD_DOSE_DESC =  StringUtils.isNotEmpty(TM_BOOST_RAD_DOSE_DESC) ? TM_BOOST_RAD_DOSE_DESC : "NA";
+        this.TM_BOOST_RAD_DOSE_DESC =  ClinicalValueUtil.defaultWithNA(TM_BOOST_RAD_DOSE_DESC);
     }
 
     public String getTM_RAD_SURG_SEQ() {
@@ -1546,7 +1548,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_SURG_SEQ(String TM_RAD_SURG_SEQ) {
-        this.TM_RAD_SURG_SEQ =  StringUtils.isNotEmpty(TM_RAD_SURG_SEQ) ? TM_RAD_SURG_SEQ : "NA";
+        this.TM_RAD_SURG_SEQ =  ClinicalValueUtil.defaultWithNA(TM_RAD_SURG_SEQ);
     }
 
     public String getTM_RAD_SURG_SEQ_DESC() {
@@ -1554,7 +1556,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_SURG_SEQ_DESC(String TM_RAD_SURG_SEQ_DESC) {
-        this.TM_RAD_SURG_SEQ_DESC =  StringUtils.isNotEmpty(TM_RAD_SURG_SEQ_DESC) ? TM_RAD_SURG_SEQ_DESC : "NA";
+        this.TM_RAD_SURG_SEQ_DESC =  ClinicalValueUtil.defaultWithNA(TM_RAD_SURG_SEQ_DESC);
     }
 
     public String getTM_RAD_MD() {
@@ -1562,7 +1564,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_MD(String TM_RAD_MD) {
-        this.TM_RAD_MD =  StringUtils.isNotEmpty(TM_RAD_MD) ? TM_RAD_MD : "NA";
+        this.TM_RAD_MD =  ClinicalValueUtil.defaultWithNA(TM_RAD_MD);
     }
 
     public String getTM_RAD_MD_NAME() {
@@ -1570,7 +1572,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_RAD_MD_NAME(String TM_RAD_MD_NAME) {
-        this.TM_RAD_MD_NAME =  StringUtils.isNotEmpty(TM_RAD_MD_NAME) ? TM_RAD_MD_NAME : "NA";
+        this.TM_RAD_MD_NAME =  ClinicalValueUtil.defaultWithNA(TM_RAD_MD_NAME);
     }
 
     public String getTM_SYST_STRT_YEAR() {
@@ -1578,7 +1580,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_SYST_STRT_YEAR(String TM_SYST_STRT_YEAR) {
-        this.TM_SYST_STRT_YEAR =  StringUtils.isNotEmpty(TM_SYST_STRT_YEAR) ? TM_SYST_STRT_YEAR : "NA";
+        this.TM_SYST_STRT_YEAR =  ClinicalValueUtil.defaultWithNA(TM_SYST_STRT_YEAR);
     }
 
     public String getAGE_AT_TM_SYST_STRT_DATE_IN_DAYS() {
@@ -1586,7 +1588,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_SYST_STRT_DATE_IN_DAYS(String AGE_AT_TM_SYST_STRT_DATE_IN_DAYS) {
-        this.AGE_AT_TM_SYST_STRT_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_SYST_STRT_DATE_IN_DAYS) ? AGE_AT_TM_SYST_STRT_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_SYST_STRT_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_SYST_STRT_DATE_IN_DAYS);
     }
 
     public String getTM_OTH_STRT_YEAR() {
@@ -1594,7 +1596,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_STRT_YEAR(String TM_OTH_STRT_YEAR) {
-        this.TM_OTH_STRT_YEAR =  StringUtils.isNotEmpty(TM_OTH_STRT_YEAR) ? TM_OTH_STRT_YEAR : "NA";
+        this.TM_OTH_STRT_YEAR =  ClinicalValueUtil.defaultWithNA(TM_OTH_STRT_YEAR);
     }
 
     public String getAGE_AT_TM_OTH_STRT_DATE_IN_DAYS() {
@@ -1602,7 +1604,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_OTH_STRT_DATE_IN_DAYS(String AGE_AT_TM_OTH_STRT_DATE_IN_DAYS) {
-        this.AGE_AT_TM_OTH_STRT_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_OTH_STRT_DATE_IN_DAYS) ? AGE_AT_TM_OTH_STRT_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_OTH_STRT_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_OTH_STRT_DATE_IN_DAYS);
     }
 
     public String getTM_CHEM_SUM() {
@@ -1610,7 +1612,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CHEM_SUM(String TM_CHEM_SUM) {
-        this.TM_CHEM_SUM =  StringUtils.isNotEmpty(TM_CHEM_SUM) ? TM_CHEM_SUM : "NA";
+        this.TM_CHEM_SUM =  ClinicalValueUtil.defaultWithNA(TM_CHEM_SUM);
     }
 
     public String getTM_CHEM_SUM_DESC() {
@@ -1618,7 +1620,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CHEM_SUM_DESC(String TM_CHEM_SUM_DESC) {
-        this.TM_CHEM_SUM_DESC =  StringUtils.isNotEmpty(TM_CHEM_SUM_DESC) ? TM_CHEM_SUM_DESC : "NA";
+        this.TM_CHEM_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_CHEM_SUM_DESC);
     }
 
     public String getTM_CHEM_SUM_MSK() {
@@ -1626,7 +1628,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CHEM_SUM_MSK(String TM_CHEM_SUM_MSK) {
-        this.TM_CHEM_SUM_MSK =  StringUtils.isNotEmpty(TM_CHEM_SUM_MSK) ? TM_CHEM_SUM_MSK : "NA";
+        this.TM_CHEM_SUM_MSK =  ClinicalValueUtil.defaultWithNA(TM_CHEM_SUM_MSK);
     }
 
     public String getTM_CHEM_SUM_MSK_DESC() {
@@ -1634,7 +1636,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CHEM_SUM_MSK_DESC(String TM_CHEM_SUM_MSK_DESC) {
-        this.TM_CHEM_SUM_MSK_DESC =  StringUtils.isNotEmpty(TM_CHEM_SUM_MSK_DESC) ? TM_CHEM_SUM_MSK_DESC : "NA";
+        this.TM_CHEM_SUM_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_CHEM_SUM_MSK_DESC);
     }
 
     public String getTM_TUMOR_SEQ() {
@@ -1642,7 +1644,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TUMOR_SEQ(String TM_TUMOR_SEQ) {
-        this.TM_TUMOR_SEQ =  StringUtils.isNotEmpty(TM_TUMOR_SEQ) ? TM_TUMOR_SEQ : "NA";
+        this.TM_TUMOR_SEQ =  ClinicalValueUtil.defaultWithNA(TM_TUMOR_SEQ);
     }
 
     public String getTM_HORM_SUM() {
@@ -1650,7 +1652,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_HORM_SUM(String TM_HORM_SUM) {
-        this.TM_HORM_SUM =  StringUtils.isNotEmpty(TM_HORM_SUM) ? TM_HORM_SUM : "NA";
+        this.TM_HORM_SUM =  ClinicalValueUtil.defaultWithNA(TM_HORM_SUM);
     }
 
     public String getTM_HORM_SUM_DESC() {
@@ -1658,7 +1660,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_HORM_SUM_DESC(String TM_HORM_SUM_DESC) {
-        this.TM_HORM_SUM_DESC =  StringUtils.isNotEmpty(TM_HORM_SUM_DESC) ? TM_HORM_SUM_DESC : "NA";
+        this.TM_HORM_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_HORM_SUM_DESC);
     }
 
     public String getTM_HORM_SUM_MSK() {
@@ -1666,7 +1668,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_HORM_SUM_MSK(String TM_HORM_SUM_MSK) {
-        this.TM_HORM_SUM_MSK =  StringUtils.isNotEmpty(TM_HORM_SUM_MSK) ? TM_HORM_SUM_MSK : "NA";
+        this.TM_HORM_SUM_MSK =  ClinicalValueUtil.defaultWithNA(TM_HORM_SUM_MSK);
     }
 
     public String getTM_HORM_SUM_MSK_DESC() {
@@ -1674,7 +1676,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_HORM_SUM_MSK_DESC(String TM_HORM_SUM_MSK_DESC) {
-        this.TM_HORM_SUM_MSK_DESC =  StringUtils.isNotEmpty(TM_HORM_SUM_MSK_DESC) ? TM_HORM_SUM_MSK_DESC : "NA";
+        this.TM_HORM_SUM_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_HORM_SUM_MSK_DESC);
     }
 
     public String getTM_BRM_SUM() {
@@ -1682,7 +1684,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_BRM_SUM(String TM_BRM_SUM) {
-        this.TM_BRM_SUM =  StringUtils.isNotEmpty(TM_BRM_SUM) ? TM_BRM_SUM : "NA";
+        this.TM_BRM_SUM =  ClinicalValueUtil.defaultWithNA(TM_BRM_SUM);
     }
 
     public String getTM_BRM_SUM_DESC() {
@@ -1690,7 +1692,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_BRM_SUM_DESC(String TM_BRM_SUM_DESC) {
-        this.TM_BRM_SUM_DESC =  StringUtils.isNotEmpty(TM_BRM_SUM_DESC) ? TM_BRM_SUM_DESC : "NA";
+        this.TM_BRM_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_BRM_SUM_DESC);
     }
 
     public String getTM_BRM_SUM_MSK() {
@@ -1698,7 +1700,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_BRM_SUM_MSK(String TM_BRM_SUM_MSK) {
-        this.TM_BRM_SUM_MSK =  StringUtils.isNotEmpty(TM_BRM_SUM_MSK) ? TM_BRM_SUM_MSK : "NA";
+        this.TM_BRM_SUM_MSK =  ClinicalValueUtil.defaultWithNA(TM_BRM_SUM_MSK);
     }
 
     public String getTM_BRM_SUM_MSK_DESC() {
@@ -1706,7 +1708,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_BRM_SUM_MSK_DESC(String TM_BRM_SUM_MSK_DESC) {
-        this.TM_BRM_SUM_MSK_DESC =  StringUtils.isNotEmpty(TM_BRM_SUM_MSK_DESC) ? TM_BRM_SUM_MSK_DESC : "NA";
+        this.TM_BRM_SUM_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_BRM_SUM_MSK_DESC);
     }
 
     public String getTM_OTH_SUM() {
@@ -1714,7 +1716,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SUM(String TM_OTH_SUM) {
-        this.TM_OTH_SUM =  StringUtils.isNotEmpty(TM_OTH_SUM) ? TM_OTH_SUM : "NA";
+        this.TM_OTH_SUM =  ClinicalValueUtil.defaultWithNA(TM_OTH_SUM);
     }
 
     public String getTM_OTH_SUM_DESC() {
@@ -1722,7 +1724,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SUM_DESC(String TM_OTH_SUM_DESC) {
-        this.TM_OTH_SUM_DESC =  StringUtils.isNotEmpty(TM_OTH_SUM_DESC) ? TM_OTH_SUM_DESC : "NA";
+        this.TM_OTH_SUM_DESC =  ClinicalValueUtil.defaultWithNA(TM_OTH_SUM_DESC);
     }
 
     public String getTM_OTH_SUM_MSK() {
@@ -1730,7 +1732,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SUM_MSK(String TM_OTH_SUM_MSK) {
-        this.TM_OTH_SUM_MSK =  StringUtils.isNotEmpty(TM_OTH_SUM_MSK) ? TM_OTH_SUM_MSK : "NA";
+        this.TM_OTH_SUM_MSK =  ClinicalValueUtil.defaultWithNA(TM_OTH_SUM_MSK);
     }
 
     public String getTM_OTH_SUM_MSK_DESC() {
@@ -1738,7 +1740,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OTH_SUM_MSK_DESC(String TM_OTH_SUM_MSK_DESC) {
-        this.TM_OTH_SUM_MSK_DESC =  StringUtils.isNotEmpty(TM_OTH_SUM_MSK_DESC) ? TM_OTH_SUM_MSK_DESC : "NA";
+        this.TM_OTH_SUM_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_OTH_SUM_MSK_DESC);
     }
 
     public String getTM_PALLIA_PROC() {
@@ -1746,7 +1748,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PALLIA_PROC(String TM_PALLIA_PROC) {
-        this.TM_PALLIA_PROC =  StringUtils.isNotEmpty(TM_PALLIA_PROC) ? TM_PALLIA_PROC : "NA";
+        this.TM_PALLIA_PROC =  ClinicalValueUtil.defaultWithNA(TM_PALLIA_PROC);
     }
 
     public String getTM_PALLIA_PROC_DESC() {
@@ -1754,7 +1756,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PALLIA_PROC_DESC(String TM_PALLIA_PROC_DESC) {
-        this.TM_PALLIA_PROC_DESC =  StringUtils.isNotEmpty(TM_PALLIA_PROC_DESC) ? TM_PALLIA_PROC_DESC : "NA";
+        this.TM_PALLIA_PROC_DESC =  ClinicalValueUtil.defaultWithNA(TM_PALLIA_PROC_DESC);
     }
 
     public String getTM_PALLIA_PROC_MSK() {
@@ -1762,7 +1764,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PALLIA_PROC_MSK(String TM_PALLIA_PROC_MSK) {
-        this.TM_PALLIA_PROC_MSK =  StringUtils.isNotEmpty(TM_PALLIA_PROC_MSK) ? TM_PALLIA_PROC_MSK : "NA";
+        this.TM_PALLIA_PROC_MSK =  ClinicalValueUtil.defaultWithNA(TM_PALLIA_PROC_MSK);
     }
 
     public String getTM_PALLIA_PROC_MSK_DESC() {
@@ -1770,7 +1772,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PALLIA_PROC_MSK_DESC(String TM_PALLIA_PROC_MSK_DESC) {
-        this.TM_PALLIA_PROC_MSK_DESC =  StringUtils.isNotEmpty(TM_PALLIA_PROC_MSK_DESC) ? TM_PALLIA_PROC_MSK_DESC : "NA";
+        this.TM_PALLIA_PROC_MSK_DESC =  ClinicalValueUtil.defaultWithNA(TM_PALLIA_PROC_MSK_DESC);
     }
 
     public String getTM_ONCOLOGY_MD() {
@@ -1778,7 +1780,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_ONCOLOGY_MD(String TM_ONCOLOGY_MD) {
-        this.TM_ONCOLOGY_MD =  StringUtils.isNotEmpty(TM_ONCOLOGY_MD) ? TM_ONCOLOGY_MD : "NA";
+        this.TM_ONCOLOGY_MD =  ClinicalValueUtil.defaultWithNA(TM_ONCOLOGY_MD);
     }
 
     public String getTM_ONCOLOGY_MD_NAME() {
@@ -1786,7 +1788,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_ONCOLOGY_MD_NAME(String TM_ONCOLOGY_MD_NAME) {
-        this.TM_ONCOLOGY_MD_NAME =  StringUtils.isNotEmpty(TM_ONCOLOGY_MD_NAME) ? TM_ONCOLOGY_MD_NAME : "NA";
+        this.TM_ONCOLOGY_MD_NAME =  ClinicalValueUtil.defaultWithNA(TM_ONCOLOGY_MD_NAME);
     }
 
     public String getTM_PRCS_YEAR() {
@@ -1794,7 +1796,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PRCS_YEAR(String TM_PRCS_YEAR) {
-        this.TM_PRCS_YEAR =  StringUtils.isNotEmpty(TM_PRCS_YEAR) ? TM_PRCS_YEAR : "NA";
+        this.TM_PRCS_YEAR =  ClinicalValueUtil.defaultWithNA(TM_PRCS_YEAR);
     }
 
     public String getAGE_AT_TM_PRCS_DATE_IN_DAYS() {
@@ -1802,7 +1804,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setAGE_AT_TM_PRCS_DATE_IN_DAYS(String AGE_AT_TM_PRCS_DATE_IN_DAYS) {
-        this.AGE_AT_TM_PRCS_DATE_IN_DAYS =  StringUtils.isNotEmpty(AGE_AT_TM_PRCS_DATE_IN_DAYS) ? AGE_AT_TM_PRCS_DATE_IN_DAYS : "NA";
+        this.AGE_AT_TM_PRCS_DATE_IN_DAYS =  ClinicalValueUtil.defaultWithNA(AGE_AT_TM_PRCS_DATE_IN_DAYS);
     }
 
     public String getTM_PATH_TEXT() {
@@ -1810,7 +1812,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_PATH_TEXT(String TM_PATH_TEXT) {
-        this.TM_PATH_TEXT =  StringUtils.isNotEmpty(TM_PATH_TEXT) ? TM_PATH_TEXT : "NA";
+        this.TM_PATH_TEXT =  ClinicalValueUtil.defaultWithNA(TM_PATH_TEXT);
     }
 
     public String getTM_SURG_TEXT() {
@@ -1818,7 +1820,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_SURG_TEXT(String TM_SURG_TEXT) {
-        this.TM_SURG_TEXT =  StringUtils.isNotEmpty(TM_SURG_TEXT) ? TM_SURG_TEXT : "NA";
+        this.TM_SURG_TEXT =  ClinicalValueUtil.defaultWithNA(TM_SURG_TEXT);
     }
 
     public String getTM_OVERRIDE_COM() {
@@ -1826,7 +1828,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_OVERRIDE_COM(String TM_OVERRIDE_COM) {
-        this.TM_OVERRIDE_COM =  StringUtils.isNotEmpty(TM_OVERRIDE_COM) ? TM_OVERRIDE_COM : "NA";
+        this.TM_OVERRIDE_COM =  ClinicalValueUtil.defaultWithNA(TM_OVERRIDE_COM);
     }
 
     public String getTM_CSSIZE() {
@@ -1834,7 +1836,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CSSIZE(String TM_CSSIZE) {
-        this.TM_CSSIZE =  StringUtils.isNotEmpty(TM_CSSIZE) ? TM_CSSIZE : "NA";
+        this.TM_CSSIZE =  ClinicalValueUtil.defaultWithNA(TM_CSSIZE);
     }
 
     public String getTM_CSEXT() {
@@ -1842,7 +1844,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CSEXT(String TM_CSEXT) {
-        this.TM_CSEXT =  StringUtils.isNotEmpty(TM_CSEXT) ? TM_CSEXT : "NA";
+        this.TM_CSEXT =  ClinicalValueUtil.defaultWithNA(TM_CSEXT);
     }
 
     public String getTM_CSEXTEV() {
@@ -1850,7 +1852,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CSEXTEV(String TM_CSEXTEV) {
-        this.TM_CSEXTEV =  StringUtils.isNotEmpty(TM_CSEXTEV) ? TM_CSEXTEV : "NA";
+        this.TM_CSEXTEV =  ClinicalValueUtil.defaultWithNA(TM_CSEXTEV);
     }
 
     public String getTM_CSLMND() {
@@ -1858,7 +1860,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CSLMND(String TM_CSLMND) {
-        this.TM_CSLMND =  StringUtils.isNotEmpty(TM_CSLMND) ? TM_CSLMND : "NA";
+        this.TM_CSLMND =  ClinicalValueUtil.defaultWithNA(TM_CSLMND);
     }
 
     public String getTM_CSRGNEV() {
@@ -1866,7 +1868,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CSRGNEV(String TM_CSRGNEV) {
-        this.TM_CSRGNEV =  StringUtils.isNotEmpty(TM_CSRGNEV) ? TM_CSRGNEV : "NA";
+        this.TM_CSRGNEV =  ClinicalValueUtil.defaultWithNA(TM_CSRGNEV);
     }
 
     public String getTM_CSMETDX() {
@@ -1874,7 +1876,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CSMETDX(String TM_CSMETDX) {
-        this.TM_CSMETDX =  StringUtils.isNotEmpty(TM_CSMETDX) ? TM_CSMETDX : "NA";
+        this.TM_CSMETDX =  ClinicalValueUtil.defaultWithNA(TM_CSMETDX);
     }
 
     public String getTM_CSMETEV() {
@@ -1882,7 +1884,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_CSMETEV(String TM_CSMETEV) {
-        this.TM_CSMETEV =  StringUtils.isNotEmpty(TM_CSMETEV) ? TM_CSMETEV : "NA";
+        this.TM_CSMETEV =  ClinicalValueUtil.defaultWithNA(TM_CSMETEV);
     }
 
     public String getTM_TSTAGE() {
@@ -1890,7 +1892,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TSTAGE(String TM_TSTAGE) {
-        this.TM_TSTAGE =  StringUtils.isNotEmpty(TM_TSTAGE) ? TM_TSTAGE : "NA";
+        this.TM_TSTAGE =  ClinicalValueUtil.defaultWithNA(TM_TSTAGE);
     }
 
     public String getTM_TSTAGE_DESC() {
@@ -1898,7 +1900,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TSTAGE_DESC(String TM_TSTAGE_DESC) {
-        this.TM_TSTAGE_DESC =  StringUtils.isNotEmpty(TM_TSTAGE_DESC) ? TM_TSTAGE_DESC : "NA";
+        this.TM_TSTAGE_DESC =  ClinicalValueUtil.defaultWithNA(TM_TSTAGE_DESC);
     }
 
     public String getTM_NSTAGE() {
@@ -1906,7 +1908,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NSTAGE(String TM_NSTAGE) {
-        this.TM_NSTAGE =  StringUtils.isNotEmpty(TM_NSTAGE) ? TM_NSTAGE : "NA";
+        this.TM_NSTAGE =  ClinicalValueUtil.defaultWithNA(TM_NSTAGE);
     }
 
     public String getTM_NSTAGE_DESC() {
@@ -1914,7 +1916,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NSTAGE_DESC(String TM_NSTAGE_DESC) {
-        this.TM_NSTAGE_DESC =  StringUtils.isNotEmpty(TM_NSTAGE_DESC) ? TM_NSTAGE_DESC : "NA";
+        this.TM_NSTAGE_DESC =  ClinicalValueUtil.defaultWithNA(TM_NSTAGE_DESC);
     }
 
     public String getTM_MSTAGE() {
@@ -1922,7 +1924,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_MSTAGE(String TM_MSTAGE) {
-        this.TM_MSTAGE =  StringUtils.isNotEmpty(TM_MSTAGE) ? TM_MSTAGE : "NA";
+        this.TM_MSTAGE =  ClinicalValueUtil.defaultWithNA(TM_MSTAGE);
     }
 
     public String getTM_MSTAGE_DESC() {
@@ -1930,7 +1932,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_MSTAGE_DESC(String TM_MSTAGE_DESC) {
-        this.TM_MSTAGE_DESC =  StringUtils.isNotEmpty(TM_MSTAGE_DESC) ? TM_MSTAGE_DESC : "NA";
+        this.TM_MSTAGE_DESC =  ClinicalValueUtil.defaultWithNA(TM_MSTAGE_DESC);
     }
 
     public String getTM_TBASIS() {
@@ -1938,7 +1940,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TBASIS(String TM_TBASIS) {
-        this.TM_TBASIS =  StringUtils.isNotEmpty(TM_TBASIS) ? TM_TBASIS : "NA";
+        this.TM_TBASIS =  ClinicalValueUtil.defaultWithNA(TM_TBASIS);
     }
 
     public String getTM_TBASIS_DESC() {
@@ -1946,7 +1948,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_TBASIS_DESC(String TM_TBASIS_DESC) {
-        this.TM_TBASIS_DESC =  StringUtils.isNotEmpty(TM_TBASIS_DESC) ? TM_TBASIS_DESC : "NA";
+        this.TM_TBASIS_DESC =  ClinicalValueUtil.defaultWithNA(TM_TBASIS_DESC);
     }
 
     public String getTM_NBASIS() {
@@ -1954,7 +1956,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NBASIS(String TM_NBASIS) {
-        this.TM_NBASIS =  StringUtils.isNotEmpty(TM_NBASIS) ? TM_NBASIS : "NA";
+        this.TM_NBASIS =  ClinicalValueUtil.defaultWithNA(TM_NBASIS);
     }
 
     public String getTM_NBASIS_DESC() {
@@ -1962,7 +1964,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_NBASIS_DESC(String TM_NBASIS_DESC) {
-        this.TM_NBASIS_DESC =  StringUtils.isNotEmpty(TM_NBASIS_DESC) ? TM_NBASIS_DESC : "NA";
+        this.TM_NBASIS_DESC =  ClinicalValueUtil.defaultWithNA(TM_NBASIS_DESC);
     }
 
     public String getTM_MBASIS() {
@@ -1970,7 +1972,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_MBASIS(String TM_MBASIS) {
-        this.TM_MBASIS =  StringUtils.isNotEmpty(TM_MBASIS) ? TM_MBASIS : "NA";
+        this.TM_MBASIS =  ClinicalValueUtil.defaultWithNA(TM_MBASIS);
     }
 
     public String getTM_MBASIS_DESC() {
@@ -1978,7 +1980,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_MBASIS_DESC(String TM_MBASIS_DESC) {
-        this.TM_MBASIS_DESC =  StringUtils.isNotEmpty(TM_MBASIS_DESC) ? TM_MBASIS_DESC : "NA";
+        this.TM_MBASIS_DESC =  ClinicalValueUtil.defaultWithNA(TM_MBASIS_DESC);
     }
 
     public String getTM_AJCC() {
@@ -1986,7 +1988,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_AJCC(String TM_AJCC) {
-        this.TM_AJCC =  StringUtils.isNotEmpty(TM_AJCC) ? TM_AJCC : "NA";
+        this.TM_AJCC =  ClinicalValueUtil.defaultWithNA(TM_AJCC);
     }
 
     public String getTM_AJCC_DESC() {
@@ -1994,7 +1996,7 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_AJCC_DESC(String TM_AJCC_DESC) {
-        this.TM_AJCC_DESC =  StringUtils.isNotEmpty(TM_AJCC_DESC) ? TM_AJCC_DESC : "NA";
+        this.TM_AJCC_DESC =  ClinicalValueUtil.defaultWithNA(TM_AJCC_DESC);
     }
 
     public String getTM_MSK_STG() {
@@ -2002,25 +2004,25 @@ public class MskimpactPatientIcdoRecord {
     }
 
     public void setTM_MSK_STG(String TM_MSK_STG) {
-        this.TM_MSK_STG =  StringUtils.isNotEmpty(TM_MSK_STG) ? TM_MSK_STG : "NA";
+        this.TM_MSK_STG =  ClinicalValueUtil.defaultWithNA(TM_MSK_STG);
     }
-    
+
     public Integer getAGE_AT_LAST_KNOWN_ALIVE_IN_DAYS() {
         return AGE_AT_LAST_KNOWN_ALIVE_IN_DAYS;
     }
-    
+
     public void setAGE_AT_LAST_KNOWN_ALIVE_IN_DAYS(Integer AGE_AT_LAST_KNOWN_ALIVE_IN_DAYS) {
         this.AGE_AT_LAST_KNOWN_ALIVE_IN_DAYS = AGE_AT_LAST_KNOWN_ALIVE_IN_DAYS;
     }
-    
+
     public Integer getAGE_AT_DATE_OF_DEATH_IN_DAYS() {
         return AGE_AT_DATE_OF_DEATH_IN_DAYS;
     }
-    
+
     public void setAGE_AT_DATE_OF_DEATH_IN_DAYS(Integer AGE_AT_DATE_OF_DEATH_IN_DAYS) {
         this.AGE_AT_DATE_OF_DEATH_IN_DAYS = AGE_AT_DATE_OF_DEATH_IN_DAYS;
-    }    
-    
+    }
+
     @Override
     public String toString(){
         return ToStringBuilder.reflectionToString(this);
@@ -2205,10 +2207,7 @@ public class MskimpactPatientIcdoRecord {
         fieldNames.add("TM_AJCC");
         fieldNames.add("TM_AJCC_DESC");
         fieldNames.add("TM_MSK_STG");
-
         return fieldNames;
     }
-    
-    
-    
+
 }

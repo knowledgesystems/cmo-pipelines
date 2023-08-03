@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016, 2017, 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2022, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,14 +32,11 @@
 
 package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
-import java.util.*;
-
 import com.google.common.base.Strings;
-import org.apache.commons.lang.StringUtils;
+import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRSvVariant;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLCnvIntragenicVariant;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import com.google.common.base.Strings;
 
 /**
  *
@@ -414,7 +411,7 @@ public class CVRSvRecord {
         for (String fieldName : getFieldNames()) {
                 standardSvHeader.add(fieldName);
         }
-        return StringUtils.join(standardSvHeader, "\t");
+        return String.join("\t", standardSvHeader);
     }
 
     public static List<String> getFieldNames() {

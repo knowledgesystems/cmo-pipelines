@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -33,8 +33,8 @@
 package org.mskcc.cmo.ks.darwin.pipeline.model;
 
 import java.util.*;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.cbioportal.cmo.pipelines.common.util.ClinicalValueUtil;
 
 public class Skcm_mskcc_2015_chantNormalizedClinicalRecord {
     private String patientId;
@@ -103,12 +103,12 @@ public class Skcm_mskcc_2015_chantNormalizedClinicalRecord {
     private String initialMetDisease;
     private String otherSitesOfMets;
     private String yearMetDiseaseIdentified;
-    
-    private Map<String, Object> additionalProperties;    
-    
+
+    private Map<String, Object> additionalProperties;
+
     public Skcm_mskcc_2015_chantNormalizedClinicalRecord() {
     }
-    
+
     public Skcm_mskcc_2015_chantNormalizedClinicalRecord(
              String patientId,
              String sampleId,
@@ -176,90 +176,90 @@ public class Skcm_mskcc_2015_chantNormalizedClinicalRecord {
              String initialMetDisease,
              String otherSitesOfMets,
              String yearMetDiseaseIdentified) {
-        this.patientId = StringUtils.isNotEmpty(patientId) ? patientId : "NA";
-        this.sampleId = StringUtils.isNotEmpty(sampleId) ? sampleId : "NA";
-        this.stageYear = StringUtils.isNotEmpty(stageYear) ? stageYear : "NA";
-        this.stgGrpName = StringUtils.isNotEmpty(stgGrpName) ? stgGrpName : "NA";
-        this.vitalStatus = StringUtils.isNotEmpty(vitalStatus) ? vitalStatus : "NA";
-        this.stsSrcDesc = StringUtils.isNotEmpty(stsSrcDesc) ? stsSrcDesc : "NA";
-        this.lastStatus = StringUtils.isNotEmpty(lastStatus) ? lastStatus : "NA";
-        this.dermagrphxDes = StringUtils.isNotEmpty(dermagrphxDes) ? dermagrphxDes : "NA";
-        this.presStgYear = StringUtils.isNotEmpty(presStgYear) ? presStgYear : "NA";
-        this.familyHistory = StringUtils.isNotEmpty(familyHistory) ? familyHistory : "NA";
-        this.timeToFirstRecurrence = StringUtils.isNotEmpty(timeToFirstRecurrence) ? timeToFirstRecurrence : "NA";
-        this.localDesc = StringUtils.isNotEmpty(localDesc) ? localDesc : "NA";
-        this.nodalDesc = StringUtils.isNotEmpty(nodalDesc) ? nodalDesc : "NA";
-        this.intransitDesc = StringUtils.isNotEmpty(intransitDesc) ? intransitDesc : "NA";
-        this.sysDesc = StringUtils.isNotEmpty(sysDesc) ? sysDesc : "NA";
-        this.recurNdszDes = StringUtils.isNotEmpty(recurNdszDes) ? recurNdszDes : "NA";
-        this.recurNodalNo = StringUtils.isNotEmpty(recurNodalNo) ? recurNodalNo : "NA";
-        this.ldh = StringUtils.isNotEmpty(ldh) ? ldh : "NA";
-        this.ldhYear = StringUtils.isNotEmpty(ldhYear) ? ldhYear : "NA";
-        this.metastasis = StringUtils.isNotEmpty(metastasis) ? metastasis : "NA";
-        this.adjvntTx = StringUtils.isNotEmpty(adjvntTx) ? adjvntTx : "NA";
-        this.systemicTreatment = StringUtils.isNotEmpty(systemicTreatment) ? systemicTreatment : "NA";
-        this.treatmentRadiation = StringUtils.isNotEmpty(treatmentRadiation) ? treatmentRadiation : "NA";
-        this.surgery = StringUtils.isNotEmpty(surgery) ? surgery : "NA";
-        this.tissueBankAvail = StringUtils.isNotEmpty(tissueBankAvail) ? tissueBankAvail : "NA";
-        this.primSeq = StringUtils.isNotEmpty(primSeq) ? primSeq : "NA";
-        this.yearOfDiagnosis = StringUtils.isNotEmpty(yearOfDiagnosis) ? yearOfDiagnosis : "NA";
-        this.mskReviewDes = StringUtils.isNotEmpty(mskReviewDes) ? mskReviewDes : "NA";
-        this.tumorThicknessMeasurement = StringUtils.isNotEmpty(tumorThicknessMeasurement) ? tumorThicknessMeasurement : "NA";
-        this.clarkLevelAtDiagnosis = StringUtils.isNotEmpty(clarkLevelAtDiagnosis) ? clarkLevelAtDiagnosis : "NA";
-        this.primaryMelanomaTumorUlceration = StringUtils.isNotEmpty(primaryMelanomaTumorUlceration) ? primaryMelanomaTumorUlceration : "NA";
-        this.tumorTissueSite = StringUtils.isNotEmpty(tumorTissueSite) ? tumorTissueSite : "NA";
-        this.detailedPrimarySite = StringUtils.isNotEmpty(detailedPrimarySite) ? detailedPrimarySite : "NA";
-        this.lymphocyteInfiltration = StringUtils.isNotEmpty(lymphocyteInfiltration) ? lymphocyteInfiltration : "NA";
-        this.regressionDes = StringUtils.isNotEmpty(regressionDes) ? regressionDes : "NA";
-        this.marginStatus = StringUtils.isNotEmpty(marginStatus) ? marginStatus : "NA";
-        this.mitoticIndex = StringUtils.isNotEmpty(mitoticIndex) ? mitoticIndex : "NA";
-        this.histologicalType = StringUtils.isNotEmpty(histologicalType) ? histologicalType : "NA";
-        this.satellitesDes = StringUtils.isNotEmpty(satellitesDes) ? satellitesDes : "NA";
-        this.extSlidesDes = StringUtils.isNotEmpty(extSlidesDes) ? extSlidesDes : "NA";
-        this.primaryLymphNodePresentationAssessment = StringUtils.isNotEmpty(primaryLymphNodePresentationAssessment) ? primaryLymphNodePresentationAssessment : "NA";
-        this.lnclinStsDes = StringUtils.isNotEmpty(lnclinStsDes) ? lnclinStsDes : "NA";
-        this.lnsentinbxDes = StringUtils.isNotEmpty(lnsentinbxDes) ? lnsentinbxDes : "NA";
-        this.lnsentinbxYea = StringUtils.isNotEmpty(lnsentinbxYea) ? lnsentinbxYea : "NA";
-        this.lnprolysctDes = StringUtils.isNotEmpty(lnprolysctDes) ? lnprolysctDes : "NA";
-        this.lnprosuccDesc = StringUtils.isNotEmpty(lnprosuccDesc) ? lnprosuccDesc : "NA";
-        this.lndsctCmpDes = StringUtils.isNotEmpty(lndsctCmpDes) ? lndsctCmpDes : "NA";
-        this.lndsctYear = StringUtils.isNotEmpty(lndsctYear) ? lndsctYear : "NA";
-        this.lnmattedDesc = StringUtils.isNotEmpty(lnmattedDesc) ? lnmattedDesc : "NA";
-        this.lnextnodstDes = StringUtils.isNotEmpty(lnextnodstDes) ? lnextnodstDes : "NA";
-        this.lnintrmetsDes = StringUtils.isNotEmpty(lnintrmetsDes) ? lnintrmetsDes : "NA";
-        this.lnsize = StringUtils.isNotEmpty(lnsize) ? lnsize : "NA";
-        this.lnsizeUnkDes = StringUtils.isNotEmpty(lnsizeUnkDes) ? lnsizeUnkDes : "NA";
-        this.lnslnlargSize = StringUtils.isNotEmpty(lnslnlargSize) ? lnslnlargSize : "NA";
-        this.lnihcDesc = StringUtils.isNotEmpty(lnihcDesc) ? lnihcDesc : "NA";
-        this.s100Stain = StringUtils.isNotEmpty(s100Stain) ? s100Stain : "NA";
-        this.lnimmhmb45Des = StringUtils.isNotEmpty(lnimmhmb45Des) ? lnimmhmb45Des : "NA";
-        this.lnimmMelaDes = StringUtils.isNotEmpty(lnimmMelaDes) ? lnimmMelaDes : "NA";
-        this.reportYear = StringUtils.isNotEmpty(reportYear) ? reportYear : "NA";
-        this.procedureYear = StringUtils.isNotEmpty(procedureYear) ? procedureYear : "NA";
-        this.tumorType = StringUtils.isNotEmpty(tumorType) ? tumorType : "NA";
-        this.primarySite = StringUtils.isNotEmpty(primarySite) ? primarySite : "NA";
-        this.metastaticSite = StringUtils.isNotEmpty(metastaticSite) ? metastaticSite : "NA";
-        this.initialMetDisease = StringUtils.isNotEmpty(initialMetDisease) ? initialMetDisease : "NA";
-        this.otherSitesOfMets = StringUtils.isNotEmpty(otherSitesOfMets) ? otherSitesOfMets : "NA";
-        this.yearMetDiseaseIdentified = StringUtils.isNotEmpty(yearMetDiseaseIdentified) ? yearMetDiseaseIdentified : "NA";
+        this.patientId = ClinicalValueUtil.defaultWithNA(patientId);
+        this.sampleId = ClinicalValueUtil.defaultWithNA(sampleId);
+        this.stageYear = ClinicalValueUtil.defaultWithNA(stageYear);
+        this.stgGrpName = ClinicalValueUtil.defaultWithNA(stgGrpName);
+        this.vitalStatus = ClinicalValueUtil.defaultWithNA(vitalStatus);
+        this.stsSrcDesc = ClinicalValueUtil.defaultWithNA(stsSrcDesc);
+        this.lastStatus = ClinicalValueUtil.defaultWithNA(lastStatus);
+        this.dermagrphxDes = ClinicalValueUtil.defaultWithNA(dermagrphxDes);
+        this.presStgYear = ClinicalValueUtil.defaultWithNA(presStgYear);
+        this.familyHistory = ClinicalValueUtil.defaultWithNA(familyHistory);
+        this.timeToFirstRecurrence = ClinicalValueUtil.defaultWithNA(timeToFirstRecurrence);
+        this.localDesc = ClinicalValueUtil.defaultWithNA(localDesc);
+        this.nodalDesc = ClinicalValueUtil.defaultWithNA(nodalDesc);
+        this.intransitDesc = ClinicalValueUtil.defaultWithNA(intransitDesc);
+        this.sysDesc = ClinicalValueUtil.defaultWithNA(sysDesc);
+        this.recurNdszDes = ClinicalValueUtil.defaultWithNA(recurNdszDes);
+        this.recurNodalNo = ClinicalValueUtil.defaultWithNA(recurNodalNo);
+        this.ldh = ClinicalValueUtil.defaultWithNA(ldh);
+        this.ldhYear = ClinicalValueUtil.defaultWithNA(ldhYear);
+        this.metastasis = ClinicalValueUtil.defaultWithNA(metastasis);
+        this.adjvntTx = ClinicalValueUtil.defaultWithNA(adjvntTx);
+        this.systemicTreatment = ClinicalValueUtil.defaultWithNA(systemicTreatment);
+        this.treatmentRadiation = ClinicalValueUtil.defaultWithNA(treatmentRadiation);
+        this.surgery = ClinicalValueUtil.defaultWithNA(surgery);
+        this.tissueBankAvail = ClinicalValueUtil.defaultWithNA(tissueBankAvail);
+        this.primSeq = ClinicalValueUtil.defaultWithNA(primSeq);
+        this.yearOfDiagnosis = ClinicalValueUtil.defaultWithNA(yearOfDiagnosis);
+        this.mskReviewDes = ClinicalValueUtil.defaultWithNA(mskReviewDes);
+        this.tumorThicknessMeasurement = ClinicalValueUtil.defaultWithNA(tumorThicknessMeasurement);
+        this.clarkLevelAtDiagnosis = ClinicalValueUtil.defaultWithNA(clarkLevelAtDiagnosis);
+        this.primaryMelanomaTumorUlceration = ClinicalValueUtil.defaultWithNA(primaryMelanomaTumorUlceration);
+        this.tumorTissueSite = ClinicalValueUtil.defaultWithNA(tumorTissueSite);
+        this.detailedPrimarySite = ClinicalValueUtil.defaultWithNA(detailedPrimarySite);
+        this.lymphocyteInfiltration = ClinicalValueUtil.defaultWithNA(lymphocyteInfiltration);
+        this.regressionDes = ClinicalValueUtil.defaultWithNA(regressionDes);
+        this.marginStatus = ClinicalValueUtil.defaultWithNA(marginStatus);
+        this.mitoticIndex = ClinicalValueUtil.defaultWithNA(mitoticIndex);
+        this.histologicalType = ClinicalValueUtil.defaultWithNA(histologicalType);
+        this.satellitesDes = ClinicalValueUtil.defaultWithNA(satellitesDes);
+        this.extSlidesDes = ClinicalValueUtil.defaultWithNA(extSlidesDes);
+        this.primaryLymphNodePresentationAssessment = ClinicalValueUtil.defaultWithNA(primaryLymphNodePresentationAssessment);
+        this.lnclinStsDes = ClinicalValueUtil.defaultWithNA(lnclinStsDes);
+        this.lnsentinbxDes = ClinicalValueUtil.defaultWithNA(lnsentinbxDes);
+        this.lnsentinbxYea = ClinicalValueUtil.defaultWithNA(lnsentinbxYea);
+        this.lnprolysctDes = ClinicalValueUtil.defaultWithNA(lnprolysctDes);
+        this.lnprosuccDesc = ClinicalValueUtil.defaultWithNA(lnprosuccDesc);
+        this.lndsctCmpDes = ClinicalValueUtil.defaultWithNA(lndsctCmpDes);
+        this.lndsctYear = ClinicalValueUtil.defaultWithNA(lndsctYear);
+        this.lnmattedDesc = ClinicalValueUtil.defaultWithNA(lnmattedDesc);
+        this.lnextnodstDes = ClinicalValueUtil.defaultWithNA(lnextnodstDes);
+        this.lnintrmetsDes = ClinicalValueUtil.defaultWithNA(lnintrmetsDes);
+        this.lnsize = ClinicalValueUtil.defaultWithNA(lnsize);
+        this.lnsizeUnkDes = ClinicalValueUtil.defaultWithNA(lnsizeUnkDes);
+        this.lnslnlargSize = ClinicalValueUtil.defaultWithNA(lnslnlargSize);
+        this.lnihcDesc = ClinicalValueUtil.defaultWithNA(lnihcDesc);
+        this.s100Stain = ClinicalValueUtil.defaultWithNA(s100Stain);
+        this.lnimmhmb45Des = ClinicalValueUtil.defaultWithNA(lnimmhmb45Des);
+        this.lnimmMelaDes = ClinicalValueUtil.defaultWithNA(lnimmMelaDes);
+        this.reportYear = ClinicalValueUtil.defaultWithNA(reportYear);
+        this.procedureYear = ClinicalValueUtil.defaultWithNA(procedureYear);
+        this.tumorType = ClinicalValueUtil.defaultWithNA(tumorType);
+        this.primarySite = ClinicalValueUtil.defaultWithNA(primarySite);
+        this.metastaticSite = ClinicalValueUtil.defaultWithNA(metastaticSite);
+        this.initialMetDisease = ClinicalValueUtil.defaultWithNA(initialMetDisease);
+        this.otherSitesOfMets = ClinicalValueUtil.defaultWithNA(otherSitesOfMets);
+        this.yearMetDiseaseIdentified = ClinicalValueUtil.defaultWithNA(yearMetDiseaseIdentified);
     }
-    
+
     public String getPATIENT_ID() {
         return patientId;
     }
-    
+
     public void setPATIENT_ID(String patientId) {
         this.patientId = patientId;
     }
-    
+
     public String getSAMPLE_ID() {
         return sampleId;
     }
-    
+
     public void setSAMPLE_ID(String sampleId) {
         this.sampleId = sampleId;
     }
-    
+
     public String getSTAGE_YEAR() {
         return this.stageYear;
     }
@@ -847,13 +847,13 @@ public class Skcm_mskcc_2015_chantNormalizedClinicalRecord {
         fieldNames.add("YEAR_MET_DISEASE_IDENTIFIED");
         return fieldNames;
     }
-    
+
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
     }
 
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
-    }    
-    
+    }
+
 }
