@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,21 +32,22 @@
 
 package org.mskcc.cmo.ks.ddp.source.util;
 
-import org.mskcc.cmo.ks.ddp.source.exception.InvalidAuthenticationException;
-
 import java.io.IOException;
 import java.lang.Thread;
 import java.util.*;
-import org.json.JSONObject;
-import org.apache.log4j.Logger;
-import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.cookie.Cookie;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.StatusLine;
+import org.apache.log4j.Logger;
+import org.json.JSONObject;
+import org.mskcc.cmo.ks.ddp.source.exception.InvalidAuthenticationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.HttpStatus;
@@ -102,7 +103,7 @@ public class AuthenticationUtil {
                     break;
                 } catch (Exception e) {
                     // exception thrown from authentication endpoint
-                    // sleep before trying again (in case DDP is temporarily down) 
+                    // sleep before trying again (in case DDP is temporarily down)
                     LOG.warn("Failed to generate authentication cookie ... trying again in " + (COOKIE_ATTEMPT_WAIT_TIME / 1000) + " seconds");
                     try {
                         Thread.sleep(COOKIE_ATTEMPT_WAIT_TIME);
@@ -134,14 +135,15 @@ public class AuthenticationUtil {
     private void fillAuthCookie() throws IOException {
         String url = ddpBaseUrl + ddpAuthCookieEndpoint;
         HttpClientContext context = HttpClientContext.create();
-        CloseableHttpClient client = HttpClients.createDefault();
+        RequestConfig customRequestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
+        CloseableHttpClient customClient = HttpClients.custom().setDefaultRequestConfig(customRequestConfig).build();
         HttpPost postRequest = new HttpPost(url);
         StringEntity input = new StringEntity(new JSONObject(getUserCredentials()).toString());
         input.setContentType("application/json");
         postRequest.setEntity(input);
-        CloseableHttpResponse response = client.execute(postRequest, context);
+        CloseableHttpResponse response = customClient.execute(postRequest, context);
 
-        StatusLine statusLine = response.getStatusLine(); 
+        StatusLine statusLine = response.getStatusLine();
         if (statusLine.getStatusCode() == HttpStatus.OK.value()) {
             // get the cookie
             List<Cookie> cookies = context.getCookieStore().getCookies();
@@ -157,7 +159,7 @@ public class AuthenticationUtil {
         }
 
         // close stuff
-        client.close();
+        customClient.close();
         response.close();
     }
 }
