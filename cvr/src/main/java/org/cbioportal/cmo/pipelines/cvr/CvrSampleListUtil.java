@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2017, 2023 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,8 +32,8 @@
 
 package org.cbioportal.cmo.pipelines.cvr;
 
-import org.apache.log4j.Logger;
 import java.util.*;
+import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.model.CvrResponse;
 import org.springframework.context.annotation.*;
 
@@ -44,6 +44,7 @@ import org.springframework.context.annotation.*;
 @Configuration
 public class CvrSampleListUtil {
 
+    private final boolean SUSPEND_THE_FILTERING_OF_FETCHED_SAMPLES_WHICH_ARE_NOT_ON_THE_MASTERLIST = true;
     private CvrResponse cvrResponse;
     private Set<String> dmpMasterList = new HashSet<>();
     private Set<String> newDmpSamples = new HashSet<>();
@@ -65,7 +66,7 @@ public class CvrSampleListUtil {
     // be published to the smile server (https://github.com/mskcc/smile-server)
     private Set<String> smileSamplesToPublishList = new HashSet<>();
 
-    Logger log = Logger.getLogger(CvrSampleListUtil.class);
+    private Logger log = Logger.getLogger(CvrSampleListUtil.class);
 
     @Bean
     public CvrSampleListUtil CvrSampleListUtil() {
@@ -171,7 +172,7 @@ public class CvrSampleListUtil {
     /**
      * updates the dmpSamplesNotInPortal
      */
-    public void updateDmpSamplesNotInPortal() {
+    private void updateDmpSamplesNotInPortal() {
         this.dmpSamplesNotInPortal = new HashSet<>(dmpMasterList);
         dmpSamplesNotInPortal.removeAll(portalSamples);
     }
@@ -186,7 +187,11 @@ public class CvrSampleListUtil {
     /**
      * updates the portalSamplesNotInDmp
      */
-    public void updatePortalSamplesNotInDmp() {
+    private void updatePortalSamplesNotInDmp(boolean masterListDoesNotExcludeSamples) {
+        if (masterListDoesNotExcludeSamples) {
+            portalSamplesNotInDmp = new HashSet<>();
+            return;
+        }
         this.portalSamplesNotInDmp = new HashSet<>(portalSamples);
         portalSamplesNotInDmp.removeAll(dmpMasterList);
     }
@@ -252,31 +257,27 @@ public class CvrSampleListUtil {
         this.maxNumSamplesToRemove = maxNumSamplesToRemove;
     }
 
-    public void updateSampleLists() {
+    public void updateSampleLists(boolean masterListDoesNotExcludeSamples) {
         // update  portal samples not in dmp and dmp samples not in portal lists
-        updatePortalSamplesNotInDmp();
+        updatePortalSamplesNotInDmp(masterListDoesNotExcludeSamples);
         updateDmpSamplesNotInPortal();
 
         boolean maxSamplesToRemoveThresholdExceeded = (maxNumSamplesToRemove <= 0 || (maxNumSamplesToRemove > 0 && portalSamplesNotInDmp.size() >= maxNumSamplesToRemove));
         if (maxSamplesToRemoveThresholdExceeded) {
             String message;
             if (maxNumSamplesToRemove > 0) {
-                message = "updateSampleLists(),  Number of samples in 'portalSamplesNotInDmp' exceeds threshold set by user (" +
-                    String.valueOf(maxNumSamplesToRemove) + " samples)";
-            }
-            else {
+                message = String.format("updateSampleLists(),  Number of samples in 'portalSamplesNotInDmp' exceeds threshold set by user (%d samples)", maxNumSamplesToRemove);
+            } else {
                 message = "updateSampleLists(),  Something is wrong with 'dmpMasterList' or 'portalSamples' - sample data will not be filtered";
             }
-             saveSampleListStats();
+            saveSampleListStats();
             log.warn(message);
-        }
-        else {
+        } else {
             portalSamples.removeAll(portalSamplesNotInDmp);
             String message = "updateSampleLists(),  Number of samples in 'portalSamplesNotInDmp' passes threshold check - ";
             if (portalSamplesNotInDmp.size() == 0) {
                 message += "'portalSamplesNotInDmp' list is empty, no sample data will be removed";
-            }
-            else {
+            } else {
                 message += "'portalSamplesNotInDmp' contains " + String.valueOf(portalSamplesNotInDmp.size()) + " samples. Data for these samples will be removed";
             }
             log.info(message);

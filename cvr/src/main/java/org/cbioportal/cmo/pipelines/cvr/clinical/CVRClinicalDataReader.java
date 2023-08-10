@@ -71,6 +71,9 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
     @Value("#{jobParameters[clinicalFilename]}")
     private String clinicalFilename;
 
+    @Value("#{jobParameters[masterListDoesNotExcludeSamples]}")
+    private boolean masterListDoesNotExcludeSamples;
+
     @Autowired
     public CVRUtilities cvrUtilities;
 
@@ -97,7 +100,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
         }
         // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
         // portalSamples list is only updated if threshold check for max num samples to remove passes
-        cvrSampleListUtil.updateSampleLists();
+        cvrSampleListUtil.updateSampleLists(masterListDoesNotExcludeSamples);
     }
 
     @Override

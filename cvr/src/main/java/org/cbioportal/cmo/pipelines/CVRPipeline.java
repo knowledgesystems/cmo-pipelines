@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2017, 2018, 2019, 2020, 2021, 2022 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -32,19 +32,18 @@
 
 package org.cbioportal.cmo.pipelines;
 
-import org.cbioportal.cmo.pipelines.cvr.BatchConfiguration;
-import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.SessionConfiguration;
-import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
-
 import java.util.*;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
+import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
+import org.cbioportal.cmo.pipelines.cvr.BatchConfiguration;
+import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
+import org.cbioportal.cmo.pipelines.cvr.SessionConfiguration;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
@@ -65,9 +64,10 @@ public class CVRPipeline {
             .addOption("g", "gml", false, "Run germline job")
             .addOption("s", "skipSeg", false, "Flag to skip fetching seg data")
             .addOption("i", "study_id", true, "Study identifier (i.e., mskimpact, mskraindance, mskarcher, mskimpact_heme)")
-            .addOption("t", "test", false, "Flag for running pipeline in testing mode so that samples are not consumed")
+            .addOption("t", "test", false, "Flag for running pipeline in testing mode so that samples are not requeued or consumed")
             .addOption("c", "consume_samples", true, "Path to CVR json filename")
             .addOption("r", "max_samples_to_remove", true, "The max number of samples that can be removed from data")
+            .addOption("m", "master_list_does_not_exclude_samples", false, "Flag to cause samples to be accepted/kept even when they are not on the master list")
             .addOption("f", "force_annotation", false, "Flag for forcing reannotation of samples")
             .addOption("b", "block_zero_variant_warnings", false, "Flag to turn off warnings for samples with no variants")
             .addOption("n", "name_of_clinical_file", true, "Clinical filename.  Default is data_clinical.txt");
@@ -81,14 +81,17 @@ public class CVRPipeline {
     }
 
     private static void launchCvrPipelineJob(String[] args, String directory, String privateDirectory, String studyId, Boolean json, Boolean gml,
-            Boolean skipSeg, boolean testingMode, Integer maxNumSamplesToRemove, Boolean forceAnnotation, String clinicalFilename,
-            Boolean stopZeroVariantWarnings) throws Exception {
+            Boolean skipSeg, boolean testingMode, Integer maxNumSamplesToRemove, boolean masterListDoesNotExcludeSamples, Boolean forceAnnotation,
+            String clinicalFilename, Boolean stopZeroVariantWarnings) throws Exception {
         // log wether in testing mode or not
         if (testingMode) {
             log.warn("CvrPipelineJob running in TESTING MODE - samples will NOT be requeued.");
         }
         else {
             log.warn("CvrPipelineJob running in PRODUCTION MODE - samples will be requeued.");
+        }
+        if (masterListDoesNotExcludeSamples) {
+            log.warn("CvrPipelineJob using masterListDoesNotExcludeSamples - samples accepted/kept even when they are not on the master list.");
         }
         SpringApplication app = new SpringApplication(CVRPipeline.class);
         app.setWebApplicationType(WebApplicationType.NONE);
@@ -103,6 +106,7 @@ public class CVRPipeline {
                 .addString("studyId", studyId)
                 .addString("testingMode", String.valueOf(testingMode))
                 .addString("maxNumSamplesToRemove", String.valueOf(maxNumSamplesToRemove))
+                .addString("masterListDoesNotExcludeSamples", String.valueOf(masterListDoesNotExcludeSamples))
                 .addString("forceAnnotation", String.valueOf(forceAnnotation))
                 .addString("clinicalFilename", clinicalFilename)
                 .addString("stopZeroVariantWarnings", String.valueOf(stopZeroVariantWarnings))
@@ -217,8 +221,8 @@ public class CVRPipeline {
                 clinicalFilename = commandLine.getOptionValue("n");
             }
             launchCvrPipelineJob(args, commandLine.getOptionValue("d"), commandLine.getOptionValue("p"), commandLine.getOptionValue("i"),
-                commandLine.hasOption("j"), commandLine.hasOption("g"), commandLine.hasOption("s"),
-                commandLine.hasOption("t"), maxNumSamplesToRemove, commandLine.hasOption("f"), clinicalFilename, commandLine.hasOption("b"));
+                commandLine.hasOption("j"), commandLine.hasOption("g"), commandLine.hasOption("s"), commandLine.hasOption("t"),
+                maxNumSamplesToRemove, commandLine.hasOption("m"), commandLine.hasOption("f"), clinicalFilename, commandLine.hasOption("b"));
         }
     }
 }

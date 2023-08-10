@@ -64,6 +64,9 @@ public class GMLClinicalTasklet implements Tasklet {
     @Value("#{jobParameters[clinicalFilename]}")
     private String clinicalFilename;
 
+    @Value("#{jobParameters[masterListDoesNotExcludeSamples]}")
+    private boolean masterListDoesNotExcludeSamples;
+
     @Autowired
     public CVRUtilities cvrUtilities;
 
@@ -112,7 +115,7 @@ public class GMLClinicalTasklet implements Tasklet {
         }
         // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
         // portalSamples list is only updated if threshold check for max num samples to remove passes
-        cvrSampleListUtil.updateSampleLists();
+        cvrSampleListUtil.updateSampleLists(masterListDoesNotExcludeSamples);
         updateSamplesRemovedList();
     }
 
