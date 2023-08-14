@@ -260,7 +260,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
         echo $(date)
         echo "Beginning SV annotation..."
-        $PYTHON3_BINARY $SV_ANNOTATOR_SCRIPT -b ONCOKB_TOKEN -i STAGING_SV_FILE -o ONCOKB_SV_FILE -c $STAGING_SAMPLE_FILE
+        $PYTHON3_BINARY $SV_ANNOTATOR_SCRIPT -b $ONCOKB_TOKEN -i $STAGING_SV_FILE -o $ONCOKB_SV_FILE -c $STAGING_SAMPLE_FILE
         if [ $? -ne 0 ] ; then
             echo "Failed to annotate SV file, exiting..."
             ONCOKB_ANNOTATION_SUCCESS=0
