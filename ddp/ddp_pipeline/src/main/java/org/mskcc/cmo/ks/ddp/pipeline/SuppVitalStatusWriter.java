@@ -37,7 +37,6 @@ import java.io.*;
 import java.util.*;
 import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 import org.mskcc.cmo.ks.ddp.pipeline.model.SuppVitalStatusRecord;
-import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.*;
@@ -66,19 +65,17 @@ public class SuppVitalStatusWriter implements ItemStreamWriter<CompositeResult> 
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        if (DDPUtils.isMskimpactCohort(cohortName)) {
-            File stagingFile = new File(outputDirectory, ddpSuppDirname + File.separator + ddpSuppVitalStatusFilename);
-            LineAggregator<String> aggr = new PassThroughLineAggregator<>();
-            flatFileItemWriter.setLineAggregator(aggr);
-            flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
-                @Override
-                public void writeHeader(Writer writer) throws IOException {
-                    writer.write(String.join("\t", SuppVitalStatusRecord.getFieldNames()));
-                }
-            });
-            flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
-            flatFileItemWriter.open(ec);
-        }
+        File stagingFile = new File(outputDirectory, ddpSuppDirname + File.separator + ddpSuppVitalStatusFilename);
+        LineAggregator<String> aggr = new PassThroughLineAggregator<>();
+        flatFileItemWriter.setLineAggregator(aggr);
+        flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
+            @Override
+            public void writeHeader(Writer writer) throws IOException {
+                writer.write(String.join("\t", SuppVitalStatusRecord.getFieldNames()));
+            }
+        });
+        flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
+        flatFileItemWriter.open(ec);
     }
 
     @Override
@@ -86,22 +83,18 @@ public class SuppVitalStatusWriter implements ItemStreamWriter<CompositeResult> 
 
     @Override
     public void close() throws ItemStreamException {
-        if (DDPUtils.isMskimpactCohort(cohortName)) {
-            flatFileItemWriter.close();
-        }
+        flatFileItemWriter.close();
     }
 
     @Override
     public void write(List<? extends CompositeResult> compositeResults) throws Exception {
-        if (DDPUtils.isMskimpactCohort(cohortName)) {
-            List<String> records = new ArrayList<>();
-            for (CompositeResult result : compositeResults) {
-                if (Strings.isNullOrEmpty(result.getSuppVitalStatusResult())) {
-                    continue;
-                }
-                records.add(result.getSuppVitalStatusResult());
+        List<String> records = new ArrayList<>();
+        for (CompositeResult result : compositeResults) {
+            if (Strings.isNullOrEmpty(result.getSuppVitalStatusResult())) {
+                continue;
             }
-            flatFileItemWriter.write(records);
+            records.add(result.getSuppVitalStatusResult());
         }
+        flatFileItemWriter.write(records);
     }
 }
