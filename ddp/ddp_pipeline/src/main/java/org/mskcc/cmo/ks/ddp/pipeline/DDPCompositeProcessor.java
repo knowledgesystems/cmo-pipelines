@@ -167,10 +167,9 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
 
         // if cohort is mskimpact then update composite record with supplemental data
         // provided to genie (vital status, age as years since birth, naaccr codes)
-        if (DDPUtils.isMskimpactCohort(cohortName)) {
-            compositeResult.setSuppVitalStatusResult(suppVitalStatusProcessor.process(compositeRecord));
-            compositeResult.setSuppNaccrMappingsResult(suppNaaccrMappingsProcessor.process(compositeRecord));
-        }
+        compositeResult.setSuppVitalStatusResult(suppVitalStatusProcessor.process(compositeRecord));
+        compositeResult.setSuppNaccrMappingsResult(suppNaaccrMappingsProcessor.process(compositeRecord));
+
         return compositeResult;
     }
 
