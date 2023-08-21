@@ -45,14 +45,12 @@ def merge_ddp_files(ddp_files, clinical_file, output_file):
                             header = data
                             patient_id_index = clinicalfile_utils.get_index_for_column(header, 'PATIENT_ID')
                             if patient_id_index == -1:
-                                print >> ERROR_FILE, 'PATIENT_ID column not found in ddp file %s.' % (file)
-                                return
+                                raise IndexError('Unable to find PATIENT_ID column in DDP file %s' % (file))
                             to_write.append(line.rstrip('\n'))
 
                         # Check if header matches headers of other DDP files
                         if header and data != header:
-                            print >> ERROR_FILE, 'Cannot merge DDP file with differing header: %s.' % (file)
-                            return
+                            raise ValueError('Cannot merge DDP file with differing header: %s.' % (file))
 
                         header_processed = True
                         continue
@@ -112,11 +110,7 @@ def main():
         parser.print_help()
 
     # Merge the DDP files
-    try:
-        merge_ddp_files(ddp_files, clinical_file, output_file)
-    except ValueError as error:
-        print >> ERROR_FILE, 'Unable to merge DDP files: ' + error
-        sys.exit(2)
+    merge_ddp_files(ddp_files, clinical_file, output_file)
 
 
 if __name__ == '__main__':
