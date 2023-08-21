@@ -76,7 +76,7 @@ def main():
         action='store',
         required=True,
         nargs='+',
-        help='path to DDP files to merge',
+        help='paths to DDP files to merge',
     )
     parser.add_argument(
         '-c',
@@ -100,11 +100,16 @@ def main():
     clinical_file = args.clinical_file
     output_file = args.output_file
 
-    # Check that the input files exist
-    for file in ddp_files.copy().append(clinical_file):
+    # Check that the DDP files exist
+    for file in ddp_files:
         if not os.path.exists(file):
-            print >> ERROR_FILE, 'No such file: ' + file
+            print >> ERROR_FILE, 'No such DDP file: ' + file
             parser.print_help()
+
+    # Check that the clinical file exists
+    if not os.path.exists(clinical_file):
+        print >> ERROR_FILE, 'No such clinical file: ' + file
+        parser.print_help()
 
     # Merge the DDP files
     try:
