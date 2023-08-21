@@ -873,7 +873,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     ## MERGE STUDIES FOR MIXEDPACT, MSKSOLIDHEME:
     # Note: RAINDANCE is no longer being updated but the data will still be included in MIXEDPACT
     #   (1) MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER, and ACCESS (MIXEDPACT)
-    #   (1) MSK-IMPACT, HEMEPACT, ARCHER, and ACCESS (MSKSOLIDHEME)
+    #   (1) MSK-IMPACT, HEMEPACT, and ACCESS (MSKSOLIDHEME)
 
     # touch meta_sv.txt files if not already exist
     if [ ! -f $MSK_IMPACT_DATA_HOME/meta_sv.txt ] ; then
