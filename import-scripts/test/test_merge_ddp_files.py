@@ -51,6 +51,14 @@ class TestMergeDDPFiles(unittest.TestCase):
         ]
         self.assertRaises(IndexError, self.compare_expected_output_to_actual, sub_dir, ddp_files)
 
+    def test_has_metadata_headers(self):
+        sub_dir = 'has_metadata_headers'
+        ddp_files = [
+            os.path.join(TestMergeDDPFiles.base_dir, sub_dir, 'ddp_vital_status1.txt'),
+            os.path.join(TestMergeDDPFiles.base_dir, sub_dir, 'ddp_vital_status2.txt'),
+        ]
+        self.compare_expected_output_to_actual(sub_dir, ddp_files)
+
     def compare_expected_output_to_actual(self, sub_dir, ddp_files):
         clinical_file = os.path.join(TestMergeDDPFiles.base_dir, sub_dir, 'data_clinical_patient.txt')
         output_file = os.path.join(TestMergeDDPFiles.base_dir, sub_dir, 'merged.txt')

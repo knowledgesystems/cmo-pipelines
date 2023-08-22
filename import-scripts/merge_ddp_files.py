@@ -1,9 +1,11 @@
 #! /usr/bin/env python
 
 """ merge_ddp_files.py
-This script merges an arbitrary number of DDP files. Its primary use is to generate DDP files for the msk_solid_heme cohort
-based off of its sub-cohorts. This merged file is only needed for GENIE cohort creation. This script requires a clinical
-file (patient or sample) containing the masterlist of patients included in the study.
+This script merges an arbitrary number of DDP files *of the same format* into one combined file.
+Its primary use is to merge DDP files from MSK-IMPACT, HEMEPACT, ACCESS to generate merged DDP files
+for the msk_solid_heme cohort. This merged DDP file is only used for GENIE cohort creation.
+This script requires a clinical file (patient or sample) containing the masterlist of patients
+included in the study.
 Usage:
     python merge_ddp_files.py --ddp-files $DDP_FILE1 $DDP_FILE2 <...> --clinical-file $CLINICAL_FILE --output-file $OUTPUT_FILE
 Example:
@@ -36,8 +38,8 @@ def merge_ddp_files(ddp_files, clinical_file, output_file):
             for line in f.readlines():
                 data = line.rstrip('\n').split('\t')
                 if line.startswith('#'):
-                    # Automatically add commented out lines
-                    to_write.append(line.rstrip('\n'))
+                    # Skip metadata headers
+                    continue
                 else:
                     if not header_processed:
                         # Store header information
