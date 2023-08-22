@@ -402,13 +402,6 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         sorted_actual_file = self.sort_records_and_lines_in_file(expected_header, actual_file)
         sorted_expected_file = self.sort_records_and_lines_in_file(expected_header, expected_file)
         file_contents_are_equal = filecmp.cmp(sorted_expected_file, sorted_actual_file)
-        if not file_contents_are_equal:
-            print >> sys.stderr, "WAIT HERE\n\n\n\n\n\n\n\n"
-            print >> sys.stderr, sorted_actual_file
-            f = open(sorted_actual_file, "r")
-            for line in f.readlines():
-                print >> sys.stderr, line
-            f.close()
         os.remove(sorted_actual_file)
         os.remove(sorted_expected_file)
         return file_contents_are_equal

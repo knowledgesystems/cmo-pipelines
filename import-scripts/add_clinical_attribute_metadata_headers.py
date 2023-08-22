@@ -103,7 +103,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--files", nargs = "+", help = "file(s) to add metadata headers", required = True)
     parser.add_argument("-s", "--study-id", help = "study id for specific overrides", required = False)
-    parser.add_argument("-c", "--cdd-url", help = "the url for the cdd web application, default is https://.cbioportal.mskcc.org/api/", required = False)
+    parser.add_argument("-c", "--cdd-url", help = "the url for the cdd web application, default is https://cdd.cbioportal.mskcc.org/api/", required = False)
     args = parser.parse_args()
     clinical_files = args.files
     study_id = args.study_id
@@ -129,14 +129,9 @@ def main():
     # get a set of attributes used across all input files
     for clinical_file in clinical_files:
         all_attributes = all_attributes.union(get_header(clinical_file))
-    print >> ERROR_FILE, "uhhhhhhh"
-    print >> ERROR_FILE, len(all_attributes)
     metadata_dictionary = get_clinical_attribute_metadata_from_cdd(study_id, all_attributes, base_cdd_url)
-    print >> ERROR_FILE, len(metadata_dictionary)
     # check metadata is defined for all attributes in CDD
     if len(metadata_dictionary.keys()) != len(all_attributes):
-        print >> ERROR_FILE, set(all_attributes)
-        print >> ERROR_FILE, set(metadata_dictionary.keys())
         print >> ERROR_FILE, 'Error, metadata not found for attribute(s): ' + ', '.join(all_attributes.difference(metadata_dictionary.keys()))
     for clinical_file in clinical_files:
         # create temp file to write to
