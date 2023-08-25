@@ -165,10 +165,12 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
         compositeResult.setTimelineChemoResults(timelineChemoProcessor.process(compositeRecord));
         compositeResult.setTimelineSurgeryResults(timelineSurgeryProcessor.process(compositeRecord));
 
-        // if cohort is mskimpact then update composite record with supplemental data
-        // provided to genie (vital status, age as years since birth, naaccr codes)
-        compositeResult.setSuppVitalStatusResult(suppVitalStatusProcessor.process(compositeRecord));
-        compositeResult.setSuppNaccrMappingsResult(suppNaaccrMappingsProcessor.process(compositeRecord));
+        // if cohort is mskimpact, mskaccess, or hemepact then update composite record with supplemental data
+        // provided to genie (vital status, naaccr codes)
+        if (DDPUtils.isMskimpactCohort(cohortName) || DDPUtils.isHemepactCohort(cohortName) || DDPUtils.isMskaccessCohort(cohortName)) {
+            compositeResult.setSuppVitalStatusResult(suppVitalStatusProcessor.process(compositeRecord));
+            compositeResult.setSuppNaccrMappingsResult(suppNaaccrMappingsProcessor.process(compositeRecord));
+        }
 
         return compositeResult;
     }

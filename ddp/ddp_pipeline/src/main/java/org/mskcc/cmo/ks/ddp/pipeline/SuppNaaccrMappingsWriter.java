@@ -37,6 +37,7 @@ import java.io.*;
 import java.util.*;
 import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 import org.mskcc.cmo.ks.ddp.pipeline.model.SuppNaaccrMappingsRecord;
+import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
 import org.springframework.batch.item.file.transform.*;
@@ -65,17 +66,19 @@ public class SuppNaaccrMappingsWriter implements ItemStreamWriter<CompositeResul
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        File stagingFile = new File(outputDirectory, ddpSuppDirname + File.separator + ddpSuppNaaccrMappingsFilename);
-        LineAggregator<String> aggr = new PassThroughLineAggregator<>();
-        flatFileItemWriter.setLineAggregator(aggr);
-        flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
-            @Override
-            public void writeHeader(Writer writer) throws IOException {
-                writer.write(String.join("\t", SuppNaaccrMappingsRecord.getFieldNames()));
-            }
-        });
-        flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
-        flatFileItemWriter.open(ec);
+        if (DDPUtils.isMskimpactCohort(cohortName) || DDPUtils.isHemepactCohort(cohortName) || DDPUtils.isMskaccessCohort(cohortName)) {
+            File stagingFile = new File(outputDirectory, ddpSuppDirname + File.separator + ddpSuppNaaccrMappingsFilename);
+            LineAggregator<String> aggr = new PassThroughLineAggregator<>();
+            flatFileItemWriter.setLineAggregator(aggr);
+            flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
+                @Override
+                public void writeHeader(Writer writer) throws IOException {
+                    writer.write(String.join("\t", SuppNaaccrMappingsRecord.getFieldNames()));
+                }
+            });
+            flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
+            flatFileItemWriter.open(ec);
+        }
     }
 
     @Override
@@ -83,18 +86,22 @@ public class SuppNaaccrMappingsWriter implements ItemStreamWriter<CompositeResul
 
     @Override
     public void close() throws ItemStreamException {
-        flatFileItemWriter.close();
+        if (DDPUtils.isMskimpactCohort(cohortName) || DDPUtils.isHemepactCohort(cohortName) || DDPUtils.isMskaccessCohort(cohortName)) {
+            flatFileItemWriter.close();
+        }
     }
 
     @Override
     public void write(List<? extends CompositeResult> compositeResults) throws Exception {
-        List<String> records = new ArrayList<>();
-        for (CompositeResult result : compositeResults) {
-            if (Strings.isNullOrEmpty(result.getSuppNaccrMappingsResult())) {
-                continue;
+        if (DDPUtils.isMskimpactCohort(cohortName) || DDPUtils.isHemepactCohort(cohortName) || DDPUtils.isMskaccessCohort(cohortName)) {
+            List<String> records = new ArrayList<>();
+            for (CompositeResult result : compositeResults) {
+                if (Strings.isNullOrEmpty(result.getSuppNaccrMappingsResult())) {
+                    continue;
+                }
+                records.add(result.getSuppNaccrMappingsResult());
             }
-            records.add(result.getSuppNaccrMappingsResult());
+            flatFileItemWriter.write(records);
         }
-        flatFileItemWriter.write(records);
     }
 }
