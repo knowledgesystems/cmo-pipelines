@@ -282,7 +282,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
         echo $(date)
         echo "Beginning clinical annotation..."
-        $PYTHON3_BINARY $CLINICAL_ANNOTATOR_SCRIPT -i $STAGING_SAMPLE_FILE -o $ONCOKB_SAMPLE_FILE -a $ONCOKB_MAF_FILE,$ONCOKB_CNA_FILE
+        $PYTHON3_BINARY $CLINICAL_ANNOTATOR_SCRIPT -i $STAGING_SAMPLE_FILE -o $ONCOKB_SAMPLE_FILE -a $ONCOKB_MAF_FILE,$ONCOKB_CNA_FILE,$ONCOKB_SV_FILE
         if [ $? -ne 0 ] ; then
             echo "Failed to annotate clinical file, exiting..."
             ONCOKB_ANNOTATION_SUCCESS=0
@@ -306,7 +306,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
         echo "Beginning somatic clinical annotation..."
         # Generate somatic-only MAF by excluding lines including 'GERMLINE'
         awk -F'\t' '$26 != "GERMLINE"' $ONCOKB_MAF_FILE > $ONCOKB_SOMATIC_MAF_FILE
-        $PYTHON3_BINARY $CLINICAL_ANNOTATOR_SCRIPT -i $STAGING_SAMPLE_FILE -o $ONCOKB_SOMATIC_SAMPLE_FILE -a $ONCOKB_SOMATIC_MAF_FILE,$ONCOKB_CNA_FILE
+        $PYTHON3_BINARY $CLINICAL_ANNOTATOR_SCRIPT -i $STAGING_SAMPLE_FILE -o $ONCOKB_SOMATIC_SAMPLE_FILE -a $ONCOKB_SOMATIC_MAF_FILE,$ONCOKB_CNA_FILE,$ONCOKB_SV_FILE
         if [ $? -ne 0 ] ; then
             echo "Failed to annotate somatic clinical file, exiting..."
             ONCOKB_ANNOTATION_SUCCESS=0
