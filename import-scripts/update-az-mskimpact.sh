@@ -296,7 +296,7 @@ function generate_case_lists() {
 }
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 1. Pull latest from AstraZeneca repo (az-data)
+# Pull latest from AstraZeneca repo (az-data)
 printTimeStampedDataProcessingStepMessage "Pull of AstraZeneca MSK-IMPACT data updates"
 
 if ! pull_latest_data_from_az_git_repo ; then
@@ -304,7 +304,7 @@ if ! pull_latest_data_from_az_git_repo ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 2. Copy data from local clone of MSK Solid Heme repo to local clone of AZ repo
+# Copy data from local clone of MSK Solid Heme repo to local clone of AZ repo
 
 # Create temporary directory to store data before subsetting
 if ! [ -d "$AZ_TMPDIR" ] ; then
@@ -323,7 +323,7 @@ if [ $? -gt 0 ] ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 3. Post-process the dataset
+# Post-process the dataset
 
 printTimeStampedDataProcessingStepMessage "Subset and merge of Part A Consented patients for AstraZeneca MSK-IMPACT"
 
@@ -400,7 +400,7 @@ if [[ -d "$AZ_TMPDIR" && "$AZ_TMPDIR" != "/" ]] ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 4. Run changelog script
+# Run changelog script
 printTimeStampedDataProcessingStepMessage "Generate changelog for AstraZeneca MSK-IMPACT"
 
 $PYTHON3_BINARY $PORTAL_HOME/scripts/generate_az_study_changelog_py3.py $AZ_MSK_IMPACT_DATA_HOME
@@ -410,7 +410,7 @@ if [ $? -gt 0 ] ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 5. Filter germline events from mutation file and structural variant file
+# Filter germline events from mutation file and structural variant file
 printTimeStampedDataProcessingStepMessage "Filter germline events for AstraZeneca MSK-IMPACT"
 
 mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
@@ -421,17 +421,8 @@ if [ $? -gt 0 ] ; then
 fi
 mv $mutation_filtered_filepath $mutation_filepath
 
-sv_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt"
-sv_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
-$PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $sv_filepath $sv_filtered_filepath --event-type structural_variant
-
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to filter germline events from structural variant file for AstraZeneca MSK-IMPACT. Exiting."
-fi
-mv $sv_filtered_filepath $sv_filepath
-
 # ------------------------------------------------------------------------------------------------------------------------
-# 6. Generate case list files
+# Generate case list files
 printTimeStampedDataProcessingStepMessage "Generate case list files for AstraZeneca MSK-IMPACT"
 
 if ! generate_case_lists ; then
@@ -439,7 +430,7 @@ if ! generate_case_lists ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 7. Push the updated data to GitHub
+# Push the updated data to GitHub
 printTimeStampedDataProcessingStepMessage "Push data updates to AstraZeneca MSK-IMPACT git repository"
 
 if ! push_updates_to_az_git_repo ; then
@@ -447,7 +438,7 @@ if ! push_updates_to_az_git_repo ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 7. Push the updated data to AstraZeneca's SFTP server
+# Push the updated data to AstraZeneca's SFTP server
 
 printTimeStampedDataProcessingStepMessage "Transfer data updates to SFTP server for AstraZeneca MSK-IMPACT"
 
