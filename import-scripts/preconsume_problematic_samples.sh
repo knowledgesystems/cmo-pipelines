@@ -120,6 +120,16 @@ function attempt_to_consume_problematic_samples() {
     done < ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
 }
 
+function consume_hardcoded_samples() {
+    rm -f ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH} ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
+    touch ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
+    touch ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
+    echo "P-0025907-N01-IM6" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
+    if [ -f "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}" ] ; then
+        attempt_to_consume_problematic_samples
+    fi
+}
+
 function log_actions() {
     date
     echo -e "consumed the following samples with problematic events:\n${succeeded_to_consume_problematic_events_sample_list[*]}"
@@ -143,6 +153,11 @@ function post_slack_message() {
 
 date
 make_tmp_dir_if_necessary
+failed_to_consume_problematic_events_sample_list=() # temporary code
+succeeded_to_consume_problematic_events_sample_list=() # temporary code
+failed_to_consume_problematic_metadata_sample_list=() # temporary code
+succeeded_to_consume_problematic_metadata_sample_list=() # temporary code
+consume_hardcoded_samples # temporary code
 fetch_currently_queued_samples
 detect_samples_with_problematic_events
 detect_samples_with_problematic_metadata

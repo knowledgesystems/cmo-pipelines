@@ -50,7 +50,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-devdb-data.lock"
     JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     devdb_notification_file=$(mktemp $tmp/devdb-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
-    DATA_SOURCES_TO_BE_FETCHED="datahub impact"
+    DATA_SOURCES_TO_BE_FETCHED="datahub impact private"
     unset failed_data_source_fetches
     declare -a failed_data_source_fetches
 

@@ -2,7 +2,7 @@
 
 export CMO_EMAIL_LIST="cbioportal-cmo-importer@cbioportal.org"
 export PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-export ALL_DATA_SOURCES="bic-mskcc-legacy cmo-argos private impact impact-MERGED knowledge-systems-curated-studies datahub datahub_shahlab msk-mind-datahub dmp pipelines-testing"
+export ALL_DATA_SOURCES="genie bic-mskcc-legacy cmo-argos private impact impact-MERGED knowledge-systems-curated-studies datahub datahub_shahlab msk-mind-datahub dmp pipelines-testing"
 
 unset DATA_SOURCE_NAME_TO_START_LOG_MESSAGE
 declare -Ax DATA_SOURCE_NAME_TO_START_LOG_MESSAGE

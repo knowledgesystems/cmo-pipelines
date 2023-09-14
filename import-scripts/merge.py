@@ -265,7 +265,12 @@ def merge_files(data_filenames, file_type, reference_set, keep_match, output_dir
                 data_values = map(lambda x: data.get(x, ''), file_header)
                 if data_okay_to_add(is_clinical_or_timeline_file, file_header, reference_set, data_values, keep_match):
                     if file_type in [CLINICAL_PATIENT_META_PATTERN, CLINICAL_SAMPLE_META_PATTERN, CLINICAL_META_PATTERN]:
-                        indexed_id = data['PATIENT_ID'] if file_type == CLINICAL_PATIENT_META_PATTERN else data['SAMPLE_ID']
+                        if file_type == SV_META_PATTERN:
+                            indexed_id = data['Sample_ID']
+                        elif file_type == CLINICAL_PATIENT_META_PATTERN:
+                            indexed_id = data['PATIENT_ID']
+                        else:
+                            indexed_id = data['SAMPLE_ID']
                         if indexed_id in id_to_row_index:
                             previous_record = rows[id_to_row_index[indexed_id]]
                             replicated_id_row_count += 1
@@ -916,7 +921,6 @@ def main():
         sublist = [line.strip() for line in open(subsetlist,'rU').readlines() if line.strip() != '']
     if excluded_samples is not None:
         excluded_samples_list = [line.strip() for line in open(excluded_samples, 'rU').readlines() if line.strip() != '']
-
     if subsetlist is not None and excluded_samples is not None:
         print >> ERROR_FILE, 'Cannot specify a subset list and an exclude samples list! Please use one option or the other.'
         sys.exit(2)
