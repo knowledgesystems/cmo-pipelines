@@ -152,6 +152,14 @@ public class HttpClientWithTimeoutAndRetry {
                 }
                 pauseForMilliseconds(lastTimeoutUsed);
             } catch (RestClientException e) {
+                // if the server responds with something which does not match the expected model, consider that a "server error"
+                // this would happen if the server sends a 200 "OK" http status but contains a message such as this json:
+                // { "error": "Error occurred while processing your request. get_seg_data cant be processed..." }
+                // or if it sends an html page response when we expect a json object.
+                String errorMessage = e.getMessage();
+                if (errorMessage != null && errorMessage.contains("Could not extract response") && !retryOnErroneousServerResponse) {
+                    return null; // fail now : the exception and response body have been captured in instance variables
+                }
                 // these exceptions are either timeouts or other low level exceptions. Continue to attempt the request.
                 lastRestClientException = e;
                 if (!exceptionCausedByTimeout(e)) {
