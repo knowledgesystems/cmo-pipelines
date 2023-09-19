@@ -44,7 +44,6 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.support.CompositeItemWriter;
 import org.springframework.beans.factory.annotation.*;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.*;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -169,6 +168,12 @@ public class BatchConfiguration {
     @StepScope
     public ClinicalProcessor clinicalProcessor() {
         return new ClinicalProcessor();
+    }
+
+    @Bean
+    @StepScope
+    public AgeAtSeqDateProcessor ageAtSeqDateProcessor() {
+        return new AgeAtSeqDateProcessor();
     }
 
     @Bean

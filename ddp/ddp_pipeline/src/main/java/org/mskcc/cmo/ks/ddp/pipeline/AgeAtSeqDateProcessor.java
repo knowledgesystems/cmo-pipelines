@@ -40,6 +40,7 @@ import java.util.*;
 import java.text.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -49,11 +50,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, List<String>> {
 
+    @Value("#{jobParameters[includeSurvival]}")
+    private Boolean includeSurvival;
     private final Logger LOG = Logger.getLogger(AgeAtSeqDateProcessor.class);
 
     @Override
     public List<String> process(DDPCompositeRecord compositeRecord) throws Exception {
-        List<AgeAtSeqDateRecord> ageAtSeqDateRecords = convertAgeAtSeqDateRecord(compositeRecord.getDmpPatientId(), compositeRecord.getDmpSampleIds(), compositeRecord.getPatientBirthDate());
+        String osMonths = includeSurvival ? DDPUtils.resolveOsMonths(DDPUtils.resolveOsStatus(compositeRecord), compositeRecord) : "NA";
+        List<AgeAtSeqDateRecord> ageAtSeqDateRecords = convertAgeAtSeqDateRecord(compositeRecord.getDmpPatientId(), compositeRecord.getDmpSampleIds(), compositeRecord.getPatientBirthDate(), osMonths);
         // construct records into strings for writing to output file
         List<String> records = new ArrayList<>();
         for (AgeAtSeqDateRecord ageAtSeqDateRecord : ageAtSeqDateRecords) {
@@ -73,11 +77,11 @@ public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, 
      * @param sampleId
      * @return
      */
-    private List<AgeAtSeqDateRecord> convertAgeAtSeqDateRecord(String patientId, List<String> sampleIds, String patientBirthDate) {
+    private List<AgeAtSeqDateRecord> convertAgeAtSeqDateRecord(String patientId, List<String> sampleIds, String patientBirthDate, String osMonths) {
         List<AgeAtSeqDateRecord> ageAtSeqDateRecords = new ArrayList<>();
         for (String sampleId : sampleIds) {
             try {
-                ageAtSeqDateRecords.add(new AgeAtSeqDateRecord(patientId, sampleId, patientBirthDate));
+                ageAtSeqDateRecords.add(new AgeAtSeqDateRecord(patientId, sampleId, patientBirthDate, osMonths));
             }
             catch (ParseException e) {
                 continue;

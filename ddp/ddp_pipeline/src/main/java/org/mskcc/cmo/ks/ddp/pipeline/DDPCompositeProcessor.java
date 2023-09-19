@@ -32,6 +32,7 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline;
 
+import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
@@ -106,7 +107,7 @@ public class DDPCompositeProcessor implements ItemProcessor<DDPCompositeRecord, 
 
     @Override
     public CompositeResult process(DDPCompositeRecord compositeRecord) throws Exception {
-        // all get methods are asynchrnous - won't wait for completion before completing
+        // all get methods are asynchronous - won't wait for completion before completing
         CompletableFuture<PatientDemographics> futurePatientDemographics = ddpDataSource.getPatientDemographics(compositeRecord.getDmpPatientId());
         CompletableFuture<List<PatientDiagnosis>> futurePatientDiagnosis = (includeDiagnosis ?
                 ddpDataSource.getPatientDiagnoses(compositeRecord.getDmpPatientId()) : null);

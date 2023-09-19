@@ -188,10 +188,23 @@ public class DDPUtils {
      *
      * @param sampleId
      * @param patientBirthDate String date of birth
+     * @param osMonths String osMonths
      * @return age in years at sequencing, null if we don't know patient date of birth or sequencing date
      * @throws ParseException
      */
-    public static String resolveAgeAtSeqDate(String sampleId, String patientBirthDate) throws ParseException {
+    public static String resolveAgeAtSeqDate(String sampleId, String patientBirthDate, String osMonths) throws ParseException {
+        int osYears = 0;
+        if (!osMonths.equals("NA")) {
+            try {
+                // Convert to an integer representing survival in years
+                osYears = (int)(Float.parseFloat(osMonths) / 12.0);
+            } catch(NumberFormatException e) {
+                LOG.debug("OS_MONTHS string does not contain a parseable float: " + osMonths);
+            } catch(NullPointerException e) {
+                LOG.debug("OS_MONTHS string is null: " + osMonths);
+            }
+        }
+
         Long birthDateInDays = getDateInDays(patientBirthDate);
         Long sampleSeqDateInDays = getDateInDays(sampleSeqDateMap.get(sampleId));
         // if either date is null do not calculate age at sequencing date
@@ -199,7 +212,7 @@ public class DDPUtils {
         if (age == null || age < 0) {
             return null;
         }
-        return anonymizePatientAge(age.intValue());
+        return anonymizePatientAge(age.intValue(), osYears);
     }
 
     /**
@@ -242,11 +255,27 @@ public class DDPUtils {
      * @return
      */
     private static String anonymizePatientAge(Integer age) {
-        if (age >= 90) {
-            age = 90;
+        if (age > 89) {
+            return ">89";
         }
-        else if (age <= 18) {
-            age = 18;
+        else if (age < 18) {
+            return "<18";
+        }
+        return String.valueOf(age);
+    }
+
+    /**
+     * Returns anonymized patient age as string.
+     * @param age
+     * @param osYears
+     * @return
+     */
+    private static String anonymizePatientAge(Integer age, Integer osYears) {
+        if (age + osYears > 89) {
+            return ">" + Integer.toString(Math.max(89 - osYears, 0));
+        }
+        else if (age < 18) {
+            return "<18";
         }
         return String.valueOf(age);
     }
@@ -382,7 +411,7 @@ public class DDPUtils {
                 patientsWithNegativeOsMonths.add(compositeRecord.getDmpPatientId());
                 return "NA";
             } else {
-                osMonths = String.format("%.3f", osMonthsValue);
+                osMonths = String.format("%.2f", osMonthsValue);
             }
         }
         if (osMonths.equals("NA")) {

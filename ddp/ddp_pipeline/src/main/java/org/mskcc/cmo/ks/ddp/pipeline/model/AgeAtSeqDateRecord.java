@@ -49,10 +49,10 @@ public class AgeAtSeqDateRecord {
 
     public AgeAtSeqDateRecord(){}
 
-    public AgeAtSeqDateRecord(String patientId, String sampleId, String patientBirthDate) throws ParseException {
+    public AgeAtSeqDateRecord(String patientId, String sampleId, String patientBirthDate, String osMonths) throws ParseException {
         this.PATIENT_ID = patientId;
         this.SAMPLE_ID = sampleId;
-        this.AGE_AT_SEQ_REPORTED_YEARS = DDPUtils.resolveAgeAtSeqDate(sampleId, patientBirthDate);
+        this.AGE_AT_SEQ_REPORTED_YEARS = DDPUtils.resolveAgeAtSeqDate(sampleId, patientBirthDate, osMonths);
     }
 
     /**

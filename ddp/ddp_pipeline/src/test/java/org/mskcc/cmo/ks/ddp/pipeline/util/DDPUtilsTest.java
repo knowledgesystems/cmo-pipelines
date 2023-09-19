@@ -102,18 +102,18 @@ public class DDPUtilsTest {
     // if PatientBirthDate is null or empty -- anonymize PatientAge. Cases : 0, 17, 18, 89, 90, 91
     public void resolvePatientCurrentAgeNoBirthdateTest() throws ParseException {
         // demographics age should be used first, if available
-        resolvePatientCurrentAgeAndAssert("", "", "", "", 0, 50, "18");
-        resolvePatientCurrentAgeAndAssert("", "", "", "", null, 0, "18");
-        resolvePatientCurrentAgeAndAssert("", "", "", "", 17, 50, "18");
-        resolvePatientCurrentAgeAndAssert("", "", "", "", null, 17, "18");
+        resolvePatientCurrentAgeAndAssert("", "", "", "", 0, 50, "<18");
+        resolvePatientCurrentAgeAndAssert("", "", "", "", null, 0, "<18");
+        resolvePatientCurrentAgeAndAssert("", "", "", "", 17, 50, "<18");
+        resolvePatientCurrentAgeAndAssert("", "", "", "", null, 17, "<18");
         resolvePatientCurrentAgeAndAssert("", "", "", "", 18, 50, "18");
         resolvePatientCurrentAgeAndAssert("", "", "", "", null, 18, "18");
         resolvePatientCurrentAgeAndAssert("", "", "", "", 89, 50, "89");
         resolvePatientCurrentAgeAndAssert("", "", "", "", null, 89, "89");
-        resolvePatientCurrentAgeAndAssert("", "", "", "", 90, 50, "90");
-        resolvePatientCurrentAgeAndAssert("", "", "", "", null, 90, "90");
-        resolvePatientCurrentAgeAndAssert("", "", "", "", 91, 50, "90");
-        resolvePatientCurrentAgeAndAssert("", "", "", "", null, 91, "90");
+        resolvePatientCurrentAgeAndAssert("", "", "", "", 90, 50, ">89");
+        resolvePatientCurrentAgeAndAssert("", "", "", "", null, 90, ">89");
+        resolvePatientCurrentAgeAndAssert("", "", "", "", 91, 50, ">89");
+        resolvePatientCurrentAgeAndAssert("", "", "", "", null, 91, ">89");
     }
 
     @Test
@@ -233,25 +233,33 @@ public class DDPUtilsTest {
 
     @Test(expected = ParseException.class)
     public void resolveAgeAtSeqDateParseExceptionTest() throws ParseException {
-        resolveAgeAtSeqDateAndAssert("invalid date", "Thu, 1 Aug 2019 19:17:55 UTC", "NA");
+        resolveAgeAtSeqDateAndAssert("invalid date", "Thu, 1 Aug 2019 19:17:55 UTC", "115.59", "NA");
     }
 
     @Test
     public void resolveAgeAtSeqDateTest() throws ParseException {
         // Test anonymized before 18
-        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 1 Aug 2019 19:17:55 UTC", "18");
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 1 Aug 2019 19:17:55 UTC", "115.59", "<18");
         // Test age the day before 19th birthday
-        resolveAgeAtSeqDateAndAssert("2003-06-02", "Wed, 1 Jun 2022 19:17:55 UTC", "18");
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Wed, 1 Jun 2022 19:17:55 UTC", "NA", "18");
         // Test 19th birthday
-        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 2 Jun 2022 19:17:55 UTC", "19");
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 2 Jun 2022 19:17:55 UTC", "NA", "19");
         // Test that patient is still 19
-        resolveAgeAtSeqDateAndAssert("2003-06-02", "Mon, 27 Feb 2023 19:17:55 UTC", "19");
-        // Test anonymized when 91
-        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 3 Jun 2094 19:17:55 UTC", "90");
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Mon, 27 Feb 2023 19:17:55 UTC", "115.59", "19");
+        // Test that patient is still 19 when osMonths is non-parseable
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Mon, 27 Feb 2023 19:17:55 UTC", "FakeVal", "19");
+        // Test anonymized when 91 at sequencing
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 3 Jun 2094 19:17:55 UTC", "NA", ">89");
+        // Test anonymized when 91 at sequencing and osMonths is set
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 3 Jun 2094 19:17:55 UTC", "115.59", ">80");
+        // Test anonymized when 91 at sequencing and osMonths is set
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Thu, 3 Jun 2094 19:17:55 UTC", "151.99", ">77");
+        // Test anonymized when younger than 89 at sequencing (87) but osMonths is set
+        resolveAgeAtSeqDateAndAssert("2003-06-02", "Sat, 3 Jun 2090 19:17:55 UTC", "45.99", ">86");
         // Test null birth date
-        resolveAgeAtSeqDateAndAssert(null, "Thu, 3 Jun 2094 19:17:55 UTC", null);
+        resolveAgeAtSeqDateAndAssert(null, "Thu, 3 Jun 2094 19:17:55 UTC", "115.59", null);
         // Test null sequencing date
-        resolveAgeAtSeqDateAndAssert("2003-06-02", null, null);
+        resolveAgeAtSeqDateAndAssert("2003-06-02", null, "115.59", null);
     }
 
     /* Tests for resolveOsMonths()
@@ -277,20 +285,20 @@ public class DDPUtilsTest {
         resolveOsMonthsAndAssert("DECEASED", "ignore", "", "2016-01-02", null, "NA");
         resolveOsMonthsAndAssert("DECEASED", "ignore", "2016-01-02", null, null, "NA");
         resolveOsMonthsAndAssert("LIVING", "2018-04-20", "ignore", "2018-02-19", null,
-            String.format("%.3f", 60 / DDPUtils.DAYS_TO_MONTHS_CONVERSION));
+            String.format("%.2f", 60 / DDPUtils.DAYS_TO_MONTHS_CONVERSION));
         resolveOsMonthsAndAssert("DECEASED", "ignore", "2018-04-21", "2018-02-19", null,
-            String.format("%.3f", 61 / DDPUtils.DAYS_TO_MONTHS_CONVERSION));
+            String.format("%.2f", 61 / DDPUtils.DAYS_TO_MONTHS_CONVERSION));
 
         // these will use seq date method, even if diagnosis is set
         resolveOsMonthsAndAssert("LIVING", "2019-01-31", "ignore", "ignore", "Sat, 01 Feb 2014 19:41:02 GMT",
-            String.format("%.3f", 60.0));
+            String.format("%.2f", 60.0));
         resolveOsMonthsAndAssert("LIVING", "2019-04-12", "ignore", "ignore", "Fri, 13 Oct 2017 15:33:32 GMT",
-            String.format("%.3f", 17.9506));
+            String.format("%.2f", 17.9506));
         resolveOsMonthsAndAssert("DECEASED", "ignore", "2017-01-20", "ignore", "Fri, 22 Aug 2014 16:09:17 GMT",
-            String.format("%.3f", 28.997));
+            String.format("%.2f", 28.997));
         // the following has both diagnosis and seq date, seq date wins
         resolveOsMonthsAndAssert("LIVING", "2019-04-12", "ignore", "2018-02-19", "Fri, 13 Oct 2017 15:33:32 GMT",
-            String.format("%.3f", 17.9506));
+            String.format("%.2f", 17.9506));
         // deceased patient date of death is before first tumor sequencing date
         resolveOsMonthsAndAssert("DECEASED", "ignore", "2015-05-10", "2014-01-20", "Fri, 20 Jan 2017 16:52:02 GMT", "0");
         // living patient last follow up date is before first tumor sequencing date
@@ -498,7 +506,7 @@ public class DDPUtilsTest {
         compositeRecord.setPatientDemographics(patientDemographics);
         compositeRecord.setCohortPatient(cohortPatient);
         ClinicalRecord clinicalRecord = new ClinicalRecord(compositeRecord, Boolean.TRUE);
-        String expectedValue = "MY_PT_ID\t75\tNA\tNA\tNA\tNA\tLIVING\tNA\t17.951";
+        String expectedValue = "MY_PT_ID\t75\tNA\tNA\tNA\tNA\tLIVING\tNA\t17.95";
         String returnedValue = DDPUtils.constructRecord(clinicalRecord, Boolean.TRUE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE);
         Assert.assertEquals(expectedValue, returnedValue);
     }
@@ -658,7 +666,7 @@ public class DDPUtilsTest {
         Assert.assertEquals(expectedValue, returnedValue);
     }
 
-    private void resolveAgeAtSeqDateAndAssert(String patientBirthDate, String sampleSeqDate, String expectedValue) throws ParseException {
+    private void resolveAgeAtSeqDateAndAssert(String patientBirthDate, String sampleSeqDate, String osMonths, String expectedValue) throws ParseException {
         String dmpSampleId = "TEST_SAMPLE_ID";
         Map<String, Date> sampleSeqDateMap = new HashMap<String, Date>();
         if (sampleSeqDate != null) {
@@ -667,7 +675,7 @@ public class DDPUtilsTest {
             sampleSeqDateMap.put(dmpSampleId, seqDate);
         }
         DDPUtils.setSampleSeqDateMap(sampleSeqDateMap);
-        String returnedValue = DDPUtils.resolveAgeAtSeqDate(dmpSampleId, patientBirthDate);
+        String returnedValue = DDPUtils.resolveAgeAtSeqDate(dmpSampleId, patientBirthDate, osMonths);
         Assert.assertEquals(expectedValue, returnedValue);
     }
 
