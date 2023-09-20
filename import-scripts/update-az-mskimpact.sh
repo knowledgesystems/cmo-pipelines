@@ -107,6 +107,29 @@ function filter_files_in_delivery_directory() {
     return 0
 }
 
+function rename_files_in_delivery_directory() {
+    # We want to rename:
+    # mskimpact_data_cna_hg19.seg -> az_mskimpact_data_cna_hg19.seg
+    # mskimpact_meta_cna_hg19_seg.txt -> az_mskimpact_meta_cna_hg19_seg.txt
+
+    unset filenames_to_rename
+    declare -A filenames_to_rename
+
+    # Data files to rename
+    filenames_to_rename[mskimpact_data_cna_hg19.seg]=az_mskimpact_data_cna_hg19.seg
+    filenames_to_rename[mskimpact_meta_cna_hg19_seg.txt]=az_mskimpact_meta_cna_hg19_seg.txt
+
+    for original_filename in "${!filenames_to_rename[@]}"
+    do
+        if [ -f "$AZ_MSK_IMPACT_DATA_HOME/$original_filename" ]; then
+            if ! mv "$AZ_MSK_IMPACT_DATA_HOME/$original_filename" "$AZ_MSK_IMPACT_DATA_HOME/${filenames_to_rename[$original_filename]}" ; then
+                return 1
+            fi
+        fi
+    done
+    return 0
+}
+
 function find_clinical_attribute_header_line_from_file() {
     # Path to clinical file taken as an argument
     clinical_attribute_filepath="$1"
@@ -350,7 +373,12 @@ if [ $? -gt 0 ] ; then
     report_error "ERROR: Failed to write out subsetted data for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
-printTimeStampedDataProcessingStepMessage "Filter clinical attribute columns, add metadata headers, standardize data files, and anonymize age at sequencing for AstraZeneca MSK-IMPACT"
+printTimeStampedDataProcessingStepMessage "Post-processing for AstraZeneca MSK-IMPACT"
+
+# Rename files that need to be renamed
+if ! rename_files_in_delivery_directory ; then
+    report_error "ERROR: Failed to rename files for AstraZeneca MSK-IMPACT. Exiting."
+fi
 
 # Filter clinical attribute columns from clinical files
 if ! filter_clinical_attribute_columns ; then
