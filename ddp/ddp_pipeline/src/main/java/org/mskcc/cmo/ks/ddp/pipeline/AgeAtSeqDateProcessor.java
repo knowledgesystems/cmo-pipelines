@@ -41,13 +41,11 @@ import java.text.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
  *
  * @author Manda Wilson and Calla Chennault
  */
-@Component
 public class AgeAtSeqDateProcessor implements ItemProcessor<DDPCompositeRecord, List<String>> {
 
     @Value("#{jobParameters[includeSurvival]}")
