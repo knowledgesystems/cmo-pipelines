@@ -32,7 +32,6 @@
 
 package org.mskcc.cmo.ks.ddp.pipeline;
 
-import org.mskcc.cmo.ks.ddp.pipeline.model.ClinicalRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
