@@ -604,7 +604,7 @@ public class DDPUtils {
         if (date != null) {
             Calendar calendar = Calendar.getInstance();
             calendar.setTime(date);
-            return new Long(calendar.get(Calendar.YEAR));
+            return Long.valueOf(calendar.get(Calendar.YEAR));
         }
         return null;
     }
@@ -621,7 +621,7 @@ public class DDPUtils {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             Calendar calendar = Calendar.getInstance();
             calendar.setTime(sdf.parse(dateValue));
-            return new Long(calendar.get(Calendar.YEAR));
+            return Long.valueOf(calendar.get(Calendar.YEAR));
         }
         return null;
     }
