@@ -39,6 +39,7 @@ import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Calendar;
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
@@ -80,7 +81,8 @@ public class DDPUtils {
 
     private static Integer getOffsetMinutesForSavingsTimeChange() {
         if (offsetMinutesForSavingsTimeChange == null) {
-            offsetMinutesForSavingsTimeChange = ZonedDateTime.now().getOffset().getTotalSeconds();
+            Calendar cal = Calendar.getInstance();
+            offsetMinutesForSavingsTimeChange = cal.get(Calendar.ZONE_OFFSET) + cal.get(Calendar.DST_OFFSET) / (60 * 1000);
         }
         return offsetMinutesForSavingsTimeChange;
     }
