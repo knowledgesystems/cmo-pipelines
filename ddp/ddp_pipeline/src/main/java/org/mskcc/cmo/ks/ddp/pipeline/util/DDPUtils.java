@@ -37,6 +37,7 @@ import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
@@ -79,8 +80,7 @@ public class DDPUtils {
 
     private static Integer getOffsetMinutesForSavingsTimeChange() {
         if (offsetMinutesForSavingsTimeChange == null) {
-            Date now = new Date();
-            offsetMinutesForSavingsTimeChange = now.getTimezoneOffset();
+            offsetMinutesForSavingsTimeChange = ZonedDateTime.now().getOffset().getTotalSeconds();
         }
         return offsetMinutesForSavingsTimeChange;
     }
@@ -569,7 +569,12 @@ public class DDPUtils {
         if (!Strings.isNullOrEmpty(dateValue) && !NULL_EMPTY_VALUES.contains(dateValue)) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             Date date = sdf.parse(dateValue);
-            Integer savingstimeOffsetMinutesForParsedDate = date.getTimezoneOffset();
+            //Integer savingstimeOffsetMinutesForParsedDate = date.getTimezoneOffset();
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            ZonedDateTime zdt = ZonedDateTime.parse(dateValue, formatter);
+            Integer savingstimeOffsetMinutesForParsedDate = zdt.getOffset().getTotalSeconds();
+
             Integer localTimezoneOffsetMinuteDifference = getOffsetMinutesForSavingsTimeChange() - savingstimeOffsetMinutesForParsedDate;
             return computeDaysFromDateUsingLocalMidnight(date, localTimezoneOffsetMinuteDifference);
         }
