@@ -39,7 +39,7 @@ import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.Calendar;
+
 import org.apache.log4j.Logger;
 import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
@@ -81,8 +81,8 @@ public class DDPUtils {
 
     private static Integer getOffsetMinutesForSavingsTimeChange() {
         if (offsetMinutesForSavingsTimeChange == null) {
-            Calendar cal = Calendar.getInstance();
-            offsetMinutesForSavingsTimeChange = cal.get(Calendar.ZONE_OFFSET) + cal.get(Calendar.DST_OFFSET) / (60 * 1000);
+            Date now = new Date();
+            offsetMinutesForSavingsTimeChange = now.getTimezoneOffset();
         }
         return offsetMinutesForSavingsTimeChange;
     }
@@ -572,11 +572,6 @@ public class DDPUtils {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             Date date = sdf.parse(dateValue);
             Integer savingstimeOffsetMinutesForParsedDate = date.getTimezoneOffset();
-
-            //DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            //ZonedDateTime zdt = ZonedDateTime.parse(dateValue, formatter);
-            //Integer savingstimeOffsetMinutesForParsedDate = zdt.getOffset().getTotalSeconds();
-
             Integer localTimezoneOffsetMinuteDifference = getOffsetMinutesForSavingsTimeChange() - savingstimeOffsetMinutesForParsedDate;
             return computeDaysFromDateUsingLocalMidnight(date, localTimezoneOffsetMinuteDifference);
         }
