@@ -569,11 +569,11 @@ public class DDPUtils {
         if (!Strings.isNullOrEmpty(dateValue) && !NULL_EMPTY_VALUES.contains(dateValue)) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             Date date = sdf.parse(dateValue);
-            //Integer savingstimeOffsetMinutesForParsedDate = date.getTimezoneOffset();
+            Integer savingstimeOffsetMinutesForParsedDate = date.getTimezoneOffset();
 
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            ZonedDateTime zdt = ZonedDateTime.parse(dateValue, formatter);
-            Integer savingstimeOffsetMinutesForParsedDate = zdt.getOffset().getTotalSeconds();
+            //DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            //ZonedDateTime zdt = ZonedDateTime.parse(dateValue, formatter);
+            //Integer savingstimeOffsetMinutesForParsedDate = zdt.getOffset().getTotalSeconds();
 
             Integer localTimezoneOffsetMinuteDifference = getOffsetMinutesForSavingsTimeChange() - savingstimeOffsetMinutesForParsedDate;
             return computeDaysFromDateUsingLocalMidnight(date, localTimezoneOffsetMinuteDifference);
