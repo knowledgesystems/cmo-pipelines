@@ -186,7 +186,7 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         // annotate with GenomeNexusImpl annotator from genome nexus annotation pipeline
         // records will be partitioned inside annotator client
         // records which do not get a response back will automatically be defauled to an AnnotatedRecord(record)
-        List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE);
+        List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE, Boolean.FALSE);
         for (AnnotatedRecord ar : annotatedRecords) {
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             mutationRecords.add(ar);
