@@ -65,7 +65,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     DB_VERSION_FAIL=0
     # check database version before importing anything
     echo "Checking if database version is compatible"
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --check-db-version
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
     if [ $? -gt 0 ]; then
         echo "Database version expected by portal does not match version in database!"
         DB_VERSION_FAIL=1
@@ -74,10 +74,10 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     if [[ $DB_VERSION_FAIL -eq 0 && ${#failed_data_source_fetches[*]} -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         # import vetted studies into MSK portal
         echo "importing cancer type updates into msk portal database..."
-        $JAVA_BINARY_FOR_IMPORTER -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+        $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
         echo "importing study data into msk portal database..."
         IMPORT_FAIL=0
-        $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal msk-automation-portal --update-worksheet --notification-file "$msk_automation_notification_file" --use-never-import --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal msk-automation-portal --update-worksheet --notification-file "$msk_automation_notification_file" --use-never-import --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -gt 0 ]; then
             echo "MSK CMO import failed!"
             IMPORT_FAIL=1
@@ -109,7 +109,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     echo "Cleaning up any untracked files from MSK-CMO import..."
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind
 
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
 
     echo "### Starting import" >> "$CANCERSTUDIESLOGFILENAME"
 

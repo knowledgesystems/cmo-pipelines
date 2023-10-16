@@ -8,8 +8,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     fi
 
     # set necessary env variables with automation-environment.sh
-    if [[ -z "$PORTAL_HOME" || -z "$JAVA_BINARY_FOR_IMPORTER" || -z "$START_GENIE_IMPORT_TRIGGER_FILENAME" || -z "$KILL_GENIE_IMPORT_TRIGGER_FILENAME" || -z "$GENIE_IMPORT_IN_PROGRESS_FILENAME" || -z "$GENIE_IMPORT_KILLING_FILENAME" ]] ; then
-        echo "Error : import-genie-data.sh cannot be run without setting the PORTAL_HOME, JAVA_BINARY_FOR_IMPORTER, START_GENIE_IMPORT_TRIGGER_FILENAME, KILL_GENIE_IMPORT_TRIGGER_FILENAME, GENIE_IMPORT_IN_PROGRESS_FILENAME, GENIE_IMPORT_KILLING_FILENAME environment variables. (Use automation-environment.sh)"
+    if [[ -z "$PORTAL_HOME" || -z "$JAVA_BINARY" || -z "$START_GENIE_IMPORT_TRIGGER_FILENAME" || -z "$KILL_GENIE_IMPORT_TRIGGER_FILENAME" || -z "$GENIE_IMPORT_IN_PROGRESS_FILENAME" || -z "$GENIE_IMPORT_KILLING_FILENAME" ]] ; then
+        echo "Error : import-genie-data.sh cannot be run without setting the PORTAL_HOME, JAVA_BINARY, START_GENIE_IMPORT_TRIGGER_FILENAME, KILL_GENIE_IMPORT_TRIGGER_FILENAME, GENIE_IMPORT_IN_PROGRESS_FILENAME, GENIE_IMPORT_KILLING_FILENAME environment variables. (Use automation-environment.sh)"
         exit 1
     fi
 
@@ -97,7 +97,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     DB_VERSION_FAIL=0
     # check database version before importing anything
     echo "Checking if database version is compatible"
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --check-db-version
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
     if [ $? -gt 0 ]; then
         echo "Database version expected by portal does not match version in database!"
         DB_VERSION_FAIL=1
@@ -106,7 +106,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     # fetch updates in genie repository
     echo "fetching updates from genie..."
     GENIE_FETCH_FAIL=0
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source genie --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source genie --run-date latest
     if [ $? -gt 0 ]; then
         echo "genie fetch failed!"
         GENIE_FETCH_FAIL=1
@@ -118,9 +118,9 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     if [[ $DB_VERSION_FAIL -eq 0 && $GENIE_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]]; then
         # import genie studies into genie portal
         echo "importing cancer type updates into genie portal database..."
-        $JAVA_BINARY_FOR_IMPORTER -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${oncotree_version_to_use}
+        $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${oncotree_version_to_use}
         echo "importing study data into genie portal database..."
-        $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version ${oncotree_version_to_use} --transcript-overrides-source mskcc --disable-redcap-export
+        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version ${oncotree_version_to_use} --transcript-overrides-source mskcc --disable-redcap-export
         IMPORT_EXIT_STATUS=$?
         if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
             echo "Genie import failed!"
@@ -165,7 +165,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         echo $VERSION_MISMATCH_EMAIL_INHIBIT_COUNTER_START > "$GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME"
     fi
 
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --send-update-notification --portal genie-portal --notification-file "$genie_portal_notification_file"
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal genie-portal --notification-file "$genie_portal_notification_file"
 
     echo "Cleaning up any untracked files from GENIE import..."
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/genie

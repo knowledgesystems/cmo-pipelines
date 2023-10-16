@@ -10,8 +10,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     fi
 
     # set necessary env variables with automation-environment.sh
-    if [[ -z $PORTAL_HOME || -z $JAVA_BINARY_FOR_IMPORTER ]] ; then
-        echo "Error : import-aws-gdac-data.sh cannot be run without setting PORTAL_HOME and JAVA_BINARY_FOR_IMPORTER environment variables. (Use automation-environment.sh)"
+    if [[ -z $PORTAL_HOME || -z $JAVA_BINARY ]] ; then
+        echo "Error : import-aws-gdac-data.sh cannot be run without setting PORTAL_HOME and JAVA_BINARY environment variables. (Use automation-environment.sh)"
         exit 1
     fi
 
@@ -56,7 +56,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     DB_VERSION_FAIL=0
     # check database version before importing anything
     echo "Checking if database version is compatible"
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --check-db-version
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
     if [ $? -gt 0 ]; then
         echo "Database version expected by portal does not match version in database!"
         DB_VERSION_FAIL=1
@@ -65,7 +65,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     # fetch updates in genie repository
     echo "fetching updates from genie..."
     GENIE_FETCH_FAIL=0
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source genie --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source genie --run-date latest
     if [ $? -gt 0 ]; then
         echo "genie fetch failed!"
         GENIE_FETCH_FAIL=1
@@ -77,9 +77,9 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     if [[ $DB_VERSION_FAIL -eq 0 && $GENIE_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]]; then
         # import genie studies into genie portal
         echo "importing cancer type updates into genie archive portal database..."
-        $JAVA_BINARY_FOR_IMPORTER -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+        $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
         echo "importing study data into genie archive portal database..."
-        $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-archive-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-archive-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         IMPORT_EXIT_STATUS=$?
         if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
             echo "Genie archive import failed!"
@@ -122,7 +122,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         echo -e "$EMAIL_BODY" | mail -s "GENIE Archive Update Failure: DB version is incompatible" $PIPELINES_EMAIL_LIST
     fi
 
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --send-update-notification --portal genie-archive-portal --notification-file "$genie_archive_portal_notification_file"
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal genie-archive-portal --notification-file "$genie_archive_portal_notification_file"
 
     echo "Cleaning up any untracked files from MSK-TRIAGE import..."
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/genie

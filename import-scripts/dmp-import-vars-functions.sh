@@ -121,7 +121,7 @@ function addDateAddedData {
 function import_project_to_redcap {
     FILENAME=$1
     PROJECT_TITLE=$2
-    $JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -i --filename $FILENAME --redcap-project-title $PROJECT_TITLE
+    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -i --filename $FILENAME --redcap-project-title $PROJECT_TITLE
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to import file $FILENAME into redcap project $PROJECT_TITLE"
@@ -133,7 +133,7 @@ function import_project_to_redcap {
 function export_project_from_redcap {
     DIRECTORY=$1
     PROJECT_TITLE=$2
-    $JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -d $DIRECTORY --redcap-project-title $PROJECT_TITLE
+    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -d $DIRECTORY --redcap-project-title $PROJECT_TITLE
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to export project $PROJECT_TITLE from redcap into directory $DIRECTORY"
@@ -150,7 +150,7 @@ function export_stable_id_from_redcap {
     if [ ! -z $IGNORED_PROJECTS_LIST ] ; then
         IGNORED_PROJECTS_ARGUMENT="-m $IGNORED_PROJECTS_LIST"
     fi
-    $JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -s $STABLE_ID -d $DIRECTORY $IGNORED_PROJECTS_ARGUMENT
+    $JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -s $STABLE_ID -d $DIRECTORY $IGNORED_PROJECTS_ARGUMENT
     if [ $? -gt 0 ] ; then
         #log error
         echo "Failed to export stable_id $STABLE_ID from REDCap into directory $DIRECTORY"
@@ -334,19 +334,19 @@ function consumeSamplesAfterSolidHemeImport {
     drop_dead_instant_string=$(date --date="+3hours" -Iseconds) # 3 hours from now
     if [ -f $MSK_IMPACT_CONSUME_TRIGGER ] ; then
         echo "Consuming mskimpact tumor samples from cvr"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         echo "Consuming mskimpact germline samples from cvr"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json -z $drop_dead_instant_string
         rm -f $MSK_IMPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_HEMEPACT_CONSUME_TRIGGER ] ; then
         echo "Consuming mskimpact_heme samples from cvr"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_HEMEPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_ACCESS_CONSUME_TRIGGER ] ; then
         echo "Consuming mskaccess samples from cvr"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_ACCESS_CONSUME_TRIGGER
     fi
 }
@@ -356,7 +356,7 @@ function consumeSamplesAfterArcherImport {
     drop_dead_instant_string=$(date --date="+3hour" -Iseconds) # 3 hour from now
     if [ -f $MSK_ARCHER_CONSUME_TRIGGER ] ; then
         echo "Consuming archer samples from cvr"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_ARCHER_CONSUME_TRIGGER
     fi
 }

@@ -15,7 +15,7 @@ if [[ -d "$MSK_DMP_TMPDIR" && "$MSK_DMP_TMPDIR" != "/" ]] ; then
     rm -rf "$MSK_DMP_TMPDIR"/*
 fi
 
-if [ -z $JAVA_BINARY_FOR_IMPORTER ] | [ -z $JAVA_BINARY_FOR_DDP ] | [ -z $GIT_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_SHAHLAB_DATA_HOME ] | [ -z $MSK_SPECTRUM_COHORT_DATA_HOME ] ; then
+if [ -z $JAVA_BINARY ] | [ -z $GIT_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_SHAHLAB_DATA_HOME ] | [ -z $MSK_SPECTRUM_COHORT_DATA_HOME ] ; then
     message="test could not run update-msk-spectrum-cohort.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_SHAHLAB_DATA_HOME, ...)"
     echo $message
     echo -e "$message" |  mail -s "update-msk-spectrum-cohort failed to run." $PIPELINES_EMAIL_LIST
@@ -39,7 +39,7 @@ if [ $MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_RO
     MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
 fi
 
-$JAVA_BINARY_FOR_DDP $JAVA_DDP_FETCHER_ARGS -c mskspectrum -p $mskspectrum_dmp_pids_file -f diagnosis,radiation,chemotherapy,surgery,survival -o $MSK_SPECTRUM_COHORT_DATA_HOME -r $MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskspectrum -p $mskspectrum_dmp_pids_file -f diagnosis,radiation,chemotherapy,surgery,survival -o $MSK_SPECTRUM_COHORT_DATA_HOME -r $MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT
 if [ $? -gt 0 ] ; then
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub_shahlab
     sendPreImportFailureMessageMskPipelineLogsSlack "MSKSPECTRUM DDP Timeline Fetch"
@@ -49,7 +49,7 @@ else
 fi
 
 # update mskspectrum cohort in portal
-$JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal msk-spectrum-portal --notification-file $mskspectrum_notification_file --oncotree-version $ONCOTREE_VERSION_TO_USE --transcript-overrides-source mskcc --disable-redcap-export
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal msk-spectrum-portal --notification-file $mskspectrum_notification_file --oncotree-version $ONCOTREE_VERSION_TO_USE --transcript-overrides-source mskcc --disable-redcap-export
 if [ $? -gt 0 ]; then
     echo "MSKSPECTRUM update failed!"
     IMPORT_FAIL=1
@@ -77,4 +77,4 @@ fi
 
 # clean up msk-spectrum repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub_shahlab
-$JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-spectrum-portal --notification-file "$mskspectrum_notification_file"
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-spectrum-portal --notification-file "$mskspectrum_notification_file"

@@ -73,7 +73,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         rm -rf "$MSK_DMP_TMPDIR"/*
     fi
 
-    if [ -z $JAVA_BINARY_FOR_DDP ] | [ -z $JAVA_BINARY_FOR_CRDB ] | [ -z $JAVA_BINARY_FOR_DARWIN ] | [ -z $JAVA_BINARY_FOR_IMPORTER ] | [ -z $JAVA_19_BINARY ] | [ -z $GIT_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
+    if [ -z $JAVA_BINARY ] | [ -z $GIT_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
         message="test could not run import-dmp-impact.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
         echo $message
         echo -e "$message" |  mail -s "fetch-dmp-data-for-import failed to run." $PIPELINES_EMAIL_LIST
@@ -114,7 +114,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     # fetch clinical data from data repository
     echo "fetching updates from dmp repository..."
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source dmp --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source dmp --run-date latest
     if [ $? -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "Git Failure: DMP repository update"
         exit 2
@@ -192,7 +192,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "MSKIMPACT data processing"
     # fetch darwin caisis data
     printTimeStampedDataProcessingStepMessage "Darwin CAISIS fetch for mskimpact"
-    $JAVA_BINARY_FOR_DARWIN $JAVA_DARWIN_FETCHER_ARGS -s mskimpact -d $MSK_IMPACT_DATA_HOME -c
+    $JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -s mskimpact -d $MSK_IMPACT_DATA_HOME -c
     if [ $? -gt 0 ] ; then
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Darwin CAISIS Fetch"
@@ -207,7 +207,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR fetch for mskimpact"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_PRIVATE_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_PRIVATE_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR fetch failed!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
@@ -247,7 +247,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR germline fetch for mskimpact"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_PRIVATE_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_PRIVATE_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR Germline fetch failed!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
@@ -284,7 +284,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
     fi
 
-    $JAVA_BINARY_FOR_DDP $JAVA_DDP_FETCHER_ARGS -c mskimpact -p $mskimpact_dmp_pids_file -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_IMPACT_DATA_HOME -r $MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
+    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -p $mskimpact_dmp_pids_file -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_IMPACT_DATA_HOME -r $MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
     if [ $? -gt 0 ] ; then
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Demographics Fetch"
@@ -299,7 +299,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PED_IND"] == "Yes") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_ddp.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
         # override default ddp clinical filename so that pediatric demographics file does not conflict with mskimpact demographics file
         DDP_PEDIATRIC_PROP_OVERRIDES="-Dddp.clinical_filename=data_clinical_ddp_pediatrics.txt"
-        $JAVA_BINARY_FOR_DDP $DDP_PEDIATRIC_PROP_OVERRIDES $JAVA_DDP_FETCHER_ARGS -o $MSK_IMPACT_DATA_HOME -p $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f diagnosis,radiation,chemotherapy,surgery,survival
+        $JAVA_BINARY $DDP_PEDIATRIC_PROP_OVERRIDES $JAVA_DDP_FETCHER_ARGS -o $MSK_IMPACT_DATA_HOME -p $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f diagnosis,radiation,chemotherapy,surgery,survival
         if [ $? -gt 0 ] ; then
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Pediatric DDP Fetch"
@@ -313,7 +313,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $PERFORM_CRDB_FETCH -gt 0 ] ; then
         # fetch CRDB data
         printTimeStampedDataProcessingStepMessage "CRDB fetch for mskimpact"
-        $JAVA_BINARY_FOR_CRDB $JAVA_CRDB_FETCHER_ARGS --directory $MSK_IMPACT_DATA_HOME
+        $JAVA_BINARY $JAVA_CRDB_FETCHER_ARGS --directory $MSK_IMPACT_DATA_HOME
         # no need for data repository update/commit ; CRDB generated files are stored in redcap and not git
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CRDB Fetch"
@@ -333,7 +333,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR fetch for hemepact"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_PRIVATE_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_PRIVATE_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR heme fetch failed!"
             echo "This will not affect importing of mskimpact"
@@ -361,7 +361,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR germline fetch for hemepact"
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_PRIVATE_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_PRIVATE_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR Germline fetch failed!"
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
@@ -398,7 +398,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
     fi
 
-    $JAVA_BINARY_FOR_DDP $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -p $mskimpact_heme_dmp_pids_file -s $MSK_HEMEPACT_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_HEMEPACT_DATA_HOME -r $HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
+    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -p $mskimpact_heme_dmp_pids_file -s $MSK_HEMEPACT_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_HEMEPACT_DATA_HOME -r $HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
     if [ $? -gt 0 ] ; then
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
         sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Demographics Fetch"
@@ -418,7 +418,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR fetch for archer"
         # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -p $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -p $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR Archer fetch failed!"
             echo "This will not affect importing of mskimpact"
@@ -452,7 +452,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         ARCHER_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
     fi
 
-    $JAVA_BINARY_FOR_DDP $JAVA_DDP_FETCHER_ARGS -c mskarcher -p $mskarcher_dmp_pids_file -s $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_ARCHER_UNFILTERED_DATA_HOME -r $ARCHER_DDP_DEMOGRAPHICS_RECORD_COUNT
+    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskarcher -p $mskarcher_dmp_pids_file -s $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_ARCHER_UNFILTERED_DATA_HOME -r $ARCHER_DDP_DEMOGRAPHICS_RECORD_COUNT
     if [ $? -gt 0 ] ; then
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
         sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Demographics Fetch"
@@ -472,7 +472,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR fetch for access"
         # access has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-        $JAVA_19_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -p $MSK_ACCESS_PRIVATE_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -p $MSK_ACCESS_PRIVATE_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR ACCESS fetch failed!"
             echo "This will not affect importing of mskimpact"
@@ -506,7 +506,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
     fi
 
-    $JAVA_BINARY_FOR_DDP $JAVA_DDP_FETCHER_ARGS -c mskaccess -p $mskaccess_dmp_pids_file -s $MSK_ACCESS_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_ACCESS_DATA_HOME -r $ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT
+    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskaccess -p $mskaccess_dmp_pids_file -s $MSK_ACCESS_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_ACCESS_DATA_HOME -r $ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT
     if [ $? -gt 0 ] ; then
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
         sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS DDP Demographics Fetch"

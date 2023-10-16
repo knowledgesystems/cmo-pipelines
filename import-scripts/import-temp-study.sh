@@ -148,7 +148,7 @@ GROUPS_FAIL=0
 
 # import study using temp id
 echo "Importing study '$CANCER_STUDY_IDENTIFIER' as temporary study '$TEMP_CANCER_STUDY_IDENTIFIER'"
-$JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --notification-file $NOTIFICATION_FILE --temporary-id $TEMP_CANCER_STUDY_IDENTIFIER $ONCOTREE_VERSION_TERM --transcript-overrides-source $TRANSCRIPT_OVERRIDES_SOURCE $DISABLE_REDCAP_EXPORT_TERM
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --notification-file $NOTIFICATION_FILE --temporary-id $TEMP_CANCER_STUDY_IDENTIFIER $ONCOTREE_VERSION_TERM --transcript-overrides-source $TRANSCRIPT_OVERRIDES_SOURCE $DISABLE_REDCAP_EXPORT_TERM
 # we do not have to check the exit status here because if num_studies_updated != 1 we consider the import to have failed (we check num_studies_updated next)
 
 # check number of studies updated before continuing
@@ -164,32 +164,32 @@ if [ "$num_studies_updated" -ne 1 ]; then
 else
     # validate
     echo "Validating import..."
-    $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --validate-temp-study --temp-study-id $TEMP_CANCER_STUDY_IDENTIFIER --original-study-id $CANCER_STUDY_IDENTIFIER --notification-file $VALIDATION_NOTIFICATION_FILENAME
+    $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --validate-temp-study --temp-study-id $TEMP_CANCER_STUDY_IDENTIFIER --original-study-id $CANCER_STUDY_IDENTIFIER --notification-file $VALIDATION_NOTIFICATION_FILENAME
     if [ $? -gt 0 ]; then
         echo "Failed to validate - deleting temp study '$TEMP_CANCER_STUDY_IDENTIFIER'"
-        $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --delete-cancer-study --cancer-study-ids $TEMP_CANCER_STUDY_IDENTIFIER
+        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --delete-cancer-study --cancer-study-ids $TEMP_CANCER_STUDY_IDENTIFIER
         VALIDATION_FAIL=1
     else
         echo "Successful validation - renaming '$CANCER_STUDY_IDENTIFIER' and temp study '$TEMP_CANCER_STUDY_IDENTIFIER'"
-        $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --delete-cancer-study --cancer-study-ids $BACKUP_CANCER_STUDY_IDENTIFIER
+        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --delete-cancer-study --cancer-study-ids $BACKUP_CANCER_STUDY_IDENTIFIER
         if [ $? -gt 0 ]; then
             echo "Failed to delete backup study '$BACKUP_CANCER_STUDY_IDENTIFIER'!"
             DELETE_FAIL=1
         else
             echo "Renaming '$CANCER_STUDY_IDENTIFIER' to '$BACKUP_CANCER_STUDY_IDENTIFIER'"
-            $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --rename-cancer-study --new-study-id $BACKUP_CANCER_STUDY_IDENTIFIER --original-study-id $CANCER_STUDY_IDENTIFIER
+            $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --rename-cancer-study --new-study-id $BACKUP_CANCER_STUDY_IDENTIFIER --original-study-id $CANCER_STUDY_IDENTIFIER
             if [ $? -gt 0 ]; then
                 echo "Failed to rename existing '$CANCER_STUDY_IDENTIFIER' to backup study '$BACKUP_CANCER_STUDY_IDENTIFIER'!"
                 RENAME_BACKUP_FAIL=1
             else
                 echo "Updating groups of study '$BACKUP_CANCER_STUDY_IDENTIFIER' to '$GROUP_FOR_HIDING_BACKUP_STUDIES'"
-                $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --update-groups --cancer-study-ids $BACKUP_CANCER_STUDY_IDENTIFIER --groups $GROUP_FOR_HIDING_BACKUP_STUDIES
+                $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-groups --cancer-study-ids $BACKUP_CANCER_STUDY_IDENTIFIER --groups $GROUP_FOR_HIDING_BACKUP_STUDIES
                 if [ $? -gt 0 ]; then
                     echo "Failed to change groups for backup study '$BACKUP_CANCER_STUDY_IDENTIFIER'!"
                     GROUPS_FAIL=1
                 fi
                 echo "Renaming temporary study '$TEMP_CANCER_STUDY_IDENTIFIER' to '$CANCER_STUDY_IDENTIFIER'"
-                $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --rename-cancer-study --new-study-id $CANCER_STUDY_IDENTIFIER --original-study-id $TEMP_CANCER_STUDY_IDENTIFIER
+                $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --rename-cancer-study --new-study-id $CANCER_STUDY_IDENTIFIER --original-study-id $TEMP_CANCER_STUDY_IDENTIFIER
                 if [ $? -gt 0 ]; then
                     echo "Failed to rename temporary study '$TEMP_CANCER_STUDY_IDENTIFIER' to '$CANCER_STUDY_IDENTIFIER'!"
                     RENAME_FAIL=1
@@ -254,7 +254,7 @@ fi
 # we only want to send the email on import failure
 # or if everything succeeds
 if [[ $IMPORT_FAIL -ne 0 || ($VALIDATION_FAIL -eq 0 && $DELETE_FAIL -eq 0 && $RENAME_BACKUP_FAIL -eq 0 && $RENAME_FAIL -eq 0 && $GROUPS_FAIL -eq 0) ]]; then
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --send-update-notification --portal $PORTAL_NAME --notification-file $NOTIFICATION_FILE
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal $PORTAL_NAME --notification-file $NOTIFICATION_FILE
 fi
 
 # determine if we need to exit with error code

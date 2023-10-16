@@ -75,12 +75,12 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
 
     # import data that requires QC into triage portal
     echo "importing cancer type updates into triage portal database..."
-    $JAVA_BINARY_FOR_IMPORTER -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+    $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
 
     DB_VERSION_FAIL=0
     # check database version before importing anything
     echo "Checking if database version is compatible"
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --check-db-version
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
     if [ $? -gt 0 ]
     then
         echo "Database version expected by portal does not match version in database!"
@@ -91,7 +91,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
     if [[ $DB_VERSION_FAIL -eq 0 && ${#failed_data_source_fetches[*]} -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data into triage portal database..."
         IMPORT_FAIL=0
-        $JAVA_BINARY_FOR_IMPORTER -Xmx32G $JAVA_IMPORTER_ARGS --update-study-data --portal triage-portal --use-never-import --update-worksheet --notification-file "$triage_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+        $JAVA_BINARY -Xmx32G $JAVA_IMPORTER_ARGS --update-study-data --portal triage-portal --use-never-import --update-worksheet --notification-file "$triage_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -gt 0 ]; then
             echo "Triage import failed!"
             IMPORT_FAIL=1
@@ -113,7 +113,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
 
         # import ran and either failed or succeeded
         echo "sending notification email.."
-        $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --send-update-notification --portal triage-portal --notification-file "$triage_notification_file"
+        $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal triage-portal --notification-file "$triage_notification_file"
     fi
 
     EMAIL_BODY="The Triage database version is incompatible. Imports will be skipped until database is updated."

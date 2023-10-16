@@ -44,7 +44,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     # START CMO-ACCESS DATA FETCHING
     echo $(date)
 
-    if [ -z $JAVA_BINARY_FOR_IMPORTER ] | [ -z $JAVA_BINARY_FOR_DDP ] | [ -z $GIT_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $CMO_ACCESS_DATA_HOME ] ; then
+    if [ -z $JAVA_BINARY ] | [ -z $GIT_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $CMO_ACCESS_DATA_HOME ] ; then
         message="could not run fetch-ddp-and-import-cmo-access-data.sh: automation-environment.sh script must be run in order to set needed environment variables (like CMO_ACCESS_DATA_HOME, ...)"
         echo $message
         echo -e "$message" | mail -s "fetch-ddp-and-import-cmo-access-data.sh failed to run." $PIPELINES_EMAIL_LIST
@@ -118,7 +118,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
         if [ $CMO_ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
             CMO_ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
         fi
-        $JAVA_BINARY_FOR_DDP $JAVA_DDP_FETCHER_ARGS -c mskimpact -p $cmo_access_dmp_pids_filepath -s "$cmo_access_seq_date_filepath" -f diagnosis,radiation,chemotherapy,surgery,survival -o $cmo_access_ddp_output_dirpath -r $CMO_ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT
+        $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -p $cmo_access_dmp_pids_filepath -s "$cmo_access_seq_date_filepath" -f diagnosis,radiation,chemotherapy,surgery,survival -o $cmo_access_ddp_output_dirpath -r $CMO_ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT
     }
 
     function correct_case_list_file() {
@@ -198,7 +198,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     echo $(date)
     # -------------------------------------------------------------
     printTimeStampedDataProcessingStepMessage "database version compatibility check"
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --check-db-version
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
     if [ $? -gt 0 ] ; then
         echo "Database version expected by portal does not match version in database!"
         sendImportFailureMessageMskPipelineLogsSlack "MSK DMP Importer DB version check (CMO-ACCESS)"
@@ -209,7 +209,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     fi
     echo "importing study data into msk-portal database..."
     ln -sf "$CMO_ACCESS_DATA_HOME" "$IMPORT_SYMLINK_FILEPATH" # symlink needed because the datasource search is based on study id, which is all lower case
-    $JAVA_BINARY_FOR_IMPORTER -Xmx32G $JAVA_IMPORTER_ARGS --update-study-data --portal cmo-access-portal --use-never-import --disable-redcap-export --notification-file "$cmo_access_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+    $JAVA_BINARY -Xmx32G $JAVA_IMPORTER_ARGS --update-study-data --portal cmo-access-portal --use-never-import --disable-redcap-export --notification-file "$cmo_access_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
     if [ $? -gt 0 ]; then
         echo "CMO-ACCESS import failed!"
         sendImportFailureMessageMskPipelineLogsSlack "CMO-ACCESS import failed!"
@@ -233,7 +233,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     # import ran and either failed or succeeded
     echo "sending notification email.."
     ####TODO we cannot rebuild importer currently, so use the mskimpact-portal which causes an email to be sent to our own group email only
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --send-update-notification --portal mskimpact-portal --notification-file "$cmo_access_notification_file"
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal mskimpact-portal --notification-file "$cmo_access_notification_file"
 
     echo "committing ddp data"
     cd $CMO_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "update of ddp timeline data"

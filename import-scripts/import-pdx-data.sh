@@ -173,7 +173,7 @@ fi
 DB_VERSION_FAIL=0
 # check database version before importing anything
 echo "Checking if database version is compatible"
-$JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --check-db-version
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ]
 then
     echo "Database version expected by portal does not match version in database!"
@@ -182,7 +182,7 @@ fi
 
 # importer data source fetch step
 echo "fetching updates from bic-mskcc-legacy repository..."
-$JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source bic-mskcc-legacy --run-date latest --update-worksheet
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source bic-mskcc-legacy --run-date latest --update-worksheet
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch BIC-MSKCC-LEGACY Studies From Git Failure"
 else
@@ -190,7 +190,7 @@ else
 fi
 
 echo "fetching updates from cmo-argos repository..."
-$JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source cmo-argos --run-date latest --update-worksheet
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source cmo-argos --run-date latest --update-worksheet
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch CMO Argos Studies From Git Failure"
 else
@@ -198,7 +198,7 @@ else
 fi
 
 echo "fetching updates from private repository..."
-$JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source private --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source private --run-date latest
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch Private Studies From Git Failure"
 else
@@ -206,7 +206,7 @@ else
 fi
 
 echo "fetching updates from datahub repository..."
-$JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source datahub --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source datahub --run-date latest
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch Datahub Studies From Git Failure"
 else
@@ -214,7 +214,7 @@ else
 fi
 
 echo "fetching updates from pdx repository..."
-$JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source pdx --run-date latest
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source pdx --run-date latest
 if [ $? -gt 0 ] ; then
     sendFailureMessageMskPipelineLogsSlack "Fetch PDX Studies From Git Failure"
 else
@@ -283,7 +283,7 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
     # if the database version is correct and ALL fetches succeed, then import
     if [[ $DB_VERSION_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data to database using $IMPORTER_JAR_FILENAME ..."
-        $JAVA_BINARY_FOR_IMPORTER -Xmx16g $JAVA_IMPORTER_ARGS --update-study-data --portal crdb-pdx-portal --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+        $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --update-study-data --portal crdb-pdx-portal --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -ne 0 ]; then
             echo "$IMPORTER_JAR_LABEL import failed!"
             EMAIL_BODY="$IMPORTER_JAR_LABEL import failed"

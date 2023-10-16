@@ -63,7 +63,7 @@ cd $REDCAP_BACKUP_DATA_HOME; $GIT_BINARY pull ; $GIT_BINARY clean -fd
 
 # export and commit MSKIMPACT REDCap data
 echo "Exporting MSKIMPACT REDCap data..."
-$JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskimpact -d $MSKIMPACT_REDCAP_BACKUP
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskimpact -d $MSKIMPACT_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for MSKIMPACT! Aborting any changes made during export..."
     cd $MSKIMPACT_REDCAP_BACKUP; $GIT_BINARY checkout -- .
@@ -84,7 +84,7 @@ else
 fi
 
 # export and commit HEMEPACT REDCap data
-$JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskimpact_heme -d $HEMEPACT_REDCAP_BACKUP
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskimpact_heme -d $HEMEPACT_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for HEMEPACT! Aborting any changes made during export..."
     cd $HEMEPACT_REDCAP_BACKUP; $GIT_BINARY checkout -- .
@@ -105,7 +105,7 @@ else
 fi
 
 # export and commit ARCHER REDCap data
-$JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskarcher -d $ARCHER_REDCAP_BACKUP
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskarcher -d $ARCHER_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for ARCHER! Aborting any changes made during export..."
     cd $ARCHER_REDCAP_BACKUP; $GIT_BINARY checkout -- .
@@ -126,7 +126,7 @@ else
 fi
 
 # export and commit ACCESS REDCap data
-$JAVA_19_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskaccess -d $ACCESS_REDCAP_BACKUP
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskaccess -d $ACCESS_REDCAP_BACKUP
 if [ $? -gt 0 ]; then
     echo "Failed to export REDCap data snapshot for ACCESS! Aborting any changes made during export..."
     cd $ACCESS_REDCAP_BACKUP; $GIT_BINARY checkout -- .

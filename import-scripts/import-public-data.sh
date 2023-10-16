@@ -11,8 +11,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
     fi
 
     # set necessary env variables with automation-environment.sh
-    if [[ -z $PORTAL_HOME || -z $JAVA_BINARY_FOR_IMPORTER ]] ; then
-        echo "Error : import-public-data.sh cannot be run without setting PORTAL_HOME and JAVA_BINARY_FOR_IMPORTER environment variables. (Use automation-environment.sh)"
+    if [[ -z $PORTAL_HOME || -z $JAVA_BINARY ]] ; then
+        echo "Error : import-public-data.sh cannot be run without setting PORTAL_HOME and JAVA_BINARY environment variables. (Use automation-environment.sh)"
         exit 1
     fi
 
@@ -71,7 +71,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
     DB_VERSION_FAIL=0
     # check database version before importing anything
     echo "Checking if database version is compatible"
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --check-db-version
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
     if [ $? -gt 0 ]; then
         echo "Database version expected by portal does not match version in database!"
         DB_VERSION_FAIL=1
@@ -80,7 +80,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
     # fetch updates in studies repository
     echo "fetching updates from cbio-portal-data..."
     CBIO_PORTAL_DATA_FETCH_FAIL=0
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source knowledge-systems-curated-studies --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source knowledge-systems-curated-studies --run-date latest
     if [ $? -gt 0 ]; then
         echo "cbio-portal-data fetch failed!"
         CBIO_PORTAL_DATA_FETCH_FAIL=1
@@ -92,7 +92,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
     # fetch updates in CMO impact
     echo "fetching updates from impact..."
     CMO_IMPACT_FETCH_FAIL=0
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source impact --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source impact --run-date latest
     if [ $? -gt 0 ]; then
         echo "impact fetch failed!"
         CMO_IMPACT_FETCH_FAIL=1
@@ -104,7 +104,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
     # fetch updates in private repository
     echo "fetching updates from private..."
     PRIVATE_FETCH_FAIL=0
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source private --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source private --run-date latest
     if [ $? -gt 0 ]; then
         echo "private fetch failed!"
         PRIVATE_FETCH_FAIL=1
@@ -115,7 +115,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
 
     echo "fetching updates from datahub..."
     DATAHUB_FETCH_FAIL=0
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --fetch-data --data-source datahub --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source datahub --run-date latest
     if [ $? -gt 0 ]; then
         echo "datahub fetch failed!"
         DATAHUB_FETCH_FAIL=1
@@ -127,9 +127,9 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
     if [[ $DB_VERSION_FAIL -eq 0 && $PRIVATE_FETCH_FAIL -eq 0 && $CMO_IMPACT_FETCH_FAIL -eq 0 && $CBIO_PORTAL_DATA_FETCH_FAIL -eq 0 && $DATAHUB_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]]; then
         # import public studies into public portal (now in aws)
         echo "importing cancer type updates into public portal database..."
-        $JAVA_BINARY_FOR_IMPORTER -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+        $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
         echo "importing study data into public portal database..."
-        $JAVA_BINARY_FOR_IMPORTER -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal public-portal --update-worksheet --notification-file "$public_portal_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source uniprot
+        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal public-portal --update-worksheet --notification-file "$public_portal_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source uniprot
         IMPORT_EXIT_STATUS=$?
         if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
             echo "Public import failed!"
@@ -152,7 +152,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-public-data.lock"
         echo -e "$EMAIL_BODY" | mail -s "Public Update Failure: DB version is incompatible" $PIPELINES_EMAIL_LIST
     fi
 
-    $JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --send-update-notification --portal public-portal --notification-file "$public_portal_notification_file"
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal public-portal --notification-file "$public_portal_notification_file"
 
     echo "Cleaning up any untracked files from CBIO-PUBLIC import..."
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/impact $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub

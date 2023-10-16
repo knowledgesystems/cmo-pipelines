@@ -19,7 +19,7 @@ echo $(date)
 
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 
-if [ -z $JAVA_BINARY_FOR_IMPORTER ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
+if [ -z $JAVA_BINARY ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
     message="could not run import-dmp-impact-data.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
     echo ${message}
     echo -e "${message}" |  mail -s "import-dmp-impact-data failed to run." $PIPELINES_EMAIL_LIST
@@ -110,7 +110,7 @@ MERCURIAL_PUSH_FAIL=0
 # -------------------------------------------------------------
 # check database version before importing anything
 printTimeStampedDataProcessingStepMessage "database version compatibility check"
-$JAVA_BINARY_FOR_IMPORTER $JAVA_IMPORTER_ARGS --check-db-version
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ] ; then
     echo "Database version expected by portal does not match version in database!"
     sendImportFailureMessageMskPipelineLogsSlack "MSK DMP Importer DB version check"
@@ -120,7 +120,7 @@ fi
 if [ $DB_VERSION_FAIL -eq 0 ] ; then
     # import into portal database
     echo "importing cancer type updates into msk portal database..."
-    $JAVA_BINARY_FOR_IMPORTER -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+    $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
     if [ $? -gt 0 ] ; then
         sendImportFailureMessageMskPipelineLogsSlack "Cancer type updates"
     fi
