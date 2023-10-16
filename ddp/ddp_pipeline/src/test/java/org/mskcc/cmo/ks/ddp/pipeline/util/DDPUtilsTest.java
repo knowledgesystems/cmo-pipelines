@@ -497,7 +497,7 @@ public class DDPUtilsTest {
         cohortPatient.setPTVITALSTATUS("ALIVE");
         PatientDemographics patientDemographics = new PatientDemographics();
         patientDemographics.setPLALASTACTVDTE("2019-04-12");
-        patientDemographics.setCurrentAge(new Integer(75));
+        patientDemographics.setCurrentAge(Integer.valueOf(75));
         Map<String, Date> patientFirstSeqDateMap = new HashMap<String, Date>();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
         Date seqDate = simpleDateFormat.parse("Fri, 13 Oct 2017 15:33:32 GMT");
