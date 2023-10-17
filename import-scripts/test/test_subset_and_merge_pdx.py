@@ -402,6 +402,10 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         sorted_actual_file = self.sort_records_and_lines_in_file(expected_header, actual_file)
         sorted_expected_file = self.sort_records_and_lines_in_file(expected_header, expected_file)
         file_contents_are_equal = filecmp.cmp(sorted_expected_file, sorted_actual_file)
+        # This is optional and can be used to propagate changes that are expected
+        # Specifically, updates to CDD will cause headers to change - instead of propagating changes manually, can rerun this test several time and those files will be adjusted. Make sure to double check the output - this should not be used to fix all issues
+        #if not file_contents_are_equal:
+        #   shutil.copy(actual_file, expected_file)
         os.remove(sorted_actual_file)
         os.remove(sorted_expected_file)
         return file_contents_are_equal
