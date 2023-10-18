@@ -374,31 +374,6 @@ fi
 ## END Institute affiliate imports
 
 #-------------------------------------------------------------------------------------------------------------------------------------
-# TEMP STUDY IMPORT: MSKIMPACT_PED
-if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSKIMPACT_PED_IMPORT_TRIGGER ]; then
-    printTimeStampedDataProcessingStepMessage "import for mskimpact_ped study"
-    bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="mskimpact_ped" --temp-study-id="temporary_mskimpact_ped" --backup-study-id="yesterday_mskimpact_ped" --portal-name="msk-ped-portal" --study-path="$MSKIMPACT_PED_DATA_HOME" --notification-file="$mskimpact_ped_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$PORTAL_HOME/lib/msk-dmp-importer.jar" --transcript-overrides-source="mskcc"
-    if [ $? -eq 0 ]; then
-        CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
-        IMPORT_FAIL_MSKIMPACT_PED=0
-    fi
-    rm $MSKIMPACT_PED_IMPORT_TRIGGER
-else
-    if [ $DB_VERSION_FAIL -gt 0 ] ; then
-        echo "Not importing MSKIMPACT_PED - database version is not compatible"
-    else
-        echo "Not importing MSKIMPACT_PED - something went wrong with subsetting clinical studies for MSKIMPACT_PED."
-    fi
-fi
-if [ $IMPORT_FAIL_MSKIMPACT_PED -gt 0 ] ; then
-    sendImportFailureMessageMskPipelineLogsSlack "MSKIMPACT_PED import"
-else
-    sendImportSuccessMessageMskPipelineLogsSlack "MSKIMPACT_PED"
-fi
-
-## END MSKIMPACT_PED import
-
-#-------------------------------------------------------------------------------------------------------------------------------------
 CLEAR_CACHES_AFTER_SCLC_IMPORT=0
 # TEMP STUDY IMPORT: SCLCMSKIMPACT
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SCLC_IMPORT_TRIGGER ] ; then
@@ -424,7 +399,6 @@ fi
 
 # END SCLCMSKIMPACT import
 
-#-------------------------------------------------------------------------------------------------------------------------------------
 # TEMP STUDY IMPORT: LYMPHOMASUPERCOHORT
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for lymphoma_super_cohort_fmi_msk study"

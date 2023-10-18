@@ -53,7 +53,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     MSK_HARTFORD_SUBSET_FAIL=0
     MSK_RALPHLAUREN_SUBSET_FAIL=0
     MSK_RIKENGENESISJAPAN_SUBSET_FAIL=0
-    MSKIMPACT_PED_SUBSET_FAIL=0
     SCLC_MSKIMPACT_SUBSET_FAIL=0
     LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=0
 
@@ -283,7 +282,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
         MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
     fi
-
+    
     $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -p $mskimpact_dmp_pids_file -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_IMPACT_DATA_HOME -r $MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
     if [ $? -gt 0 ] ; then
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
@@ -292,22 +291,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         FETCH_DDP_IMPACT_FAIL=0
         echo "committing ddp data"
         cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: DDP Demographics"
-    fi
-
-    # fetch ddp data for pediatric cohort
-    if [ $FETCH_DDP_IMPACT_FAIL -eq 0 ] ; then
-        awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PED_IND"] == "Yes") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_ddp.txt | sort | uniq > $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt
-        # override default ddp clinical filename so that pediatric demographics file does not conflict with mskimpact demographics file
-        DDP_PEDIATRIC_PROP_OVERRIDES="-Dddp.clinical_filename=data_clinical_ddp_pediatrics.txt"
-        $JAVA_BINARY $DDP_PEDIATRIC_PROP_OVERRIDES $JAVA_DDP_FETCHER_ARGS -o $MSK_IMPACT_DATA_HOME -p $MSK_DMP_TMPDIR/mskimpact_ped_patient_list.txt -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f diagnosis,radiation,chemotherapy,surgery,survival
-        if [ $? -gt 0 ] ; then
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Pediatric DDP Fetch"
-        else
-            FETCH_DDP_IMPACT_FAIL=0
-            echo "committing Pediatric DDP data"
-            cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Pediatric DDP demographics/timeline"
-        fi
     fi
 
     if [ $PERFORM_CRDB_FETCH -gt 0 ] ; then
@@ -763,14 +746,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     printTimeStampedDataProcessingStepMessage "export of redcap data for mskimpact"
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
-        export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics,mskimpact_timeline_radiation_ddp,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp,mskimpact_pediatrics_sample_supp,mskimpact_pediatrics_patient_supp,mskimpact_pediatrics_supp_timeline
+        export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics, mskimpact_pediatrics_sample_supp,mskimpact_pediatrics_patient_supp
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_IMPACT=1
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Redcap Export"
         else
             if [ $GENERATE_MASTERLIST_FAIL -eq 0 ] ; then
-                $PYTHON_BINARY $PORTAL_HOME/scripts/filter_dropped_samples_patients.py -s $MSK_IMPACT_DATA_HOME/data_clinical_sample.txt -p $MSK_IMPACT_DATA_HOME/data_clinical_patient.txt -t $MSK_IMPACT_DATA_HOME/data_timeline.txt -f $MSK_DMP_TMPDIR/sample_masterlist_for_filtering.txt -u $GMAIL_USERNAME -g $GMAIL_PASSWORD
+                $PYTHON_BINARY $PORTAL_HOME/scripts/filter_dropped_samples_patients.py -s $MSK_IMPACT_DATA_HOME/data_clinical_sample.txt -p $MSK_IMPACT_DATA_HOME/data_clinical_patient.txt -f $MSK_DMP_TMPDIR/sample_masterlist_for_filtering.txt -u $GMAIL_USERNAME -g $GMAIL_PASSWORD
                 if [ $? -gt 0 ] ; then
                     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
                 else
@@ -918,7 +901,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo "MSKSOLIDHEME merge successful! Creating cancer type case lists..."
         echo $(date)
         # add metadata headers and overrides before importing
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical*
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt
         if [ $? -gt 0 ] ; then
             echo "Error: Adding metadata headers for MSKSOLIDHEME failed! Study will not be updated in portal."
         else
@@ -1164,49 +1148,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     else
         echo "Committing RIKENGENESISJAPAN data"
         cd $MSK_RIKENGENESISJAPAN_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest RIKENGENESISJAPAN dataset"
-    fi
-
-    #--------------------------------------------------------------
-    # Subset MSKIMPACT on PED_IND for MSKIMPACT_PED cohort
-    printTimeStampedDataProcessingStepMessage "subset of mskimpact for mskimpact_ped cohort"
-    # rsync mskimpact data to tmp ped data home and overwrite clinical/timeline data with redcap
-    # export of mskimpact (with ped specific data and without caisis) into tmp ped data home directory for subsetting
-    # NOTE: the importer uses the java_tmp_dir/study_identifier for writing temp meta and data files so we should use a different
-    # tmp directory for subsetting purposes to prevent any conflicts and allow easier debugging of any issues that arise
-    MSKIMPACT_PED_TMP_DIR=$MSK_DMP_TMPDIR/mskimpact_ped_tmp
-    rsync -a $MSK_IMPACT_DATA_HOME/* $MSKIMPACT_PED_TMP_DIR
-    export_stable_id_from_redcap mskimpact $MSKIMPACT_PED_TMP_DIR mskimpact_clinical_caisis,mskimpact_timeline_surgery_caisis,mskimpact_timeline_status_caisis,mskimpact_timeline_treatment_caisis,mskimpact_timeline_imaging_caisis,mskimpact_timeline_specimen_caisis,mskimpact_data_clinical_ddp_demographics,mskimpact_timeline_chemotherapy_ddp,mskimpact_timeline_surgery_ddp
-    if [ $? -gt 0 ] ; then
-        echo "MSKIMPACT redcap export for MSKIMPACT_PED failed! Study will not be updated in the portal"
-        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT_PED redcap export"
-        MSKIMPACT_PED_SUBSET_FAIL=1
-    else
-        bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=mskimpact_ped -o=$MSKIMPACT_PED_DATA_HOME -d=$MSKIMPACT_PED_TMP_DIR -f="PED_IND=Yes" -s=$MSK_DMP_TMPDIR/mskimpact_ped_subset.txt -c=$MSKIMPACT_PED_TMP_DIR/data_clinical_patient.txt
-        if [ $? -gt 0 ] ; then
-            echo "MSKIMPACT_PED subset failed! Study will not be updated in the portal."
-            MSKIMPACT_PED_SUBSET_FAIL=1
-        else
-            filter_derived_clinical_data $MSKIMPACT_PED_DATA_HOME
-            if [ $? -gt 0 ] ; then
-                echo "MSKIMPACT_PED subset clinical attribute filtering step failed! Study will not be updated in the portal."
-                MSKIMPACT_PED_SUBSET_FAIL=1
-            else
-                echo "MSKIMPACT_PED subset successful!"
-                addCancerTypeCaseLists $MSKIMPACT_PED_DATA_HOME "mskimpact_ped" "data_clinical_sample.txt" "data_clinical_patient.txt"
-                standardizeGenePanelMatrix $MSKIMPACT_PED_DATA_HOME
-                touch $MSKIMPACT_PED_IMPORT_TRIGGER
-            fi
-        fi
-
-        # commit or revert changes for MSKIMPACT_PED
-        if [ $MSKIMPACT_PED_SUBSET_FAIL -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT_PED subset"
-            echo "MSKIMPACT_PED subset and/or updates failed! Reverting data to last commit."
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-        else
-            echo "Committing MSKIMPACT_PED data"
-            cd $MSKIMPACT_PED_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKIMPACT_PED dataset"
-        fi
     fi
 
     #--------------------------------------------------------------
@@ -1473,12 +1414,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_RIKENGENESISJAPAN_SUBSET_FAIL -gt 0 ] ; then
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" |  mail -s "RIKENGENESISJAPAN Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
-    fi
-
-    EMAIL_BODY="Failed to subset MSKIMPACT_PED data. Subset study will not be updated."
-    if [ $MSKIMPACT_PED_SUBSET_FAIL -gt 0 ]; then
-        echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "MSKIMPACT_PED Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
     fi
 
     EMAIL_BODY="Failed to subset MSKIMPACT SCLC data. Subset study will not be updated."

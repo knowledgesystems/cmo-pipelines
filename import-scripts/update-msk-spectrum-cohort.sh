@@ -30,24 +30,6 @@ mskspectrum_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskspectrum-portal-update
 # update msk-spectrum github repo
 fetch_updates_in_data_sources "datahub_shahlab"
 
-# fetch ddp timeline data
-printTimeStampedDataProcessingStepMessage "DDP demographics fetch for MSKSPECTRUM"
-mskspectrum_dmp_pids_file=$MSK_DMP_TMPDIR/mskspectrum_patient_list.txt
-grep -v "^#" $MSK_SPECTRUM_COHORT_DATA_HOME/data_clinical_patient.txt | cut -f1 | grep -v "PATIENT_ID" | sort | uniq > $mskspectrum_dmp_pids_file
-MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $mskspectrum_dmp_pids_file)
-if [ $MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
-    MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
-fi
-
-$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskspectrum -p $mskspectrum_dmp_pids_file -f diagnosis,radiation,chemotherapy,surgery,survival -o $MSK_SPECTRUM_COHORT_DATA_HOME -r $MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT
-if [ $? -gt 0 ] ; then
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub_shahlab
-    sendPreImportFailureMessageMskPipelineLogsSlack "MSKSPECTRUM DDP Timeline Fetch"
-else
-    echo "commit ddp timeline data for MSKSPECTRUM"
-    cd $MSK_SHAHLAB_DATA_HOME ; rm -f $MSK_SPECTRUM_COHORT_DATA_HOME/data_clinical_ddp.txt ; $GIT_BINARY add $MSK_SPECTRUM_COHORT_DATA_HOME/data_timeline* ; $GIT_BINARY commit -m "Latest MSKSPECTRUM DDP timeline data" ; $GIT_BINARY push origin
-fi
-
 # update mskspectrum cohort in portal
 $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal msk-spectrum-portal --notification-file $mskspectrum_notification_file --oncotree-version $ONCOTREE_VERSION_TO_USE --transcript-overrides-source mskcc --disable-redcap-export
 if [ $? -gt 0 ]; then
