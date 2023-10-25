@@ -706,6 +706,24 @@ def is_clinical_or_timeline(filename):
     """
     return (('timeline' in filename) or ('clinical' in filename))
 
+def get_file_types(file_type_list):
+    """
+    :param file_type_list: comma-delimited string where each item is a 'datatype' mapped to META_FILE_MAP values
+    :return: dictionary with META/FILE pattern as keys to an empty list - will eventually store files that get merged
+
+    e.g. input: clinical_sample.txt,clinical_patient.txt
+         output: {data_clinical_sample.txt: [], meta_clinical_sample.txt: [], data_clinical_patient: [], meta_clinical_patient: []}
+    """
+    file_types = {}
+    file_types_to_merge = set(file_type_list.split(","))
+    for meta_pattern, file_pattern in META_FILE_MAP.items():
+        if file_pattern[1] in file_types_to_merge:
+            file_types[meta_pattern] = []
+            file_types[file_pattern[0]] = []
+    print file_types
+    return file_types
+
+
 def organize_files(studies, file_types, merge_clinical):
     """ Put files in correct groups. Groups need to be explicitly defined by filenames, hence the ugly if else string. """
     for study in studies:
@@ -722,93 +740,97 @@ def organize_files(studies, file_types, merge_clinical):
             if skip_file:
                 continue
 
-            # META FILE PATTERN MATCHING
-            if MUTATION_META_PATTERN in study_file:
-                file_types[MUTATION_META_PATTERN].append(study_file)
-            elif CNA_META_PATTERN in study_file:
-                file_types[CNA_META_PATTERN].append(study_file)
-            elif SEG_HG18_META_PATTERN in study_file:
-                file_types[SEG_HG18_META_PATTERN].append(study_file)
-            elif SEG_HG19_META_PATTERN in study_file:
-                file_types[SEG_HG19_META_PATTERN].append(study_file)
-            elif LOG2_META_PATTERN in study_file:
-                file_types[LOG2_META_PATTERN].append(study_file)
-            elif EXPRESSION_META_PATTERN in study_file:
-                file_types[EXPRESSION_META_PATTERN].append(study_file)
-            elif METHYLATION27_META_PATTERN in study_file:
-                file_types[METHYLATION27_META_PATTERN].append(study_file)
-            elif METHYLATION450_META_PATTERN in study_file:
-                file_types[METHYLATION450_META_PATTERN].append(study_file)
-            elif METHYLATION_GB_HMEPIC_META_PATTERN in study_file:
-                file_types[METHYLATION_GB_HMEPIC_META_PATTERN].append(study_file)
-            elif METHYLATION_PROMOTERS_HMEPIC_META_PATTERN in study_file:
-                file_types[METHYLATION_PROMOTERS_HMEPIC_META_PATTERN].append(study_file)
-            elif METHYLATION_GB_WGBS_META_PATTERN in study_file:
-                file_types[METHYLATION_GB_WGBS_META_PATTERN].append(study_file)
-            elif METHYLATION_PROMOTERS_WGBS_META_PATTERN in study_file:
-                file_types[METHYLATION_PROMOTERS_WGBS_META_PATTERN].append(study_file)
-            elif RNASEQ_EXPRESSION_META_PATTERN in study_file:
-                file_types[RNASEQ_EXPRESSION_META_PATTERN].append(study_file)
-            elif RPPA_META_PATTERN in study_file:
-                file_types[RPPA_META_PATTERN].append(study_file)
-            elif GENE_MATRIX_META_PATTERN in study_file:
-                file_types[GENE_MATRIX_META_PATTERN].append(study_file)
-            elif SV_META_PATTERN in study_file:
-                file_types[SV_META_PATTERN].append(study_file)
-            elif TIMELINE_META_PATTERN in study_file:
-                file_types[TIMELINE_META_PATTERN].append(study_file)
-            # FILE PATTERN MATCHING
-            elif MUTATION_FILE_PATTERN in study_file:
-                file_types[MUTATION_FILE_PATTERN].append(study_file)
-            elif CNA_FILE_PATTERN in study_file:
-                file_types[CNA_FILE_PATTERN].append(study_file)
-            elif SEG_HG18_FILE_PATTERN in study_file:
-                file_types[SEG_HG18_FILE_PATTERN].append(study_file)
-            elif SEG_HG19_FILE_PATTERN in study_file:
-                file_types[SEG_HG19_FILE_PATTERN].append(study_file)
-            elif LOG2_FILE_PATTERN in study_file:
-                file_types[LOG2_FILE_PATTERN].append(study_file)
-            elif EXPRESSION_FILE_PATTERN in study_file:
-                file_types[EXPRESSION_FILE_PATTERN].append(study_file)
-            elif METHYLATION27_FILE_PATTERN in study_file:
-                file_types[METHYLATION27_FILE_PATTERN].append(study_file)
-            elif METHYLATION450_FILE_PATTERN in study_file:
-                file_types[METHYLATION450_FILE_PATTERN].append(study_file)
-            elif METHYLATION_GB_HMEPIC_FILE_PATTERN in study_file:
-                file_types[METHYLATION_GB_HMEPIC_FILE_PATTERN].append(study_file)
-            elif METHYLATION_PROMOTERS_HMEPIC_FILE_PATTERN in study_file:
-                file_types[METHYLATION_PROMOTERS_HMEPIC_FILE_PATTERN].append(study_file)
-            elif METHYLATION_GB_WGBS_FILE_PATTERN in study_file:
-                file_types[METHYLATION_GB_WGBS_FILE_PATTERN].append(study_file)
-            elif METHYLATION_PROMOTERS_WGBS_FILE_PATTERN in study_file:
-                file_types[METHYLATION_PROMOTERS_WGBS_FILE_PATTERN].append(study_file)
-            elif RNASEQ_EXPRESSION_FILE_PATTERN in study_file:
-                file_types[RNASEQ_EXPRESSION_FILE_PATTERN].append(study_file)
-            elif RPPA_FILE_PATTERN in study_file:
-                file_types[RPPA_FILE_PATTERN].append(study_file)
-            elif GENE_MATRIX_FILE_PATTERN in study_file:
-                file_types[GENE_MATRIX_FILE_PATTERN].append(study_file)
-            elif SV_FILE_PATTERN in study_file:
-                file_types[SV_FILE_PATTERN].append(study_file)
-            elif TIMELINE_FILE_PATTERN in study_file:
-                file_types[TIMELINE_FILE_PATTERN].append(study_file)
-            # CLINICAL FILE PATTERN MATCHING
-            elif CLINICAL_META_PATTERN in study_file:
-                file_types[CLINICAL_META_PATTERN].append(study_file)
-            elif CLINICAL_PATIENT_META_PATTERN in study_file:
-                file_types[CLINICAL_PATIENT_META_PATTERN].append(study_file)
-            elif CLINICAL_SAMPLE_META_PATTERN in study_file:
-                file_types[CLINICAL_SAMPLE_META_PATTERN].append(study_file)
-            elif CLINICAL_FILE_PATTERN in study_file:
-                file_types[CLINICAL_FILE_PATTERN].append(study_file)
-            elif CLINICAL_PATIENT_FILE_PATTERN in study_file:
-                file_types[CLINICAL_PATIENT_FILE_PATTERN].append(study_file)
-            elif CLINICAL_SAMPLE_FILE_PATTERN in study_file:
-                file_types[CLINICAL_SAMPLE_FILE_PATTERN].append(study_file)
-            elif DATA_CLINICAL_SUPP_PREFIX in study_file:
-                file_types[SUPP_DATA].append(study_file)
-            else:
-                file_types[SUPP_DATA].append(study_file)
+            try:
+                # META FILE PATTERN MATCHING
+                if MUTATION_META_PATTERN in study_file:
+                    file_types[MUTATION_META_PATTERN].append(study_file)
+                elif CNA_META_PATTERN in study_file:
+                    file_types[CNA_META_PATTERN].append(study_file)
+                elif SEG_HG18_META_PATTERN in study_file:
+                    file_types[SEG_HG18_META_PATTERN].append(study_file)
+                elif SEG_HG19_META_PATTERN in study_file:
+                    file_types[SEG_HG19_META_PATTERN].append(study_file)
+                elif LOG2_META_PATTERN in study_file:
+                    file_types[LOG2_META_PATTERN].append(study_file)
+                elif EXPRESSION_META_PATTERN in study_file:
+                    file_types[EXPRESSION_META_PATTERN].append(study_file)
+                elif METHYLATION27_META_PATTERN in study_file:
+                    file_types[METHYLATION27_META_PATTERN].append(study_file)
+                elif METHYLATION450_META_PATTERN in study_file:
+                    file_types[METHYLATION450_META_PATTERN].append(study_file)
+                elif METHYLATION_GB_HMEPIC_META_PATTERN in study_file:
+                    file_types[METHYLATION_GB_HMEPIC_META_PATTERN].append(study_file)
+                elif METHYLATION_PROMOTERS_HMEPIC_META_PATTERN in study_file:
+                    file_types[METHYLATION_PROMOTERS_HMEPIC_META_PATTERN].append(study_file)
+                elif METHYLATION_GB_WGBS_META_PATTERN in study_file:
+                    file_types[METHYLATION_GB_WGBS_META_PATTERN].append(study_file)
+                elif METHYLATION_PROMOTERS_WGBS_META_PATTERN in study_file:
+                    file_types[METHYLATION_PROMOTERS_WGBS_META_PATTERN].append(study_file)
+                elif RNASEQ_EXPRESSION_META_PATTERN in study_file:
+                    file_types[RNASEQ_EXPRESSION_META_PATTERN].append(study_file)
+                elif RPPA_META_PATTERN in study_file:
+                    file_types[RPPA_META_PATTERN].append(study_file)
+                elif GENE_MATRIX_META_PATTERN in study_file:
+                    file_types[GENE_MATRIX_META_PATTERN].append(study_file)
+                elif SV_META_PATTERN in study_file:
+                    file_types[SV_META_PATTERN].append(study_file)
+                elif TIMELINE_META_PATTERN in study_file:
+                    file_types[TIMELINE_META_PATTERN].append(study_file)
+                # FILE PATTERN MATCHING
+                elif MUTATION_FILE_PATTERN in study_file:
+                    file_types[MUTATION_FILE_PATTERN].append(study_file)
+                elif CNA_FILE_PATTERN in study_file:
+                    file_types[CNA_FILE_PATTERN].append(study_file)
+                elif SEG_HG18_FILE_PATTERN in study_file:
+                    file_types[SEG_HG18_FILE_PATTERN].append(study_file)
+                elif SEG_HG19_FILE_PATTERN in study_file:
+                    file_types[SEG_HG19_FILE_PATTERN].append(study_file)
+                elif LOG2_FILE_PATTERN in study_file:
+                    file_types[LOG2_FILE_PATTERN].append(study_file)
+                elif EXPRESSION_FILE_PATTERN in study_file:
+                    file_types[EXPRESSION_FILE_PATTERN].append(study_file)
+                elif METHYLATION27_FILE_PATTERN in study_file:
+                    file_types[METHYLATION27_FILE_PATTERN].append(study_file)
+                elif METHYLATION450_FILE_PATTERN in study_file:
+                    file_types[METHYLATION450_FILE_PATTERN].append(study_file)
+                elif METHYLATION_GB_HMEPIC_FILE_PATTERN in study_file:
+                    file_types[METHYLATION_GB_HMEPIC_FILE_PATTERN].append(study_file)
+                elif METHYLATION_PROMOTERS_HMEPIC_FILE_PATTERN in study_file:
+                    file_types[METHYLATION_PROMOTERS_HMEPIC_FILE_PATTERN].append(study_file)
+                elif METHYLATION_GB_WGBS_FILE_PATTERN in study_file:
+                    file_types[METHYLATION_GB_WGBS_FILE_PATTERN].append(study_file)
+                elif METHYLATION_PROMOTERS_WGBS_FILE_PATTERN in study_file:
+                    file_types[METHYLATION_PROMOTERS_WGBS_FILE_PATTERN].append(study_file)
+                elif RNASEQ_EXPRESSION_FILE_PATTERN in study_file:
+                    file_types[RNASEQ_EXPRESSION_FILE_PATTERN].append(study_file)
+                elif RPPA_FILE_PATTERN in study_file:
+                    file_types[RPPA_FILE_PATTERN].append(study_file)
+                elif GENE_MATRIX_FILE_PATTERN in study_file:
+                    file_types[GENE_MATRIX_FILE_PATTERN].append(study_file)
+                elif SV_FILE_PATTERN in study_file:
+                    file_types[SV_FILE_PATTERN].append(study_file)
+                elif TIMELINE_FILE_PATTERN in study_file:
+                    file_types[TIMELINE_FILE_PATTERN].append(study_file)
+                # CLINICAL FILE PATTERN MATCHING
+                elif CLINICAL_META_PATTERN in study_file:
+                    file_types[CLINICAL_META_PATTERN].append(study_file)
+                elif CLINICAL_PATIENT_META_PATTERN in study_file:
+                    file_types[CLINICAL_PATIENT_META_PATTERN].append(study_file)
+                elif CLINICAL_SAMPLE_META_PATTERN in study_file:
+                    file_types[CLINICAL_SAMPLE_META_PATTERN].append(study_file)
+                elif CLINICAL_FILE_PATTERN in study_file:
+                    file_types[CLINICAL_FILE_PATTERN].append(study_file)
+                elif CLINICAL_PATIENT_FILE_PATTERN in study_file:
+                    file_types[CLINICAL_PATIENT_FILE_PATTERN].append(study_file)
+                elif CLINICAL_SAMPLE_FILE_PATTERN in study_file:
+                    file_types[CLINICAL_SAMPLE_FILE_PATTERN].append(study_file)
+                elif DATA_CLINICAL_SUPP_PREFIX in study_file:
+                    file_types[SUPP_DATA].append(study_file)
+                else:
+                    file_types[SUPP_DATA].append(study_file)
+            except KeyError:
+                print >> ERROR_FILE, "File " + study_file + " not supported and will not be merged"
+        
 
 def usage():
     print >> OUTPUT_FILE, 'merge.py --subset [/path/to/subset] --output-directory [/path/to/output] --study-id [study id] --cancer-type [cancer type] --merge-clinical [true/false] --exclude-supplemental-data [true/false] --excluded-samples [/path/to/exclude_list] <path/to/study path/to/study ...>'
@@ -825,6 +847,7 @@ def main():
     parser.add_option('-t', '--cancer-type', action = 'store', dest = 'cancertype')
     parser.add_option('-m', '--merge-clinical', action = 'store', dest = 'mergeclinical')
     parser.add_option('-x', '--exclude-supplemental-data', action = 'store', dest = 'excludesuppdata')
+    parser.add_option('-f', '--file-type-list', action = 'store', dest='filetypelist')
 
     (options, args) = parser.parse_args()
 
@@ -835,6 +858,7 @@ def main():
     cancer_type = options.cancertype
     merge_clinical = options.mergeclinical
     exclude_supp_data = options.excludesuppdata
+    file_type_list = options.filetypelist
 
     if (output_directory == None or study_id == None):
         usage()
@@ -857,47 +881,50 @@ def main():
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    file_types = {MUTATION_FILE_PATTERN: [],
-        CNA_FILE_PATTERN: [],
-        SEG_HG18_FILE_PATTERN: [],
-        SEG_HG19_FILE_PATTERN: [],
-        LOG2_FILE_PATTERN: [],
-        EXPRESSION_FILE_PATTERN: [],
-        METHYLATION27_FILE_PATTERN: [],
-        METHYLATION450_FILE_PATTERN: [],
-        METHYLATION_GB_HMEPIC_FILE_PATTERN: [],
-        METHYLATION_PROMOTERS_HMEPIC_FILE_PATTERN: [],
-        METHYLATION_GB_WGBS_FILE_PATTERN: [],
-        METHYLATION_PROMOTERS_WGBS_FILE_PATTERN: [],
-        RNASEQ_EXPRESSION_FILE_PATTERN: [],
-        RPPA_FILE_PATTERN: [],
-        GENE_MATRIX_FILE_PATTERN: [],
-        SV_FILE_PATTERN: [],
-        TIMELINE_FILE_PATTERN: [],
-        MUTATION_META_PATTERN: [],
-        CNA_META_PATTERN: [],
-        SEG_HG18_META_PATTERN: [],
-        SEG_HG19_META_PATTERN: [],
-        LOG2_META_PATTERN: [],
-        EXPRESSION_META_PATTERN: [],
-        METHYLATION27_META_PATTERN: [],
-        METHYLATION450_META_PATTERN: [],
-        METHYLATION_GB_HMEPIC_META_PATTERN: [],
-        METHYLATION_PROMOTERS_HMEPIC_META_PATTERN: [],
-        METHYLATION_GB_WGBS_META_PATTERN: [],
-        METHYLATION_PROMOTERS_WGBS_META_PATTERN: [],
-        RNASEQ_EXPRESSION_META_PATTERN: [],
-        RPPA_META_PATTERN: [],
-        GENE_MATRIX_META_PATTERN: [],
-        SV_META_PATTERN: [],
-        TIMELINE_META_PATTERN: [],
-        SUPP_DATA: [],
-        CLINICAL_META_PATTERN: [],
-        CLINICAL_PATIENT_META_PATTERN: [],
-        CLINICAL_SAMPLE_META_PATTERN: [],
-        CLINICAL_FILE_PATTERN: [],
-        CLINICAL_PATIENT_FILE_PATTERN: [],
-        CLINICAL_SAMPLE_FILE_PATTERN: []}
+    if file_type_list:
+        get_file_types(file_type_list)
+    else:
+        file_types = {MUTATION_FILE_PATTERN: [],
+            CNA_FILE_PATTERN: [],
+            SEG_HG18_FILE_PATTERN: [],
+            SEG_HG19_FILE_PATTERN: [],
+            LOG2_FILE_PATTERN: [],
+            EXPRESSION_FILE_PATTERN: [],
+            METHYLATION27_FILE_PATTERN: [],
+            METHYLATION450_FILE_PATTERN: [],
+            METHYLATION_GB_HMEPIC_FILE_PATTERN: [],
+            METHYLATION_PROMOTERS_HMEPIC_FILE_PATTERN: [],
+            METHYLATION_GB_WGBS_FILE_PATTERN: [],
+            METHYLATION_PROMOTERS_WGBS_FILE_PATTERN: [],
+            RNASEQ_EXPRESSION_FILE_PATTERN: [],
+            RPPA_FILE_PATTERN: [],
+            GENE_MATRIX_FILE_PATTERN: [],
+            SV_FILE_PATTERN: [],
+            TIMELINE_FILE_PATTERN: [],
+            MUTATION_META_PATTERN: [],
+            CNA_META_PATTERN: [],
+            SEG_HG18_META_PATTERN: [],
+            SEG_HG19_META_PATTERN: [],
+            LOG2_META_PATTERN: [],
+            EXPRESSION_META_PATTERN: [],
+            METHYLATION27_META_PATTERN: [],
+            METHYLATION450_META_PATTERN: [],
+            METHYLATION_GB_HMEPIC_META_PATTERN: [],
+            METHYLATION_PROMOTERS_HMEPIC_META_PATTERN: [],
+            METHYLATION_GB_WGBS_META_PATTERN: [],
+            METHYLATION_PROMOTERS_WGBS_META_PATTERN: [],
+            RNASEQ_EXPRESSION_META_PATTERN: [],
+            RPPA_META_PATTERN: [],
+            GENE_MATRIX_META_PATTERN: [],
+            SV_META_PATTERN: [],
+            TIMELINE_META_PATTERN: [],
+            SUPP_DATA: [],
+            CLINICAL_META_PATTERN: [],
+            CLINICAL_PATIENT_META_PATTERN: [],
+            CLINICAL_SAMPLE_META_PATTERN: [],
+            CLINICAL_FILE_PATTERN: [],
+            CLINICAL_PATIENT_FILE_PATTERN: [],
+            CLINICAL_SAMPLE_FILE_PATTERN: []}
 
     # adds clinical file types if merge_clinical is true
     if merge_clinical != None and merge_clinical.lower() == 'true':
