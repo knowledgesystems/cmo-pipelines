@@ -904,13 +904,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt
         if [ $? -gt 0 ] ; then
-            echo "Error: Adding metadata headers for MSKSOLIDHEME failed! Study will not be updated in portal."
+          echo "Error: Adding metadata headers for MSKSOLIDHEME failed! Study will not be updated in portal."
         else
-            touch $MSK_SOLID_HEME_IMPORT_TRIGGER
+          touch $MSK_SOLID_HEME_IMPORT_TRIGGER
         fi
         addCancerTypeCaseLists $MSK_SOLID_HEME_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
     fi
 
+    #----------------------------------------------------------
     # check that meta_sv.txt are actually empty files before deleting from IMPACT, HEME, and ARCHER studies
     if [ $(wc -l < $MSK_IMPACT_DATA_HOME/meta_sv.txt) -eq 0 ] ; then
         rm $MSK_IMPACT_DATA_HOME/meta_sv.txt
@@ -944,8 +945,33 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset"
     fi
 
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+    #--------------------------------------------------------------
+    # CDM Fetch is optional -- does not break import if it fails, but will send notif
+    echo "fetching clinical demographics & timeline updates from cdsi-cdm repository..."
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source cdsi-cdm --run-date latest
+    if [ $? -gt 0 ] ; then
+      sendPreImportFailureMessageMskPipelineLogsSlack "Git Failure: CDSI CDM repository update"
+    else
+      # create temp directory for merging mskimpact and cdm clinical files
+      # all processing is done in tmp and only copied over if everything succeeds
+      # no git cleanup needed - will just remove the tmpdir at the end
+      TMP_PROCESSING_DIRECTORY=$(mktemp --tmpdir=$MSK_DMP_TMPDIR -d merge.XXXXXXXX)
+      $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $TMP_PROCESSING_DIRECTORY -i merged_cdm_mskimpact -m true -f clinical_patient,clinical_sample $CDM_MSKIMPACT_DATA_HOME $MSK_SOLID_HEME_DATA_HOME
+      if [ $? -gt 0 ] ; then
+        sendPreImportFailureMessageMskPipelineLogsSlack "Error: Unable to merge CDM MSKIMPACT and MSKSOLIDHEME clinical files"
+      else
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt
+        if [ $? -gt 0 ] ; then
+                sendPreImportFailureMessageMskPipelineLogsSlack "Unable to add metadata headers to merged CDM MSKIMPACT and MSKSOLIDHEME clinical files"
+        fi
+        cp -a $TMP_PROCESSING_DIRECTORY/data_clinical*.txt $MSK_SOLID_HEME_DATA_HOME
+        cp -a $CDM_MSKIMPACT_DATA_HOME/data_timeline*.txt $MSK_SOLID_HEME_DATA_HOME
+        cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset: CDM Annotation"
+        rm -rf $TMP_PROCESSING_DIRECTORY
+      fi
+    fi
 
+    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     #--------------------------------------------------------------
     # AFFILIATE COHORTS
     printTimeStampedDataProcessingStepMessage "subset of affiliate cohorts"
