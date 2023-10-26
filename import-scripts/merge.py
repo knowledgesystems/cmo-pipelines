@@ -720,7 +720,6 @@ def get_file_types(file_type_list):
         if file_pattern[1] in file_types_to_merge:
             file_types[meta_pattern] = []
             file_types[file_pattern[0]] = []
-    print file_types
     return file_types
 
 
