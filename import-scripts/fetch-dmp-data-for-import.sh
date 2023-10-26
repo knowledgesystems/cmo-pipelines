@@ -802,13 +802,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
       else
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt
         if [ $? -gt 0 ] ; then
-                sendPreImportFailureMessageMskPipelineLogsSlack "Unable to add metadata headers to merged CDM MSKIMPACT and MSKSOLIDHEME clinical files"
+            sendPreImportFailureMessageMskPipelineLogsSlack "Unable to add metadata headers to merged CDM MSKIMPACT and MSKSOLIDHEME clinical files"
+        else
+            cp -a $TMP_PROCESSING_DIRECTORY/data_clinical*.txt $MSK_SOLID_HEME_DATA_HOME
+            cp -a $CDM_MSKIMPACT_DATA_HOME/data_timeline*.txt $MSK_SOLID_HEME_DATA_HOME
+            cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset: CDM Annotation"
         fi
-        cp -a $TMP_PROCESSING_DIRECTORY/data_clinical*.txt $MSK_SOLID_HEME_DATA_HOME
-        cp -a $CDM_MSKIMPACT_DATA_HOME/data_timeline*.txt $MSK_SOLID_HEME_DATA_HOME
-        cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset: CDM Annotation"
-        rm -rf $TMP_PROCESSING_DIRECTORY
       fi
+      rm -rf $TMP_PROCESSING_DIRECTORY
     fi
 
     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
