@@ -711,7 +711,7 @@ def get_file_types(file_type_list):
     :param file_type_list: comma-delimited string where each item is a 'datatype' mapped to META_FILE_MAP values
     :return: dictionary with META/FILE pattern as keys to an empty list - will eventually store files that get merged
 
-    e.g. input: clinical_sample.txt,clinical_patient.txt
+    e.g. input: clinical_sample,clinical_patient
          output: {data_clinical_sample.txt: [], meta_clinical_sample.txt: [], data_clinical_patient: [], meta_clinical_patient: []}
     """
     file_types = {}
