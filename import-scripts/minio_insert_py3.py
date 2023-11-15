@@ -1,22 +1,14 @@
-# from pathlib import Path
 import argparse
 import io
 from minio import Minio
 import urllib3
 
-# from dotenv import load_dotenv
-
-# env_path = Path('.')/'.env'
-# load_dotenv(dotenv_path=env_path)
-
 
 def insert_hardcoded():
-    # TODO specify a different way
     ACCESS_KEY = ''
     SECRET_KEY = ''
 
     # required for self-signed certs
-    # TODO specify path to certificate differently
     httpClient = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs='certificate.crt')
 
     # Create secure client with access key and secret key
@@ -57,12 +49,12 @@ def get_client(ca_certs, endpoint, access_key, secret_key):
 
 def insert(client, bucket_name, object_name, file_path):
     result = client.fput_object(
-        bucket_name=bucket_name,
-        object_name=object_name,
-        file_path=file_path
+        bucket_name=bucket_name, object_name=object_name, file_path=file_path
     )
 
-    print(f'created {result.object_name} object; etag: {result.etag}, version-id: {result.version_id}')
+    print(
+        f'created {result.object_name} object; etag: {result.etag}, version-id: {result.version_id}'
+    )
 
 
 if __name__ == '__main__':
@@ -79,9 +71,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     client = get_client(args.ca_certs, args.endpoint, args.access_key, args.secret_key)
-    insert(
-        client,
-        args.bucket_name,
-        args.object_name,
-        args.file_path
-    )
+    insert(client, args.bucket_name, args.object_name, args.file_path)
