@@ -19,7 +19,7 @@ MINIO_CDM_BUCKET_NAME="cdm-data"
 MINIO_OBJECT_NAME="cbioportal/test_data_clinical_sample.txt"
 MINIO_FILE_TO_INSERT="$MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt"
 
-filter_clinical_attribute_columns $INPUT_FILE $DELIVERED_ATTRIBUTES $OUTPUT_FILE
+filter_clinical_attribute_columns "$INPUT_CLINICAL_FILE" "$DELIVERED_ATTRIBUTES" "$OUTPUT_CLINICAL_FILE"
 if [ $? -gt 0 ] ; then
     echo "Failed to filter clinical attribute columns for CDM."
 else
@@ -34,6 +34,6 @@ else
         -f $MINIO_FILE_TO_INSERT
     
     if [ $? -gt 0 ] ; then
-        echo "Failed to filter clinical attribute columns for CDM."
+        echo "Failed to deliver clinical attributes to MinIO for CDM."
     fi
 fi

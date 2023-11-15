@@ -1,3 +1,8 @@
+unset clinical_attributes_in_file
+declare -gA clinical_attributes_in_file=()
+unset clinical_attributes_to_filter_arg
+declare -g clinical_attributes_to_filter_arg="unset"
+
 function find_clinical_attribute_header_line_from_file() {
     # Path to clinical file taken as an argument
     clinical_attribute_filepath="$1"
@@ -30,7 +35,7 @@ function find_clinical_attribute_header_line_from_file() {
 
 function find_clinical_attributes_in_file() {
     # Path to clinical file taken as an argument
-    clinical_attribute_filepath=$1
+    clinical_attribute_filepath="$1"
 
     # Results (array of clinical attributes) are stored in this global array
     clinical_attributes_in_file=() 
@@ -47,7 +52,7 @@ function find_clinical_attributes_to_filter_arg() {
     clinical_attribute_filepath="$1"
 
     # Attributes to deliver in the clinical file
-    delivered_attributes="$2"
+    attributes_to_deliver="$2"
 
     declare -A clinical_attributes_to_filter=()
     if ! find_clinical_attributes_in_file "$clinical_attribute_filepath" ; then
@@ -57,7 +62,7 @@ function find_clinical_attributes_to_filter_arg() {
     # Populate delivered attributes for given file type
     unset delivered_attributes
     declare -A delivered_attributes=()
-    for attribute in $DELIVERED_ATTRIBUTES ; do
+    for attribute in $attributes_to_deliver ; do
         delivered_attributes[$attribute]+=1
     done
 
@@ -85,15 +90,14 @@ function filter_clinical_attribute_columns() {
     clinical_attribute_filepath="$1"
 
     # Attributes to deliver in the clinical file
-    delivered_attributes="$2"
+    attributes_to_deliver="$2"
 
     # Path to output clinical file taken as an argument
     output_filepath="$3"
 
     # Determine which columns to exclude in the patient file
-    find_clinical_attributes_to_filter_arg $clinical_attribute_filepath $delivered_attributes
+    find_clinical_attributes_to_filter_arg "$clinical_attribute_filepath" "$attributes_to_deliver"
     EXCLUDED_HEADER_FIELD_LIST="$clinical_attributes_to_filter_arg"
-    
     # Filter out the columns we want to exclude in both files
     $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$clinical_attribute_filepath" -e "$EXCLUDED_HEADER_FIELD_LIST" > "$output_filepath"
 }
