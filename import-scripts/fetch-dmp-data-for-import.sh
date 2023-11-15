@@ -950,6 +950,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # AFFILIATE COHORTS
     printTimeStampedDataProcessingStepMessage "subset of affiliate cohorts"
 
+    ## Deliver CDM data
+    bash $PORTAL_HOME/scripts/deliver-cdm-clinical-data.sh
+    if [ $? -gt 0 ] ; then
+        echo "CDM delivery failed! Study will not be updated in the portal."
+    else
+        echo "CDM delivery successful"
+    fi
+
     ## Subset MIXEDPACT on INSTITUTE for institute specific impact studies
 
     # subset the mixedpact study for Queens Cancer Center, Lehigh Valley, Kings County Cancer Center, Miami Cancer Institute, and Hartford Health Care
