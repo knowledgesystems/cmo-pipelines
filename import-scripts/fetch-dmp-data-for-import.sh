@@ -746,7 +746,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     printTimeStampedDataProcessingStepMessage "export of redcap data for mskimpact"
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
-        export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics, mskimpact_pediatrics_sample_supp,mskimpact_pediatrics_patient_supp
+        export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics,mskimpact_pediatrics_sample_supp,mskimpact_pediatrics_patient_supp
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_IMPACT=1
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
