@@ -32,12 +32,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     EXPORT_SUPP_DATE_ACCESS_FAIL=0
 
     # Assume fetchers have failed until they complete successfully
-    FETCH_CRDB_IMPACT_FAIL=1
-    FETCH_DARWIN_CAISIS_FAIL=1
-    FETCH_DDP_IMPACT_FAIL=1
-    FETCH_DDP_HEME_FAIL=1
-    FETCH_DDP_ARCHER_FAIL=1
-    FETCH_DDP_ACCESS_FAIL=1
     FETCH_CVR_IMPACT_FAIL=1
     FETCH_CVR_HEME_FAIL=1
     FETCH_CVR_ARCHER_FAIL=1
@@ -189,17 +183,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # MSKIMPACT DATA FETCHES
     # TODO: move other pre-import/data-fetch steps here (i.e exporting raw files from redcap)
     printTimeStampedDataProcessingStepMessage "MSKIMPACT data processing"
-    # fetch darwin caisis data
-    printTimeStampedDataProcessingStepMessage "Darwin CAISIS fetch for mskimpact"
-    $JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -s mskimpact -d $MSK_IMPACT_DATA_HOME -c
-    if [ $? -gt 0 ] ; then
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Darwin CAISIS Fetch"
-    else
-        FETCH_DARWIN_CAISIS_FAIL=0
-        echo "committing darwin caisis data"
-        cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Darwin CAISIS"
-    fi
 
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
         # fetch new/updated IMPACT samples using CVR Web service   (must come after git fetching)
@@ -274,39 +257,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
     fi
 
-    # fetch ddp demographics data
-    printTimeStampedDataProcessingStepMessage "DDP demographics fetch for mskimpact"
-    mskimpact_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_patient_list.txt
-    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $mskimpact_dmp_pids_file
-    MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $MSKIMPACT_REDCAP_BACKUP/data_clinical_mskimpact_data_clinical_ddp_demographics.txt)
-    if [ $MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
-        MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
-    fi
-    
-    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -p $mskimpact_dmp_pids_file -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_IMPACT_DATA_HOME -r $MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
-    if [ $? -gt 0 ] ; then
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Demographics Fetch"
-    else
-        FETCH_DDP_IMPACT_FAIL=0
-        echo "committing ddp data"
-        cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: DDP Demographics"
-    fi
-
-    if [ $PERFORM_CRDB_FETCH -gt 0 ] ; then
-        # fetch CRDB data
-        printTimeStampedDataProcessingStepMessage "CRDB fetch for mskimpact"
-        $JAVA_BINARY $JAVA_CRDB_FETCHER_ARGS --directory $MSK_IMPACT_DATA_HOME
-        # no need for data repository update/commit ; CRDB generated files are stored in redcap and not git
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CRDB Fetch"
-        else
-            FETCH_CRDB_IMPACT_FAIL=0
-        fi
-    else
-        FETCH_CRDB_IMPACT_FAIL=0
-    fi
-
     # -----------------------------------------------------------------------------------------------------------
     # HEMEPACT DATA FETCHES
     printTimeStampedDataProcessingStepMessage "HEMEPACT data processing"
@@ -371,26 +321,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
         fi
     fi
-
-    # fetch ddp demographics data
-    printTimeStampedDataProcessingStepMessage "DDP demographics fetch for hemepact"
-    mskimpact_heme_dmp_pids_file=$MSK_DMP_TMPDIR/mskimpact_heme_patient_list.txt
-    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $mskimpact_heme_dmp_pids_file
-    HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $HEMEPACT_REDCAP_BACKUP/data_clinical_hemepact_data_clinical_ddp_demographics.txt)
-    if [ $HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
-        HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
-    fi
-
-    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -p $mskimpact_heme_dmp_pids_file -s $MSK_HEMEPACT_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_HEMEPACT_DATA_HOME -r $HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
-    if [ $? -gt 0 ] ; then
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-        sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Demographics Fetch"
-    else
-        FETCH_DDP_HEME_FAIL=0
-        echo "committing ddp data"
-        cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: DDP Demographics"
-    fi
-
     # -----------------------------------------------------------------------------------------------------------
     # ARCHER DATA FETCHES
     printTimeStampedDataProcessingStepMessage "ARCHER data processing"
@@ -426,25 +356,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
     fi
 
-    # fetch ddp demographics data
-    printTimeStampedDataProcessingStepMessage "DDP demographics fetch for archer"
-    mskarcher_dmp_pids_file=$MSK_DMP_TMPDIR/mskarcher_patient_list.txt
-    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt | sort | uniq > $mskarcher_dmp_pids_file
-    ARCHER_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $ARCHER_REDCAP_BACKUP/data_clinical_mskarcher_data_clinical_ddp_demographics.txt)
-    if [ $ARCHER_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
-        ARCHER_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
-    fi
-
-    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskarcher -p $mskarcher_dmp_pids_file -s $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_ARCHER_UNFILTERED_DATA_HOME -r $ARCHER_DDP_DEMOGRAPHICS_RECORD_COUNT
-    if [ $? -gt 0 ] ; then
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-        sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Demographics Fetch"
-    else
-        FETCH_DDP_ARCHER_FAIL=0
-        echo "committing ddp data"
-        cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: DDP Demographics"
-    fi
-
     # -----------------------------------------------------------------------------------------------------------
     # ACCESS DATA FETCHES
     printTimeStampedDataProcessingStepMessage "ACCESS data processing"
@@ -478,25 +389,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_ACCESS_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS dataset"
             fi
         fi
-    fi
-
-    # fetch ddp demographics data
-    printTimeStampedDataProcessingStepMessage "DDP demographics fetch for access"
-    mskaccess_dmp_pids_file=$MSK_DMP_TMPDIR/mskaccess_patient_list.txt
-    awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt | sort | uniq > $mskaccess_dmp_pids_file
-    ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $ACCESS_REDCAP_BACKUP/data_clinical_mskaccess_data_clinical_ddp_demographics.txt)
-    if [ $ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
-        ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
-    fi
-
-    $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskaccess -p $mskaccess_dmp_pids_file -s $MSK_ACCESS_DATA_HOME/cvr/seq_date.txt -f survival,ageAtSeqDate -o $MSK_ACCESS_DATA_HOME -r $ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT
-    if [ $? -gt 0 ] ; then
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-        sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS DDP Demographics Fetch"
-    else
-        FETCH_DDP_ACCESS_FAIL=0
-        echo "committing ddp data"
-        cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS Dataset: DDP Demographics"
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -600,33 +492,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     ## MSKIMPACT imports
 
-    # imports mskimpact crdb data into redcap
-    if [ $PERFORM_CRDB_FETCH -gt 0 ] && [ $FETCH_CRDB_IMPACT_FAIL -eq 0 ] ; then
-        import_crdb_to_redcap
-        if [ $? -gt 0 ] ; then
-            #NOTE: we have decided to allow import of mskimpact project to proceed even when CRDB data has been lost from redcap (not setting IMPORT_STATUS_IMPACT)
-            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CRDB Redcap Import - Recovery Of Redcap Project Needed!"
-        fi
-    fi
-
-    # imports mskimpact darwin data into redcap
-    if [ $FETCH_DARWIN_CAISIS_FAIL -eq 0 ] ; then
-        import_mskimpact_darwin_caisis_to_redcap
-        if [ $? -gt 0 ] ; then
-            IMPORT_STATUS_IMPACT=1
-            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Darwin CAISIS Redcap Import"
-        fi
-    fi
-
-    # imports mskimpact ddp data into redcap
-    if [ $FETCH_DDP_IMPACT_FAIL -eq 0 ] ; then
-        import_mskimpact_ddp_to_redcap
-        if [ $? -gt 0 ] ; then
-            IMPORT_STATUS_IMPACT=1
-            sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT DDP Redcap Import"
-        fi
-    fi
-
     # imports mskimpact cvr data into redcap
     if [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
         import_mskimpact_cvr_to_redcap
@@ -643,14 +508,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     ## HEMEPACT imports
-
-    if [ $FETCH_DDP_HEME_FAIL -eq 0 ] ; then
-       import_hemepact_ddp_to_redcap
-       if [ $? -gt 0 ] ; then
-           IMPORT_STATUS_HEME=1
-           sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT DDP Redcap Import"
-       fi
-    fi
 
     # imports hemepact cvr data into redcap
     if [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
@@ -669,14 +526,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     ## ARCHER imports
 
-    if [ $FETCH_DDP_ARCHER_FAIL -eq 0 ] ; then
-       import_archer_ddp_to_redcap
-       if [ $? -gt 0 ] ; then
-           IMPORT_STATUS_ARCHER=1
-           sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED DDP Redcap Import"
-       fi
-    fi
-
     # imports archer cvr data into redcap
     if [ $FETCH_CVR_ARCHER_FAIL -eq 0 ] ; then
         import_archer_cvr_to_redcap
@@ -693,14 +542,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     ## ACCESS imports
-
-    if [ $FETCH_DDP_ACCESS_FAIL -eq 0 ] ; then
-       import_access_ddp_to_redcap
-       if [ $? -gt 0 ] ; then
-           IMPORT_STATUS_ACCESS=1
-           sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS DDP Redcap Import"
-       fi
-    fi
 
     # imports access cvr data into redcap
     if [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
@@ -736,7 +577,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     # commit raw file cleanup - study staging directories should only contain files for portal import
     $GIT_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPACT, ARCHER, ACCESS"
-
 
     # -------------------------------------------------------------
     # REDCAP EXPORTS - CBIO STAGING FORMATS
