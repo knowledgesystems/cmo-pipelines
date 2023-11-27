@@ -881,7 +881,7 @@ def main():
         os.makedirs(output_directory)
 
     if file_type_list:
-        get_file_types(file_type_list)
+        file_types = get_file_types(file_type_list)
     else:
         file_types = {MUTATION_FILE_PATTERN: [],
             CNA_FILE_PATTERN: [],
