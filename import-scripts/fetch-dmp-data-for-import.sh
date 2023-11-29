@@ -586,7 +586,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     printTimeStampedDataProcessingStepMessage "export of redcap data for mskimpact"
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
-        export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME mskimpact_data_clinical_ddp_demographics_pediatrics, mskimpact_pediatrics_sample_supp,mskimpact_pediatrics_patient_supp
+        export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_IMPACT=1
             cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
@@ -788,15 +788,15 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     #--------------------------------------------------------------
     # CDM Fetch is optional -- does not break import if it fails, but will send notif
     echo "fetching clinical demographics & timeline updates from cdsi-cdm repository..."
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source cdsi-cdm --run-date latest
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source cdm --run-date latest
     if [ $? -gt 0 ] ; then
-      sendPreImportFailureMessageMskPipelineLogsSlack "Git Failure: CDSI CDM repository update"
+      sendPreImportFailureMessageMskPipelineLogsSlack "Git Failure: CDM repository update"
     else
       # create temp directory for merging mskimpact and cdm clinical files
       # all processing is done in tmp and only copied over if everything succeeds
       # no git cleanup needed - will just remove the tmpdir at the end
       TMP_PROCESSING_DIRECTORY=$(mktemp --tmpdir=$MSK_DMP_TMPDIR -d merge.XXXXXXXX)
-      $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $TMP_PROCESSING_DIRECTORY -i merged_cdm_mskimpact -m true -f clinical_patient,clinical_sample $CDM_MSKIMPACT_DATA_HOME $MSK_SOLID_HEME_DATA_HOME
+      $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $TMP_PROCESSING_DIRECTORY -i merged_cdm_mskimpact -m true -f clinical_patient,clinical_sample $MSK_CHORD_DATA_HOME $MSK_SOLID_HEME_DATA_HOME
       if [ $? -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "Error: Unable to merge CDM MSKIMPACT and MSKSOLIDHEME clinical files"
       else
@@ -805,7 +805,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             sendPreImportFailureMessageMskPipelineLogsSlack "Unable to add metadata headers to merged CDM MSKIMPACT and MSKSOLIDHEME clinical files"
         else
             cp -a $TMP_PROCESSING_DIRECTORY/data_clinical*.txt $MSK_SOLID_HEME_DATA_HOME
-            cp -a $CDM_MSKIMPACT_DATA_HOME/data_timeline*.txt $MSK_SOLID_HEME_DATA_HOME
+            cp -a $MSK_CHORD_DATA_HOME/data_timeline*.txt $MSK_SOLID_HEME_DATA_HOME
             cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset: CDM Annotation"
         fi
       fi
