@@ -424,9 +424,9 @@ if ! standardize_structural_variant_data ; then
 fi
 
 # Anonymize ages
-if ! anonymize_age_at_seq_with_cap ; then
-    report_error "ERROR: Failed to anonymize AGE_AT_SEQUENCING_REPORTED_YEARS for AstraZeneca MSK-IMPACT. Exiting."
-fi
+#if ! anonymize_age_at_seq_with_cap ; then
+#    report_error "ERROR: Failed to anonymize AGE_AT_SEQUENCING_REPORTED_YEARS for AstraZeneca MSK-IMPACT. Exiting."
+#fi
 
 printTimeStampedDataProcessingStepMessage "Filter non-delivered files and include delivered meta files for AstraZeneca MSK-IMPACT"
 
