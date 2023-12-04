@@ -507,5 +507,11 @@ if ! transfer_to_az_sftp_server ; then
     report_error "ERROR: Failed to transfer data updates to SFTP server for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
+# ------------------------------------------------------------------------------------------------------------------------
+# Cleanup AZ git repo
+
+printTimeStampedDataProcessingStepMessage "Cleaning up untracked files from AZ repo"
+bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $AZ_DATA_HOME
+
 # Send a message on success
 sendImportSuccessMessageMskPipelineLogsSlack "ASTRAZENECA MSKIMPACT"
