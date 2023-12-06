@@ -177,12 +177,12 @@ public class CVRUtilities {
         return comments;
     }
 
-    public boolean isDuplicateRecord(MutationRecord snp, List<AnnotatedRecord> annotatedRecords) {
-        if (annotatedRecords == null || annotatedRecords.isEmpty()) {
+    public boolean isDuplicateRecord(MutationRecord snp, List<MutationRecord> mutationRecords) {
+        if (mutationRecords == null || mutationRecords.isEmpty()) {
             return false;
         }
 
-        for (AnnotatedRecord record : annotatedRecords) {
+        for (MutationRecord record : mutationRecords) {
             if (record.getCHROMOSOME().equals(snp.getCHROMOSOME()) &&
                     record.getSTART_POSITION().equals(snp.getSTART_POSITION()) &&
                     record.getEND_POSITION().equals(snp.getEND_POSITION()) &&
