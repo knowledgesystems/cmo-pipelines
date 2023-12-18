@@ -133,8 +133,10 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             if (samples != null && !snps.isEmpty()) {
                 for (GMLSnp snp : snps) {
                     for (String sampleId : samples) {
-                        recordsToAnnotate.add(cvrUtilities.buildGMLMutationRecord(snp, sampleId));
+                        MutationRecord to_add = cvrUtilities.buildGMLMutationRecord(snp, sampleId);
+                        recordsToAnnotate.add(to_add);
                         germlineSamples.add(sampleId);
+                        mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
                     }
                 }
             }

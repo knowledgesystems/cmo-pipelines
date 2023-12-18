@@ -129,7 +129,9 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
             int countNonSignedoutSampleSnps = result.getAllNonSignedoutCvrSnps().size();
             String somaticStatus = result.getMetaData().getSomaticStatus() != null ? result.getMetaData().getSomaticStatus() : "N/A";
             for (CVRSnp snp : result.getAllNonSignedoutCvrSnps()) {
-                recordsToAnnotate.add(cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus));
+                MutationRecord to_add = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
+                recordsToAnnotate.add(to_add);
+                mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
             }
             cvrSampleListUtil.updateNonSignedoutSampleSnpCount(sampleId, countNonSignedoutSampleSnps);
         }
