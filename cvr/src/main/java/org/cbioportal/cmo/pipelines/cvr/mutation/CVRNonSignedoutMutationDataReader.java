@@ -38,6 +38,9 @@ import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.models.*;
 
+
+import java.time.format.DateTimeFormatter;  
+import java.time.LocalDateTime;   
 import java.io.*;
 import java.util.*;
 import org.apache.log4j.Logger;
@@ -181,14 +184,24 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         // annotate with GenomeNexusImpl annotator from genome nexus annotation pipeline
         // records will be partitioned inside annotator client
         // records which do not get a response back will automatically be defaulted to an AnnotatedRecord(record)
+		DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");  
+   		LocalDateTime now = LocalDateTime.now();  
+   		System.out.println(dtf.format(now)); 
+        System.out.println("Total mutation records being sent " + records.size());
         List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE, Boolean.FALSE);
+		System.out.println("Response received");
+   		now = LocalDateTime.now();  
+   		System.out.println(dtf.format(now));
+		System.out.println("Total annotated records " + annotatedRecords.size()); 
         for (AnnotatedRecord ar : annotatedRecords) {
-            logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
+            //logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             mutationRecords.add(ar);
             mutationMap.getOrDefault(ar.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(ar);
             additionalPropertyKeys.addAll(ar.getAdditionalProperties().keySet());
             header.addAll(ar.getHeaderWithAdditionalFields());
         }
+   		now = LocalDateTime.now();  
+   		System.out.println(dtf.format(now)); 
     }
 
     private void logAnnotationProgress(Integer annotatedVariantsCount, Integer totalVariantsToAnnotateCount, Integer intervalSize) {
