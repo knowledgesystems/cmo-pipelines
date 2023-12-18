@@ -136,8 +136,8 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             for (CVRSnp snp : result.getAllSignedoutCvrSnps()) {
                 MutationRecord to_add = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
                 recordsToAnnotate.add(to_add);
-                mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
-
+                //mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
+                addRecordToMap(to_add);
             }
             cvrSampleListUtil.updateSignedoutSampleSnpCounts(sampleId, countSignedOutSnps);
             if (!stopZeroVariantWarnings && countSignedOutSnps == 0) {
@@ -181,7 +181,8 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             }
             cvrSampleListUtil.updateSignedoutSampleSnpCounts(to_add.getTUMOR_SAMPLE_BARCODE(), 1);
             recordsToAnnotate.add(to_add);
-            mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
+            //mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
+            addRecordToMap(to_add);
         }
         reader.close();
         log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
@@ -236,5 +237,17 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             return annotatedRecord;
         }
         return null;
+    }
+
+    private void addRecordToMap(MutationRecord record) {
+        String sampleId = record.getTUMOR_SAMPLE_BARCODE();
+        List<MutationRecord> recordList = mutationMap.get(sampleId);
+        if (recordList == null) {
+            recordList = new ArrayList<MutationRecord>();
+            recordList.add(record);
+            mutationMap.put(sampleId, recordList);
+        } else {
+            recordList.add(record);
+        }
     }
 }

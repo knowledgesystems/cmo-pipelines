@@ -136,7 +136,8 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
                         MutationRecord to_add = cvrUtilities.buildGMLMutationRecord(snp, sampleId);
                         recordsToAnnotate.add(to_add);
                         germlineSamples.add(sampleId);
-                        mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
+                        addRecordToMap(to_add);
+                        //mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
                     }
                 }
             }
@@ -177,7 +178,8 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
                 continue;
             }
             recordsToAnnotate.add(to_add);
-            mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
+            addRecordToMap(to_add);
+            //mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
         }
         reader.close();
         log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
@@ -235,4 +237,15 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         return null;
     }
 
+    private void addRecordToMap(MutationRecord record) {
+        String sampleId = record.getTUMOR_SAMPLE_BARCODE();
+        List<MutationRecord> recordList = mutationMap.get(sampleId);
+        if (recordList == null) {
+            recordList = new ArrayList<MutationRecord>();
+            recordList.add(record);
+            mutationMap.put(sampleId, recordList);
+        } else {
+            recordList.add(record);
+        }
+    }
 }
