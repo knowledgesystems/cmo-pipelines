@@ -81,7 +81,6 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
 
     private List<AnnotatedRecord> mutationRecords = new ArrayList<>();
 
-    //private Map<String, List<AnnotatedRecord>> mutationMap = new HashMap<>();
     private Map<String, List<MutationRecord>> mutationMap = new HashMap<>();
 
     private File mutationFile;
@@ -136,7 +135,6 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             for (CVRSnp snp : result.getAllSignedoutCvrSnps()) {
                 MutationRecord to_add = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
                 recordsToAnnotate.add(to_add);
-                //mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
                 addRecordToMap(to_add);
             }
             cvrSampleListUtil.updateSignedoutSampleSnpCounts(sampleId, countSignedOutSnps);
@@ -175,13 +173,15 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         MutationRecord to_add;
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
             // skip if new sample or if mutation record for sample seen already
+            String tumorSampleBarcode = to_add.getTUMOR_SAMPLE_BARCODE();
+            String hugoSymbol = to_add.getHUGO_SYMBOL();
+
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
                 continue;
             }
             cvrSampleListUtil.updateSignedoutSampleSnpCounts(to_add.getTUMOR_SAMPLE_BARCODE(), 1);
             recordsToAnnotate.add(to_add);
-            //mutationMap.getOrDefault(to_add.getTUMOR_SAMPLE_BARCODE(), new ArrayList<MutationRecord>()).add(to_add);
             addRecordToMap(to_add);
         }
         reader.close();
@@ -199,7 +199,6 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         for (AnnotatedRecord ar : annotatedRecords) {
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             mutationRecords.add(ar);
-            //mutationMap.getOrDefault(ar.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(ar);
             additionalPropertyKeys.addAll(ar.getAdditionalProperties().keySet());
             header.addAll(ar.getHeaderWithAdditionalFields());
         }
