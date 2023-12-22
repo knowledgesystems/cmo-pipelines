@@ -108,7 +108,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
                 sendClearCacheFailureMessage triage import-cmo-data-triage.sh
             fi
         else
-            echo "No studies have been updated, not clearing persitsence cache for triage portal..."
+            echo "No studies have been updated, not clearing persistence cache for triage portal..."
         fi
 
         # import ran and either failed or succeeded

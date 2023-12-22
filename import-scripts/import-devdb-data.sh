@@ -111,7 +111,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-devdb-data.lock"
                 sendClearCacheFailureMessage devdb import-data-devdb.sh
             fi
         else
-            echo "No studies have been updated, not clearing persitsence cache for devdb portal..."
+            echo "No studies have been updated, not clearing persistence cache for devdb portal..."
         fi
 
         # import ran and either failed or succeeded
