@@ -227,7 +227,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
             sendClearCacheFailureMessage cmo-access fetch-ddp-and-import-cmo-access-data.sh
         fi
     else
-        echo "No studies have been updated, not clearing persitsence cache for cmo-access portal..."
+        echo "No studies have been updated, not clearing persistence cache for cmo-access portal..."
     fi
 
     # import ran and either failed or succeeded

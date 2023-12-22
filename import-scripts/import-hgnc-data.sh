@@ -111,7 +111,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-hgnc-data.lock"
                 sendClearCacheFailureMessage hgnc import-data-hgnc.sh
             fi
         else
-            echo "No studies have been updated, not clearing persitsence cache for hgnc portal..."
+            echo "No studies have been updated, not clearing persistence cache for hgnc portal..."
         fi
 
         # import ran and either failed or succeeded
