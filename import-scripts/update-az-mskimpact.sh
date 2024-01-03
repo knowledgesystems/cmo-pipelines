@@ -7,8 +7,8 @@ export AZ_MSK_IMPACT_DATA_HOME="$AZ_DATA_HOME/$AZ_MSKIMPACT_STABLE_ID"
 export AZ_TMPDIR=$AZ_DATA_HOME/tmp
 
 # Patient and sample attributes that we want to deliver in our data
-DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 AGE_CURRENT RACE RELIGION SEX ETHNICITY OS_STATUS OS_MONTHS"
-DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SO_COMMENTS SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_COMMENT MSI_SCORE MSI_TYPE SOMATIC_STATUS AGE_AT_SEQ_REPORTED_YEARS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE"
+DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 CURRENT_AGE_DEID RACE GENDER ETHNICITY OS_STATUS OS_MONTHS"
+DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SO_COMMENTS SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_COMMENT MSI_SCORE MSI_TYPE SOMATIC_STATUS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE"
 
 # Stores an array of clinical attributes found in the data + attributes we want to filter, respectively
 unset clinical_attributes_in_file
@@ -247,6 +247,18 @@ function filter_clinical_attribute_columns() {
     mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
 }
 
+function rename_cdm_clinical_attribute_columns() {
+    # Rename clinical patient attributes coming from CDM:
+    # CURRENT_AGE_DEID -> AGE_CURRENT
+    # GENDER -> SEX
+
+    PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
+    PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.renamed"
+
+    sed -e '1s/CURRENT_AGE_DEID/AGE_CURRENT/' -e '1s/GENDER/SEX/' $PATIENT_INPUT_FILEPATH > $PATIENT_OUTPUT_FILEPATH &&
+    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH"
+}
+
 function add_metadata_headers() {
     # Calling merge.py strips out metadata headers from our clinical files - add them back in
     CDD_URL="https://cdd.cbioportal.mskcc.org/api/"
@@ -319,7 +331,7 @@ function generate_case_lists() {
 }
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 1. Pull latest from AstraZeneca repo (az-data)
+# Pull latest from AstraZeneca repo (az-data)
 printTimeStampedDataProcessingStepMessage "Pull of AstraZeneca MSK-IMPACT data updates"
 
 if ! pull_latest_data_from_az_git_repo ; then
@@ -327,7 +339,7 @@ if ! pull_latest_data_from_az_git_repo ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 2. Copy data from local clone of MSK Solid Heme repo to local clone of AZ repo
+# Copy data from local clone of MSK Solid Heme repo to local clone of AZ repo
 
 # Create temporary directory to store data before subsetting
 if ! [ -d "$AZ_TMPDIR" ] ; then
@@ -346,7 +358,7 @@ if [ $? -gt 0 ] ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 3. Post-process the dataset
+# Post-process the dataset
 
 printTimeStampedDataProcessingStepMessage "Subset and merge of Part A Consented patients for AstraZeneca MSK-IMPACT"
 
@@ -385,6 +397,10 @@ if ! filter_clinical_attribute_columns ; then
     report_error "ERROR: Failed to filter non-delivered clinical attribute columns for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
+if ! rename_cdm_clinical_attribute_columns ; then
+    report_error "ERROR: Failed to rename CDM clinical attribute columns for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
 # Add metadata headers to clinical files
 if ! add_metadata_headers ; then
     report_error "ERROR: Failed to add metadata headers to clinical attribute files for AstraZeneca MSK-IMPACT. Exiting."
@@ -411,9 +427,9 @@ if ! standardize_structural_variant_data ; then
 fi
 
 # Anonymize ages
-if ! anonymize_age_at_seq_with_cap ; then
-    report_error "ERROR: Failed to anonymize AGE_AT_SEQUENCING_REPORTED_YEARS for AstraZeneca MSK-IMPACT. Exiting."
-fi
+#if ! anonymize_age_at_seq_with_cap ; then
+#    report_error "ERROR: Failed to anonymize AGE_AT_SEQUENCING_REPORTED_YEARS for AstraZeneca MSK-IMPACT. Exiting."
+#fi
 
 printTimeStampedDataProcessingStepMessage "Filter non-delivered files and include delivered meta files for AstraZeneca MSK-IMPACT"
 
@@ -428,7 +444,7 @@ if [[ -d "$AZ_TMPDIR" && "$AZ_TMPDIR" != "/" ]] ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 4. Run changelog script
+# Run changelog script
 printTimeStampedDataProcessingStepMessage "Generate changelog for AstraZeneca MSK-IMPACT"
 
 $PYTHON3_BINARY $PORTAL_HOME/scripts/generate_az_study_changelog_py3.py $AZ_MSK_IMPACT_DATA_HOME
@@ -438,7 +454,7 @@ if [ $? -gt 0 ] ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 5. Filter germline events from mutation file and structural variant file
+# Filter germline events from mutation file and structural variant file
 printTimeStampedDataProcessingStepMessage "Filter germline events for AstraZeneca MSK-IMPACT"
 
 mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
@@ -467,7 +483,7 @@ fi
 mv $sv_filtered_filepath $sv_filepath
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 6. Generate case list files
+# Generate case list files
 printTimeStampedDataProcessingStepMessage "Generate case list files for AstraZeneca MSK-IMPACT"
 
 if ! generate_case_lists ; then
@@ -475,7 +491,7 @@ if ! generate_case_lists ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 7. Push the updated data to GitHub
+# Push the updated data to GitHub
 printTimeStampedDataProcessingStepMessage "Push data updates to AstraZeneca MSK-IMPACT git repository"
 
 if ! push_updates_to_az_git_repo ; then
@@ -483,13 +499,19 @@ if ! push_updates_to_az_git_repo ; then
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
-# 7. Push the updated data to AstraZeneca's SFTP server
+# Push the updated data to AstraZeneca's SFTP server
 
 printTimeStampedDataProcessingStepMessage "Transfer data updates to SFTP server for AstraZeneca MSK-IMPACT"
 
 if ! transfer_to_az_sftp_server ; then
     report_error "ERROR: Failed to transfer data updates to SFTP server for AstraZeneca MSK-IMPACT. Exiting."
 fi
+
+# ------------------------------------------------------------------------------------------------------------------------
+# Cleanup AZ git repo
+
+printTimeStampedDataProcessingStepMessage "Cleaning up untracked files from AZ repo"
+bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $AZ_DATA_HOME
 
 # Send a message on success
 sendImportSuccessMessageMskPipelineLogsSlack "ASTRAZENECA MSKIMPACT"
