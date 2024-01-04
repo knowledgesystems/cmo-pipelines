@@ -31,6 +31,11 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
         echo ${message}
         exit 1
     fi
+    if ! [ -f $DMP_IMPORT_VARS_AND_FUNCTIONS_FILEPATH ] ; then
+        message="dmp-import-vars-functions.sh could not be found, exiting..." >&2
+        echo ${message}
+        exit 1
+    fi
 
     source $AUTOMATION_SCRIPT_FILEPATH
     source $DMP_IMPORT_VARS_AND_FUNCTIONS_FILEPATH
@@ -180,6 +185,20 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
             echo "merge.py exiting with non-zero status while merging dremio output into cmo-access study, exiting..." >&2
             exit 1
         fi
+        merged_clinical_sample_filepath="${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/data_clinical_sample.txt"
+        merged_clinical_sample_with_metadata_filepath="${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/data_clinical_sample.txt.with_metadata"
+        if ! ${PYTHON3_BINARY} ${PORTAL_HOME}/scripts/merge_clinical_metadata_headers.py "$merged_clinical_sample_filepath" "$merged_clinical_sample_with_metadata_filepath" "$DREMIO_CLINICAL_STAGING_DIRECTORY/data_clinical_sample.txt" "$CMO_ACCESS_STAGING_INPUT_DIRECTORY/data_clinical_sample.txt" ; then
+            echo "merging of metadata heaers failed for ${merged_clinical_sample_filepath}, exiting..." >&2
+            exit 1
+        fi
+        merged_clinical_patient_filepath="${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/data_clinical_patient.txt"
+        merged_clinical_patient_with_metadata_filepath="${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/data_clinical_patient.txt.with_metadata"
+        if ! ${PYTHON3_BINARY} ${PORTAL_HOME}/scripts/merge_clinical_metadata_headers.py "$merged_clinical_patient_filepath" "$merged_clinical_patient_with_metadata_filepath" "$DREMIO_CLINICAL_STAGING_DIRECTORY/data_clinical_patient.txt" "$CMO_ACCESS_STAGING_INPUT_DIRECTORY/data_clinical_patient.txt" ; then
+            echo "merging of metadata heaers failed for ${merged_clinical_patient_filepath}, exiting..." >&2
+            exit 1
+        fi
+        mv "$merged_clinical_sample_with_metadata_filepath" "$merged_clinical_sample_filepath"
+        mv "$merged_clinical_patient_with_metadata_filepath" "$merged_clinical_patient_filepath"
     }
 
     function rsync_merged_files_to_active_repo() {
@@ -234,13 +253,17 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
 
     function import_cmo_access_study() {
         portal_name="cmo-access-dremio-dev-portal"
+        import_symlink_actual_target="${clone_homedir}/mixed_MSK_cfDNA_RESEARCH_ACCESS"
         import_symlink_filepath="$IMPORT_DEV_SYMLINK_FILEPATH"
         if [ "$runmode" == "$RUNMODE_PROD" ] ; then
             portal_name="cmo-access-portal"
             import_symlink_filepath="$IMPORT_PROD_SYMLINK_FILEPATH"
+        else
+            rm -f ${import_symlink_actual_target}/*ddp_chemotherapy*
+            rm -f ${import_symlink_actual_target}/*ddp_radiation*
+            rm -f ${import_symlink_actual_target}/*ddp_surgery*
         fi
-        import_symlink_actual_target="${clone_homedir}/mixed_MSK_cfDNA_RESEARCH_ACCESS"
-        rm -f "$IMPORT_SYMLINK_FILEPATH"
+        rm -f "$import_symlink_filepath"
         ln -s "$import_symlink_actual_target" "$import_symlink_filepath" # symlink needed because the datasource search is based on study id, which is all lower case
         # -----------------------------------------------------------------------------------------------------------
         # STUDY IMPORT
@@ -265,7 +288,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
             echo -e "$EMAIL_BODY" | mail -s "Import failure: cmo_access" $PIPELINES_EMAIL_LIST
             exit 1
         fi
-        rm -f "$IMPORT_SYMLINK_FILEPATH"
+        rm -f "$import_symlink_filepath"
         num_studies_updated=$(cat $CMO_ACCESS_TMPDIR/num_studies_updated.txt)
         # clear persistence cache
         if [[ $num_studies_updated -gt 0 ]]; then
