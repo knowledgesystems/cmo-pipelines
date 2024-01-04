@@ -298,6 +298,15 @@ function standardize_mutations_data() {
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$NSOUT_MUTATIONS_INPUT_FILEPATH"
 }
 
+function remove_duplicate_maf_variants() {
+    MUTATIONS_EXTD_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
+    NSOUT_MUTATIONS_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
+
+    # Remove duplicate variants from MAF files
+    $PYTHON_BINARY $PORTAL_HOME/scripts/remove-duplicate-maf-variants.py -i "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_HOME/scripts/remove-duplicate-maf-variants.py -i "$NSOUT_MUTATIONS_INPUT_FILEPATH"
+}
+
 function standardize_structural_variant_data() {
     DATA_SV_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt"
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_structural_variant_data.py -f "$DATA_SV_INPUT_FILEPATH"
@@ -419,6 +428,11 @@ fi
 # Standardize mutations files
 if ! standardize_mutations_data ; then
     report_error "ERROR: Failed to standardize mutations files for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
+# Remove duplicate variants from MAF files
+if ! remove_duplicate_maf_variants ; then
+    report_error "ERROR: Failed to remove duplicate variants from MAF files for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
 # Standardize structural variant data by removing records with invalid genes and standardizing the file header

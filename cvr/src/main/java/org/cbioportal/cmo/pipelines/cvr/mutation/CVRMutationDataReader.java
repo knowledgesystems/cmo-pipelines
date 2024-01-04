@@ -173,9 +173,6 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         MutationRecord to_add;
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
             // skip if new sample or if mutation record for sample seen already
-            String tumorSampleBarcode = to_add.getTUMOR_SAMPLE_BARCODE();
-            String hugoSymbol = to_add.getHUGO_SYMBOL();
-
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
                 continue;
