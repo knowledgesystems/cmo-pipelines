@@ -80,7 +80,6 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
     private Annotator annotator;
 
     private List<AnnotatedRecord> mutationRecords = new ArrayList<>();
-
     private Map<String, List<MutationRecord>> mutationMap = new HashMap<>();
 
     private File mutationFile;
