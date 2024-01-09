@@ -30,7 +30,7 @@ MAX_NUMBER_OF_ATTEMPTS = 18
 
 def authenticate_service_account():
     try:
-        subprocess.check_output(["/data/portal-cron/scripts/authenticate_service_account.sh"])
+        subprocess.check_output(["/data/portal-cron/scripts/authenticate_service_account.sh public"])
     except:
         print "Attempt to authenticate to k8s cluster failed with non-zero exit status, exiting..."
         sys.exit(1)

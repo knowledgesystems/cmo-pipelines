@@ -77,9 +77,10 @@ fi
 
 unset KUBECONFIG_ARG
 if [ "$cluster_id" == "$CLUSTER_ID_DIGITS" ] ; then
-    /data/portal-cron/scripts/authenticate_service_account.sh
+    /data/portal-cron/scripts/authenticate_service_account.sh eks
 else
     if ! [ -z $PUBLIC_CLUSTER_KUBECONFIG ] ; then
+        /data/portal-cron/scripts/authenticate_service_account.sh public
         KUBECONFIG_ARG="--kubeconfig $PUBLIC_CLUSTER_KUBECONFIG"
     fi
 fi
