@@ -38,7 +38,7 @@ def write_tsv(df, path, **opts):
     )
 
 
-def combine_files(input_files, output_file, sep="\t", on=None, how="inner"):
+def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="inner"):
     data_frames = []
     for file in input_files:
         df = pd.read_table(
@@ -52,7 +52,7 @@ def combine_files(input_files, output_file, sep="\t", on=None, how="inner"):
         data_frames.append(df)
 
     df_merged = reduce(
-        lambda left, right: pd.merge(left, right, on=on, how=how), data_frames
+        lambda left, right: pd.merge(left, right, on=columns, how=merge_type), data_frames
     )
     write_tsv(
         df_merged,
