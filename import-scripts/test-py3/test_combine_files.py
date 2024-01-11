@@ -46,8 +46,7 @@ class TestCombineFiles(unittest.TestCase):
             os.path.join(TestCombineFiles.base_dir, sub_dir, 'ddp_vital_status.txt'),
         ]
         merge_type='outer'
-        columns = ['PATIENT_ID']
-        self.compare_expected_output_to_actual(sub_dir, ddp_files, merge_type, columns)
+        self.compare_expected_output_to_actual(sub_dir, ddp_files, merge_type)
 
     def test_has_metadata_headers(self):
         sub_dir = 'has_metadata_headers'
