@@ -207,6 +207,11 @@ if ! filter_clinical_attribute_columns ; then
     report_error "ERROR: Failed to filter non-delivered clinical attribute columns for Sophia MSK-IMPACT. Exiting."
 fi
 
+# Add SEQ_DATE to clinical sample file
+if ! add_seq_date_to_sample_file; then
+    report_error "ERROR: Failed to add SEQ_DATE column to clinical sample file for Sophia MSK-IMPACT. Exiting."
+fi
+
 # Filter replicated columns from MAF files
 if ! filter_replicated_maf_columns ; then
     report_error "ERROR: Failed to filter duplicated columns in MAF files for Sophia MSK-IMPACT. Exiting."
