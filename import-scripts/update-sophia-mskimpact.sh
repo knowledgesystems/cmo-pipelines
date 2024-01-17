@@ -94,7 +94,7 @@ function add_seq_date_to_sample_file() {
     KEY_COLUMNS="SAMPLE_ID PATIENT_ID"
 
     $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$MSK_ACCESS_SEQ_DATE" "$MSK_HEMEPACT_SEQ_DATE" "$MSK_IMPACT_SEQ_DATE" -o "$MERGED_SEQ_DATE" -m outer &&
-	$PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$MERGED_SEQ_DATE" -o "$SAMPLE_OUTPUT_FILEPATH" -c "$KEY_COLUMNS" -m left &&
+	$PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$MERGED_SEQ_DATE" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
 
     mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
 
@@ -124,6 +124,7 @@ function remove_duplicate_maf_variants() {
     NSOUT_MUTATIONS_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations_merged.txt"
 
     # Remove duplicate variants from MAF files
+    # CVR data can contain duplicates for a gene and its alias
     $PYTHON_BINARY $PORTAL_HOME/scripts/remove-duplicate-maf-variants.py -i "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
     $PYTHON_BINARY $PORTAL_HOME/scripts/remove-duplicate-maf-variants.py -i "$NSOUT_MUTATIONS_INPUT_FILEPATH" &&
 
