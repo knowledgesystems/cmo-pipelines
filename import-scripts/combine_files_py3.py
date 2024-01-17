@@ -120,7 +120,7 @@ def main():
             parser.print_help()
 
     # Combine the files
-    combine_files(input_files, output_file, sep=sep, on=columns, how=merge_type)
+    combine_files(input_files, output_file, sep=sep, columns=columns, merge_type=merge_type)
 
 
 if __name__ == "__main__":
