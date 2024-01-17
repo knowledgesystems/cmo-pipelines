@@ -15,6 +15,7 @@ unset clinical_attributes_to_filter_arg
 declare -g clinical_attributes_to_filter_arg="unset"
 
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
+source $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh
 
 function report_error() {
     # Error message provided as an argument
@@ -126,123 +127,6 @@ function rename_files_in_delivery_directory() {
         fi
     done
     return 0
-}
-
-function find_clinical_attribute_header_line_from_file() {
-    # Path to clinical file taken as an argument
-    clinical_attribute_filepath="$1"
-
-    # Results are stored in this variable
-    declare -g clinical_attribute_header_line="unset"
-
-    # Error if clinical file cannot be read
-    if ! [ -r "$clinical_attribute_filepath" ] ; then
-        echo "error: cannot read file $clinical_attribute_filepath" >&2
-        return 1
-    fi
-
-    # Search file for header line
-    while read -r line ; do
-        if [ ${#line} -eq 0 ] ; then
-            echo "error: first uncommented line in $clinical_attribute_filepath was empty" >&2
-            return 1
-        fi
-        if ! [ ${line:0:1} == "#" ] ; then
-            clinical_attribute_header_line=$line
-            break
-        fi
-    done < "$clinical_attribute_filepath"
-    if [ "$clinical_attribute_header_line" == "unset" ] ; then
-        echo "error: unable to find header line in $clinical_attribute_filepath" >&2
-        return 1
-    fi
-}
-
-function find_clinical_attributes_in_file() {
-    # Path to clinical file taken as an argument
-    clinical_attribute_filepath=$1
-
-    # Results (array of clinical attributes) are stored in this global array
-    clinical_attributes_in_file=() 
-    if ! find_clinical_attribute_header_line_from_file "$clinical_attribute_filepath" ; then
-        return 1
-    fi
-    for attribute in $clinical_attribute_header_line ; do
-        clinical_attributes_in_file[$attribute]+=1
-    done
-}
-
-function find_clinical_attributes_to_filter_arg() {
-    # Path to clinical file taken as an argument
-    clinical_attribute_filepath=$1
-
-    # Must be either "patient" or "sample"
-    clinical_attribute_filetype=$2
-
-    declare -A clinical_attributes_to_filter=()
-    if ! find_clinical_attributes_in_file "$clinical_attribute_filepath" ; then
-        return 1
-    fi
-
-    # Populate delivered attributes for given file type
-    unset delivered_attributes
-    declare -A delivered_attributes=()
-    case $clinical_attribute_filetype in
-        patient)
-            for attribute in $DELIVERED_PATIENT_ATTRIBUTES ; do
-                delivered_attributes[$attribute]+=1
-            done
-            ;;
-        sample)
-            for attribute in $DELIVERED_SAMPLE_ATTRIBUTES ; do
-                delivered_attributes[$attribute]+=1
-            done
-            ;;
-        *) 
-            echo "error: illegal filetype passed to find_clinical_attributes_to_filter() : $clinical_attribute_filetype" >&2
-            return 1
-            ;;
-    esac
-
-    # Determine which clinical attributes we need to filter based on the attributes found in the file
-    for attribute in ${!clinical_attributes_in_file[@]} ; do
-        if [ -z ${delivered_attributes[$attribute]} ] ; then
-            clinical_attributes_to_filter[$attribute]+=1
-        fi
-    done
-
-    # Put the list attributes we want to filter in a comma separated string
-    clinical_attributes_to_filter_arg=""
-    list_size=0
-    for attribute in ${!clinical_attributes_to_filter[@]} ; do
-        clinical_attributes_to_filter_arg="$clinical_attributes_to_filter_arg$attribute"
-        list_size=$(($list_size+1))
-        if [ "$list_size" -lt ${#clinical_attributes_to_filter[@]} ] ; then
-            clinical_attributes_to_filter_arg="$clinical_attributes_to_filter_arg,"
-        fi
-    done
-}
-
-function filter_clinical_attribute_columns() {
-    # Determine which columns to exclude in the patient file
-    PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
-    PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.filtered"
-    find_clinical_attributes_to_filter_arg "$PATIENT_INPUT_FILEPATH" patient
-    PATIENT_EXCLUDED_HEADER_FIELD_LIST="$clinical_attributes_to_filter_arg"
-
-    # Determine which columns to exclude in the sample file
-    SAMPLE_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
-    SAMPLE_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
-    find_clinical_attributes_to_filter_arg "$SAMPLE_INPUT_FILEPATH" sample
-    SAMPLE_EXCLUDED_HEADER_FIELD_LIST="$clinical_attributes_to_filter_arg"
-    
-    # Filter out the columns we want to exclude in both files
-    $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$PATIENT_INPUT_FILEPATH" -e "$PATIENT_EXCLUDED_HEADER_FIELD_LIST" > "$PATIENT_OUTPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$SAMPLE_INPUT_FILEPATH" -e "$SAMPLE_EXCLUDED_HEADER_FIELD_LIST" > "$SAMPLE_OUTPUT_FILEPATH" &&
-    
-    # Rewrite the patient and sample files with updated data
-    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH" &&
-    mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
 }
 
 function rename_cdm_clinical_attribute_columns() {
