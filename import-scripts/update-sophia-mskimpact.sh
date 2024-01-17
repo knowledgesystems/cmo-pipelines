@@ -142,7 +142,7 @@ function add_metadata_headers() {
 function transpose_cna_data() {
     # Transpose the CNA file so that sample IDs are contained in the first column instead of the header
     DATA_CNA_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_CNA.txt"
-    $PYTHON3_BINARY transpose_cna.py "$DATA_CNA_INPUT_FILEPATH"
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/transpose_cna_py3.py "$DATA_CNA_INPUT_FILEPATH"
 }
 
 function remove_sequenced_samples_header() {
