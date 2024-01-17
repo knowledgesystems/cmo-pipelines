@@ -11,7 +11,7 @@ export SOPHIA_TMPDIR=$SOPHIA_DATA_HOME/tmp
 
 # Patient and sample attributes that we want to deliver in our data
 DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 RACE SEX ETHNICITY"
-DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_SCORE MSI_TYPE SOMATIC_STATUS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE"
+DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_SCORE MSI_TYPE SOMATIC_STATUS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE SEQ_DATE"
 
 # Duplicate columns that we want to filter out of MAF files
 MUTATIONS_EXTENDED_COLS_TO_FILTER="amino_acid_change,cdna_change,transcript,COMMENTS,Comments,comments,Matched_Norm_Sample_Barcode"
@@ -202,14 +202,14 @@ if ! remove_sequenced_samples_header ; then
     report_error "ERROR: Failed to remove sequenced_samples header from MAF for Sophia MSK-IMPACT. Exiting."
 fi
 
-# Filter clinical attribute columns from clinical files
-if ! filter_clinical_attribute_columns ; then
-    report_error "ERROR: Failed to filter non-delivered clinical attribute columns for Sophia MSK-IMPACT. Exiting."
-fi
-
 # Add SEQ_DATE to clinical sample file
 if ! add_seq_date_to_sample_file; then
     report_error "ERROR: Failed to add SEQ_DATE column to clinical sample file for Sophia MSK-IMPACT. Exiting."
+fi
+
+# Filter clinical attribute columns from clinical files
+if ! filter_clinical_attribute_columns ; then
+    report_error "ERROR: Failed to filter non-delivered clinical attribute columns for Sophia MSK-IMPACT. Exiting."
 fi
 
 # Filter replicated columns from MAF files
