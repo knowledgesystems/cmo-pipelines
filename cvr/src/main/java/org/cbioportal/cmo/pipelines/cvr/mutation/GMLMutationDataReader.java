@@ -76,8 +76,8 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
     @Autowired
     private Annotator annotator;
 
-    private List<AnnotatedRecord> mutationRecords = new ArrayList();
-    private Map<String, List<AnnotatedRecord>> mutationMap = new HashMap<>();
+    private List<AnnotatedRecord> mutationRecords = new ArrayList<>();
+    private Map<String, List<MutationRecord>> mutationMap = new HashMap<>();
     private File mutationFile;
     private Set<String> additionalPropertyKeys = new LinkedHashSet<>();
     private Set<String> header = new LinkedHashSet<>();
@@ -132,8 +132,10 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             if (samples != null && !snps.isEmpty()) {
                 for (GMLSnp snp : snps) {
                     for (String sampleId : samples) {
-                        recordsToAnnotate.add(cvrUtilities.buildGMLMutationRecord(snp, sampleId));
+                        MutationRecord to_add = cvrUtilities.buildGMLMutationRecord(snp, sampleId);
+                        recordsToAnnotate.add(to_add);
                         germlineSamples.add(sampleId);
+                        addRecordToMap(to_add);
                     }
                 }
             }
@@ -174,6 +176,7 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
                 continue;
             }
             recordsToAnnotate.add(to_add);
+            addRecordToMap(to_add);
         }
         reader.close();
         log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
@@ -190,7 +193,6 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         for (AnnotatedRecord ar : annotatedRecords) {
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             mutationRecords.add(ar);
-            mutationMap.getOrDefault(ar.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(ar);
             additionalPropertyKeys.addAll(ar.getAdditionalProperties().keySet());
             header.addAll(ar.getHeaderWithAdditionalFields());
         }
@@ -231,4 +233,15 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         return null;
     }
 
+    private void addRecordToMap(MutationRecord record) {
+        String sampleId = record.getTUMOR_SAMPLE_BARCODE();
+        List<MutationRecord> recordList = mutationMap.get(sampleId);
+        if (recordList == null) {
+            recordList = new ArrayList<MutationRecord>();
+            recordList.add(record);
+            mutationMap.put(sampleId, recordList);
+        } else {
+            recordList.add(record);
+        }
+    }
 }

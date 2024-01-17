@@ -77,7 +77,7 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
 
     private File mutationFile;
     private List<AnnotatedRecord> mutationRecords = new ArrayList<>();
-    private Map<String, List<AnnotatedRecord>> mutationMap = new HashMap<>();
+    private Map<String, List<MutationRecord>> mutationMap = new HashMap<>();
     private Set<String> additionalPropertyKeys = new LinkedHashSet<>();
     Set<String> header = new LinkedHashSet<>();
     private AnnotationSummaryStatistics summaryStatistics;
@@ -128,7 +128,9 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
             int countNonSignedoutSampleSnps = result.getAllNonSignedoutCvrSnps().size();
             String somaticStatus = result.getMetaData().getSomaticStatus() != null ? result.getMetaData().getSomaticStatus() : "N/A";
             for (CVRSnp snp : result.getAllNonSignedoutCvrSnps()) {
-                recordsToAnnotate.add(cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus));
+                MutationRecord to_add = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
+                recordsToAnnotate.add(to_add);
+                addRecordToMap(to_add);
             }
             cvrSampleListUtil.updateNonSignedoutSampleSnpCount(sampleId, countNonSignedoutSampleSnps);
         }
@@ -169,6 +171,7 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
             }
             cvrSampleListUtil.updateNonSignedoutSampleSnpCount(to_add.getTUMOR_SAMPLE_BARCODE(), 1);
             recordsToAnnotate.add(to_add);
+            addRecordToMap(to_add);
         }
         reader.close();
         log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
@@ -185,7 +188,6 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         for (AnnotatedRecord ar : annotatedRecords) {
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             mutationRecords.add(ar);
-            mutationMap.getOrDefault(ar.getTUMOR_SAMPLE_BARCODE(), new ArrayList()).add(ar);
             additionalPropertyKeys.addAll(ar.getAdditionalProperties().keySet());
             header.addAll(ar.getHeaderWithAdditionalFields());
         }
@@ -224,4 +226,17 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         }
         return null;
     }
+
+    private void addRecordToMap(MutationRecord record) {
+        String sampleId = record.getTUMOR_SAMPLE_BARCODE();
+        List<MutationRecord> recordList = mutationMap.get(sampleId);
+        if (recordList == null) {
+            recordList = new ArrayList<MutationRecord>();
+            recordList.add(record);
+            mutationMap.put(sampleId, recordList);
+        } else {
+            recordList.add(record);
+        }
+    }
+
 }
