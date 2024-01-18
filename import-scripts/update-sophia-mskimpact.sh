@@ -101,6 +101,17 @@ function add_seq_date_to_sample_file() {
     # Metadata headers will be added back in a later function call
 }
 
+function filter_clinical_cols() {
+    PATIENT_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
+    PATIENT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.filtered"
+    filter_clinical_attribute_columns "$PATIENT_INPUT_FILEPATH" "$DELIVERED_PATIENT_ATTRIBUTES" "$PATIENT_OUTPUT_FILEPATH"
+
+    # Determine which columns to exclude in the sample file
+    SAMPLE_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
+    SAMPLE_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
+    filter_clinical_attribute_columns "$SAMPLE_INPUT_FILEPATH" "$DELIVERED_SAMPLE_ATTRIBUTES" "$SAMPLE_OUTPUT_FILEPATH"
+}
+
 function filter_replicated_maf_columns() {
     MUTATIONS_EXTENDED_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
     MUTATIONS_EXTENDED_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt.filtered"
@@ -209,7 +220,7 @@ if ! add_seq_date_to_sample_file; then
 fi
 
 # Filter clinical attribute columns from clinical files
-if ! filter_clinical_attribute_columns ; then
+if ! filter_clinical_cols ; then
     report_error "ERROR: Failed to filter non-delivered clinical attribute columns for Sophia MSK-IMPACT. Exiting."
 fi
 
