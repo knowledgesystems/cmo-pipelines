@@ -1,21 +1,69 @@
 #!/usr/bin/env bash
+#
+# replace patient ids present in a clnical file in the cmo-access repository
+# with the perferred patient id based on a input provided id mapping table.
 
-CLINICAL_SAMPLE_FILEPATH="/data/portal-cron/cbio-portal-data/cmo-access/mixed_MSK_cfDNA_RESEARCH_ACCESS/data_clinical_sample.txt"
-UPDATED_CLINICAL_SAMPLE_FILEPATH="data_clinical_sample_replaced.txt"
-PATIENT_ID_MAPPING_FILEPATH="patient_id_mapping.txt"
-PATIENT_ID_MAPPING_FILTERED_FILEPATH="patient_id_mapping_filtered.txt"
-PATIENT_ID_MAPPING_AMBIGUOUS_FILEPATH="patient_id_mapping_ambiguous.txt"
+# global variables
 TAB=$'\t'
+PATIENT_ID_MAPPING_FILTERED_FILENAME="patient_id_mapping_filtered.txt"
+PATIENT_ID_MAPPING_AMBIGUOUS_FILENAME="patient_id_mapping_ambiguous.txt"
+unset input_clinical_filepath
+unset output_clinical_dirpath
+unset patient_id_mapping_filepath
+unset patient_id_mapping_filtered_filepath
+unset patient_id_mapping_ambiguous_filepath
+unset PROGRAM_NAME
+input_clinical_filepath=""
+output_clinical_filepath=""
+patient_id_mapping_filepath=""
+patient_id_mapping_filtered_filepath=""
+patient_id_mapping_ambiguous_filepath=""
+PROGRAM_NAME="$0"
+
+function usage() {
+    echo "Usage: $PROGRAM_NAME input_clinical_file output_directory patient_id_mapping_file" >&2
+}
+
+# validate and parse arguments
+if [[ ${#@} -eq 1 ]] ; then
+    if [[ "$1" == "-h" || "$1" == "--help" ]] ; then
+        usage
+        exit 0
+    fi
+fi
+if [[ ${#@} -ne 3 ]] ; then
+    usage
+    exit 1
+fi
+input_clinical_filepath="$1"
+output_clinical_dirpath="$2"
+patient_id_mapping_filepath="$3"
+if ! [[ -r "$input_clinical_filepath" ]] ; then
+    echo "Error: expected a readable input file as input_clinical_file. Unable to read file '$input_clinical_filepath'" >&2
+    exit 1
+fi
+if ! [[ -w "$output_clinical_dirpath" && -d "$output_clinical_dirpath" ]] ; then
+    echo "Error: expected a writable output directory as output_directory. Unable to write to '$input_clinical_filepath'" >&2
+    exit 1
+fi
+if ! [[ -r "$patient_id_mapping_filepath" ]] ; then
+    echo "Error: expected a readable input file as patient_id_mapping_file. Unable to read file '$patient_id_mapping_filepath'" >&2
+    exit 1
+fi
+patient_id_mapping_filtered_filepath="$output_clinical_dirpath/$PATIENT_ID_MAPPING_FILTERED_FILENAME"
+patient_id_mapping_ambiguous_filepath="$output_clinical_dirpath/$PATIENT_ID_MAPPING_AMBIGUOUS_FILENAME"
+output_clinical_filename="$(basename $input_clinical_filepath).updated"
+output_clinical_filepath="$output_clinical_dirpath/$output_clinical_filename"
 
 # filter patient id mappings of all rows missing either dmp-id or cmo-id
-if ! cat "$PATIENT_ID_MAPPING_FILEPATH" | egrep -v "^[[:space:]]" | egrep -v "[[:space:]]$" > "$PATIENT_ID_MAPPING_FILTERED_FILEPATH" ; then
-    echo "could not filter $PATIENT_ID_MAPPING_FILEPATH of rows missing a dmp id" >&2
+if ! cat "$patient_id_mapping_filepath" | egrep -v "^[[:space:]]" | egrep -v "[[:space:]]$" > "$patient_id_mapping_filtered_filepath" ; then
+    echo "could not filter $patient_id_mapping_filepath of rows missing a dmp id" >&2
     exit 1
 fi
 
 # generate list of ambiguous cmo patient ids (have multiple associated dmp ids)
-if ! cat "$PATIENT_ID_MAPPING_FILTERED_FILEPATH" | sort | uniq | cut -f2 | sort | uniq -d > "$PATIENT_ID_MAPPING_AMBIGUOUS_FILEPATH" ; then
-    echo "could not findfilter $PATIENT_ID_MAPPING_FILEPATH of rows missing a dmp id" >&2
+if ! cat "$patient_id_mapping_filtered_filepath" | sort | uniq | cut -f2 | sort | uniq -d > "$patient_id_mapping_ambiguous_filepath" ; then
+    echo "could not findfilter $patient_id_mapping_filepath of rows missing a dmp id" >&2
     exit 1
 fi
 
@@ -24,13 +72,13 @@ unset ambiguous_cmo_patient_id
 declare -A ambiguous_cmo_patient_id
 while read -r cmo_patient_id ; do
     ambiguous_cmo_patient_id[$cmo_patient_id]=1
-done < "$PATIENT_ID_MAPPING_AMBIGUOUS_FILEPATH"
+done < "$patient_id_mapping_ambiguous_filepath"
 unset dmp_id_for_cmo_id
 declare -A dmp_id_for_cmo_id
 while IFS="" read -r line ; do
     line_regex="^([^$TAB][^$TAB]*)$TAB([^$TAB][^$TAB]*)\$"
     if ! [[ "$line" =~ $line_regex ]] ; then
-        echo "malformatted line in $PATIENT_ID_MAPPING_FILTERED_FILEPATH : $line" >&2
+        echo "malformatted line in $patient_id_mapping_filtered_filepath : $line" >&2
         exit 1
     fi
     dmp_patient_id=${BASH_REMATCH[1]}
@@ -39,7 +87,7 @@ while IFS="" read -r line ; do
         continue; # skip ambiguous cmo_patient_ids
     fi
     dmp_id_for_cmo_id["$cmo_patient_id"]="$dmp_patient_id"
-done < "$PATIENT_ID_MAPPING_FILTERED_FILEPATH"
+done < "$patient_id_mapping_filtered_filepath"
 
 #replace any cmo-patient-ids in clinical sample file with associated dmp-patient-id
 unset headerline
@@ -79,7 +127,7 @@ while IFS="" read -r line ; do
             fi
         done
         if [ -z $patient_id_colnum ] ; then
-            echo "could not find column header PATIENT_ID in file $CLINICAL_SAMPLE_FILEPATH" >&2
+            echo "could not find column header PATIENT_ID in file $input_clinical_filepath" >&2
             exit 1
         fi
         continue
@@ -118,4 +166,4 @@ while IFS="" read -r line ; do
         fi
         colnum=$(($colnum+1))
     done
-done < "$CLINICAL_SAMPLE_FILEPATH" > "$UPDATED_CLINICAL_SAMPLE_FILEPATH"
+done < "$input_clinical_filepath" > "$output_clinical_filepath"
