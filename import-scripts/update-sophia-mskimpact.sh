@@ -129,10 +129,10 @@ function filter_replicated_maf_columns() {
 
 function remove_duplicate_maf_variants() {
     MUTATIONS_EXTD_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
-    NSOUT_MUTATIONS_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
+    NSOUT_MUTATIONS_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout.txt"
 
     MUTATIONS_EXTD_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended_merged.txt"
-    NSOUT_MUTATIONS_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations_merged.txt"
+    NSOUT_MUTATIONS_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout_merged.txt"
 
     # Remove duplicate variants from MAF files
     # CVR data can contain duplicates for a gene and its alias
