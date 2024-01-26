@@ -2,11 +2,14 @@
 
 # File containing list of patients should be passed in as argument
 export SUBSET_FILE="$1"
+export CANCER_TYPE="$2"
+export CURRENT_DATE="$(date '+%m.%d.%y')"
+export COHORT_NAME="sophia-$CANCER_TYPE-$CURRENT_DATE"
 
 export SOPHIA_REPO_NAME="sophia-data"
 export SOPHIA_DATA_HOME="$PORTAL_DATA_HOME/$SOPHIA_REPO_NAME"
 export SOPHIA_MSKIMPACT_STABLE_ID="sophia_mskimpact"
-export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_DATA_HOME/$SOPHIA_MSKIMPACT_STABLE_ID"
+export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_DATA_HOME/deliveries/$COHORT_NAME/$SOPHIA_MSKIMPACT_STABLE_ID"
 export SOPHIA_TMPDIR=$SOPHIA_DATA_HOME/tmp
 
 # Patient and sample attributes that we want to deliver in our data
