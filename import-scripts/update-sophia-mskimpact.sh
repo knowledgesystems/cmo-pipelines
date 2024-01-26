@@ -180,9 +180,9 @@ if [[ -d "$SOPHIA_TMPDIR" && "$SOPHIA_TMPDIR" != "/" ]] ; then
 fi
 
 # Copy data from local clone of AZ repo to Sophia directory
-cp -a "$AZ_MSK_IMPACT_DATA_HOME/*" "$SOPHIA_TMPDIR"
-cp -aR "$SOPHIA_DATA_HOME/gene_panels" "$SOPHIA_COHORT_HOME"
-cp -a "$SOPHIA_DATA_HOME/README.pdf" "$SOPHIA_COHORT_HOME"
+cp -a $AZ_MSK_IMPACT_DATA_HOME/* $SOPHIA_TMPDIR
+cp -aR $SOPHIA_DATA_HOME/gene_panels $SOPHIA_COHORT_HOME
+cp -a $SOPHIA_DATA_HOME/README.pdf $SOPHIA_COHORT_HOME
 
 if [ $? -gt 0 ] ; then
     report_error "ERROR: Failed to populate temporary directory for Sophia MSK-IMPACT. Exiting."
