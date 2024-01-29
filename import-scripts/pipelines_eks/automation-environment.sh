@@ -133,6 +133,7 @@ export MSK_MIND_DATA_HOME=$PORTAL_DATA_HOME/msk-mind
 export MSK_SHAHLAB_DATA_HOME=$PORTAL_DATA_HOME/datahub_shahlab
 export CDSI_DATA_HOME=$PORTAL_DATA_HOME/cdm
 export AZ_DATA_HOME=$PORTAL_DATA_HOME/az-data
+export SOPHIA_DATA_HOME=$PORTAL_DATA_HOME/sophia-data
 
 #######################
 # environment variables used across import scripts
