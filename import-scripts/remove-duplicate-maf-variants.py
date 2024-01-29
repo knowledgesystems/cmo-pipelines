@@ -1,11 +1,13 @@
 #!/usr/bin/python
-import sys
-import os
-import optparse
 
-# Script to remove duplicate maf records based on the 8 key columns.
-# Calculates VAF for each record and picks the record with high VAF
-# Formula for VAF = t_alt_count / (t_ref_count + t_alt_count) 
+""" remove-duplicate-maf-variants.py
+Script to remove duplicate maf records based on the 8 key columns.
+Calculates VAF for each record and picks the record with high VAF
+Formula for VAF = t_alt_count / (t_ref_count + t_alt_count)
+"""
+
+import sys
+import optparse
 
 ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
@@ -14,7 +16,7 @@ KEY_COLUMNS_INDEX = []
 KEY_COLUMNS = ['Entrez_Gene_Id','Chromosome','Start_Position','End_Position','Variant_Classification','Tumor_Seq_Allele2','Tumor_Sample_Barcode','HGVSp_Short']
 MAF_DATA = {}
 
-def remove_duplicate_variants(maf_filename, out_filename, comments, header, t_refc_index, t_altc_index):
+def remove_duplicate_variants(out_filename, comments, header, t_refc_index, t_altc_index):
 	outfile = []
 	outfile.append(comments)
 	outfile.append(header)
@@ -81,7 +83,7 @@ def main():
 				else:
 					MAF_DATA[reference_key].append(line)
 	
-	remove_duplicate_variants(maf_filename, out_filename, comments, header, t_refc_index, t_altc_index)
+	remove_duplicate_variants(out_filename, comments, header, t_refc_index, t_altc_index)
 
 if __name__ == '__main__':
 	main()
