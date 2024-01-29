@@ -2,14 +2,10 @@
 
 # File containing list of patients should be passed in as argument
 export SUBSET_FILE="$1"
-export CANCER_TYPE="$2"
-export CURRENT_DATE="$(date '+%m.%d.%y')"
-export COHORT_NAME="sophia-$CANCER_TYPE-data-$CURRENT_DATE"
+export COHORT_NAME="$2"
 
-export SOPHIA_MSKIMPACT_STABLE_ID="sophia_mskimpact"
-export SOPHIA_COHORT_HOME="$SOPHIA_DATA_HOME/deliveries/$COHORT_NAME"
-export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_COHORT_HOME/$SOPHIA_MSKIMPACT_STABLE_ID"
-export SOPHIA_TMPDIR="$SOPHIA_COHORT_HOME/tmp"
+export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_DATA_HOME/$COHORT_NAME"
+export SOPHIA_TMPDIR="$SOPHIA_MSK_IMPACT_DATA_HOME/tmp"
 
 # Patient and sample attributes that we want to deliver in our data
 DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 RACE SEX ETHNICITY"
@@ -179,8 +175,6 @@ fi
 
 # Copy data from local clone of AZ repo to Sophia directory
 cp -a $AZ_MSK_IMPACT_DATA_HOME/* $SOPHIA_TMPDIR
-cp -aR $SOPHIA_DATA_HOME/gene_panels $SOPHIA_COHORT_HOME
-cp -a $SOPHIA_DATA_HOME/README.pdf $SOPHIA_COHORT_HOME
 
 if [ $? -gt 0 ] ; then
     report_error "ERROR: Failed to populate temporary directory for Sophia MSK-IMPACT. Exiting."
@@ -250,5 +244,3 @@ fi
 if [[ -d "$SOPHIA_TMPDIR" && "$SOPHIA_TMPDIR" != "/" ]] ; then
     rm -rf "$SOPHIA_TMPDIR"
 fi
-
-zip -r "$SOPHIA_MSK_IMPACT_DATA_HOME.zip" "$SOPHIA_MSK_IMPACT_DATA_HOME"
