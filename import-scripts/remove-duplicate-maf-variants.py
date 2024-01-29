@@ -14,7 +14,7 @@ KEY_COLUMNS_INDEX = []
 KEY_COLUMNS = ['Entrez_Gene_Id','Chromosome','Start_Position','End_Position','Variant_Classification','Tumor_Seq_Allele2','Tumor_Sample_Barcode','HGVSp_Short']
 MAF_DATA = {}
 
-def remove_duplicate_variants(maf_filename, comments, header, t_refc_index, t_altc_index):
+def remove_duplicate_variants(maf_filename, out_filename, comments, header, t_refc_index, t_altc_index):
 	outfile = []
 	outfile.append(comments)
 	outfile.append(header)
@@ -38,7 +38,6 @@ def remove_duplicate_variants(maf_filename, comments, header, t_refc_index, t_al
 		else:
 			outfile.append(MAF_DATA[key][0])
 			
-	out_filename = maf_filename.split('.')[0]+'_merged.txt'
 	datafile = open(out_filename, 'w')
 	for line in outfile:
 		datafile.write(line)
@@ -49,10 +48,12 @@ def remove_duplicate_variants(maf_filename, comments, header, t_refc_index, t_al
 def main():
 	# get command line arguments
 	parser = optparse.OptionParser()
-	parser.add_option('-i', '--input-maf-file', action = 'store', dest = 'maf_file')
+	parser.add_option('-i', '--input-maf-file', action = 'store', dest = 'input_maf_file')
+	parser.add_option('-o', '--output-maf-file', action = 'store', dest = 'output_maf_file')
 
 	(options, args) = parser.parse_args()
-	maf_filename = options.maf_file
+	maf_filename = options.input_maf_file
+	out_filename = options.output_maf_file
 
 	comments = ""
 	header = ""
@@ -80,7 +81,7 @@ def main():
 				else:
 					MAF_DATA[reference_key].append(line)
 	
-	remove_duplicate_variants(maf_filename, comments, header, t_refc_index, t_altc_index)
+	remove_duplicate_variants(maf_filename, out_filename, comments, header, t_refc_index, t_altc_index)
 
 if __name__ == '__main__':
 	main()
