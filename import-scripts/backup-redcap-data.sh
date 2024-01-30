@@ -10,11 +10,13 @@ MSKIMPACT_REDCAP_EXPORT_FAIL=0
 HEMEPACT_REDCAP_EXPORT_FAIL=0
 ARCHER_REDCAP_EXPORT_FAIL=0
 ACCESS_REDCAP_EXPORT_FAIL=0
+ACCESSHEME_REDCAP_EXPORT_FAIL=0
 
 MSKIMPACT_VALIDATION_FAIL=0
 HEMEPACT_VALIDATION_FAIL=0
 ARCHER_VALIDATION_FAIL=0
 ACCESS_VALIDATION_FAIL=0
+ACCESSHEME_VALIDATION_FAIL=0
 
 # -----------------------------------------------------------------------------------------------------------
 # FUNCTIONS
@@ -143,6 +145,28 @@ else
     else
         echo "Committing ACCESS REDCap data snapshot"
         cd $ACCESS_REDCAP_BACKUP; $GIT_BINARY add -A . ; $GIT_BINARY commit -m "ACCESS REDCap Snapshot"
+    fi
+fi
+
+
+# export and commit ACCESS REDCap data
+$JAVA_BINARY $JAVA_REDCAP_PIPELINE_ARGS -e -r -s mskaccess_heme -d $ACCESSHEME_REDCAP_BACKUP
+if [ $? -gt 0 ]; then
+    echo "Failed to export REDCap data snapshot for ACCESSHEME! Aborting any changes made during export..."
+    cd $ACCESSHEME_REDCAP_BACKUP; $GIT_BINARY checkout -- .
+    ACCESSHEME_REDCAP_EXPORT_FAIL=1
+    sendFailureMessageMskPipelineLogsSlack "ACCESSHEME export"
+else
+    validateRedcapExportForStudy $ACCESSHEME_REDCAP_BACKUP
+    if [ $? -gt 0 ]; then
+        echo "Validation of ACCESS REDCap snapshot failed! Aborting any changes made during export..."
+        ACCESSHEME_VALIDATION_FAIL=1
+        cd $ACCESSHEME_REDCAP_BACKUP; $GIT_BINARY checkout -- .
+        ACCESSHEME_REDCAP_EXPORT_FAIL=1
+        sendFailureMessageMskPipelineLogsSlack "ACCESSHEME validation"
+    else
+        echo "Committing ACCESSHEME REDCap data snapshot"
+        cd $ACCESSHEME_REDCAP_BACKUP; $GIT_BINARY add -A . ; $GIT_BINARY commit -m "ACCESSHEME REDCap Snapshot"
     fi
 fi
 
