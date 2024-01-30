@@ -3,6 +3,7 @@
 # File containing list of patients should be passed in as argument
 export SUBSET_FILE="$1"
 export COHORT_NAME="$2"
+export CURRENT_DATE="$(date '+%m.%d.%y')"
 
 export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_DATA_HOME/$COHORT_NAME"
 export SOPHIA_TMPDIR="$SOPHIA_MSK_IMPACT_DATA_HOME/tmp"
@@ -31,6 +32,27 @@ function report_error() {
     exit 1
 }
 
+function pull_latest_data_from_sophia_git_repo() {
+    (   # Executed in a subshell to avoid changing the actual working directory
+        # If any statement fails, the return value of the entire expression is the failure status
+        cd $SOPHIA_DATA_HOME &&
+        $GIT_BINARY fetch &&
+        $GIT_BINARY reset origin/main --hard &&
+        $GIT_BINARY lfs pull &&
+        $GIT_BINARY clean -f -d
+    )
+}
+
+function push_updates_to_sophia_git_repo() {
+    (   # Executed in a subshell to avoid changing the actual working directory
+        # If any statement fails, the return value of the entire expression is the failure status
+        cd $SOPHIA_DATA_HOME &&
+        $GIT_BINARY add * &&
+        $GIT_BINARY commit -m "$COHORT_NAME data $CURRENT_DATE" &&
+        $GIT_BINARY push origin
+    )
+}
+
 function filter_files_in_delivery_directory() {
     unset filenames_to_deliver
     declare -A filenames_to_deliver
@@ -44,6 +66,7 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[data_mutations_non_signedout.txt]+=1
     filenames_to_deliver[data_sv.txt]+=1
     filenames_to_deliver[sophia_mskimpact_data_cna_hg19.seg]+=1
+    filenames_to_deliver[DMP_IDs.txt]+=1
 
     # Remove any files/directories that are not specified above
     for filepath in $SOPHIA_MSK_IMPACT_DATA_HOME/* ; do
@@ -163,6 +186,12 @@ function remove_sequenced_samples_header() {
     awk '!/^#sequenced_samples:/' "$MAF_INPUT_FILEPATH" > "$MAF_OUTPUT_FILEPATH" && mv "$MAF_OUTPUT_FILEPATH" "$MAF_INPUT_FILEPATH"
 }
 
+# Pull latest from Sophia repo (sophia-data)
+printTimeStampedDataProcessingStepMessage "Pull of Sophia MSK-IMPACT data updates"
+if ! pull_latest_data_from_sophia_git_repo ; then
+    report_error "ERROR: Failed git pull for Sophia MSK-IMPACT. Exiting."
+fi
+
 # Create temporary directory to store data before subsetting
 if ! [ -d "$SOPHIA_TMPDIR" ] ; then
     if ! mkdir -p "$SOPHIA_TMPDIR" ; then
@@ -244,3 +273,14 @@ fi
 if [[ -d "$SOPHIA_TMPDIR" && "$SOPHIA_TMPDIR" != "/" ]] ; then
     rm -rf "$SOPHIA_TMPDIR"
 fi
+
+# Push updated data to GitHub
+if ! push_updates_to_sophia_git_repo ; then
+    report_error "ERROR: Failed git push for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
+printTimeStampedDataProcessingStepMessage "Cleaning up untracked files from Sophia repo"
+bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $SOPHIA_DATA_HOME
+
+# Zip data files for easier data transfer
+zip "sophia-$COHORT_NAME-data-$CURRENT_DATE.zip" *data*
