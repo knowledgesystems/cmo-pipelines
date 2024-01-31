@@ -283,4 +283,4 @@ printTimeStampedDataProcessingStepMessage "Cleaning up untracked files from Soph
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $SOPHIA_DATA_HOME
 
 # Zip data files for easier data transfer
-zip "sophia-$COHORT_NAME-data-$CURRENT_DATE.zip" *data*
+zip "$SOPHIA_MSK_IMPACT_DATA_HOME/sophia-$COHORT_NAME-data-$CURRENT_DATE.zip" "$SOPHIA_MSK_IMPACT_DATA_HOME/*data*"
