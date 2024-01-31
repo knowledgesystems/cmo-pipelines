@@ -24,6 +24,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
 
     AUTOMATION_SCRIPT_FILEPATH=/data/portal-cron/scripts/automation-environment.sh
     DMP_IMPORT_VARS_AND_FUNCTIONS_FILEPATH=/data/portal-cron/scripts/dmp-import-vars-functions.sh
+    CLEAR_PERSISTENCE_CACHE_SHELL_FUNCTIONS_FILEPATH=/data/portal-cron/scripts/clear-persistence-cache-shell-functions.sh
 
     # set up enivornment variables and temp directory
     if ! [ -f $AUTOMATION_SCRIPT_FILEPATH ] ; then
@@ -36,9 +37,15 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
         echo ${message}
         exit 1
     fi
+    if ! [ -f $CLEAR_PERSISTENCE_CACHE_SHELL_FUNCTIONS_FILEPATH ] ; then
+        message="clear-persistence-cache-shell-functions.sh could not be found, exiting..." >&2
+        echo ${message}
+        exit 1
+    fi
 
     source $AUTOMATION_SCRIPT_FILEPATH
     source $DMP_IMPORT_VARS_AND_FUNCTIONS_FILEPATH
+    source $CLEAR_PERSISTENCE_CACHE_SHELL_FUNCTIONS_FILEPATH
 
     if [ -z "$PORTAL_HOME" ] ; then
         message="could not run merge_dremio_clinical_data_into_cmo_access.sh : automation-environment.sh script must be run in order to set needed environment variables"
@@ -49,7 +56,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
     DREMIO_CLINICAL_TO_CMO_ACCESS_TMPDIR=/data/portal-cron/tmp/merge_dremio_clinical_to_cmo_access
     DREMIO_CLINICAL_STAGING_DIRECTORY="${DREMIO_CLINICAL_TO_CMO_ACCESS_TMPDIR}/dremio_cfdna_data"
     CMO_ACCESS_STAGING_INPUT_DIRECTORY="${DREMIO_CLINICAL_TO_CMO_ACCESS_TMPDIR}/cmo_access_data"
-    DREMIO_CLINICAL_OUTPUT_DIRECTORY="${DREMIO_CLINICAL_TO_CMO_ACCESS_TMPDIR}/merged_study_data"
+    DREMIO_CLINICAL_OUTPUT_DIRECTORY="${DREMIO_CLINICAL_TO_CMO_ACCESS_TMPDIR}/output_data"
     DREMIO_CREDENTIALS_FILE="$PORTAL_HOME/pipelines-credentials/eks-account.credentials"
     DREMIO_USERNAME=""
     DREMIO_PASSWORD=""
@@ -70,6 +77,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
     IMPORT_DEV_SYMLINK_FILEPATH="$CMO_ACCESS_PROD_DATA_HOME/mixed_msk_cfdna_research_access_dremio_dev"
     IMPORT_PROD_SYMLINK_FILEPATH="$CMO_ACCESS_PROD_DATA_HOME/mixed_msk_cfdna_research_access"
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
+    cmo_access_notification_file=$(mktemp $CMO_ACCESS_TMPDIR/cmo-access-portal-update-notification.$now.XXXXXX)
     current_changeset_hash_at_head=""
 
     function set_runmode_active_vars() {
@@ -164,13 +172,109 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
 
     }
 
-    function get_source_data() {
+    function get_cmo_access_data() {
         set_dremio_credentials
         update_git_repository_before_rsync
         if ! rsync -a "${clone_homedir}/mixed_MSK_cfDNA_RESEARCH_ACCESS/" "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}" ; then
             echo "unable to rsync data from data repository ${clone_homedir} to staging area ${CMO_ACCESS_STAGING_INPUT_DIRECTORY}, exiting..." >&2
             exit 1
         fi
+    }
+
+    function purge_timeline_files_from_cmo_access() {
+        from_directory="$1"
+        darwin_based_timeline_files="data_timeline_ddp_chemotherapy.txt data_timeline_ddp_radiation.txt data_timeline_ddp_surgery.txt meta_timeline_ddp_chemotherapy.txt meta_timeline_ddp_radiation.txt meta_timeline_ddp_surgery.txt"
+        for filename in $darwin_based_timeline_files; do
+            rm "${from_directory}/$filename"
+        done
+    }
+
+    function update_cmo_access_data() {
+        purge_timeline_files_from_cmo_access "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}"
+        # construct the file "patient_id_mapping.txt" which maps cmo-patient-ids to dmp-patient-ids in a tab delimited table
+        old_dir=$(pwd)
+        cd "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}"
+        if ! /data/portal-cron/bin/retrieve_cfdna_patient_id_mappings --host=tlvidreamcord1.mskcc.org --port=32010 --user=${DREMIO_USERNAME} --pass=${DREMIO_PASSWORD} ; then
+            echo "go program retrieve_cfdna_patient_id_mappings exited with non-zero status, exiting..." >&2
+            exit 1
+        fi
+        patient_mapping_filepath="${CMO_ACCESS_STAGING_INPUT_DIRECTORY}/patient_id_mapping.txt"
+        patient_mapping_ambiguous_filepath="${CMO_ACCESS_STAGING_INPUT_DIRECTORY}/patient_id_mapping_ambiguous.txt"
+        patient_mapping_filtered_filepath="${CMO_ACCESS_STAGING_INPUT_DIRECTORY}/patient_id_mapping_filtered.txt"
+        # apply the patient id mappings and convert matching cmo-patient-ids into dmp-patient-ids
+        if ! ${PORTAL_HOME}/scripts/update_cfdna_clinical_sample_patient_ids_via_dremio.sh data_clinical_sample.txt "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}" "${patient_mapping_filepath}"; then
+            echo "script which applies patient_id_mapping file conversions to samples exited with non-zero status, exiting..." >&2
+            exit 1
+        fi
+        if ! ${PORTAL_HOME}/scripts/update_cfdna_clinical_sample_patient_ids_via_dremio.sh data_clinical_patient.txt "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}" "${patient_mapping_filepath}"; then
+            echo "script which applies patient_id_mapping file conversions to patients exited with non-zero status, exiting..." >&2
+            exit 1
+        fi
+####    rm -f "${patient_mapping_filepath}" "${patient_mapping_ambiguous_filepath}" "${patient_mapping_filtered_filepath}"
+        # replace the original clinical files with the updated/transformed versions which were output
+        mv data_clinical_sample.txt.updated data_clinical_sample.txt
+        mv data_clinical_patient.txt.updated data_clinical_patient.txt
+        cd "$old_dir"
+    }
+
+    function rsync_files_to_active_repo() {
+        destination_dirpath="${clone_homedir}/mixed_MSK_cfDNA_RESEARCH_ACCESS"
+        if ! rsync -a "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/" "${destination_dirpath}" ; then
+            echo "rsync of files from ${DREMIO_CLINICAL_OUTPUT_DIRECTORY} to ${destination_dirpath} failed, exiting..." >&2
+            exit 1
+        fi
+    }
+
+    function set_current_changeset_hash_at_head() {
+        current_changeset_hash_at_head=$($GIT_BINARY -C "${clone_homedir}" log | head -n 1 | cut -f 2 -d $" ")
+    }
+
+    function create_and_push_github_changeset() {
+        log_message_for_commit="$1"
+        set_current_changeset_hash_at_head
+        current_changeset_hash_at_head_previous="$current_changeset_hash_at_head"
+        if ! $GIT_BINARY -C "${clone_homedir}" pull ; then
+            echo "git pull on ${clone_homedir} failed, exiting..." >&2
+            exit 1
+        fi
+        if ! $GIT_BINARY -C "${clone_homedir}" reset HEAD --hard ; then
+            echo "git reset on ${clone_homedir} failed, exiting..." >&2
+            exit 1
+        fi
+        set_current_changeset_hash_at_head
+        if ! [ "$current_changeset_hash_at_head_previous" == "$current_changeset_hash_at_head" ] ; then
+            # there has been commits added since we began this run - report and exit
+            echo "The repository at ${clone_homedir} has been modified during the time that merging occurred. Exiting..." >&2
+            exit 1
+        fi
+        rsync_files_to_active_repo
+        if ! $GIT_BINARY -C "${clone_homedir}" add "${clone_homedir}/mixed_MSK_cfDNA_RESEARCH_ACCESS"/* ; then
+            echo "git add on ${clone_homdir} failed, exiting..." >&2
+            exit 1
+        fi
+        if ! $GIT_BINARY -C "${clone_homedir}" commit -m "${log_message_for_commit}" ; then
+            echo "git commit on ${clone_homdir} failed, exiting..." >&2
+            exit 1
+        fi
+        if ! $GIT_BINARY -C "${clone_homedir}" push origin ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (cmo_access) :fire: - address ASAP!"
+            echo "git push origin on ${clone_homdir} failed, exiting..." >&2
+            exit 1
+        fi
+    }
+
+    function commit_updated_cmo_access_data() {
+        safe_delete_directory_recursively "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}"
+        mkdir "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}"
+        if [ "$runmode" == "$RUNMODE_PROD" ] ; then
+            # copy updated files to the output directory (so they are in position for the git commit function)
+            cp -a "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}/data_clinical_patient.txt" "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}"
+            cp -a "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}/data_clinical_sample.txt" "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}"
+            create_and_push_github_changeset "updated patient ids using dremio id preference logic"
+        fi
+    }
+
+    function get_related_dremio_data() {
         old_dir=$(pwd)
         cd "${DREMIO_CLINICAL_STAGING_DIRECTORY}"
         if ! /data/portal-cron/bin/convert_extract_cfdna --host=tlvidreamcord1.mskcc.org --port=32010 --user=${DREMIO_USERNAME} --pass=${DREMIO_PASSWORD} --sampleFile="${CMO_ACCESS_STAGING_INPUT_DIRECTORY}"/data_clinical_sample.txt ; then
@@ -181,6 +285,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
     }
 
     function merge_clinical_data() {
+        safe_delete_directory_recursively "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}"
+        mkdir "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}"
         if ! ${PYTHON_BINARY} ${PORTAL_HOME}/scripts/merge.py --output-directory "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}" --study-id mixed_msk_cfdna_research_access --merge-clinical true --file-type-list clinical_patient,clinical_sample,timeline "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}" "${DREMIO_CLINICAL_STAGING_DIRECTORY}" ; then
             echo "merge.py exiting with non-zero status while merging dremio output into cmo-access study, exiting..." >&2
             exit 1
@@ -201,54 +307,13 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
         mv "$merged_clinical_patient_with_metadata_filepath" "$merged_clinical_patient_filepath"
     }
 
-    function rsync_merged_files_to_active_repo() {
-        destination_dirpath="${clone_homedir}/mixed_MSK_cfDNA_RESEARCH_ACCESS"
-        if ! rsync -a "${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/" "${destination_dirpath}" ; then
-            echo "rsync of files from ${DREMIO_CLINICAL_OUTPUT_DIRECTORY} to ${destination_dirpath} failed, exiting..." >&2
-            exit 1
-        fi
-    }
-
-    function set_current_changeset_hash_at_head() {
-        current_changeset_hash_at_head=$($GIT_BINARY -C "${clone_homedir}" log | head -n 1 | cut -f 2 -d $" ")
-    }
-
-    function rsync_and_commit_updated_study_files() {
+    function rsync_and_commit_merged_study_files() {
         if ! [ "$runmode" == "$RUNMODE_PROD" ] ; then
             # only rsync files when running in dev mode - skip commit
-            rsync_merged_files_to_active_repo
+            rsync_files_to_active_repo
             return 0
-        fi 
-        set_current_changeset_hash_at_head
-        current_changeset_hash_at_head_previous="$current_changeset_hash_at_head"
-        if ! $GIT_BINARY -C "${clone_homedir}" pull ; then
-            echo "git pull on ${clone_homedir} failed, exiting..." >&2
-            exit 1
         fi
-        if ! $GIT_BINARY -C "${clone_homedir}" reset HEAD --hard ; then
-            echo "git reset on ${clone_homedir} failed, exiting..." >&2
-            exit 1
-        fi
-        set_current_changeset_hash_at_head
-        if ! [ "$current_changeset_hash_at_head_previous" == "$current_changeset_hash_at_head" ] ; then
-            # there has been commits added since we began this run - report and exit
-            echo "The repository at ${clone_homedir} has been modified during the time that merging occurred. Exiting..." >&2
-            exit 1
-        fi
-        rsync_merged_files_to_active_repo
-        if ! $GIT_BINARY -C "${clone_homedir}" add "${clone_homedir}/mixed_MSK_cfDNA_RESEARCH_ACCESS"/* ; then
-            echo "git add on ${clone_homdir} failed, exiting..." >&2
-            exit 1
-        fi
-        if ! $GIT_BINARY -C "${clone_homedir}" commit -m "Latest clinical data from Dremio/SMILE" ; then
-            echo "git commit on ${clone_homdir} failed, exiting..." >&2
-            exit 1
-        fi
-        if ! $GIT_BINARY -C "${clone_homedir}" push origin ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (cmo_access) :fire: - address ASAP!"
-            echo "git push origin on ${clone_homdir} failed, exiting..." >&2
-            exit 1
-        fi
+        create_and_push_github_changeset "Latest clinical data from Dremio/SMILE"
     }
 
     function import_cmo_access_study() {
@@ -320,11 +385,14 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
         set_runmode_from_args $@
         set_clone_homedir
         prepare_tempdirs
-        get_source_data
+        get_cmo_access_data
+        update_cmo_access_data
+        commit_updated_cmo_access_data
+        get_related_dremio_data
         merge_clinical_data
-        rsync_and_commit_updated_study_files
+        rsync_and_commit_merged_study_files
         import_cmo_access_study
-        remove_tempdirs
+        #remove_tempdirs
         close_log_and_exit
     }
 
