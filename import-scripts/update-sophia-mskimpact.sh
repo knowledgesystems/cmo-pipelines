@@ -274,13 +274,13 @@ if [[ -d "$SOPHIA_TMPDIR" && "$SOPHIA_TMPDIR" != "/" ]] ; then
     rm -rf "$SOPHIA_TMPDIR"
 fi
 
+# Zip data files for easier data transfer
+zip "$SOPHIA_MSK_IMPACT_DATA_HOME/sophia-$COHORT_NAME-data-$CURRENT_DATE.zip" $SOPHIA_MSK_IMPACT_DATA_HOME/*data*
+
 # Push updated data to GitHub
 if ! push_updates_to_sophia_git_repo ; then
     report_error "ERROR: Failed git push for AstraZeneca MSK-IMPACT. Exiting."
 fi
-
-# Zip data files for easier data transfer
-zip "$SOPHIA_MSK_IMPACT_DATA_HOME/sophia-$COHORT_NAME-data-$CURRENT_DATE.zip" $SOPHIA_MSK_IMPACT_DATA_HOME/*data*
 
 printTimeStampedDataProcessingStepMessage "Cleaning up untracked files from Sophia repo"
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $SOPHIA_DATA_HOME
