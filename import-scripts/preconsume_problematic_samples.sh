@@ -126,7 +126,6 @@ function consume_hardcoded_samples() {
     touch ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
     touch ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
 
-    # see if we still need this ?
     if [ "$COHORT" == "mskimpact" ] ; then
         echo "P-0025907-N01-IM6" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
     fi
