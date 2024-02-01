@@ -15,9 +15,9 @@ CVR_ACCESS_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_access_variants"
 CVR_CONSUME_SAMPLE_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_consume_sample"
 FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_${COHORT}.json"
 CONSUME_IDS_FILEPATH="$TMP_DIR/${COHORT}_consume.ids"
-PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_event_consume.ids"
-PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_metadata_consume.ids"
-CONSUME_ATTEMPT_OUTPUT_FILEPATH="$TMP_DIR/consume_attempt_output.json"
+PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_event_consume_${COHORT}.ids"
+PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_metadata_consume_${COHORT}.ids"
+CONSUME_ATTEMPT_OUTPUT_FILEPATH="$TMP_DIR/consume_attempt_output_${COHORT}.json"
 DETECT_SAMPLES_WITH_NULL_DP_AD_FIELDS_SCRIPT_FILEPATH=/data/portal-cron/scripts/detect_samples_with_null_dp_ad_fields.py
 DETECT_SAMPLES_WITH_PROBLEMATIC_METADATA_SCRIPT_FILEPATH=/data/portal-cron/scripts/detect_samples_with_problematic_metadata.py
 CVR_MONITOR_SLACK_URI_FILE="/data/portal-cron/pipelines-credentials/cvr-monitor-webhook-uri"
@@ -33,13 +33,6 @@ function make_tmp_dir_if_necessary() {
 }
 
 function set_cvr_fetch_url_prefix() {
-    # for cohort need to know
-    # CVR_{}_FETCH_URL_PREFIX
-    # {}_FETCH_OUTPUT_FILEPATH
-        # actually don't think this needs to be separate for cohorts now
-    # {}_CONSUME_IDS_FILEPATH - might need 2 ? one for problematic events + one for problematic metadata
-        # actually don't think this needs to be separate for cohorts now
-
     if [ "$COHORT" == "mskimpact" ] ; then
         CVR_FETCH_URL_PREFIX=$CVR_IMPACT_FETCH_URL_PREFIX
     elif [ "$COHORT" == "mskimpact_heme" ] ; then
@@ -143,6 +136,7 @@ function consume_hardcoded_samples() {
 }
 
 function log_actions() {
+    # add cohort name to log actions?
     date
     echo -e "consumed the following samples with problematic events:\n${succeeded_to_consume_problematic_events_sample_list[*]}"
     echo -e "attempted but failed to consume the following samples with problematic events:\n${failed_to_consume_problematic_events_sample_list[*]}"
@@ -152,11 +146,12 @@ function log_actions() {
 }
 
 function post_slack_message() {
+    # add cohort name to message?
     MESSAGE="<@U02D0Q0RWUE> <@U03FERRJ6SE> Warning : the following samples have been preemptively consumed before fetch because they contained events which required a value for fields {normal_dp, normal_ad, tumor_dp, tumor_ad} but contained no value in one or more of these fields.\nSuccessfully Consumed :\n${succeeded_to_consume_problematic_events_sample_list[*]}"
     if [ ${#failed_to_consume_problematic_events_sample_list[@]} -gt 0 ]; then
         MESSAGE="${MESSAGE} Attempted Unsuccessfully To Consume :\n${failed_to_consume_problematic_events_sample_list[*]}"
     fi
-    MESSAGE="${MESSAGE}Warning : the following samples have been reemptively consumed before fetch because they contained problematic metadata where the gene-panel property was unset or had value UNKNOWN.\nSuccessfully Consumed :\n${succeeded_to_consume_problematic_metadata_sample_list[*]}"
+    MESSAGE="${MESSAGE}Warning : the following samples have been preemptively consumed before fetch because they contained problematic metadata where the gene-panel property was unset or had value UNKNOWN.\nSuccessfully Consumed :\n${succeeded_to_consume_problematic_metadata_sample_list[*]}"
     if [ ${#failed_to_consume_problematic_metadata_sample_list[@]} -gt 0 ]; then
         MESSAGE="${MESSAGE} Attempted Unsuccessfully To Consume :\n${failed_to_consume_problematic_metadata_sample_list[*]}"
     fi
@@ -171,9 +166,9 @@ failed_to_consume_problematic_metadata_sample_list=() # temporary code
 succeeded_to_consume_problematic_metadata_sample_list=() # temporary code
 set_cvr_fetch_url_prefix
 consume_hardcoded_samples # temporary code
-fetch_currently_queued_samples # needs cohort
-detect_samples_with_problematic_events # needs cohort
-detect_samples_with_problematic_metadata # needs cohort
+fetch_currently_queued_samples
+detect_samples_with_problematic_events
+detect_samples_with_problematic_metadata
 exit_if_no_problems_detected
 failed_to_consume_problematic_events_sample_list=()
 succeeded_to_consume_problematic_events_sample_list=()
