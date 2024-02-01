@@ -1,24 +1,20 @@
 #!/usr/bin/env bash
 
+COHORT=$1
 TMP_DIR="/data/portal-cron/tmp/preconsume_problematic_samples"
 CVR_FETCH_PROPERTIES_FILEPATH="/data/portal-cron/git-repos/pipelines-configuration/properties/fetch-cvr/application.properties"
 CVR_USERNAME=$(grep 'dmp.user_name' ${CVR_FETCH_PROPERTIES_FILEPATH} | head -n 1 | sed -E s/[^=][^=]*=//)
 CVR_PASSWORD=$(grep 'dmp.password' ${CVR_FETCH_PROPERTIES_FILEPATH} | head -n 1 | sed -E s/[^=][^=]*=//)
 CVR_TUMOR_SERVER=$(grep 'dmp.server_name' ${CVR_FETCH_PROPERTIES_FILEPATH} | head -n 1 | sed -E s/[^=][^=]*=//)
 CVR_CREATE_SESSION_URL="${CVR_TUMOR_SERVER}create_session/${CVR_USERNAME}/${CVR_PASSWORD}/0"
+CVR_FETCH_URL_PREFIX=""
 CVR_IMPACT_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_variants"
 CVR_HEME_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_heme_variants"
 CVR_ARCHER_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_archer_retrieve_variants"
 CVR_ACCESS_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_access_variants"
 CVR_CONSUME_SAMPLE_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_consume_sample"
-IMPACT_FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_impact.json"
-HEME_FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_heme.json"
-ARCHER_FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_archer.json"
-ACCESS_FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_access.json"
-IMPACT_CONSUME_IDS_FILEPATH="$TMP_DIR/impact_consume.ids"
-HEME_CONSUME_IDS_FILEPATH="$TMP_DIR/heme_consume.ids"
-ARCHER_CONSUME_IDS_FILEPATH="$TMP_DIR/archer_consume.ids"
-ACCESS_CONSUME_IDS_FILEPATH="$TMP_DIR/access_consume.ids"
+FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_${COHORT}.json"
+CONSUME_IDS_FILEPATH="$TMP_DIR/${COHORT}_consume.ids"
 PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_event_consume.ids"
 PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_metadata_consume.ids"
 CONSUME_ATTEMPT_OUTPUT_FILEPATH="$TMP_DIR/consume_attempt_output.json"
@@ -36,27 +32,39 @@ function make_tmp_dir_if_necessary() {
     fi
 }
 
+function set_cvr_fetch_url_prefix() {
+    # for cohort need to know
+    # CVR_{}_FETCH_URL_PREFIX
+    # {}_FETCH_OUTPUT_FILEPATH
+        # actually don't think this needs to be separate for cohorts now
+    # {}_CONSUME_IDS_FILEPATH - might need 2 ? one for problematic events + one for problematic metadata
+        # actually don't think this needs to be separate for cohorts now
+
+    if [ "$COHORT" == "mskimpact" ] ; then
+        CVR_FETCH_URL_PREFIX=$CVR_IMPACT_FETCH_URL_PREFIX
+    elif [ "$COHORT" == "mskimpact_heme" ] ; then
+        CVR_FETCH_URL_PREFIX=$CVR_HEME_FETCH_URL_PREFIX
+    elif [ "$COHORT" == "mskarcher" ] ; then
+        CVR_FETCH_URL_PREFIX=$CVR_ARCHER_FETCH_URL_PREFIX
+    elif [ "$COHORT" == "mskaccess" ] ; then
+        CVR_FETCH_URL_PREFIX=$CVR_ACCESS_FETCH_URL_PREFIX
+    else
+        echo "Error: Invalid cohort name '$COHORT'" >&2
+        exit 1
+    fi
+}
+
 function fetch_currently_queued_samples() {
     dmp_token=$(curl $CVR_CREATE_SESSION_URL | grep session_id | sed -E 's/",[[:space:]]*$//' | sed -E 's/.*"//')
-    curl "${CVR_IMPACT_FETCH_URL_PREFIX}/${dmp_token}/0" > ${IMPACT_FETCH_OUTPUT_FILEPATH}
-    curl "${CVR_HEME_FETCH_URL_PREFIX}/${dmp_token}/0" > ${HEME_FETCH_OUTPUT_FILEPATH}
-    curl "${CVR_ARCHER_FETCH_URL_PREFIX}/${dmp_token}/0" > ${ARCHER_FETCH_OUTPUT_FILEPATH}
-    curl "${CVR_ACCESS_FETCH_URL_PREFIX}/${dmp_token}/0" > ${ACCESS_FETCH_OUTPUT_FILEPATH}
+    curl "${CVR_FETCH_URL_PREFIX}/${dmp_token}/0" > ${FETCH_OUTPUT_FILEPATH}
 }
 
 function detect_samples_with_problematic_events() {
-    $DETECT_SAMPLES_WITH_NULL_DP_AD_FIELDS_SCRIPT_FILEPATH ${IMPACT_FETCH_OUTPUT_FILEPATH} ${IMPACT_CONSUME_IDS_FILEPATH}
-    $DETECT_SAMPLES_WITH_NULL_DP_AD_FIELDS_SCRIPT_FILEPATH ${HEME_FETCH_OUTPUT_FILEPATH} ${HEME_CONSUME_IDS_FILEPATH}
-    $DETECT_SAMPLES_WITH_NULL_DP_AD_FIELDS_SCRIPT_FILEPATH ${ACCESS_FETCH_OUTPUT_FILEPATH} ${ACCESS_CONSUME_IDS_FILEPATH}
+    $DETECT_SAMPLES_WITH_NULL_DP_AD_FIELDS_SCRIPT_FILEPATH ${FETCH_OUTPUT_FILEPATH} ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
 }
 
 function detect_samples_with_problematic_metadata() {
-    $DETECT_SAMPLES_WITH_PROBLEMATIC_METADATA_SCRIPT_FILEPATH ${ARCHER_FETCH_OUTPUT_FILEPATH} ${ARCHER_CONSUME_IDS_FILEPATH}
-}
-
-function combine_problematic_samples_for_consumption() {
-    cat ${IMPACT_CONSUME_IDS_FILEPATH} ${HEME_CONSUME_IDS_FILEPATH} ${ACCESS_CONSUME_IDS_FILEPATH} > ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
-    cat ${ARCHER_CONSUME_IDS_FILEPATH} > ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
+    $DETECT_SAMPLES_WITH_PROBLEMATIC_METADATA_SCRIPT_FILEPATH ${FETCH_OUTPUT_FILEPATH} ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
 }
 
 function exit_if_no_problems_detected() {
@@ -124,7 +132,11 @@ function consume_hardcoded_samples() {
     rm -f ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH} ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
     touch ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
     touch ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
-    echo "P-0025907-N01-IM6" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
+
+    # see if we still need this ?
+    if [ "$COHORT" == "mskimpact" ] ; then
+        echo "P-0025907-N01-IM6" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
+    fi
     if [ -f "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}" ] ; then
         attempt_to_consume_problematic_samples
     fi
@@ -157,11 +169,11 @@ failed_to_consume_problematic_events_sample_list=() # temporary code
 succeeded_to_consume_problematic_events_sample_list=() # temporary code
 failed_to_consume_problematic_metadata_sample_list=() # temporary code
 succeeded_to_consume_problematic_metadata_sample_list=() # temporary code
+set_cvr_fetch_url_prefix
 consume_hardcoded_samples # temporary code
-fetch_currently_queued_samples
-detect_samples_with_problematic_events
-detect_samples_with_problematic_metadata
-combine_problematic_samples_for_consumption
+fetch_currently_queued_samples # needs cohort
+detect_samples_with_problematic_events # needs cohort
+detect_samples_with_problematic_metadata # needs cohort
 exit_if_no_problems_detected
 failed_to_consume_problematic_events_sample_list=()
 succeeded_to_consume_problematic_events_sample_list=()
@@ -169,4 +181,4 @@ failed_to_consume_problematic_metadata_sample_list=()
 succeeded_to_consume_problematic_metadata_sample_list=()
 attempt_to_consume_problematic_samples
 log_actions
-post_slack_message
+#post_slack_message
