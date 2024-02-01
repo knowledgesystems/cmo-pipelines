@@ -135,8 +135,8 @@ function consume_hardcoded_samples() {
 }
 
 function log_actions() {
-    # add cohort name to log actions?
     date
+    echo -e "${COHORT^^} Problematic Samples"
     echo -e "consumed the following samples with problematic events:\n${succeeded_to_consume_problematic_events_sample_list[*]}"
     echo -e "attempted but failed to consume the following samples with problematic events:\n${failed_to_consume_problematic_events_sample_list[*]}"
     echo -e "consumed the following samples with problematic metadata:\n${succeeded_to_consume_problematic_metadata_sample_list[*]}"
@@ -145,8 +145,7 @@ function log_actions() {
 }
 
 function post_slack_message() {
-    # add cohort name to message?
-    MESSAGE="<@U02D0Q0RWUE> <@U03FERRJ6SE> Warning : the following samples have been preemptively consumed before fetch because they contained events which required a value for fields {normal_dp, normal_ad, tumor_dp, tumor_ad} but contained no value in one or more of these fields.\nSuccessfully Consumed :\n${succeeded_to_consume_problematic_events_sample_list[*]}"
+    MESSAGE="<@U02D0Q0RWUE> <@U03FERRJ6SE> ${COHORT^^} Problematic Samples \nWarning : \nThe following samples have been preemptively consumed before fetch because they contained events which required a value for fields {normal_dp, normal_ad, tumor_dp, tumor_ad} but contained no value in one or more of these fields.\nSuccessfully Consumed :\n${succeeded_to_consume_problematic_events_sample_list[*]}"
     if [ ${#failed_to_consume_problematic_events_sample_list[@]} -gt 0 ]; then
         MESSAGE="${MESSAGE} Attempted Unsuccessfully To Consume :\n${failed_to_consume_problematic_events_sample_list[*]}"
     fi
@@ -175,4 +174,4 @@ failed_to_consume_problematic_metadata_sample_list=()
 succeeded_to_consume_problematic_metadata_sample_list=()
 attempt_to_consume_problematic_samples
 log_actions
-#post_slack_message
+post_slack_message
