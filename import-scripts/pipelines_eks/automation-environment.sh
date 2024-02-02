@@ -132,6 +132,8 @@ export DATAHUB_DATA_HOME=$PORTAL_DATA_HOME/datahub/public
 export MSK_MIND_DATA_HOME=$PORTAL_DATA_HOME/msk-mind
 export MSK_SHAHLAB_DATA_HOME=$PORTAL_DATA_HOME/datahub_shahlab
 export CDSI_DATA_HOME=$PORTAL_DATA_HOME/cdm
+export AZ_DATA_HOME=$PORTAL_DATA_HOME/az-data
+export SOPHIA_DATA_HOME=$PORTAL_DATA_HOME/sophia-data
 
 #######################
 # environment variables used across import scripts
@@ -188,6 +190,7 @@ export LYMPHOMA_SUPER_COHORT_DATA_HOME=$DMP_DATA_HOME/lymphoma_super_cohort_fmi_
 export MSK_EXTRACT_COHORT_DATA_HOME=$MSK_MIND_DATA_HOME/datahub/msk_extract_cohort2_2019
 export MSK_SPECTRUM_COHORT_DATA_HOME=$MSK_SHAHLAB_DATA_HOME/msk_spectrum
 export MSK_CHORD_DATA_HOME=$CDSI_DATA_HOME/msk-chord
+export AZ_MSK_IMPACT_DATA_HOME=$AZ_DATA_HOME/az_mskimpact
 # read-only data directories
 export FMI_BATLEVI_DATA_HOME=$FOUNDATION_DATA_HOME/mixed/lymphoma/mskcc/foundation/lymph_landscape_fmi_201611
 # other data directories
