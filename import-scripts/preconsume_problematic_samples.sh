@@ -32,6 +32,18 @@ function make_tmp_dir_if_necessary() {
     fi
 }
 
+function check_args() {
+    if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
+        usage
+        exit 1
+    fi
+}
+
+function usage {
+    echo "preconsume_problematic_samples.sh \$COHORT_ID"
+    echo -e "\t\$COHORT_ID                      one of: ['mskimpact', 'mskimpact_heme', 'mskaccess', 'mskarcher']"
+}
+
 function set_cvr_fetch_url_prefix() {
     if [ "$COHORT" == "mskimpact" ] ; then
         CVR_FETCH_URL_PREFIX=$CVR_IMPACT_FETCH_URL_PREFIX
@@ -41,9 +53,6 @@ function set_cvr_fetch_url_prefix() {
         CVR_FETCH_URL_PREFIX=$CVR_ARCHER_FETCH_URL_PREFIX
     elif [ "$COHORT" == "mskaccess" ] ; then
         CVR_FETCH_URL_PREFIX=$CVR_ACCESS_FETCH_URL_PREFIX
-    else
-        echo "Error: Invalid cohort name '$COHORT'" >&2
-        exit 1
     fi
 }
 
