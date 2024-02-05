@@ -63,7 +63,7 @@ fi
 
 # generate list of ambiguous cmo patient ids (have multiple associated dmp ids)
 if ! cat "$patient_id_mapping_filtered_filepath" | sort | uniq | cut -f2 | sort | uniq -d > "$patient_id_mapping_ambiguous_filepath" ; then
-    echo "could not findfilter $patient_id_mapping_filepath of rows missing a dmp id" >&2
+    echo "could not find and output ambiguous cases from file $patient_id_mapping_filtered_filepath" >&2
     exit 1
 fi
 
