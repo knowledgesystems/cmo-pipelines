@@ -202,11 +202,11 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
         patient_mapping_ambiguous_filepath="${CMO_ACCESS_STAGING_INPUT_DIRECTORY}/patient_id_mapping_ambiguous.txt"
         patient_mapping_filtered_filepath="${CMO_ACCESS_STAGING_INPUT_DIRECTORY}/patient_id_mapping_filtered.txt"
         # apply the patient id mappings and convert matching cmo-patient-ids into dmp-patient-ids
-        if ! ${PORTAL_HOME}/scripts/update_cfdna_clinical_sample_patient_ids_via_dremio.sh data_clinical_sample_py3.txt "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}" "${patient_mapping_filepath}"; then
+        if ! ${PORTAL_HOME}/scripts/update_cfdna_clinical_sample_patient_ids_via_dremio.sh data_clinical_sample.txt "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}" "${patient_mapping_filepath}"; then
             echo "script which applies patient_id_mapping file conversions to samples exited with non-zero status, exiting..." >&2
             exit 1
         fi
-        if ! ${PORTAL_HOME}/scripts/update_cfdna_clinical_sample_patient_ids_via_dremio.sh data_clinical_patient_py3.txt "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}" "${patient_mapping_filepath}"; then
+        if ! ${PORTAL_HOME}/scripts/update_cfdna_clinical_sample_patient_ids_via_dremio.sh data_clinical_patient.txt "${CMO_ACCESS_STAGING_INPUT_DIRECTORY}" "${patient_mapping_filepath}"; then
             echo "script which applies patient_id_mapping file conversions to patients exited with non-zero status, exiting..." >&2
             exit 1
         fi
