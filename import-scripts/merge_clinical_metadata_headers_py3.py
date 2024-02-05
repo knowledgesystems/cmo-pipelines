@@ -51,7 +51,7 @@ determative when constructing the metadata dictionary.
 import sys
 
 def print_usage():
-    sys.stdout.write('usage: merge_clinical_metadata_headers.py input_filepath output_filepath [metadata_header_containing_filepath ...]\n')
+    sys.stdout.write('usage: merge_clinical_metadata_headers_py3.py input_filepath output_filepath [metadata_header_containing_filepath ...]\n')
 
 def validate_args(argv):
     # exit if argument count has no provided metadata_header_containing_filepath

@@ -293,13 +293,13 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
         fi
         merged_clinical_sample_filepath="${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/data_clinical_sample.txt"
         merged_clinical_sample_with_metadata_filepath="${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/data_clinical_sample.txt.with_metadata"
-        if ! ${PYTHON3_BINARY} ${PORTAL_HOME}/scripts/merge_clinical_metadata_headers.py "$merged_clinical_sample_filepath" "$merged_clinical_sample_with_metadata_filepath" "$DREMIO_CLINICAL_STAGING_DIRECTORY/data_clinical_sample.txt" "$CMO_ACCESS_STAGING_INPUT_DIRECTORY/data_clinical_sample.txt" ; then
+        if ! ${PYTHON3_BINARY} ${PORTAL_HOME}/scripts/merge_clinical_metadata_headers_py3.py "$merged_clinical_sample_filepath" "$merged_clinical_sample_with_metadata_filepath" "$DREMIO_CLINICAL_STAGING_DIRECTORY/data_clinical_sample.txt" "$CMO_ACCESS_STAGING_INPUT_DIRECTORY/data_clinical_sample.txt" ; then
             echo "merging of metadata heaers failed for ${merged_clinical_sample_filepath}, exiting..." >&2
             exit 1
         fi
         merged_clinical_patient_filepath="${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/data_clinical_patient.txt"
         merged_clinical_patient_with_metadata_filepath="${DREMIO_CLINICAL_OUTPUT_DIRECTORY}/data_clinical_patient.txt.with_metadata"
-        if ! ${PYTHON3_BINARY} ${PORTAL_HOME}/scripts/merge_clinical_metadata_headers.py "$merged_clinical_patient_filepath" "$merged_clinical_patient_with_metadata_filepath" "$DREMIO_CLINICAL_STAGING_DIRECTORY/data_clinical_patient.txt" "$CMO_ACCESS_STAGING_INPUT_DIRECTORY/data_clinical_patient.txt" ; then
+        if ! ${PYTHON3_BINARY} ${PORTAL_HOME}/scripts/merge_clinical_metadata_headers_py3.py "$merged_clinical_patient_filepath" "$merged_clinical_patient_with_metadata_filepath" "$DREMIO_CLINICAL_STAGING_DIRECTORY/data_clinical_patient.txt" "$CMO_ACCESS_STAGING_INPUT_DIRECTORY/data_clinical_patient.txt" ; then
             echo "merging of metadata heaers failed for ${merged_clinical_patient_filepath}, exiting..." >&2
             exit 1
         fi
