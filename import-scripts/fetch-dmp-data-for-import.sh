@@ -102,9 +102,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
     fi
 
-    # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN Archer gene-panel
-    bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh
-
     # fetch clinical data from data repository
     echo "fetching updates from dmp repository..."
     $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source dmp --run-date latest
@@ -188,6 +185,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         # fetch new/updated IMPACT samples using CVR Web service   (must come after git fetching)
         drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
+        # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
+        bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskimpact
         printTimeStampedDataProcessingStepMessage "CVR fetch for mskimpact"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_PRIVATE_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
@@ -265,6 +264,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         # fetch new/updated heme samples using CVR Web service (must come after git fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
         drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
+        # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
+        bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskimpact_heme
         printTimeStampedDataProcessingStepMessage "CVR fetch for hemepact"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_PRIVATE_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
@@ -329,6 +330,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         # fetch new/updated archer samples using CVR Web service (must come after git fetching).
         drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
+        # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
+        bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskarcher
         printTimeStampedDataProcessingStepMessage "CVR fetch for archer"
         # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -p $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
@@ -364,6 +367,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         # fetch new/updated access samples using CVR Web service (must come after git fetching).
         drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
+        # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
+        bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskaccess
         printTimeStampedDataProcessingStepMessage "CVR fetch for access"
         # access has -b option to block warnings for samples with zero variants (all samples will have zero variants)
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -p $MSK_ACCESS_PRIVATE_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
