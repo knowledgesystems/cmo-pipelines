@@ -166,6 +166,7 @@ function post_slack_message() {
 }
 
 date
+check_args
 make_tmp_dir_if_necessary
 failed_to_consume_problematic_events_sample_list=() # temporary code
 succeeded_to_consume_problematic_events_sample_list=() # temporary code
