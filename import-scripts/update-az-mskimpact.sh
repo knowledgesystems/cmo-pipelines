@@ -302,7 +302,7 @@ if ! rename_files_in_delivery_directory ; then
 fi
 
 # Filter clinical attribute columns from clinical files
-if ! filter_clinical_attribute_columns ; then
+if ! filter_clinical_cols ; then
     report_error "ERROR: Failed to filter non-delivered clinical attribute columns for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
