@@ -1,0 +1,22 @@
+#!/bin/bash
+source $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh
+
+CLINICAL_SAMPLE_FILE=$1
+SEQ_DATE_FILE=$2
+
+DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE CANCER_TYPE_DETAILED"
+
+TMP_SAMPLE_FILE=$(mktemp -q)
+TMP_PROCESSING_FILE=$(mktemp -q)
+CDM_DELIVERABLE=$(mktemp -q)
+
+cp -a $CLINICAL_SAMPLE_FILE $TMP_SAMPLE_FILE
+filter_clinical_attribute_columns "$TMP_SAMPLE_FILE" "$DELIVERED_SAMPLE_ATTRIBUTES" "$TMP_PROCESSING_FILE"
+
+$PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$TMP_SAMPLE_FILE" "$SEQ_DATE_FILE" -o "$CDM_DELIVERABLE" -c SAMPLE_ID -m left 
+
+aws s3 cp $CDM_DELIVERABLE s3://cdm-deliverable/averystest.txt --profile saml 
+cp $CDM_DELIVERABLE . 
+
+rm $TMP_SAMPLE_FILE
+rm $CDM_DELIVERABLE
