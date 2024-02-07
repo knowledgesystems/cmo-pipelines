@@ -158,7 +158,7 @@ function post_slack_message() {
     if [ ${#failed_to_consume_problematic_events_sample_list[@]} -gt 0 ]; then
         MESSAGE="${MESSAGE} Attempted Unsuccessfully To Consume :\n${failed_to_consume_problematic_events_sample_list[*]}"
     fi
-    MESSAGE="${MESSAGE}Warning : the following samples have been preemptively consumed before fetch because they contained problematic metadata where the gene-panel property was unset or had value UNKNOWN.\nSuccessfully Consumed :\n${succeeded_to_consume_problematic_metadata_sample_list[*]}"
+    MESSAGE="${MESSAGE}Warning : the following samples have been preemptively consumed before fetch because they contained problematic metadata where the gene-panel property was unset, invalid, or had value UNKNOWN.\nSuccessfully Consumed :\n${succeeded_to_consume_problematic_metadata_sample_list[*]}"
     if [ ${#failed_to_consume_problematic_metadata_sample_list[@]} -gt 0 ]; then
         MESSAGE="${MESSAGE} Attempted Unsuccessfully To Consume :\n${failed_to_consume_problematic_metadata_sample_list[*]}"
     fi
