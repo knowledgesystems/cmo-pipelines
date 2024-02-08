@@ -154,10 +154,10 @@ function consume_hardcoded_samples() {
 }
 
 function need_to_log_actions {
-    if [ ${#succeeded_to_consume_problematic_events_sample_list[@]} -gt 0] || \
-       [ ${#failed_to_consume_problematic_events_sample_list[@]} -gt 0] || \
-       [ ${#succeeded_to_consume_problematic_metadata_sample_list[@]} -gt 0] || \
-       [ ${#failed_to_consume_problematic_metadata_sample_list[@]} -gt 0] ; then
+    if [ ${#succeeded_to_consume_problematic_events_sample_list[@]} -gt 0 ] || \
+       [ ${#failed_to_consume_problematic_events_sample_list[@]} -gt 0 ] || \
+       [ ${#succeeded_to_consume_problematic_metadata_sample_list[@]} -gt 0 ] || \
+       [ ${#failed_to_consume_problematic_metadata_sample_list[@]} -gt 0 ] ; then
             return 0
     fi
     return 1
