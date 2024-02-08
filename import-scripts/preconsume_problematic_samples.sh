@@ -32,7 +32,7 @@ function make_tmp_dir_if_necessary() {
         fi
     else
         # Remove files from last fetch
-        rm "$TMP_DIR/*"
+        rm $TMP_DIR/*
     fi
 }
 
