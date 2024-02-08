@@ -116,25 +116,27 @@ function attempt_to_consume_problematic_sample() {
     dmp_token="$1"
     sample_id="$2"
     type_of_problem="$3" # pass 'e' for event problems and 'm' for metadata problems
+    register_attempt="$4"
     HTTP_STATUS=$(curl -sSL -w '%{http_code}' -o "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" "${CVR_CONSUME_SAMPLE_URL_PREFIX}/${dmp_token}/${sample_id}")
     if [[ $HTTP_STATUS =~ ^2 ]] ; then
         if ! grep '"error": "' "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" ; then
             if grep --silent 'affectedRows": 1' "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" ; then
-                register_successful_consumption "${sample_id}" "$type_of_problem"
+                register_successful_consumption "${sample_id}" "$type_of_problem" "$register_attempt"
                 continue
             fi
         fi
     fi
-    register_failed_consumption "${sample_id}" "$type_of_problem"
+    register_failed_consumption "${sample_id}" "$type_of_problem" "$register_attempt"
 }
 
 function attempt_to_consume_problematic_samples() {
+    register_attempt=${1:-true}
     dmp_token=$(curl $CVR_CREATE_SESSION_URL | grep session_id | sed -E 's/",[[:space:]]*$//' | sed -E 's/.*"//')
     while read sample_id ; do
-        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "e"
+        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "e" "$register_attempt"
     done < ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
     while read sample_id ; do
-        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "m"
+        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "m" "$register_attempt"
     done < ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
 }
 
@@ -146,7 +148,8 @@ function consume_hardcoded_samples() {
         echo "P-0025907-N01-IM6" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
     fi
     if [ -f "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}" ] ; then
-        attempt_to_consume_problematic_samples
+        # Won't register attempt (so it doesn't show up in logs every night)
+        attempt_to_consume_problematic_samples false
     fi
 }
 
@@ -155,9 +158,9 @@ function need_to_log_actions {
        [ ${#failed_to_consume_problematic_events_sample_list[@]} -gt 0] || \
        [ ${#succeeded_to_consume_problematic_metadata_sample_list[@]} -gt 0] || \
        [ ${#failed_to_consume_problematic_metadata_sample_list[@]} -gt 0] ; then
-            return 1
+            return 0
     fi
-    return 0
+    return 1
 }
 
 function log_actions() {
@@ -186,10 +189,10 @@ date
 check_args
 make_tmp_dir_if_necessary
 set_cvr_fetch_url_prefix
-failed_to_consume_problematic_events_sample_list=() # temporary code
-succeeded_to_consume_problematic_events_sample_list=() # temporary code
-failed_to_consume_problematic_metadata_sample_list=() # temporary code
-succeeded_to_consume_problematic_metadata_sample_list=() # temporary code
+failed_to_consume_problematic_events_sample_list=()
+succeeded_to_consume_problematic_events_sample_list=()
+failed_to_consume_problematic_metadata_sample_list=()
+succeeded_to_consume_problematic_metadata_sample_list=()
 while :
 do
     consume_hardcoded_samples # temporary code
