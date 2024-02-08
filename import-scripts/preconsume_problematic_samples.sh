@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 COHORT=$1
+FETCH_NUM=1
 TMP_DIR="/data/portal-cron/tmp/preconsume_problematic_samples"
 CVR_FETCH_PROPERTIES_FILEPATH="/data/portal-cron/git-repos/pipelines-configuration/properties/fetch-cvr/application.properties"
 CVR_USERNAME=$(grep 'dmp.user_name' ${CVR_FETCH_PROPERTIES_FILEPATH} | head -n 1 | sed -E s/[^=][^=]*=//)
@@ -13,8 +14,7 @@ CVR_HEME_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_heme_variants"
 CVR_ARCHER_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_archer_retrieve_variants"
 CVR_ACCESS_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_access_variants"
 CVR_CONSUME_SAMPLE_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_consume_sample"
-FETCH_NUM=0
-FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_${COHORT}_${FETCH_NUM}.json"
+FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_${COHORT}.json"
 CONSUME_IDS_FILEPATH="$TMP_DIR/${COHORT}_consume.ids"
 PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_event_consume_${COHORT}.ids"
 PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_metadata_consume_${COHORT}.ids"
@@ -58,7 +58,7 @@ function set_cvr_fetch_url_prefix() {
 }
 
 function fetch_currently_queued_samples() {
-    FETCH_NUM=$((FETCH_NUM+1))
+    FETCH_OUTPUT_FILEPATH="${FETCH_OUTPUT_FILEPATH}_${FETCH_NUM}"
     dmp_token=$(curl $CVR_CREATE_SESSION_URL | grep session_id | sed -E 's/",[[:space:]]*$//' | sed -E 's/.*"//')
     curl "${CVR_FETCH_URL_PREFIX}/${dmp_token}/0" > ${FETCH_OUTPUT_FILEPATH}
 }
@@ -110,7 +110,6 @@ function attempt_to_consume_problematic_sample() {
     dmp_token="$1"
     sample_id="$2"
     type_of_problem="$3" # pass 'e' for event problems and 'm' for metadata problems
-    #register_failures="$4"
     HTTP_STATUS=$(curl -sSL -w '%{http_code}' -o "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" "${CVR_CONSUME_SAMPLE_URL_PREFIX}/${dmp_token}/${sample_id}")
     if [[ $HTTP_STATUS =~ ^2 ]] ; then
         if ! grep '"error": "' "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" ; then
@@ -120,19 +119,16 @@ function attempt_to_consume_problematic_sample() {
             fi
         fi
     fi
-    #if [ "$register_failures" == true ] ; then
     register_failed_consumption "${sample_id}" "$type_of_problem"
-    #fi
 }
 
 function attempt_to_consume_problematic_samples() {
-    #register_failures=${1:-true}
     dmp_token=$(curl $CVR_CREATE_SESSION_URL | grep session_id | sed -E 's/",[[:space:]]*$//' | sed -E 's/.*"//')
     while read sample_id ; do
-        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "e" "$register_failures"
+        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "e"
     done < ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
     while read sample_id ; do
-        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "m" #"$register_failures"
+        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "m"
     done < ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
 }
 
@@ -144,8 +140,7 @@ function consume_hardcoded_samples() {
         echo "P-0025907-N01-IM6" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
     fi
     if [ -f "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}" ] ; then
-        # Won't report if unsuccessful (so it doesn't show up in reports every night)
-        attempt_to_consume_problematic_samples #false
+        attempt_to_consume_problematic_samples
     fi
 }
 
@@ -191,6 +186,7 @@ do
     #failed_to_consume_problematic_metadata_sample_list=()
     #succeeded_to_consume_problematic_metadata_sample_list=()
     attempt_to_consume_problematic_samples # has to be in loop
+    ((FETCH_NUM++))
 done
 log_actions
 #post_slack_message
