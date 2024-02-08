@@ -181,12 +181,8 @@ do
     detect_samples_with_problematic_events
     detect_samples_with_problematic_metadata
     exit_if_no_problems_detected
-    #failed_to_consume_problematic_events_sample_list=()
-    #succeeded_to_consume_problematic_events_sample_list=()
-    #failed_to_consume_problematic_metadata_sample_list=()
-    #succeeded_to_consume_problematic_metadata_sample_list=()
-    attempt_to_consume_problematic_samples # has to be in loop
+    attempt_to_consume_problematic_samples
     ((FETCH_NUM++))
 done
 log_actions
-#post_slack_message
+post_slack_message
