@@ -2,7 +2,7 @@
 
 COHORT=$1
 FETCH_NUM=1
-TMP_DIR="/data/portal-cron/tmp/preconsume_problematic_samples"
+TMP_DIR="/data/portal-cron/tmp/preconsume_problematic_samples/${COHORT}"
 CVR_FETCH_PROPERTIES_FILEPATH="/data/portal-cron/git-repos/pipelines-configuration/properties/fetch-cvr/application.properties"
 CVR_USERNAME=$(grep 'dmp.user_name' ${CVR_FETCH_PROPERTIES_FILEPATH} | head -n 1 | sed -E s/[^=][^=]*=//)
 CVR_PASSWORD=$(grep 'dmp.password' ${CVR_FETCH_PROPERTIES_FILEPATH} | head -n 1 | sed -E s/[^=][^=]*=//)
@@ -14,11 +14,11 @@ CVR_HEME_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_heme_variants"
 CVR_ARCHER_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_archer_retrieve_variants"
 CVR_ACCESS_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_access_variants"
 CVR_CONSUME_SAMPLE_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_consume_sample"
-FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_${COHORT}.json"
-CONSUME_IDS_FILEPATH="$TMP_DIR/${COHORT}_consume.ids"
-PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_event_consume_${COHORT}.ids"
-PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_metadata_consume_${COHORT}.ids"
-CONSUME_ATTEMPT_OUTPUT_FILEPATH="$TMP_DIR/consume_attempt_output_${COHORT}.json"
+FETCH_OUTPUT_FILEPATH=""
+CONSUME_IDS_FILEPATH="$TMP_DIR/consume.ids"
+PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_event_consume.ids"
+PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_metadata_consume.ids"
+CONSUME_ATTEMPT_OUTPUT_FILEPATH="$TMP_DIR/consume_attempt_output.json"
 DETECT_SAMPLES_WITH_NULL_DP_AD_FIELDS_SCRIPT_FILEPATH=/data/portal-cron/scripts/detect_samples_with_null_dp_ad_fields.py
 DETECT_SAMPLES_WITH_PROBLEMATIC_METADATA_SCRIPT_FILEPATH=/data/portal-cron/scripts/detect_samples_with_problematic_metadata.py
 CVR_MONITOR_SLACK_URI_FILE="/data/portal-cron/pipelines-credentials/cvr-monitor-webhook-uri"
@@ -30,6 +30,9 @@ function make_tmp_dir_if_necessary() {
             echo "Error : could not create tmp directory '$TMP_DIR'" >&2
             exit 1
         fi
+    else
+        # Remove files from last fetch
+        rm "$TMP_DIR/*"
     fi
 }
 
@@ -58,7 +61,7 @@ function set_cvr_fetch_url_prefix() {
 }
 
 function fetch_currently_queued_samples() {
-    FETCH_OUTPUT_FILEPATH="${FETCH_OUTPUT_FILEPATH}_${FETCH_NUM}"
+    FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_${FETCH_NUM}.json"
     dmp_token=$(curl $CVR_CREATE_SESSION_URL | grep session_id | sed -E 's/",[[:space:]]*$//' | sed -E 's/.*"//')
     curl "${CVR_FETCH_URL_PREFIX}/${dmp_token}/0" > ${FETCH_OUTPUT_FILEPATH}
 }
