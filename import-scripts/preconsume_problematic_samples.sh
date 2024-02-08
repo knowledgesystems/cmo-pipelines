@@ -74,10 +74,13 @@ function detect_samples_with_problematic_metadata() {
     $DETECT_SAMPLES_WITH_PROBLEMATIC_METADATA_SCRIPT_FILEPATH ${FETCH_OUTPUT_FILEPATH} ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
 }
 
-function exit_if_no_problems_detected() {
+function problems_were_detected() {
     if [ ! -s ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH} ] && [ ! -s ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH} ] ; then
-        echo "no problematic samples detected .. exiting"
-        exit 0
+        echo "no problematic samples detected"
+        return 1
+    else
+        echo "problematic samples were detected"
+        return 0
     fi
 }
 
@@ -147,6 +150,16 @@ function consume_hardcoded_samples() {
     fi
 }
 
+function need_to_log_actions {
+    if [ ${#succeeded_to_consume_problematic_events_sample_list[@]} -gt 0] || \
+       [ ${#failed_to_consume_problematic_events_sample_list[@]} -gt 0] || \
+       [ ${#succeeded_to_consume_problematic_metadata_sample_list[@]} -gt 0] || \
+       [ ${#failed_to_consume_problematic_metadata_sample_list[@]} -gt 0] ; then
+            return 1
+    fi
+    return 0
+}
+
 function log_actions() {
     date
     echo -e "${COHORT^^} Problematic Samples"
@@ -183,9 +196,13 @@ do
     fetch_currently_queued_samples
     detect_samples_with_problematic_events
     detect_samples_with_problematic_metadata
-    exit_if_no_problems_detected
+    if ! problems_were_detected ; then
+        break
+    fi
     attempt_to_consume_problematic_samples
     ((FETCH_NUM++))
 done
-log_actions
-post_slack_message
+if need_to_log_actions ; then
+    log_actions
+    post_slack_message
+fi
