@@ -108,6 +108,7 @@ function attempt_to_consume_problematic_sample() {
     dmp_token="$1"
     sample_id="$2"
     type_of_problem="$3" # pass 'e' for event problems and 'm' for metadata problems
+    register_failures="$4"
     HTTP_STATUS=$(curl -sSL -w '%{http_code}' -o "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" "${CVR_CONSUME_SAMPLE_URL_PREFIX}/${dmp_token}/${sample_id}")
     if [[ $HTTP_STATUS =~ ^2 ]] ; then
         if ! grep '"error": "' "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" ; then
@@ -117,16 +118,19 @@ function attempt_to_consume_problematic_sample() {
             fi
         fi
     fi
-    register_failed_consumption "${sample_id}" "$type_of_problem"
+    if [ "$register_failures" == true ] ; then
+        register_failed_consumption "${sample_id}" "$type_of_problem"
+    fi
 }
 
 function attempt_to_consume_problematic_samples() {
+    register_failures=${1:-true}
     dmp_token=$(curl $CVR_CREATE_SESSION_URL | grep session_id | sed -E 's/",[[:space:]]*$//' | sed -E 's/.*"//')
     while read sample_id ; do
-        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "e"
+        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "e" "$register_failures"
     done < ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
     while read sample_id ; do
-        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "m"
+        attempt_to_consume_problematic_sample "$dmp_token" "$sample_id" "m" "$register_failures"
     done < ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
 }
 
@@ -134,12 +138,12 @@ function consume_hardcoded_samples() {
     rm -f ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH} ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
     touch ${PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH}
     touch ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
-
     if [ "$COHORT" == "mskimpact" ] ; then
         echo "P-0025907-N01-IM6" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
     fi
     if [ -f "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}" ] ; then
-        attempt_to_consume_problematic_samples
+        # Won't report if unsuccessful (so it doesn't show up in reports every night)
+        attempt_to_consume_problematic_samples false
     fi
 }
 
@@ -168,20 +172,23 @@ function post_slack_message() {
 date
 check_args
 make_tmp_dir_if_necessary
+set_cvr_fetch_url_prefix
 failed_to_consume_problematic_events_sample_list=() # temporary code
 succeeded_to_consume_problematic_events_sample_list=() # temporary code
 failed_to_consume_problematic_metadata_sample_list=() # temporary code
 succeeded_to_consume_problematic_metadata_sample_list=() # temporary code
-set_cvr_fetch_url_prefix
-consume_hardcoded_samples # temporary code
-fetch_currently_queued_samples
-detect_samples_with_problematic_events
-detect_samples_with_problematic_metadata
-exit_if_no_problems_detected
-failed_to_consume_problematic_events_sample_list=()
-succeeded_to_consume_problematic_events_sample_list=()
-failed_to_consume_problematic_metadata_sample_list=()
-succeeded_to_consume_problematic_metadata_sample_list=()
-attempt_to_consume_problematic_samples
+while :
+do
+    consume_hardcoded_samples # temporary code
+    fetch_currently_queued_samples
+    detect_samples_with_problematic_events
+    detect_samples_with_problematic_metadata
+    exit_if_no_problems_detected
+    #failed_to_consume_problematic_events_sample_list=()
+    #succeeded_to_consume_problematic_events_sample_list=()
+    #failed_to_consume_problematic_metadata_sample_list=()
+    #succeeded_to_consume_problematic_metadata_sample_list=()
+    attempt_to_consume_problematic_samples # has to be in loop
+done
 log_actions
 post_slack_message
