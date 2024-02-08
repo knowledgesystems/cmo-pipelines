@@ -121,12 +121,16 @@ function attempt_to_consume_problematic_sample() {
     if [[ $HTTP_STATUS =~ ^2 ]] ; then
         if ! grep '"error": "' "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" ; then
             if grep --silent 'affectedRows": 1' "$CONSUME_ATTEMPT_OUTPUT_FILEPATH" ; then
-                register_successful_consumption "${sample_id}" "$type_of_problem" "$register_attempt"
-                continue
+                if [ "$register_attempt" == true ] ; then
+                    register_successful_consumption "${sample_id}" "$type_of_problem"
+                    continue
+                fi
             fi
         fi
     fi
-    register_failed_consumption "${sample_id}" "$type_of_problem" "$register_attempt"
+    if [ "$register_attempt" == true ] ; then
+        register_failed_consumption "${sample_id}" "$type_of_problem"
+    fi
 }
 
 function attempt_to_consume_problematic_samples() {
