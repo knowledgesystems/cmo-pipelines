@@ -13,7 +13,8 @@ CVR_HEME_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_heme_variants"
 CVR_ARCHER_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_archer_retrieve_variants"
 CVR_ACCESS_FETCH_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_retrieve_access_variants"
 CVR_CONSUME_SAMPLE_URL_PREFIX="${CVR_TUMOR_SERVER}cbio_consume_sample"
-FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_${COHORT}.json"
+FETCH_NUM=0
+FETCH_OUTPUT_FILEPATH="$TMP_DIR/cvr_data_${COHORT}_${FETCH_NUM}.json"
 CONSUME_IDS_FILEPATH="$TMP_DIR/${COHORT}_consume.ids"
 PROBLEMATIC_EVENT_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_event_consume_${COHORT}.ids"
 PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_metadata_consume_${COHORT}.ids"
@@ -57,8 +58,9 @@ function set_cvr_fetch_url_prefix() {
 }
 
 function fetch_currently_queued_samples() {
+    FETCH_NUM=$((FETCH_NUM+1))
     dmp_token=$(curl $CVR_CREATE_SESSION_URL | grep session_id | sed -E 's/",[[:space:]]*$//' | sed -E 's/.*"//')
-    curl "${CVR_FETCH_URL_PREFIX}/${dmp_token}/0" > "${FETCH_OUTPUT_FILEPATH}_${FETCH_NUM}"
+    curl "${CVR_FETCH_URL_PREFIX}/${dmp_token}/0" > ${FETCH_OUTPUT_FILEPATH}
 }
 
 function detect_samples_with_problematic_events() {
@@ -177,11 +179,10 @@ failed_to_consume_problematic_events_sample_list=() # temporary code
 succeeded_to_consume_problematic_events_sample_list=() # temporary code
 failed_to_consume_problematic_metadata_sample_list=() # temporary code
 succeeded_to_consume_problematic_metadata_sample_list=() # temporary code
-fetch_num=1
 while :
 do
     consume_hardcoded_samples # temporary code
-    fetch_currently_queued_samples $fetch_num
+    fetch_currently_queued_samples
     detect_samples_with_problematic_events
     detect_samples_with_problematic_metadata
     exit_if_no_problems_detected
