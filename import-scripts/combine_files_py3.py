@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 
 """ combine_files_py3.py
 This script merges an arbitrary number of files into one combined file.
@@ -8,9 +8,9 @@ for the msk_solid_heme cohort. This merged DDP file is only used for GENIE cohor
 - merge cvr/seq_date.txt files from MSK-IMPACT, HEMEPACT, ACCESS to generate a merged seq_date file
 for the msk_solid_heme cohort. This merged seq_date.txt file is only used for the Sophia cohort.
 Usage:
-    python combine_files_py3.py --input-files $FILE1 $FILE2 <...> --output-file $OUTPUT_FILE
+    python3 combine_files_py3.py --input-files $FILE1 $FILE2 <...> --output-file $OUTPUT_FILE
 Example:
-    python combine_files_py3.py --input-files mskimpact/ddp/ddp_naaccr.txt mskaccess/ddp/ddp_naaccr.txt mskimpact_heme/ddp/ddp_naaccr.txt \
+    python3 combine_files_py3.py --input-files mskimpact/ddp/ddp_naaccr.txt mskaccess/ddp/ddp_naaccr.txt mskimpact_heme/ddp/ddp_naaccr.txt \
         --output-file merged_ddp_naaccr.txt
 """
 
