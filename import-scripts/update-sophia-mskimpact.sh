@@ -110,12 +110,19 @@ function add_seq_date_to_sample_file() {
     MSK_IMPACT_SEQ_DATE="$MSK_IMPACT_DATA_HOME/$SEQ_DATE_FILENAME"
     MERGED_SEQ_DATE="./merged_seq_date.txt"
 
+    MERGED_SEQ_DATE_FORMATTED="./merged_seq_date_formatted.txt"
+    DATE_COLUMN="SEQ_DATE"
+
     SAMPLE_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
     SAMPLE_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
     KEY_COLUMNS="SAMPLE_ID PATIENT_ID"
 
+    # Merge all 3 seq date files
     $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$MSK_ACCESS_SEQ_DATE" "$MSK_HEMEPACT_SEQ_DATE" "$MSK_IMPACT_SEQ_DATE" -o "$MERGED_SEQ_DATE" -m outer &&
-	$PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$MERGED_SEQ_DATE" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
+	# Convert SEQ_DATE format to YYYY-MM-DD
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/convert_date_col_format_py3.py -i "$MERGED_SEQ_DATE" -o "$MERGED_SEQ_DATE_FORMATTED" -c "$DATE_COLUMN" &&
+    # Add SEQ_DATE to sample file
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$MERGED_SEQ_DATE_FORMATTED" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
 
     mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
 
