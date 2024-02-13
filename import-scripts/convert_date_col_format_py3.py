@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# TODO what happens if seq_date column empty?
+
 """ convert_date_col_format_py3.py
 This script reads in a column containing a date value of a given format from a given file
 and rewrites it as a different format.
@@ -18,12 +20,23 @@ from combine_files_py3 import write_tsv
 
 ERROR_FILE = sys.stderr
 
+"""
+def convert_date_format(input_date):
+    dt = datetime.strptime(input_date, input_date_pattern)
+    return dt.strftime(output_date_pattern)
+
+    d = datetime.strptime("Tue, 14 Jan 2014 19:21:03 GMT", "%a, %d %b %Y %H:%M:%S %Z")
+    d.strftime('%Y-%m-%d')
+"""
 
 def convert_date_format(input_file, output_file, column, input_date_format, output_date_format, sep="\t"):
     df = pd.read_table(
         input_file,
         sep=sep,
         comment="#",
+        float_precision="round_trip",
+        na_filter=False,
+        low_memory=False,
     )
 
     # Read in current date format
