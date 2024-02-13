@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# TODO what happens if seq_date column empty?
-
 """ convert_date_col_format_py3.py
 This script reads in a column containing a date value of a given format from a given file
 and rewrites it as a different format.
@@ -32,7 +30,8 @@ def convert_date_format(input_file, output_file, column, input_date_format, outp
     )
 
     # Read in current date format
-    df[column] = pd.to_datetime(df[column], format=input_date_format)
+    # Errors in conversion will be ignored
+    df[column] = pd.to_datetime(df[column], format=input_date_format, errors='coerce')
 
     # Change date format
     df[column] = df[column].dt.strftime(output_date_format)
