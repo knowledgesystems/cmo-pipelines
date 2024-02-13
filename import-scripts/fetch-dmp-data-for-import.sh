@@ -254,7 +254,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_IMPACT_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR Germline"
             fi
         fi
-        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt $MSK_IMPACT_DATA_HOME/cvr/seq_data.txt mskimpact
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -322,7 +321,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_HEMEPACT_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: CVR Germline"
             fi
         fi
-        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt $MSK_HEMEPACT_DATA_HOME/cvr/seq_data.txt hemepact
     fi
     # -----------------------------------------------------------------------------------------------------------
     # ARCHER DATA FETCHES
@@ -359,7 +357,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED dataset"
             fi
         fi
-        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/seq_data.txt mskarcher
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -397,7 +394,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_ACCESS_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS dataset"
             fi
         fi
-        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt $MSK_ACCESS_DATA_HOME/cvr/seq_data.txt mskaccess
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -796,6 +792,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     #--------------------------------------------------------------
     # CDM Fetch is optional -- does not break import if it fails, but will send notif
+    sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh
     echo "fetching clinical demographics & timeline updates from cdsi-cdm repository..."
     $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source cdm --run-date latest
     if [ $? -gt 0 ] ; then
