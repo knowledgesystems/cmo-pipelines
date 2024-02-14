@@ -45,12 +45,14 @@ echo "exporting impact data_clinical_mskimpact_data_clinical_ddp_demographics.tx
 export_project_from_redcap $MSK_IMPACT_TMP_DIR mskimpact_data_clinical_ddp_demographics
 if [ $? -gt 0 ] ; then
     echo "ERROR: MSKIMPACT Redcap export of mskimpact_data_clinical_ddp_demographics"
+    exit 1
 fi
 
 echo "exporting impact data_clinical.txt from redcap"
 export_project_from_redcap $MSK_IMPACT_TMP_DIR mskimpact_data_clinical_cvr
 if [ $? -gt 0 ] ; then
     echo "ERROR: MSKIMPACT Redcap export of mskimpact_data_clinical_cvr"
+    exit 1
 fi
 
 printTimeStampedDataProcessingStepMessage "DDP demographics fetch for mskimpact"
@@ -63,8 +65,8 @@ fi
 
 $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact -p $mskimpact_dmp_pids_file -s $MSK_IMPACT_DATA_HOME/cvr/seq_date.txt -f ageAtSeqDate -o $MSK_IMPACT_TMP_DIR -r $MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
 if [ $? -gt 0 ] ; then
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     echo "ERROR: MSKIMPACT DDP Demographics Fetch"
+    exit 1
 fi
 
 # --------------------------------------------------------------------------------------------------------------
@@ -74,12 +76,14 @@ echo "exporting heme data_clinical_hemepact_data_clinical_ddp_demographics.txt f
 export_project_from_redcap $MSK_HEMEPACT_TMP_DIR hemepact_data_clinical_ddp_demographics
 if [ $? -gt 0 ] ; then
     echo "ERROR: HEMEPACT Redcap export of hemepact_data_clinical_ddp_demographics"
+    exit 1
 fi
 
 echo "exporting heme data_clinical.txt from redcap"
 export_project_from_redcap $MSK_HEMEPACT_TMP_DIR hemepact_data_clinical
 if [ $? -gt 0 ] ; then
     echo "ERROR: HEMEPACT Redcap export of hemepact_data_clinical_cvr"
+    exit 1
 fi
 
 printTimeStampedDataProcessingStepMessage "DDP demographics fetch for hemepact"
@@ -92,8 +96,8 @@ fi
 
 $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskimpact_heme -p $mskimpact_heme_dmp_pids_file -s $MSK_HEMEPACT_DATA_HOME/cvr/seq_date.txt -f ageAtSeqDate -o $MSK_HEMEPACT_TMP_DIR -r $HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT
 if [ $? -gt 0 ] ; then
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     echo "ERROR: HEMEPACT DDP Demographics Fetch"
+    exit 1
 fi
 
 # --------------------------------------------------------------------------------------------------------------
@@ -103,12 +107,14 @@ echo "exporting access data_clinical_mskaccess_data_clinical_ddp_demographics.tx
 export_project_from_redcap $MSK_ACCESS_TMP_DIR mskaccess_data_clinical_ddp_demographics
 if [ $? -gt 0 ] ; then
     echo "ERROR: ACCESS Redcap export of mskaccess_data_clinical_ddp_demographics"
+    exit 1
 fi
 
 echo "exporting access data_clinical.txt from redcap"
 export_project_from_redcap $MSK_ACCESS_TMP_DIR mskaccess_data_clinical
 if [ $? -gt 0 ] ; then
     echo "ERROR: ACCESS Redcap export of mskaccess_data_clinical_cvr"
+    exit 1
 fi
 
 printTimeStampedDataProcessingStepMessage "DDP demographics fetch for access"
@@ -121,8 +127,8 @@ fi
 
 $JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskaccess -p $mskaccess_dmp_pids_file -s $MSK_ACCESS_DATA_HOME/cvr/seq_date.txt -f ageAtSeqDate -o $MSK_ACCESS_TMP_DIR -r $ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT
 if [ $? -gt 0 ] ; then
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     echo "ERROR: ACCESS DDP Demographics Fetch"
+    exit 1
 fi
 
 # --------------------------------------------------------------------------------------------------------------
