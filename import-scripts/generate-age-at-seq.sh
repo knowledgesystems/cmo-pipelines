@@ -4,6 +4,8 @@ MSK_IMPACT_TMP_DIR="$TMP_DIR/mskimpact"
 MSK_HEMEPACT_TMP_DIR="$TMP_DIR/mskhemepact"
 MSK_ACCESS_TMP_DIR="$TMP_DIR/mskaccess"
 
+source /data/portal-cron/scripts/dmp-import-vars-functions.sh
+
 # Create tmp dir if necessary
 if ! [ -d "$TMP_DIR" ] ; then
     if ! mkdir -p "$TMP_DIR" ; then
