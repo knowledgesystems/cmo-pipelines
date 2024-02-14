@@ -6,15 +6,37 @@ MSK_ACCESS_TMP_DIR="$TMP_DIR/mskaccess"
 
 source /data/portal-cron/scripts/dmp-import-vars-functions.sh
 
-# Create tmp dir if necessary
-if ! [ -d "$TMP_DIR" ] ; then
-    if ! mkdir -p "$TMP_DIR" ; then
-        echo "Error : could not create tmp directory '$TMP_DIR'" >&2
+# Create mskimpact tmp dir if necessary
+if ! [ -d "$MSK_IMPACT_TMP_DIR" ] ; then
+    if ! mkdir -p "$MSK_IMPACT_TMP_DIR" ; then
+        echo "Error : could not create tmp directory '$MSK_IMPACT_TMP_DIR'" >&2
         exit 1
     fi
 else
     # Remove files from last fetch
-    rm -rf $TMP_DIR/*
+    rm -rf $MSK_IMPACT_TMP_DIR/*
+fi
+
+# Create mskimpact tmp dir if necessary
+if ! [ -d "$MSK_HEMEPACT_TMP_DIR" ] ; then
+    if ! mkdir -p "$MSK_HEMEPACT_TMP_DIR" ; then
+        echo "Error : could not create tmp directory '$MSK_HEMEPACT_TMP_DIR'" >&2
+        exit 1
+    fi
+else
+    # Remove files from last fetch
+    rm -rf $MSK_HEMEPACT_TMP_DIR/*
+fi
+
+# Create mskimpact tmp dir if necessary
+if ! [ -d "$MSK_ACCESS_TMP_DIR" ] ; then
+    if ! mkdir -p "$MSK_ACCESS_TMP_DIR" ; then
+        echo "Error : could not create tmp directory '$MSK_ACCESS_TMP_DIR'" >&2
+        exit 1
+    fi
+else
+    # Remove files from last fetch
+    rm -rf $MSK_ACCESS_TMP_DIR/*
 fi
 
 # --------------------------------------------------------------------------------------------------------------
