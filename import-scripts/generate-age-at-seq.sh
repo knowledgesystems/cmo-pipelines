@@ -17,7 +17,7 @@ else
     rm -rf $MSK_IMPACT_TMP_DIR/*
 fi
 
-# Create mskimpact tmp dir if necessary
+# Create hemepact tmp dir if necessary
 if ! [ -d "$MSK_HEMEPACT_TMP_DIR" ] ; then
     if ! mkdir -p "$MSK_HEMEPACT_TMP_DIR" ; then
         echo "Error : could not create tmp directory '$MSK_HEMEPACT_TMP_DIR'" >&2
@@ -28,7 +28,7 @@ else
     rm -rf $MSK_HEMEPACT_TMP_DIR/*
 fi
 
-# Create mskimpact tmp dir if necessary
+# Create mskaccess tmp dir if necessary
 if ! [ -d "$MSK_ACCESS_TMP_DIR" ] ; then
     if ! mkdir -p "$MSK_ACCESS_TMP_DIR" ; then
         echo "Error : could not create tmp directory '$MSK_ACCESS_TMP_DIR'" >&2
@@ -138,11 +138,13 @@ AGE_AT_SEQ_FILENAME="data_clinical_ddp_age_at_seq.txt"
 MSK_IMPACT_AGE_AT_SEQ="$MSK_IMPACT_TMP_DIR/$AGE_AT_SEQ_FILENAME"
 MSK_HEMEPACT_AGE_AT_SEQ="$MSK_HEMEPACT_TMP_DIR/$AGE_AT_SEQ_FILENAME"
 MSK_ACCESS_AGE_AT_SEQ="$MSK_ACCESS_TMP_DIR/$AGE_AT_SEQ_FILENAME"
-MERGED_SEQ_DATE="$TMP_DIR/merged_age_at_seq.txt"
+MERGED_AGE_AT_SEQ="$TMP_DIR/merged_age_at_seq.txt"
 
 SAMPLE_INPUT_FILEPATH="$MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt"
 SAMPLE_OUTPUT_FILEPATH="$TMP_DIR/data_clinical_sample.txt"
 KEY_COLUMNS="SAMPLE_ID PATIENT_ID"
+CDD_URL="https://cdd.cbioportal.mskcc.org/api/"
 
 $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$MSK_IMPACT_AGE_AT_SEQ" "$MSK_HEMEPACT_AGE_AT_SEQ" "$MSK_ACCESS_AGE_AT_SEQ" -o "$MERGED_AGE_AT_SEQ" -m outer &&
-$PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$MERGED_AGE_AT_SEQ" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left
+$PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$MERGED_AGE_AT_SEQ" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
+$PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $SAMPLE_OUTPUT_FILEPATH -c "$CDD_URL" -s mskimpact
