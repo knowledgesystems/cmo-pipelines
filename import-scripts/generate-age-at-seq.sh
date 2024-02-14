@@ -55,7 +55,7 @@ fi
 
 printTimeStampedDataProcessingStepMessage "DDP demographics fetch for mskimpact"
 mskimpact_dmp_pids_file=$MSK_IMPACT_TMP_DIR/mskimpact_patient_list.txt
-awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $mskimpact_dmp_pids_file
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_IMPACT_TMP_DIR/data_clinical_mskimpact_data_clinical_cvr.txt | sort | uniq > $mskimpact_dmp_pids_file
 MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $MSK_IMPACT_TMP_DIR/data_clinical_mskimpact_data_clinical_ddp_demographics.txt)
 if [ $MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
     MSKIMPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
@@ -84,7 +84,7 @@ fi
 
 printTimeStampedDataProcessingStepMessage "DDP demographics fetch for hemepact"
 mskimpact_heme_dmp_pids_file=$MSK_HEMEPACT_TMP_DIR/mskimpact_heme_patient_list.txt
-awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt | sort | uniq > $mskimpact_heme_dmp_pids_file
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_HEMEPACT_TMP_DIR/data_clinical_hemepact_data_clinical.txt | sort | uniq > $mskimpact_heme_dmp_pids_file
 HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $MSK_HEMEPACT_TMP_DIR/data_clinical_hemepact_data_clinical_ddp_demographics.txt)
 if [ $HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
     HEMEPACT_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
@@ -113,7 +113,7 @@ fi
 
 printTimeStampedDataProcessingStepMessage "DDP demographics fetch for access"
 mskaccess_dmp_pids_file=$MSK_ACCESS_TMP_DIR/mskaccess_patient_list.txt
-awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt | sort | uniq > $mskaccess_dmp_pids_file
+awk -F'\t' 'NR==1 { for (i=1; i<=NF; i++) { f[$i] = i } }{ if ($f["PATIENT_ID"] != "PATIENT_ID") { print $(f["PATIENT_ID"]) } }' $MSK_ACCESS_TMP_DIR/data_clinical_mskaccess_data_clinical.txt | sort | uniq > $mskaccess_dmp_pids_file
 ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $MSK_ACCESS_TMP_DIR/data_clinical_mskaccess_data_clinical_ddp_demographics.txt)
 if [ $ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
     ACCESS_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
