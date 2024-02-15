@@ -143,8 +143,7 @@ MERGED_AGE_AT_SEQ="$TMP_DIR/merged_age_at_seq.txt"
 SAMPLE_INPUT_FILEPATH="$MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt"
 SAMPLE_OUTPUT_FILEPATH="$TMP_DIR/data_clinical_sample.txt"
 KEY_COLUMNS="SAMPLE_ID PATIENT_ID"
-CDD_URL="https://cdd.cbioportal.mskcc.org/api/"
 
 $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$MSK_IMPACT_AGE_AT_SEQ" "$MSK_HEMEPACT_AGE_AT_SEQ" "$MSK_ACCESS_AGE_AT_SEQ" -o "$MERGED_AGE_AT_SEQ" -m outer &&
 $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$MERGED_AGE_AT_SEQ" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
-$PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $SAMPLE_OUTPUT_FILEPATH -c "$CDD_URL" -s mskimpact
+$PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $SAMPLE_OUTPUT_FILEPATH -s mskimpact -i /data/portal-cron/scripts/cdm_metadata.json
