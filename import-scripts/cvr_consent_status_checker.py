@@ -41,6 +41,11 @@ def fetch_expected_consent_status_values():
     for field,url in CVR_CONSENT_STATUS_ENDPOINTS.items():
         response = urllib.urlopen(url)
         data = json.loads(response.read())
+
+        if data['status'] != "SUCCESS" or len(data['cases']) == 0:
+            print >> ERROR_FILE, "Could not retrieve %s consent status from germline server at %s. No action will be taken." % (field, url)
+            return None
+
         consent_values = {}
         for pt,status in data['cases'].items():
             if status:
@@ -192,6 +197,16 @@ def main():
         sys.exit(2)
 
     expected_consent_status_values = fetch_expected_consent_status_values()
+    if expected_consent_status_values is None:
+        print >> ERROR_FILE, "Unable to fetch consent status values, exiting..."
+        email_consent_status_report(
+            samples_to_requeue={},
+            samples_to_remove={},
+            gmail_username=gmail_username,
+            gmail_password=gmail_password
+        )
+        sys.exit(2)
+
     cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password)
 
 if __name__ == '__main__':
