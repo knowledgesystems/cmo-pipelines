@@ -73,9 +73,7 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
     samples_to_remove = {}
 
     # Iterates thru each record in the data file.
-    # Remove samples if their Part A or Part C consent status has changed,
-    # BUT if the % changed is above some threshold, assume something is up with
-    # the server and don't take any action.
+    # Remove samples if their Part A or Part C consent status has changed.
     with open(cvr_clinical_file, 'rU') as data_file:
         lines = data_file.readlines()
         header = map(str.strip, lines.pop().split('\t'))
@@ -84,12 +82,14 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
         ]
         for field in CVR_CONSENT_STATUS_ENDPOINTS.keys():
             consents_changed = {
-                # sample ID => current consent status
+                # Sample ID => current consent status
                 record['SAMPLE_ID']: record[field]
                 for record in records
                 if record[field] != expected_consent_status_values[field].get(record['PATIENT_ID'], 'NO')
             }
             pct_consents_changed = 100*(len(consents_changed) / len(records))
+            # If the % of records changed is above some threshold, assume something is up
+            # with the server and don't take any action. (20 is somewhat arbitrary)
             cutoff = 20
             if pct_consents_changed > cutoff:
                 print >> ERROR_FILE, "WARNING: More than %s%% of samples have had their %s consent status changed. No action will be taken." % (cutoff, field)
@@ -100,11 +100,11 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
                 # if patient has granted consent then add samples to requeue list
                 # otherwise if patient has since revoked consent then add sample to
                 # set of samples to remove from data set
-                if current_consent == 'NO':
+                if current_consent == 'NO': # expected_consent == 'YES'
                     requeue_list = samples_to_requeue.get(field, set())
                     requeue_list.add(sample_id)
                     samples_to_requeue[field] = requeue_list
-                elif current_consent == 'YES':
+                elif current_consent == 'YES': # expected_consent == 'NO'
                     remove_list = samples_to_remove.get(field, set())
                     remove_list.add(sample_id)
                     samples_to_remove[field] = remove_list
