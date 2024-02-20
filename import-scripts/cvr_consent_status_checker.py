@@ -43,8 +43,8 @@ def fetch_expected_consent_status_values():
         data = json.loads(response.read())
 
         consent_values = {}
-        if data['status'] != "SUCCESS":
-            print >> ERROR_FILE, "WARNING: Could not retrieve %s consent status from germline server at %s" % (field, url)
+        if 'status' not in data or data['status'] != "SUCCESS":
+            print >> ERROR_FILE, "WARNING: Could not retrieve %s consent values from germline server at %s" % (field, url)
         else:
             for pt,status in data['cases'].items():
                 if status:
@@ -71,7 +71,7 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
     '''
     samples_to_requeue = {}
     samples_to_remove = {}
-    
+
     # Iterates thru each record in the data file.
     # Remove samples if their Part A or Part C consent status has changed,
     # BUT if the % changed is above some threshold, assume something is up with
