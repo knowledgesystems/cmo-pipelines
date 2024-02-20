@@ -20,6 +20,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     IMPORT_STATUS_HEME=0
     IMPORT_STATUS_ARCHER=0
     IMPORT_STATUS_ACCESS=0
+    IMPORT_STATUS_ACCESSHEME=0
 
     # Flags for ARCHER structural variants merge failure
     ARCHER_MERGE_IMPACT_FAIL=0
@@ -30,12 +31,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     EXPORT_SUPP_DATE_HEME_FAIL=0
     EXPORT_SUPP_DATE_ARCHER_FAIL=0
     EXPORT_SUPP_DATE_ACCESS_FAIL=0
+    EXPORT_SUPP_DATE_ACCESSHEME_FAIL=0
 
     # Assume fetchers have failed until they complete successfully
     FETCH_CVR_IMPACT_FAIL=1
     FETCH_CVR_HEME_FAIL=1
     FETCH_CVR_ARCHER_FAIL=1
     FETCH_CVR_ACCESS_FAIL=1
+    FETCH_CVR_ACCESSHEME_FAIL=1
 
     UNLINKED_ARCHER_SUBSET_FAIL=0
     MIXEDPACT_MERGE_FAIL=0
@@ -146,6 +149,13 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap export of mskaccess_data_clinical_supp_date"
     fi
 
+    echo "exporting accessheme data_clinical_supp_date.txt from redcap"
+    export_project_from_redcap $MSK_ACCESSHEME_DATA_HOME mskaccess_heme_data_clinical_supp_date
+    if [ $? -gt 0 ] ; then
+        EXPORT_SUPP_DATE_ACCESSHEME_FAIL=1
+        sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap export of mskaccess_heme_data_clinical_supp_date"
+    fi
+
     # IF WE CANCEL ANY IMPORT, LET REDCAP GET AHEAD OF CURRENCY, BUT DON'T LET THE REPOSITORY HEAD ADVANCE [REVERT]
     printTimeStampedDataProcessingStepMessage "export of cvr clinical files from redcap"
     echo "exporting impact data_clinical.txt from redcap"
@@ -176,6 +186,12 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap export of mskaccess_data_clinical_cvr"
     fi
 
+    echo "exporting accessheme data_clinical.txt from redcap"
+    export_project_from_redcap $MSK_ACCESSHEME_DATA_HOME mskaccess_heme_data_clinical
+    if [ $? -gt 0 ] ; then
+        IMPORT_STATUS_ACCESSHEME=1
+        sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap export of mskaccess_heme_data_clinical_cvr"
+    fi
     # -----------------------------------------------------------------------------------------------------------
     # MSKIMPACT DATA FETCHES
     # TODO: move other pre-import/data-fetch steps here (i.e exporting raw files from redcap)
@@ -397,6 +413,40 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # -----------------------------------------------------------------------------------------------------------
+    # ACCESSHEME DATA FETCHES
+    printTimeStampedDataProcessingStepMessage "ACCESSHEME data processing"
+
+    if [ $IMPORT_STATUS_ACCESSHEME -eq 0 ] ; then
+        # fetch new/updated access samples using CVR Web service (must come after git fetching).
+        drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
+        drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
+        printTimeStampedDataProcessingStepMessage "CVR fetch for accessheme"
+        # access has -b option to block warnings for samples with zero variants (all samples will have zero variants)
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESSHEME_DATA_HOME -p $MSK_ACCESSHEME_PRIVATE_DATA_HOME -n data_clinical_mskaccessheme_data_clinical.txt -i mskaccess_heme -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        if [ $? -gt 0 ] ; then
+            echo "CVR ACCESSHEME fetch failed!"
+            echo "This will not affect importing of mskimpact"
+            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            sendPreImportFailureMessageMskPipelineLogsSlack "ACCESSHEME CVR Fetch"
+            IMPORT_STATUS_ACCESSHEME=1
+        else
+            # check for PHI
+            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ACCESSHEME_PRIVATE_DATA_HOME/cvr_data.json
+            if [ $? -gt 0 ] ; then
+                echo "PHI attributes found in $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json! ACCESSHEME will not be imported!"
+                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+                cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+                sendPreImportFailureMessageMskPipelineLogsSlack "ACCESSHEME PHI attributes scan failed on $MSK_ACCESSHEME_PRIVATE_DATA_HOME/cvr_data.json"
+                IMPORT_STATUS_ACCESSHEME=1
+            else
+                FETCH_CVR_ACCESSHEME_FAIL=0
+                cd $MSK_ACCESSHEME_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESSHEME dataset"
+                cd $MSK_ACCESSHEME_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESSHEME dataset"
+            fi
+        fi
+    fi
+    # -----------------------------------------------------------------------------------------------------------
     # GENERATE CANCER TYPE CASE LISTS AND SUPP DATE ADDED FILES
     # NOTE: Even though cancer type case lists are not needed for MSKIMPACT, HEMEPACT for the portal
     # since they are imported as part of MSKSOLIDHEME - the LYMPHOMASUPERCOHORT subsets these source
@@ -443,6 +493,18 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $EXPORT_SUPP_DATE_ACCESS_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_ACCESS_DATA_HOME "data_clinical_mskaccess_data_clinical.txt" "data_clinical_mskaccess_data_clinical_supp_date.txt"
             cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add data_clinical_mskaccess_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ACCESS Dataset: SUPP DATE ADDED"
+        fi
+        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+    fi
+
+    # generate case lists by cancer type and add "DATE ADDED" info to clinical data for ACCESSHEME
+    if [ $IMPORT_STATUS_ACCESSHEME -eq 0 ] && [ $FETCH_CVR_ACCESSHEME_FAIL -eq 0 ] ; then
+        # TODO: double check args for this
+        addCancerTypeCaseLists $MSK_ACCESSHEME_DATA_HOME "mskaccess_heme" "data_clinical_mskaccess_heme_data_clinical.txt"
+        cd $MSK_ACCESSHEME_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ACCESSHEME Dataset: Case Lists"
+        if [ $EXPORT_SUPP_DATE_ACCESSHEME_FAIL -eq 0 ] ; then
+            addDateAddedData $MSK_ACCESSHEME_DATA_HOME "data_clinical_mskaccess_heme_data_clinical.txt" "data_clinical_mskaccess_heme_data_clinical_supp_date.txt"
+            cd $MSK_ACCESSHEME_DATA_HOME ; $GIT_BINARY add data_clinical_mskaccess_heme_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ACCESSHEME Dataset: SUPP DATE ADDED"
         fi
         cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     fi
@@ -563,6 +625,23 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
     fi
 
+    ## ACCESSHEME imports
+
+    # imports access cvr data into redcap
+    if [ $FETCH_CVR_ACCESSHEME_FAIL -eq 0 ] ; then
+        import_accessheme_cvr_to_redcap
+        if [ $? -gt 0 ] ; then
+            IMPORT_STATUS_ACCESSHEME=1
+            sendPreImportFailureMessageMskPipelineLogsSlack "ACCESSHEME CVR Redcap Import"
+        fi
+        if [ $EXPORT_SUPP_DATE_ACCESSHEME_FAIL -eq 0 ] ; then
+            import_accessheme_supp_date_to_redcap
+            if [ $? -gt 0 ] ; then
+                sendPreImportFailureMessageMskPipelineLogsSlack "ACCESSHEME Supp Date Redcap Import. Project is now empty, data restoration required"
+            fi
+        fi
+    fi
+
     echo "Import into redcap finished"
 
     # -------------------------------------------------------------
@@ -580,8 +659,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     echo "removing raw clinical & timeline files for mskaccess"
     remove_raw_clinical_timeline_data_files $MSK_ACCESS_DATA_HOME
 
+    echo "removing raw clinical & timeline files for mskaccess"
+    remove_raw_clinical_timeline_data_files $MSK_ACCESSHEME_DATA_HOME
+
     # commit raw file cleanup - study staging directories should only contain files for portal import
-    $GIT_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPACT, ARCHER, ACCESS"
+    $GIT_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPACT, ARCHER, ACCESS, ACCESSHEME"
 
     # -------------------------------------------------------------
     # REDCAP EXPORTS - CBIO STAGING FORMATS
@@ -661,6 +743,19 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
     fi
 
+    printTimeStampedDataProcessingStepMessage "export of redcap data for accessheme"
+    if [ $IMPORT_STATUS_ACCESSHEME -eq 0 ] ; then
+        export_stable_id_from_redcap mskaccess_heme $MSK_ACCESSHEME_DATA_HOME
+        if [ $? -gt 0 ] ; then
+            IMPORT_STATUS_ACCESSHEME=1
+            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            sendPreImportFailureMessageMskPipelineLogsSlack "ACCESSHEME Redcap Export"
+        else
+            touch $MSK_ACCESSHEME_CONSUME_TRIGGER
+            cd $MSK_ACCESSHEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest ACCESSHEME Dataset: Clinical and Timeline"
+        fi
+    fi
+
     # -------------------------------------------------------------
     # UNLINKED ARCHER DATA PROCESSING
     # NOTE: This processing should only occur if (1) PROCESS_UNLINKED_ARCHER_STUDY=1 and
@@ -734,9 +829,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo $(date)
     fi
 
-    printTimeStampedDataProcessingStepMessage "merge of MSK-IMPACT, HEMEPACT, ACCESS data for MSKSOLIDHEME"
+    printTimeStampedDataProcessingStepMessage "merge of MSK-IMPACT, HEMEPACT, ACCESS, ACCESSHEME data for MSKSOLIDHEME"
     # MSKSOLIDHEME merge and check exit code
-    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_SOLID_HEME_DATA_HOME -i mskimpact -m "true" -e $MAPPED_ARCHER_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME
+    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_SOLID_HEME_DATA_HOME -i mskimpact -m "true" -e $MAPPED_ARCHER_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME $MSK_ACCESSHEME_DATA_HOME
     if [ $? -gt 0 ] ; then
         echo "MSKSOLIDHEME merge failed! Study will not be updated in the portal."
         echo $(date)
