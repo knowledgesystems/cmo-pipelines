@@ -42,16 +42,16 @@ def fetch_expected_consent_status_values():
         response = urllib.urlopen(url)
         data = json.loads(response.read())
 
-        if data['status'] != "SUCCESS" or len(data['cases']) == 0:
-            print >> ERROR_FILE, "Could not retrieve %s consent status from germline server at %s. No action will be taken." % (field, url)
-            return None
-
         consent_values = {}
-        for pt,status in data['cases'].items():
-            if status:
-                consent_values[pt] = 'YES'
-            else:
-                consent_values[pt] = 'NO'
+        if data['status'] != "SUCCESS":
+            # TODO
+            print >> ERROR_FILE, "Could not retrieve %s consent status from germline server at %s. No action will be taken." % (field, url)
+        else:
+            for pt,status in data['cases'].items():
+                if status:
+                    consent_values[pt] = 'YES'
+                else:
+                    consent_values[pt] = 'NO'
         expected_consent_status_values[field] = consent_values
     return expected_consent_status_values
 
@@ -72,33 +72,40 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
     '''
     samples_to_requeue = {}
     samples_to_remove = {}
+    # Iterates thru each record in the data file
+    # If Part A or Part C consent status has changed, then remove sample
+    # BUT if pct changed above some threshold, then assume something is up with
+    # the server and don't take any action
     with open(cvr_clinical_file, 'rU') as data_file:
-        header = []
-        for line in data_file.readlines():
-            if not header:
-                header = map(str.strip, line.split('\t'))
-                continue
-            # update patient-sample mapping
-            record = dict(zip(header, map(str.strip, line.split('\t'))))
-
-            for field in CVR_CONSENT_STATUS_ENDPOINTS.keys():
-                current_consent_status = record[field]
-                expected_consent_status = expected_consent_status_values[field].get(record['PATIENT_ID'], 'NO')
-                # if current and expected values are the same then skip
-                if current_consent_status == expected_consent_status:
-                    continue
-
-                # if patient has granted consent then add samples to requeue list
-                # otherwise if patient has since revoked consent then add sample to
-                # set of samples to remove from data set
-                if expected_consent_status == 'YES':
-                    requeue_list = samples_to_requeue.get(field, set())
-                    requeue_list.add(record['SAMPLE_ID'])
-                    samples_to_requeue[field] = requeue_list
-                elif expected_consent_status == 'NO':
-                    remove_list = samples_to_remove.get(field, set())
-                    remove_list.add(record['SAMPLE_ID'])
-                    samples_to_remove[field] = remove_list
+        lines = data_file.readlines()
+        header = map(str.strip, lines.pop().split('\t'))
+        records = [
+            dict(zip(header, map(str.strip, line.split('\t')))) for line in lines
+        ]
+        for field in CVR_CONSENT_STATUS_ENDPOINTS.keys():
+            consents_changed = {
+                record['SAMPLE_ID']: record[field]
+                for record in records
+                if record[field] != expected_consent_status_values[field].get(record['PATIENT_ID'], 'NO')
+            }
+            pct_consents_changed = 100*(len(consents_changed) / len(records))
+            if pct_consents_changed >= 20.:
+                # issue a warning and don't change anything
+                pass
+            else:
+                # Remove all of the records with their consent status changed for this field
+                for sample_id, current_consent in consents_changed.items():
+                    # if patient has granted consent then add samples to requeue list
+                    # otherwise if patient has since revoked consent then add sample to
+                    # set of samples to remove from data set
+                    if current_consent == 'NO':
+                        requeue_list = samples_to_requeue.get(field, set())
+                        requeue_list.add(sample_id)
+                        samples_to_requeue[field] = requeue_list
+                    elif current_consent == 'YES':
+                        remove_list = samples_to_remove.get(field, set())
+                        remove_list.add(sample_id)
+                        samples_to_remove[field] = remove_list
 
     if samples_to_remove.get(PARTC_FIELD_NAME, set()):
         remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
@@ -197,16 +204,6 @@ def main():
         sys.exit(2)
 
     expected_consent_status_values = fetch_expected_consent_status_values()
-    if expected_consent_status_values is None:
-        print >> ERROR_FILE, "Unable to fetch consent status values, exiting..."
-        email_consent_status_report(
-            samples_to_requeue={},
-            samples_to_remove={},
-            gmail_username=gmail_username,
-            gmail_password=gmail_password
-        )
-        sys.exit(2)
-
     cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password)
 
 if __name__ == '__main__':
