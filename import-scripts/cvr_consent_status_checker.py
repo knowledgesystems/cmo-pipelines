@@ -99,10 +99,12 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
                     remove_list.add(record['SAMPLE_ID'])
                     samples_to_remove[field] = remove_list
 
+    removed_germline_mutations = False
     if samples_to_remove.get(PARTC_FIELD_NAME, set()):
-        remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
+        # Attempt to remove germline mutation records where the Part C consent status has changed from YES => NO
+        removed_germline_mutations = remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
     if samples_to_requeue != {} or samples_to_remove != {}:
-        email_consent_status_report(samples_to_requeue, samples_to_remove, gmail_username, gmail_password)
+        email_consent_status_report(samples_to_requeue, samples_to_remove, removed_germline_mutations, gmail_username, gmail_password)
 
 def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples):
     '''
@@ -140,9 +142,11 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
     cutoff = 20 # If we're trying to remove too many records, then something's probably wrong with the server response. 20% is an arbitrary cutoff
     if pct_removed >= cutoff:
         print >> ERROR_FILE, "WARNING: %s%% of germline records had their Part C consent status changed. No action will be taken-- please double-check the response of the upstream server." % (pct_removed)
-        return
+        os.remove(tmpfile_name)
+        return False
 
     os.rename(tmpfile_name, cvr_mutation_file)
+    return True
 
 def generate_attachment(message, attachment_name, samples):
     '''
@@ -152,7 +156,7 @@ def generate_attachment(message, attachment_name, samples):
     report.add_header('Content-Disposition', 'attachment', filename = attachment_name)
     message.attach(report)
 
-def email_consent_status_report(samples_to_requeue, samples_to_remove, gmail_username, gmail_password):
+def email_consent_status_report(samples_to_requeue, samples_to_remove, removed_germline_mutations, gmail_username, gmail_password):
     '''
         Constructs and sends email reporting consent status updates.
     '''
@@ -165,7 +169,7 @@ def email_consent_status_report(samples_to_requeue, samples_to_remove, gmail_use
             filename = field.lower() + '_consent_granted_report.txt'
             generate_attachment(message, filename, samples)
 
-    if samples_to_remove != {}:
+    if samples_to_remove != {} and removed_germline_mutations:
         summary += '\n\nCONSENT REVOKED:'
         for field,samples in samples_to_remove.items():
             summary += '\n\t%s:\t%s samples' % (field, len(samples))
