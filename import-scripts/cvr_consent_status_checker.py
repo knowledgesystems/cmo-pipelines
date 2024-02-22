@@ -119,11 +119,16 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
         Removes germline mutation records from MAF for samples where
         Part C Consent Status has changed from Yes to No.
     '''
+
     tmpfile_name = cvr_mutation_file + ".tmp"
     tmpfile = open(tmpfile_name, "w")
     with open(cvr_mutation_file, 'rU') as data_file:
         header = []
-        for line in data_file.readlines():
+        num_germline_records = 0
+        num_removed_records = 0
+
+        lines = data_file.readlines()
+        for line in lines:
             if line.startswith("#"):
                 tmpfile.write(line)
                 continue
@@ -132,10 +137,19 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
                 tmpfile.write(line)
                 continue
             record = dict(zip(header, map(str.strip, line.split('\t'))))
-            if record[SAMPLE_ID_COLUMN] in revoked_germline_samples and record[MUTATION_STATUS_COLUMN] == GERMLINE_MUTATION_STATUS:
-                continue
+            if record[MUTATION_STATUS_COLUMN] == GERMLINE_MUTATION_STATUS:
+                num_germline_records += 1
+                if record[SAMPLE_ID_COLUMN] in revoked_germline_samples:
+                    num_removed_records += 1
+                    continue
             tmpfile.write(line)
     tmpfile.close()
+
+    pct_removed = 100*(num_removed_records / num_germline_records)
+    if pct_removed >= 20:
+        print >> ERROR_FILE, "WARNING: %s%% of germline records had their Part C consent status changed. No action will be taken-- please double-check the response of the upstream server."
+        return
+
     os.rename(tmpfile_name, cvr_mutation_file)
 
 def generate_attachment(message, attachment_name, samples):
