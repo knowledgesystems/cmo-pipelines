@@ -103,8 +103,15 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
     if samples_to_remove.get(PARTC_FIELD_NAME, set()):
         # Attempt to remove germline mutation records where the Part C consent status has changed from YES => NO
         removed_germline_mutations = remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
+
     if samples_to_requeue != {} or samples_to_remove != {}:
-        email_consent_status_report(samples_to_requeue, samples_to_remove, removed_germline_mutations, gmail_username, gmail_password)
+        email_consent_status_report(
+            samples_to_requeue,
+            samples_to_remove,
+            expected_consent_status_values,
+            removed_germline_mutations,
+            gmail_username,
+            gmail_password)
 
 def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples):
     '''
@@ -156,7 +163,13 @@ def generate_attachment(message, attachment_name, samples):
     report.add_header('Content-Disposition', 'attachment', filename = attachment_name)
     message.attach(report)
 
-def email_consent_status_report(samples_to_requeue, samples_to_remove, removed_germline_mutations, gmail_username, gmail_password):
+def email_consent_status_report(
+        samples_to_requeue,
+        samples_to_remove,
+        expected_consent_status_values,
+        removed_germline_mutations,
+        gmail_username,
+        gmail_password):
     '''
         Constructs and sends email reporting consent status updates.
     '''
@@ -165,16 +178,29 @@ def email_consent_status_report(samples_to_requeue, samples_to_remove, removed_g
     if samples_to_requeue != {}:
         summary += '\n\nCONSENT GRANTED:'
         for field,samples in samples_to_requeue.items():
-            summary += '\n\t%s:\t%s samples' % (field, len(samples))
-            filename = field.lower() + '_consent_granted_report.txt'
-            generate_attachment(message, filename, samples)
+            missing_data = expected_consent_status_values[field] == {}
+            if missing_data:
+                part = "A" if field == PARTA_FIELD_NAME else "C"
+                summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, part)
+            else:
+                summary += '\n\t%s:\t%s samples' % (field, len(samples))
+                filename = field.lower() + '_consent_granted_report.txt'
+                generate_attachment(message, filename, samples)
 
-    if samples_to_remove != {} and removed_germline_mutations:
+    if samples_to_remove != {}:
         summary += '\n\nCONSENT REVOKED:'
         for field,samples in samples_to_remove.items():
-            summary += '\n\t%s:\t%s samples' % (field, len(samples))
-            filename = field.lower() + '_consent_revoked_report.txt'
-            generate_attachment(message, filename, samples)
+            missing_data = expected_consent_status_values[field] == {}
+            if missing_data:
+                part = "A" if field == PARTA_FIELD_NAME else "C"
+                summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, part)
+            elif field == PARTC_FIELD_NAME and not removed_germline_mutations:
+                # If too many samples had their Part C cosent status changed, there is probably an issue with the upstream server, so we didn't remove any records.
+                summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.'
+            else:
+                summary += '\n\t%s:\t%s samples' % (field, len(samples))
+                filename = field.lower() + '_consent_revoked_report.txt'
+                generate_attachment(message, filename, samples)
 
     body = MIMEText(summary, 'plain')
     message.attach(body)
