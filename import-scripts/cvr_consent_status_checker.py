@@ -112,10 +112,11 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
 
     tmpfile_name = cvr_mutation_file + ".tmp"
     tmpfile = open(tmpfile_name, "w")
+
+    num_germline_records = 0
+    num_removed_records = 0
     with open(cvr_mutation_file, 'rU') as data_file:
         header = []
-        num_germline_records = 0
-        num_removed_records = 0
 
         lines = data_file.readlines()
         for line in lines:
@@ -131,13 +132,14 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
                 num_germline_records += 1
                 if record[SAMPLE_ID_COLUMN] in revoked_germline_samples:
                     num_removed_records += 1
-                    continue
+                    continue # Exclude this record from the new mutations file
             tmpfile.write(line)
     tmpfile.close()
 
     pct_removed = 100*(num_removed_records / num_germline_records)
-    if pct_removed >= 20:
-        print >> ERROR_FILE, "WARNING: %s%% of germline records had their Part C consent status changed. No action will be taken-- please double-check the response of the upstream server."
+    cutoff = 20 # If we're trying to remove too many records, then something's probably wrong with the server response. 20% is an arbitrary cutoff
+    if pct_removed >= cutoff:
+        print >> ERROR_FILE, "WARNING: %s%% of germline records had their Part C consent status changed. No action will be taken-- please double-check the response of the upstream server." % (pct_removed)
         return
 
     os.rename(tmpfile_name, cvr_mutation_file)
