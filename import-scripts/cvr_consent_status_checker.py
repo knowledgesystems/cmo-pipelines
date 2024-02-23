@@ -145,10 +145,10 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
             tmpfile.write(line)
     tmpfile.close()
 
-    pct_removed = 100*(num_removed_records / num_germline_records)
+    pct_removed = 100*(float(num_removed_records) / float(num_germline_records))
     cutoff = 20 # If we're trying to remove too many records, then something's probably wrong with the server response. 20% is an arbitrary cutoff
     if pct_removed >= cutoff:
-        print >> ERROR_FILE, "WARNING: %s%% of germline records had their Part C consent status changed. No action will be taken-- please double-check the response of the upstream server." % (pct_removed)
+        print >> ERROR_FILE, "WARNING: %.2f%% of germline records had their Part C consent status changed. No action will be taken-- please double-check the response of the upstream server." % (pct_removed)
         os.remove(tmpfile_name)
         return False
 
@@ -196,7 +196,7 @@ def email_consent_status_report(
                 summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, part)
             elif field == PARTC_FIELD_NAME and not removed_germline_mutations:
                 # If too many samples had their Part C cosent status changed, there is probably an issue with the upstream server, so we didn't remove any records.
-                summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.'
+                summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.' % (field)
             else:
                 summary += '\n\t%s:\t%s samples' % (field, len(samples))
                 filename = field.lower() + '_consent_revoked_report.txt'
