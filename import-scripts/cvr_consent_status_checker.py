@@ -180,8 +180,7 @@ def email_consent_status_report(
         for field,samples in samples_to_requeue.items():
             missing_data = expected_consent_status_values[field] == {}
             if missing_data:
-                part = "A" if field == PARTA_FIELD_NAME else "C"
-                summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, part)
+                summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, "A" if field == PARTA_FIELD_NAME else "C")
             else:
                 summary += '\n\t%s:\t%s samples' % (field, len(samples))
                 filename = field.lower() + '_consent_granted_report.txt'
@@ -192,8 +191,7 @@ def email_consent_status_report(
         for field,samples in samples_to_remove.items():
             missing_data = expected_consent_status_values[field] == {}
             if missing_data:
-                part = "A" if field == PARTA_FIELD_NAME else "C"
-                summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, part)
+                summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, "A" if field == PARTA_FIELD_NAME else "C")
             elif field == PARTC_FIELD_NAME and not removed_germline_mutations:
                 # If too many samples had their Part C cosent status changed, there is probably an issue with the upstream server, so we didn't remove any records.
                 summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.' % (field)
