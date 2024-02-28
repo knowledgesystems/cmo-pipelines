@@ -2,12 +2,12 @@
 
 DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE CANCER_TYPE_DETAILED"
 
-if [ ! -f $PORTAL_HOME/scripts/automation_env.sh ] || [ ! -f $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh ] ; then
+if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] || [ ! -f $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh ] ; then
   echo "`date`: Unable to locate automation_env and additional modules, exiting..."
   exit 1
 fi
 
-source $PORTAL_HOME/scripts/automation_env.sh
+source $PORTAL_HOME/scripts/automation-environment.sh
 source $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh
 
 TMP_SAMPLE_FILE=$(mktemp -q)

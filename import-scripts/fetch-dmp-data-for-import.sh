@@ -793,10 +793,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     #--------------------------------------------------------------
     # CDM Fetch is optional -- does not break import if it fails, but will send notif
     sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh
-    echo "fetching clinical demographics & timeline updates from cdsi-cdm repository..."
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source cdm --run-date latest
+    echo "fetching clinical demographics & timeline updates from S3..."
+    sh $PORTAL_HOME/scripts/pull-cdm-data.sh
     if [ $? -gt 0 ] ; then
-      sendPreImportFailureMessageMskPipelineLogsSlack "Git Failure: CDM repository update"
+      sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
     else
       # create temp directory for merging mskimpact and cdm clinical files
       # all processing is done in tmp and only copied over if everything succeeds
