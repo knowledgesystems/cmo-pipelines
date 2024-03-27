@@ -32,10 +32,10 @@
 
 package org.cbioportal.cmo.pipelines.cvr.samplelist;
 
+import jakarta.annotation.Resource;
 import java.io.*;
 import java.time.Instant;
 import java.util.*;
-import javax.annotation.Resource;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
 import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;

@@ -35,12 +35,11 @@ package org.cbioportal.cmo.pipelines.cvr.linkedimpactcase;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
+import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemWriter;
@@ -88,7 +87,7 @@ public class LinkedMskimpactCaseWriter implements ItemStreamWriter<String> {
     public void close() throws ItemStreamException {}
 
     @Override
-    public void write(List<? extends String> list) throws Exception {
+    public void write(Chunk<? extends String> list) throws Exception {
         flatFileItemWriter.write(list);
     }
 }

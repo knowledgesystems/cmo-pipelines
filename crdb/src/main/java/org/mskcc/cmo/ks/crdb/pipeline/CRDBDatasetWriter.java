@@ -97,11 +97,7 @@ public class CRDBDatasetWriter implements ItemStreamWriter<String> {
     }
 
     @Override
-    public void write(List<? extends String> items) throws Exception {
-        List<String> writeList = new ArrayList<>();
-        for (String result : items) {
-            writeList.add(result);
-        }
-        flatFileItemWriter.write(writeList);
+    public void write(Chunk<? extends String> items) throws Exception {
+        flatFileItemWriter.write(items);
     }
 }

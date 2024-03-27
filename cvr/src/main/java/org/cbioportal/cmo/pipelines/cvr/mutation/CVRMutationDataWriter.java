@@ -106,7 +106,7 @@ public class CVRMutationDataWriter implements ItemStreamWriter<String> {
     }
 
     @Override
-    public void write(List<? extends String> items) throws Exception {
+    public void write(Chunk<? extends String> items) throws Exception {
         flatFileItemWriter.write(items);
     }
 }

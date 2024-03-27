@@ -38,7 +38,7 @@ import org.mskcc.cmo.ks.ddp.source.model.*;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import java.util.*;
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;

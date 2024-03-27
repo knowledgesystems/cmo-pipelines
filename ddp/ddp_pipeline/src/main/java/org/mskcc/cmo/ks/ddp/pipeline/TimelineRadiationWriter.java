@@ -85,9 +85,9 @@ public class TimelineRadiationWriter implements ItemStreamWriter<CompositeResult
     }
 
     @Override
-    public void write(List<? extends CompositeResult> compositeResults) throws Exception {
+    public void write(Chunk<? extends CompositeResult> compositeResults) throws Exception {
         if (includeRadiation) {
-            List<String> records = new ArrayList<>();
+            Chunk<String> records = new Chunk<>();
             for (CompositeResult result : compositeResults) {
                 if (result.getTimelineRadiationResults() == null || result.getTimelineRadiationResults().isEmpty()) {
                     continue;

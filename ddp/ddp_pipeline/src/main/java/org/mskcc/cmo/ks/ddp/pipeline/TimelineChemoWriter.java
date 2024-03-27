@@ -85,9 +85,9 @@ public class TimelineChemoWriter implements ItemStreamWriter<CompositeResult> {
     }
 
     @Override
-    public void write(List<? extends CompositeResult> compositeResults) throws Exception {
+    public void write(Chunk<? extends CompositeResult> compositeResults) throws Exception {
         if (includeChemotherapy) {
-            List<String> records = new ArrayList<>();
+            Chunk<String> records = new Chunk<>();
             for (CompositeResult result : compositeResults) {
                 if (result.getTimelineChemoResults() == null || result.getTimelineChemoResults().isEmpty()) {
                     continue;

@@ -39,9 +39,9 @@ import org.mskcc.cmo.ks.ddp.source.model.PatientIdentifiers;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPPatientListUtil;
 
 import com.google.common.base.Strings;
+import jakarta.annotation.Resource;
 import java.io.*;
 import java.util.*;
-import javax.annotation.Resource;
 import org.apache.log4j.Logger;
 import org.springframework.batch.item.*;
 import org.springframework.beans.factory.annotation.*;

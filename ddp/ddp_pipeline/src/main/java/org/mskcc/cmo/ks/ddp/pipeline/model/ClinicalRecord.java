@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018, 2019, 2024 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -37,7 +37,6 @@ import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 
 import java.text.ParseException;
 import java.util.*;
-import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
  *
@@ -240,11 +239,6 @@ public class ClinicalRecord {
      */
     public void setSURGERY(String SURGERY) {
         this.SURGERY = SURGERY;
-    }
-
-    @Override
-    public String toString() {
-        return ToStringBuilder.reflectionToString(this);
     }
 
     /**

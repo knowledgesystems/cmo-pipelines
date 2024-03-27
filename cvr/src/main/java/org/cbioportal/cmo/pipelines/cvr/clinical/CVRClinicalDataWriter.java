@@ -87,8 +87,8 @@ public class CVRClinicalDataWriter implements ItemStreamWriter<CompositeClinical
     }
 
     @Override
-    public void write(List<? extends CompositeClinicalRecord> items) throws Exception {
-        List<String> writeList = new ArrayList<>();
+    public void write(Chunk<? extends CompositeClinicalRecord> items) throws Exception {
+        Chunk<String> writeList = new Chunk<>();
         for (CompositeClinicalRecord item : items) {
             if (item.getNewClinicalRecord() != null) {
                 writeList.add(item.getNewClinicalRecord());

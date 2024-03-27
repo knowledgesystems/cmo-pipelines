@@ -23,6 +23,9 @@ jobs:
           name: update apt-get
           command: sudo apt-get update --fix-missing
       - run:
+          name: update java
+          command: wget https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558476027ac/13/GPL/openjdk-21.0.2_linux-x64_bin.tar.gz; sudo tar -xvf openjdk-21.0.2_linux-x64_bin.tar.gz -C /usr/lib/jvm
+      - run:
           name: Install setuptools in python 2
           command: sudo apt-get -y install python-pip
       - run:
@@ -37,11 +40,11 @@ jobs:
       # Use mvn clean and package as the standard maven build phase
       - run:
           name: Build
-          command: mvn -B -DskipTests clean package
+          command: export JAVA_HOME=/usr/lib/jvm/jdk-21.0.2; export PATH=/usr/lib/jvm/jdk-21.0.2/bin:$PATH; mvn -B -DskipTests clean package
       # Then run your tests!
       - run:
           name: Test
-          command: mvn test
+          command: export JAVA_HOME=/usr/lib/jvm/jdk-21.0.2; export PATH=/usr/lib/jvm/jdk-21.0.2/bin:$PATH; mvn test
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows

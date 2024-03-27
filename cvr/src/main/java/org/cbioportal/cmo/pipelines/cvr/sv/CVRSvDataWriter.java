@@ -39,6 +39,7 @@ import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSvRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
+import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemWriter;
@@ -89,8 +90,8 @@ public class CVRSvDataWriter implements ItemStreamWriter<CompositeSvRecord> {
     }
 
     @Override
-    public void write(List<? extends CompositeSvRecord> items) throws Exception {
-        List<String> writeList = new ArrayList<>();
+    public void write(Chunk<? extends CompositeSvRecord> items) throws Exception {
+        Chunk<String> writeList = new Chunk<>();
         for (CompositeSvRecord item : items) {
             if (item.getNewSvRecord() != null) {
                 writeList.add(item.getNewSvRecord());

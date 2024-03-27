@@ -34,7 +34,7 @@ package org.cbioportal.cmo.pipelines.cvr.variants;
 
 import java.time.Instant;
 import java.util.Map;
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
 import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;

@@ -12,10 +12,10 @@ import subprocess
 
 # Script for integration testing of a pull request
 # Determines which datasource schema to test based on tags on pull request
-# Will fetch and export from redcap accordingly (i.e fetch from darwin and export all darwin based projects)
+# Will fetch and export from redcap accordingly
 # Compares headers between datasource fetch and all related redcap projects
 # Different headers imply mismatched data schema and returns false
-# lib directory holding all jars must be provided (redcap_pipelines, ddp, cvr, crdb, darwin)
+# lib directory holding all jars must be provided (redcap_pipelines, ddp, cvr, crdb)
 # seperate directories to hold fetched files and redcap exports must be provided
 # ---------------------------------------------
 
@@ -31,15 +31,14 @@ SKIP_INTEGRATION_TESTS_LABEL = "1383619983"
 LABEL_TO_TEST_MAPPING = {
 #   '984868388' : "crdb_fetcher",
 #   '984867863' : "cvr_fetcher",
-#   '984872074' : "darwin_fetcher",
    '984872969' : "ddp_fetcher"
 }
 
 # generates a mapping for fetchers to fetched and redcap-exported filenames
 # used for determining which files need to be compared
 # redcap_project_to_file_mapping:
-# { "darwin_fetcher" : {
-#       "/path/to/fetch/<darwin_demographics.txt>" : ["/path/to/redcap_export/<hemepact_darwin_demographics.txt>", "/path/to/redcap_export/<mskimapct_darwin_demographics.txt>", ...],
+# { "fetcher_filename" : {
+#       "/path/to/fetch/<data.txt>" : ["/path/to/redcap_export/<data1.txt>", "/path/to/redcap_export/<data2.txt>", ...],
 #       "<fetched file name2>" " ["<redcap project export>", ...]
 #   }
 # }
@@ -112,10 +111,6 @@ def export_redcap_projects(fetchers_to_test, fetched_file_to_redcap_file_mapping
 def crdb_fetch(lib, fetch_directory):
     return "java -jar " + os.path.join(lib, "crdb_fetcher.jar") + " -d " + fetch_directory
 
-# darwin fetch currently does not work because jenkins machine cannot access darwin
-def darwin_fetch(lib, fetch_directory):
-    return "java -jar " + os.path.join(lib, "darwin_fetcher.jar") + " -d " + fetch_directory + " -s mskimpact_heme -c 0"
-
 def cvr_fetch(lib, fetch_directory, truststore, truststore_password):
     redcap_request = "java -Djavax.net.ssl.trustStore=" + truststore + "  -Djavax.net.ssl.trustStorePassword=" + truststore_password + " -jar " + os.path.join(lib, "redcap_pipeline.jar") + " -e -r -p hemepact_data_clinical -d " + fetch_directory
     redcap_status = subprocess.call(redcap_request, shell = True)
@@ -143,7 +138,6 @@ def fetch_data_source_files(fetchers_to_test, fetch_directory, lib, truststore, 
     datasource_fetches = {
         "crdb_fetcher" : [crdb_fetch],
         "cvr_fetcher" : [cvr_fetch],
-        "darwin_fetcher" : [darwin_fetch],
         "ddp_fetcher" : [ddp_fetch, ddp_pediatrics_fetch]
     }
     for fetcher in fetchers_to_test:

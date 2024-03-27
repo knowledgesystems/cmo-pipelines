@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2024 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -33,9 +33,8 @@
 package org.cbioportal.cmo.pipelines.cvr.model;
 
 import com.fasterxml.jackson.annotation.*;
+import jakarta.annotation.Generated;
 import java.util.*;
-import javax.annotation.Generated;
-import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
  *
@@ -152,11 +151,6 @@ public class CvrResponse {
     @JsonProperty("information")
     public void setInformation(String information) {
         this.information = information;
-    }
-
-    @Override
-    public String toString() {
-        return ToStringBuilder.reflectionToString(this);
     }
 
     @JsonAnyGetter

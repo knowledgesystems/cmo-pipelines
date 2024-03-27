@@ -4,20 +4,15 @@
   <name>MSKCC CMO Pipelines Common</name>
   <description>Shared classes</description>
   <artifactId>common</artifactId>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
 
   <parent>
     <groupId>org.mskcc.cmo.ks</groupId>
     <artifactId>master</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
   </parent>
 
   <dependencies>
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <version>2.4</version>
-    </dependency>
     <dependency>
       <groupId>javax.mail</groupId>
       <artifactId>mail</artifactId>
@@ -31,6 +26,7 @@
         <!-- in parent pom and we don't want this -->
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring.boot.version}</version>
         <configuration>
           <skip>true</skip>
         </configuration>

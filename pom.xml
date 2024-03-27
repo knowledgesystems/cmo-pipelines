@@ -4,18 +4,15 @@
   <artifactId>master</artifactId>
   <packaging>pom</packaging>
   <name>MSKCC CMO Pipelines Master</name>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
   <description>master maven module</description>
   <url>https://github.com/cBioPortal/cmo-pipelines/</url>
 
   <modules>
     <module>common</module>
-    <module>gdd</module>
     <module>crdb</module>
-    <module>darwin</module>
     <module>redcap</module>
     <module>cvr</module>
-    <module>gene</module>
     <module>ddp</module>
     <module>import-scripts</module>
   </modules>
@@ -24,16 +21,18 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>2.3.3.RELEASE</version>
+    <version>3.1.4</version> <!-- please match this with ${spring.boot.version} defined in properties -->
   </parent>
 
   <properties>
-    <spring.version>5.2.6.RELEASE</spring.version>
-    <jackson.version>2.11.2</jackson.version>
+    <spring.version>6.0.12</spring.version>
+    <spring.boot.version>3.1.4</spring.boot.version>
+    <spring.batch.version>5.0.3</spring.batch.version>
+    <jackson.version>2.14.3</jackson.version>
     <slf4j.version>1.7.30</slf4j.version>
     <maven.compiler.version>3.11.0</maven.compiler.version>
-    <maven.compiler.java.source>11</maven.compiler.java.source>
-    <maven.compiler.java.target>11</maven.compiler.java.target>
+    <maven.compiler.java.source>21</maven.compiler.java.source>
+    <maven.compiler.java.target>21</maven.compiler.java.target>
   </properties>
 
   <dependencies>
@@ -41,6 +40,7 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-batch</artifactId>
+      <version>${spring.boot.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.slf4j</groupId>
@@ -67,7 +67,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.13</version>
+      <version>4.13.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -97,7 +97,7 @@
     <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>
-      <version>3.15.1</version>
+      <version>3.15.1</version> <!-- this may need update .. a modern example uses 3.25.2 -->
     </dependency>
     <!-- other deps -->
     <dependency>

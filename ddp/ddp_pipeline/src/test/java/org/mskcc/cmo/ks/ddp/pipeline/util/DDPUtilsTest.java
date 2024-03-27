@@ -40,8 +40,8 @@ import org.mskcc.cmo.ks.ddp.source.model.CohortPatient;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDemographics;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
 
+import jakarta.annotation.Resource;
 import java.util.*;
-import javax.annotation.Resource;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
 import org.junit.Test;

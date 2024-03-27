@@ -4,12 +4,12 @@
   <name>MSKCC CMO Import Scripts</name>
   <description>Import Python Scripts</description>
   <artifactId>import-scripts</artifactId>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
 
   <parent>
     <groupId>org.mskcc.cmo.ks</groupId>
     <artifactId>master</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
   </parent>
 
   <build>
@@ -18,6 +18,7 @@
         <!-- do not include this module when building an executable jar -->
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring.boot.version}</version>
         <configuration>
           <skip>true</skip>
         </configuration>

@@ -264,7 +264,7 @@ public class RedcapSessionManager {
         }
         HttpEntity<LinkedMultiValueMap<String, String>> requestEntity = getRequestEntity(uriVariables);
         ResponseEntity<String> responseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, requestEntity, String.class);
-        HttpStatus responseStatus = responseEntity.getStatusCode();
+        HttpStatusCode responseStatus = responseEntity.getStatusCode();
         if (!responseStatus.is2xxSuccessful()) {
             String errorMessage = "RedCap delete record API call failed. HTTP status code = " + Integer.toString(responseEntity.getStatusCode().value());
             log.warn(errorMessage);
@@ -301,7 +301,7 @@ public class RedcapSessionManager {
         importRecordUriVariables.add("data", dataForImport);
         HttpEntity<LinkedMultiValueMap<String, String>> importRecordRequestEntity = getRequestEntity(importRecordUriVariables);
         ResponseEntity<String> importRecordResponseEntity = restTemplate.exchange(getRedcapApiURI(), HttpMethod.POST, importRecordRequestEntity, String.class);
-        HttpStatus responseStatus = importRecordResponseEntity.getStatusCode();
+        HttpStatusCode responseStatus = importRecordResponseEntity.getStatusCode();
         if (!responseStatus.is2xxSuccessful()) {
             String message = "RedCap import record API call failed. HTTP status code = " + Integer.toString(importRecordResponseEntity.getStatusCode().value());
             log.warn(message);

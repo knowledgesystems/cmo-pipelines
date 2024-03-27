@@ -3,11 +3,11 @@
   <name>MSKCC CMO Redcap Data Source</name>
   <description>Redcap Source</description>
   <artifactId>redcap_source</artifactId>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
   <groupId>org.mskcc.cmo.ks.redcap.source</groupId>
   <parent>
     <groupId>org.mskcc.cmo.ks.redcap</groupId>
     <artifactId>redcap</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
   </parent>
 </project>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2023, 2024 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -36,7 +36,6 @@ import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 
 import java.text.ParseException;
 import java.util.*;
-import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
  *
@@ -95,11 +94,6 @@ public class AgeAtSeqDateRecord {
      */
     public void setAGE_AT_SEQ_REPORTED_YEARS(String AGE_AT_SEQ_REPORTED_YEARS) {
         this.AGE_AT_SEQ_REPORTED_YEARS = AGE_AT_SEQ_REPORTED_YEARS;
-    }
-
-    @Override
-    public String toString() {
-        return ToStringBuilder.reflectionToString(this);
     }
 
     /**

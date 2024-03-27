@@ -83,7 +83,7 @@ public class CRDBPDXClinicalAnnotationMappingWriter implements ItemStreamWriter<
     }
 
     @Override
-    public void write(List<? extends String> items) throws Exception {
+    public void write(Chunk<? extends String> items) throws Exception {
         flatFileItemWriter.write(items);
     }
 }

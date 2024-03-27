@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 - 2024 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -37,37 +37,37 @@ import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 
 import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.annotation.*;
-import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.beans.factory.annotation.*;
-import org.springframework.context.annotation.*;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.batch.integration.async.*;
-
-import java.util.concurrent.Future;
-import java.util.concurrent.Executor;
-import javax.sql.DataSource;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.SimpleJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.integration.async.*;
+import org.springframework.batch.item.*;
+import org.springframework.batch.item.support.CompositeItemWriter;
 import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
+import org.springframework.beans.factory.annotation.*;
+import org.springframework.context.annotation.*;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 /**
  *
  * @author ochoaa
  */
 @Configuration
-@EnableBatchProcessing
 @ComponentScan(basePackages = "org.mskcc.cmo.ks.ddp.source")
 @EnableAsync
 public class BatchConfiguration {
@@ -104,7 +104,6 @@ public class BatchConfiguration {
         return threadPoolTaskExecutor;
     }
 
-    @Bean
     @StepScope
     public ItemProcessor<DDPCompositeRecord, Future<CompositeResult>> asyncItemProcessor() {
         AsyncItemProcessor<DDPCompositeRecord, CompositeResult> asyncItemProcessor = new AsyncItemProcessor<>();
@@ -121,11 +120,6 @@ public class BatchConfiguration {
     }
 
     public static final String DDP_COHORT_JOB = "ddpCohortJob";
-    @Autowired
-    public JobBuilderFactory jobBuilderFactory;
-
-    @Autowired
-    public StepBuilderFactory stepBuilderFactory;
 
     @Value("${chunk}")
     private Integer chunkInterval;
@@ -133,19 +127,23 @@ public class BatchConfiguration {
     private final Logger LOG = Logger.getLogger(BatchConfiguration.class);
 
     @Bean
-    public Job ddpCohortJob() {
-        return jobBuilderFactory.get(DDP_COHORT_JOB)
-                .start(ddpSeqDateStep())
-                .next(ddpStep())
-                .next(ddpSortStep())
-                .next(ddpEmailStep())
+    public Job ddpCohortJob(JobRepository jobRepository,
+                            @Qualifier("ddpSeqDateStep") Step ddpSeqDateStep,
+                            @Qualifier("ddpStep") Step ddpStep,
+                            @Qualifier("ddpSortStep") Step ddpSortStep,
+                            @Qualifier("ddpEmailStep") Step ddpEmailStep) {
+        return new JobBuilder(DDP_COHORT_JOB, jobRepository)
+                .start(ddpSeqDateStep)
+                .next(ddpStep)
+                .next(ddpSortStep)
+                .next(ddpEmailStep)
                 .build();
     }
 
-    @Bean
-    public Step ddpStep() {
-        return stepBuilderFactory.get("ddpStep")
-                .<DDPCompositeRecord, Future<CompositeResult>> chunk(chunkInterval)
+    @Bean(name = "ddpStep")
+    public Step ddpStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("ddpStep", jobRepository)
+                .<DDPCompositeRecord, Future<CompositeResult>> chunk(chunkInterval, transactionManager)
                 .reader(ddpReader())
                 .processor(asyncItemProcessor())
                 .writer(asyncItemWriter())
@@ -246,40 +244,46 @@ public class BatchConfiguration {
         return writer;
     }
 
-    @Bean
-    public Step ddpSeqDateStep() {
-        return stepBuilderFactory.get("ddpSeqDateStep")
-        .tasklet(ddpSeqDateTasklet())
+    @Bean(name = "ddpSeqDateStep")
+    public Step ddpSeqDateStep(JobRepository jobRepository,
+                               @Qualifier("ddpSeqDateTasklet") Tasklet ddpSeqDateTasklet,
+                               PlatformTransactionManager transactionManager) {
+        return new StepBuilder("ddpSeqDateStep", jobRepository)
+        .tasklet(ddpSeqDateTasklet, transactionManager)
         .build();
     }
 
-    @Bean
+    @Bean(name = "ddpSeqDateTasklet")
     @StepScope
     public Tasklet ddpSeqDateTasklet() {
         return new DDPSeqDateTasklet();
     }
 
-    @Bean
-    public Step ddpSortStep() {
-        return stepBuilderFactory.get("ddpSortStep")
-        .tasklet(ddpSortTasklet())
+    @Bean(name = "ddpSortStep")
+    public Step ddpSortStep(JobRepository jobRepository,
+                            @Qualifier("ddpSortTasklet") Tasklet ddpSortTasklet,
+                            PlatformTransactionManager transactionManager) {
+        return new StepBuilder("ddpSortStep", jobRepository)
+        .tasklet(ddpSortTasklet, transactionManager)
         .build();
     }
 
-    @Bean
+    @Bean(name = "ddpSortTasklet")
     @StepScope
     public Tasklet ddpSortTasklet() {
         return new DDPSortTasklet();
     }
 
-    @Bean
-    public Step ddpEmailStep() {
-        return stepBuilderFactory.get("ddpEmailStep")
-        .tasklet(ddpEmailTasklet())
+    @Bean(name = "ddpEmailStep")
+    public Step ddpEmailStep(JobRepository jobRepository,
+                             @Qualifier("ddpEmailTasklet") Tasklet ddpEmailTasklet,
+                             PlatformTransactionManager transactionManager) {
+        return new StepBuilder("ddpEmailStep", jobRepository)
+        .tasklet(ddpEmailTasklet, transactionManager)
         .build();
     }
 
-    @Bean
+    @Bean(name = "ddpEmailTasklet")
     @StepScope
     public Tasklet ddpEmailTasklet() {
         return new DDPEmailTasklet();

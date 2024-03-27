@@ -46,8 +46,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.util.*;
 import java.util.HashMap;
 import java.util.Map;
-import javax.annotation.Generated;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import jakarta.annotation.Generated;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Generated("org.jsonschema2pojo")
@@ -294,11 +293,6 @@ public class CVRCnvIntragenicVariant {
     @JsonProperty("variant_status_cv_id")
     public void setVariantStatusCvId(Integer variantStatusCvId) {
         this.variantStatusCvId = variantStatusCvId;
-    }
-
-    @Override
-    public String toString() {
-        return ToStringBuilder.reflectionToString(this);
     }
 
     @JsonAnyGetter

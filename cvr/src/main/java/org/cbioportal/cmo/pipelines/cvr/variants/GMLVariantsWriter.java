@@ -33,7 +33,6 @@
 package org.cbioportal.cmo.pipelines.cvr.variants;
 
 import java.io.File;
-import java.util.List;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
@@ -75,7 +74,7 @@ public class GMLVariantsWriter implements ItemStreamWriter<String> {
     }
 
     @Override
-    public void write(List<? extends String> items) throws Exception {
+    public void write(Chunk<? extends String> items) throws Exception {
         flatFileItemWriter.write(items);
     }
 }

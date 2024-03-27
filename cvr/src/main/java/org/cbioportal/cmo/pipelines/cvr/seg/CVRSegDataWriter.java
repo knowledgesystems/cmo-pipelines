@@ -87,8 +87,8 @@ public class CVRSegDataWriter implements ItemStreamWriter<CompositeSegRecord> {
     }
 
     @Override
-    public void write(List<? extends CompositeSegRecord> items) throws Exception {
-        List<String> writeList = new ArrayList<>();
+    public void write(Chunk<? extends CompositeSegRecord> items) throws Exception {
+        Chunk<String> writeList = new Chunk<>();
         for (CompositeSegRecord item : items) {
             if (item.getNewSegRecord() != null) {
                 writeList.add(item.getNewSegRecord());

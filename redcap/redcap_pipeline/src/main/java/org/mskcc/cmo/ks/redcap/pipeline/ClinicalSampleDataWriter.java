@@ -35,6 +35,7 @@ package org.mskcc.cmo.ks.redcap.pipeline;
 import java.io.*;
 import java.util.*;
 import org.mskcc.cmo.ks.redcap.source.ClinicalDataSource;
+import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemWriter;
@@ -103,9 +104,9 @@ public class ClinicalSampleDataWriter implements ItemStreamWriter<ClinicalDataCo
     }
 
     @Override
-    public void write(List<? extends ClinicalDataComposite> items) throws Exception {
+    public void write(Chunk<? extends ClinicalDataComposite> items) throws Exception {
         if (writeClinicalSample) {
-            List<String> writeList = new ArrayList<>();
+            Chunk<String> writeList = new Chunk<>();
             for (ClinicalDataComposite composite : items) {
                 writeList.add(composite.getSampleResult());
             }

@@ -33,10 +33,9 @@
 package org.cbioportal.cmo.pipelines.cvr.cna;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
+import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
@@ -80,8 +79,8 @@ public class CVRCnaDataWriter implements ItemStreamWriter<CompositeCnaRecord> {
     }
 
     @Override
-    public void write(List<? extends CompositeCnaRecord> records) throws Exception {
-        List<String> items = new ArrayList<>();
+    public void write(Chunk<? extends CompositeCnaRecord> records) throws Exception {
+        Chunk<String> items = new Chunk<>();
         for (CompositeCnaRecord record : records) {
             if (record.getAllCnaRecord() != null) {
                 items.add(record.getAllCnaRecord());

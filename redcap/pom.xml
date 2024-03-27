@@ -4,12 +4,12 @@
   <name>MSKCC CMO Redcap Pipeline Master</name>
   <description>Redcap Pipeline</description>
   <artifactId>redcap</artifactId>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
   <groupId>org.mskcc.cmo.ks.redcap</groupId>
   <parent>
     <groupId>org.mskcc.cmo.ks</groupId>
     <artifactId>master</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
   </parent>
   <packaging>pom</packaging>
   <modules>
@@ -22,7 +22,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>2.3</version>
+        <version>3.5.1</version>
         <executions>
           <execution>
             <id>redcap-pipeline-shade-jar</id>

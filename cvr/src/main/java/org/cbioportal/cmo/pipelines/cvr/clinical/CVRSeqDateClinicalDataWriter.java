@@ -91,9 +91,9 @@ public class CVRSeqDateClinicalDataWriter implements ItemStreamWriter<CompositeC
     }
 
     @Override
-    public void write(List<? extends CompositeClinicalRecord> items) throws Exception {
+    public void write(Chunk<? extends CompositeClinicalRecord> items) throws Exception {
         if (CVRUtilities.SUPPORTED_SEQ_DATE_STUDY_IDS.contains(studyId)) {
-            List<String> writeList = new ArrayList<>();
+            Chunk<String> writeList = new Chunk<>();
             for (CompositeClinicalRecord item : items) {
                 if (item.getSeqDateRecord()!= null) {
                     writeList.add(item.getSeqDateRecord());

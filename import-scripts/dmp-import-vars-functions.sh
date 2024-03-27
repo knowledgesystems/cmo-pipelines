@@ -7,13 +7,11 @@ PERFORM_CRDB_FETCH=0
 PROCESS_UNLINKED_ARCHER_STUDY=0
 CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
 CVR_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/cvr_fetcher.jar"
-DARWIN_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/darwin_fetcher.jar"
 DDP_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/ddp_fetcher.jar"
 REDCAP_PIPELINE_JAR_FILENAME="$PORTAL_HOME/lib/redcap_pipeline.jar"
 IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-dmp-importer.jar"
 JAVA_CRDB_FETCHER_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED -jar $CRDB_FETCHER_JAR_FILENAME"
 JAVA_CVR_FETCHER_ARGS="-Xmx64g -jar $CVR_FETCHER_JAR_FILENAME"
-JAVA_DARWIN_FETCHER_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED -jar $DARWIN_FETCHER_JAR_FILENAME"
 JAVA_DDP_FETCHER_ARGS="-Xmx48g $JAVA_SSL_ARGS -jar $DDP_FETCHER_JAR_FILENAME"
 JAVA_REDCAP_PIPELINE_ARGS="$JAVA_SSL_ARGS -jar $REDCAP_PIPELINE_JAR_FILENAME"
 # the cvr server safety lockouts are no longer in use now that cvr timeout/retry loops are in effect
@@ -163,13 +161,6 @@ function import_crdb_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_crdb_basic.txt mskimpact_crdb_basic ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_crdb_survey.txt mskimpact_crdb_survey ; then return_value=1 ; fi
-    return $return_value
-}
-
-# Function for importing mskimpact darwin files to redcap
-function import_mskimpact_darwin_caisis_to_redcap {
-    return_value=0
-    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_caisis_gbm.txt mskimpact_clinical_caisis ; then return_value=1 ; fi
     return $return_value
 }
 
