@@ -41,13 +41,22 @@ def write_tsv(df, path, **opts):
 def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="inner"):
     data_frames = []
     for file in input_files:
+        # Determine which line to start reading from
+        start_read = 0
+        with open(file, "r") as f:
+            # Assumes that commented lines are at the start of the file
+            for line_count, line in enumerate(f):
+                if not line.startswith("#"):
+                    start_read = line_count
+                    break
+
         df = pd.read_table(
             file,
             sep=sep,
-            comment="#",
             float_precision="round_trip",
             na_filter=False,
             low_memory=False,
+            skiprows=start_read
         )
         data_frames.append(df)
 
