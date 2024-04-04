@@ -215,7 +215,8 @@ public class BatchConfiguration {
                            @Qualifier("svStepFlow") Flow svStepFlow,
                            @Qualifier("segmentStepFlow") Flow segmentStepFlow,
                            @Qualifier("genePanelStep") Step genePanelStep,
-                           @Qualifier("cvrRequeueStep") Step cvrRequeueStep,
+                            // temporarily disabled to allow rollout of java21 enabled cvr fetcher
+                            // @Qualifier("cvrRequeueStep") Step cvrRequeueStep,
                            @Qualifier("zeroVariantWhitelistFlow") Flow zeroVariantWhitelistFlow) {
         return new FlowBuilder<Flow>("cvrJobFlow")
                 .start(cvrSampleListsStep)
@@ -227,7 +228,8 @@ public class BatchConfiguration {
                 .next(svStepFlow)
                 .next(segmentStepFlow)
                 .next(genePanelStep)
-                .next(cvrRequeueStep)
+                // temporarily disabled to allow rollout of java21 enabled cvr fetcher
+                // .next(cvrRequeueStep)
                 .next(zeroVariantWhitelistFlow)
                 .build();
     }
