@@ -54,7 +54,8 @@ import jakarta.annotation.Generated;
 @JsonPropertyOrder({
     "alys2sample_id",
     "cbx_patient_id",
-    "cbx_sample_id",
+    "cbx_sample_id","ct",
+    "ct",
     "date_tumor_sequencing",
     "dmp_alys_task_id",
     "dmp_alys_task_name",
@@ -96,6 +97,8 @@ public class CVRMetaData {
     private Integer cbxPatientId;
     @JsonProperty("cbx_sample_id")
     private Integer cbxSampleId;
+    @JsonProperty("ct")
+    private Integer cycleThreshold;
     @JsonProperty("date_tumor_sequencing")
     private String dateTumorSequencing;
     @JsonProperty("linked_mskimpact_case")
@@ -175,6 +178,7 @@ public class CVRMetaData {
      * @param alys2sampleId
      * @param cbxPatientId
      * @param cbxSampleId
+     * @param ct
      * @param dateTumorSequencing
      * @param linkedMskimpactCase
      * @param dmpAlysTaskId
@@ -208,7 +212,7 @@ public class CVRMetaData {
      * @param consentPartC
      * @param wholeSlideViewerId
      */
-    public CVRMetaData(Integer alys2sampleId, Integer cbxPatientId, Integer cbxSampleId, String dateTumorSequencing, String linkedMskimpactCase,
+    public CVRMetaData(Integer alys2sampleId, Integer cbxPatientId, Integer cbxSampleId, Integer ct, String dateTumorSequencing, String linkedMskimpactCase,
             Integer dmpAlysTaskId, String dmpAlysTaskName, String dmpPatientId, String dmpSampleId, Integer dmpSampleSoId, Integer gender,
             String genePanel, Integer isMetastasis, String legacyPatientId, String legacySampleId, String metastasisSite,
             String msiComment, String msiScore, String msiType, String outsideInstitute, String primarySite, Integer retrieveStatus,
@@ -218,6 +222,7 @@ public class CVRMetaData {
         this.alys2sampleId = alys2sampleId;
         this.cbxPatientId = cbxPatientId;
         this.cbxSampleId = cbxSampleId;
+        this.cycleThreshold = ct;
         this.dateTumorSequencing = dateTumorSequencing;
         this.dmpAlysTaskId = dmpAlysTaskId;
         this.dmpAlysTaskName = dmpAlysTaskName;
@@ -320,6 +325,26 @@ public class CVRMetaData {
     @JsonProperty("cbx_sample_id")
     public void setCbxSampleId(Integer cbxSampleId) {
         this.cbxSampleId = cbxSampleId;
+    }
+
+    /**
+     *
+     * @return
+     * The cycleThreshold
+     */
+    @JsonProperty("ct")
+    public Integer getCycleThreshold() {
+        return cycleThreshold;
+    }
+
+    /**
+     *
+     * @param cycleThreshold
+     * The ct
+     */
+    @JsonProperty("ct")
+    public void setCycleThreshold(Integer cycleThreshold) {
+        this.cycleThreshold = cycleThreshold;
     }
 
     /**

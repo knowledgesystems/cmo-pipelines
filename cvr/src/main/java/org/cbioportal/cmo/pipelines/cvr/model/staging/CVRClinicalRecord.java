@@ -55,6 +55,7 @@ public class CVRClinicalRecord {
     private String otherPatientId;
     private String soComments;
     private String sampleCoverage;
+    private String cycleThreshold;
     private String tumorPurity;
     private String oncotreeCode;
     private String partCConsented;
@@ -88,6 +89,7 @@ public class CVRClinicalRecord {
         this.otherPatientId = metaData.getLegacyPatientId();
         this.soComments = metaData.getSoComments();
         this.sampleCoverage = String.valueOf(metaData.getSampleCoverage());
+        this.cycleThreshold = String.valueOf(metaData.getCycleThreshold());
         this.tumorPurity = metaData.getTumorPurity();
         this.oncotreeCode = metaData.getTumorTypeCode();
         this.partAConsented = metaData.getConsentPartA();
@@ -119,6 +121,7 @@ public class CVRClinicalRecord {
         this.otherPatientId = metaData.getLegacyPatientId();
         this.soComments = metaData.getSoComments();
         this.sampleCoverage = String.valueOf(metaData.getSampleCoverage());
+        this.cycleThreshold = "";
         this.tumorPurity = "";
         this.oncotreeCode = "";
         this.partCConsented = "YES";
@@ -226,6 +229,14 @@ public class CVRClinicalRecord {
 
     public void setSAMPLE_COVERAGE(String sampleCoverage) {
         this.sampleCoverage = sampleCoverage;
+    }
+
+    public String getCYCLE_THRESHOLD() {
+        return this.cycleThreshold != null ? this.cycleThreshold : "";
+    }
+
+    public void setCYCLE_THRESHOLD(String cycleThreshold) {
+        this.cycleThreshold = cycleThreshold;
     }
 
     public String getTUMOR_PURITY() {
@@ -411,6 +422,7 @@ public class CVRClinicalRecord {
         fieldNames.add("CVR_TMB_TT_COHORT_PERCENTILE");
         fieldNames.add("PATH_SLIDE_EXISTS");
         fieldNames.add("MSK_SLIDE_ID");
+        fieldNames.add("CYCLE_THRESHOLD");
         return fieldNames;
     }
 
