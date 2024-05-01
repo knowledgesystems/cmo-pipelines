@@ -88,6 +88,7 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 @Configuration
 @ComponentScan(basePackages = {"org.cbioportal.annotator", "org.mskcc.cmo.messaging", "org.mskcc.cmo.common.*"})
+@EnableBatchProcessing(executionContextSerializerRef = "jacksonSerializer")
 public class BatchConfiguration {
     public static final String CVR_JOB = "cvrJob";
     public static final String JSON_JOB = "jsonJob";
@@ -885,4 +886,8 @@ public class BatchConfiguration {
         return jobLauncher;
     }
 
+    @Bean
+    public ExecutionContextSerializer jacksonSerializer() {
+        return new Jackson2ExecutionContextStringSerializer();
+    }
 }
