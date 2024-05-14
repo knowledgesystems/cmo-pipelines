@@ -1,4 +1,4 @@
-"""Provides unit tests for the test_merge_ddp_files.py script functionality.
+"""Provides unit tests for the combine_files_py3.py script functionality.
 
 To run the tests, execute the following command from the parent
 directory of this script:
