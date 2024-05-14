@@ -1,0 +1,15 @@
+#Sample Identifier	Patient Identifier	Gleason Score Reported on Sample (NLP)	Sample PD-L1 Positive (NLP)
+#A unique sample identifier.	Identifier to uniquely specify a patient.	" ---DESCRIPTION: Sample summary of the Gleason score reported on the specified sample ID at the time of surgery or biopsy ---MISSING DATA: No reported Gleason Score for patient. Rule-based NLP did not sense the word ""gleason"" any pathology reports. ---SOURCE:NLP generated from pathology reports"	 ---DESCRIPTION: Indication if specimen was labeled as PD-L1 positive in surgical pathology report ---MISSING DATA: Patient not tested for PD-L1 ---SOURCE:NLP generated from pathology reports
+#STRING	STRING	STRING	STRING
+#0	0	1	1
+SAMPLE_ID	PATIENT_ID	GLEASON_SAMPLE_LEVEL	PDL1_POSITIVE
+P-0000059-T02-IM3	P-0000059		
+P-0000043-T01-IM3	P-0000043		
+P-0000087-T01-IM3	P-0000087		
+P-0000010-T01-IM3	P-0000010		
+P-0000080-T01-IM3	P-0000080		
+P-0000049-T01-IM3	P-0000049		
+P-0000028-T01-IM3	P-0000028	4	
+P-0000024-T01-IM3	P-0000024		
+P-0000031-T01-IM3	P-0000031		
+P-0000038-T01-IM3	P-0000038		
