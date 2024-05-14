@@ -1,3 +1,17 @@
+#!/usr/bin/env python3
+
+""" validation_utils_py3.py
+This can be used to validate the format of a .
+Its primary use is to:
+- merge DDP files from MSK-IMPACT, HEMEPACT, ACCESS to generate merged DDP files
+for the msk_solid_heme cohort. This merged DDP file is only used for GENIE cohort creation.
+Usage:
+    python3 combine_files_py3.py --input-files $FILE1 $FILE2 <...> --output-file $OUTPUT_FILE
+Example:
+    python3 combine_files_py3.py --input-files mskimpact/ddp/ddp_naaccr.txt 
+"""
+
+
 from abc import ABC, abstractmethod
 import argparse
 import csv
@@ -11,6 +25,7 @@ class FileValidator(ABC):
         self.file_path = file_path
         self.output_file_path = output_file_path if output_file_path else file_path
         self.df = None
+        self.header = []
 
     def validate_file_exists(self):
         return os.path.exists(self.file_path)
@@ -25,6 +40,7 @@ class FileValidator(ABC):
                 if not line.startswith("#"):
                     start_read = line_count
                     break
+                self.header.append(line.strip())
 
         self.df = pd.read_table(
             self.file_path,
@@ -64,13 +80,20 @@ class FileValidator(ABC):
         # Clear df from memory
         self.clear_df()
 
-    def write_to_file(self, sep="\t", quoting=csv.QUOTE_NONE, **opts):
+    def write_to_file(self, sep="\t", mode="a", quoting=csv.QUOTE_NONE, **opts):
+        # Write header to file
+        with open(self.output_file_path, "w") as f:
+            for line in self.header:
+                f.write(f"{line}\n")
+
+        # Write data to file
         opts["index"] = opts.get(
             "index", False
         )  # by default, don't write the index column to the output
         self.df.to_csv(
             self.output_file_path,
             sep=sep,
+            mode=mode,
             quoting=quoting,
             **opts,
         )
@@ -84,14 +107,13 @@ class CDMSampleFileValidator(FileValidator):
         super().__init__(file_path, output_file_path)
     
     def validate_sids_match_pids(self):
-        non_matching = self.df.query(f"PATIENT_ID != SAMPLE_ID.str.extract('(P-\\d*)-*')[0]")
-        print(non_matching)
-        self.df.drop(non_matching.index)
+        non_matching = self.df.query("PATIENT_ID != SAMPLE_ID.str.extract('(P-[0-9]*)-*')[0]")
+        self.df = self.df.drop(non_matching.index)
 
-        if non_matching.size > 0:
-            logging.warn(f"The following {non_matching.size} records were dropped due to mismatched patient and sample IDs: {non_matching}")
+        if len(non_matching.index) > 0:
+            logging.warning(f"The following {len(non_matching.index)} records were dropped due to mismatched patient and sample IDs:\n{non_matching}")
 
-    # TODO options to run specific checks?
+    # TODO Add options to run specific checks
     def run_validate_checks(self):
         self.validate_sids_match_pids()
 
@@ -109,7 +131,7 @@ class CDMFileValidator:
         self.validate_sample_file()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="validation_utils_py3.py")
     parser.add_argument(
         "-v",
