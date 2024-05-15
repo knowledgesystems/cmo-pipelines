@@ -801,6 +801,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $? -gt 0 ] ; then
       sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
     else
+      # Validate the clinical sample file
+      $PYTHON3_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py -v cdm -f $MSK_CHORD_DATA_HOME/data_clinical_sample.txt
+
       # create temp directory for merging mskimpact and cdm clinical files
       # all processing is done in tmp and only copied over if everything succeeds
       # no git cleanup needed - will just remove the tmpdir at the end
