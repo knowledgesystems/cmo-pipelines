@@ -10,6 +10,7 @@ import os
 
 from validation_utils_py3 import CDMSampleFileValidator
 
+
 class TestCDMSampleFileValidation(unittest.TestCase):
 
     # Show the diff even if it is very big
@@ -26,17 +27,16 @@ class TestCDMSampleFileValidation(unittest.TestCase):
     def test_sample_file_mismatched_ids(self):
         sub_dir = "mismatched_ids"
         self.compare_expected_output_to_actual(sub_dir)
-  
+
     def compare_expected_output_to_actual(self, sub_dir):
         input_sample_file = os.path.join(TestCDMSampleFileValidation.base_dir, sub_dir, "data_clinical_sample.txt")
         output_file = os.path.join(TestCDMSampleFileValidation.base_dir, sub_dir, "data_clinical_sample_output.txt")
         expected_file = os.path.join(TestCDMSampleFileValidation.base_dir, sub_dir, "data_clinical_sample_expected.txt")
-
         sample_file_validator = CDMSampleFileValidator(input_sample_file, output_file_path=output_file)
 
         try:
             sample_file_validator.validate()
-        except (KeyError, ValueError): # TODO fix error types
+        except (KeyError, ValueError):  # TODO fix error types
             if os.path.exists(output_file):
                 os.remove(output_file)
             raise
@@ -50,5 +50,5 @@ class TestCDMSampleFileValidation(unittest.TestCase):
         os.remove(output_file)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
