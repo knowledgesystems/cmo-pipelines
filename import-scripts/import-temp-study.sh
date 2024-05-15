@@ -23,6 +23,8 @@
 #     RENAME_BACKUP_FAIL     if non-zero indicates that the original study failed to rename to the backup study id
 #     RENAME_FAIL            if non-zero indicates that the temporary study failed to rename to the original study id
 
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
+
 function usage {
     echo "import-temp-study.sh"
     echo -e "\t-i | --study-id                      cancer study identifier"
@@ -41,7 +43,7 @@ function usage {
 
 function sendFailureMessageMskPipelineLogsSlack {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK temporary study import process failed: $MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK temporary study import process failed :tired_face: : $MESSAGE"
 }
 
 # set default value(s)
@@ -127,7 +129,6 @@ if [ $ENABLE_DEBUGGING != "0" ] ; then
     java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 fi
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$TMP_DIRECTORY -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
-GROUP_FOR_HIDING_BACKUP_STUDIES="KSBACKUP"
 SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 
 # define validator notification filename based on cancer study id, remove if already exists, touch new file
@@ -144,7 +145,6 @@ VALIDATION_FAIL=0
 DELETE_FAIL=0
 RENAME_BACKUP_FAIL=0
 RENAME_FAIL=0
-GROUPS_FAIL=0
 
 # import study using temp id
 echo "Importing study '$CANCER_STUDY_IDENTIFIER' as temporary study '$TEMP_CANCER_STUDY_IDENTIFIER'"
@@ -182,12 +182,6 @@ else
                 echo "Failed to rename existing '$CANCER_STUDY_IDENTIFIER' to backup study '$BACKUP_CANCER_STUDY_IDENTIFIER'!"
                 RENAME_BACKUP_FAIL=1
             else
-                echo "Updating groups of study '$BACKUP_CANCER_STUDY_IDENTIFIER' to '$GROUP_FOR_HIDING_BACKUP_STUDIES'"
-                $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-groups --cancer-study-ids $BACKUP_CANCER_STUDY_IDENTIFIER --groups $GROUP_FOR_HIDING_BACKUP_STUDIES
-                if [ $? -gt 0 ]; then
-                    echo "Failed to change groups for backup study '$BACKUP_CANCER_STUDY_IDENTIFIER'!"
-                    GROUPS_FAIL=1
-                fi
                 echo "Renaming temporary study '$TEMP_CANCER_STUDY_IDENTIFIER' to '$CANCER_STUDY_IDENTIFIER'"
                 $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --rename-cancer-study --new-study-id $CANCER_STUDY_IDENTIFIER --original-study-id $TEMP_CANCER_STUDY_IDENTIFIER
                 if [ $? -gt 0 ]; then
@@ -242,23 +236,16 @@ if [ $RENAME_FAIL -gt 0 ]; then
     sendFailureMessageMskPipelineLogsSlack "CRITICAL FAILURE: $TEMP_CANCER_STUDY_IDENTIFIER rename to $CANCER_STUDY_IDENTIFIER"
 fi
 
-EMAIL_BODY="Failed to update groups for backup study $BACKUP_CANCER_STUDY_IDENTIFIER."
-if [ $GROUPS_FAIL -gt 0 ]; then
-    echo -e "Sending email $EMAIL_BODY"
-    echo -e "$EMAIL_BODY" | mail -s "$CANCER_STUDY_IDENTIFIER Update Failure: Groups update" $EMAIL_LIST
-    sendFailureMessageMskPipelineLogsSlack "$CANCER_STUDY_IDENTIFIER groups update"
-fi
-
 # send notification file
 # this contains the error or success message from import
 # we only want to send the email on import failure
 # or if everything succeeds
-if [[ $IMPORT_FAIL -ne 0 || ($VALIDATION_FAIL -eq 0 && $DELETE_FAIL -eq 0 && $RENAME_BACKUP_FAIL -eq 0 && $RENAME_FAIL -eq 0 && $GROUPS_FAIL -eq 0) ]]; then
+if [[ $IMPORT_FAIL -ne 0 || ($VALIDATION_FAIL -eq 0 && $DELETE_FAIL -eq 0 && $RENAME_BACKUP_FAIL -eq 0 && $RENAME_FAIL -eq 0) ]]; then
     $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal $PORTAL_NAME --notification-file $NOTIFICATION_FILE
 fi
 
 # determine if we need to exit with error code
-if [[ $IMPORT_FAIL -ne 0 || $VALIDATION_FAIL -ne 0 || $DELETE_FAIL -ne 0 || $RENAME_BACKUP_FAIL -ne 0 || $RENAME_FAIL -ne 0 || $GROUPS_FAIL -ne 0 ]]; then
+if [[ $IMPORT_FAIL -ne 0 || $VALIDATION_FAIL -ne 0 || $DELETE_FAIL -ne 0 || $RENAME_BACKUP_FAIL -ne 0 || $RENAME_FAIL -ne 0 ]]; then
     echo "Update failed for study '$CANCER_STUDY_IDENTIFIER'"
     exit 1
 else

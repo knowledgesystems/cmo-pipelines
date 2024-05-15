@@ -21,8 +21,8 @@ PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH="$TMP_DIR/problematic_metadata_consume
 CONSUME_ATTEMPT_OUTPUT_FILEPATH="$TMP_DIR/consume_attempt_output.json"
 DETECT_SAMPLES_WITH_NULL_DP_AD_FIELDS_SCRIPT_FILEPATH=/data/portal-cron/scripts/detect_samples_with_null_dp_ad_fields.py
 DETECT_SAMPLES_WITH_PROBLEMATIC_METADATA_SCRIPT_FILEPATH=/data/portal-cron/scripts/detect_samples_with_problematic_metadata.py
-CVR_MONITOR_SLACK_URI_FILE="/data/portal-cron/pipelines-credentials/cvr-monitor-webhook-uri"
-CVR_MONITOR_URI=$(cat "$CVR_MONITOR_SLACK_URI_FILE")
+
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 
 function make_tmp_dir_if_necessary() {
     if ! [ -d "$TMP_DIR" ] ; then
@@ -186,7 +186,7 @@ function post_slack_message() {
     if [ ${#failed_to_consume_problematic_metadata_sample_list[@]} -gt 0 ]; then
         MESSAGE="${MESSAGE} Attempted Unsuccessfully To Consume :\n${failed_to_consume_problematic_metadata_sample_list[*]}"
     fi
-    curl -X POST -H 'Content-type: application/json' --data '{"blocks": [ { "type": "section", "text": { "type": "mrkdwn", "text": "'"$MESSAGE"'" } } ] }' "$CVR_MONITOR_URI"
+    send_slack_message_to_channel "#msk-cvr" "blocks" "$MESSAGE"
 }
 
 date

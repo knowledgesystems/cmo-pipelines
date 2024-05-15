@@ -56,7 +56,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     GMAIL_USERNAME=`grep gmail_username $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
     GMAIL_PASSWORD=`grep gmail_password $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
 
-    DROP_DEAD_INSTANT_END_TO_END=$(date --date="+12hours" -Iseconds)
+    DROP_DEAD_INSTANT_END_TO_END=$(date --date="+18hours" -Iseconds)
 
     # -----------------------------------------------------------------------------------------------------------
     # START DMP DATA FETCHING
@@ -183,7 +183,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
         # fetch new/updated IMPACT samples using CVR Web service   (must come after git fetching)
-        drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
+        drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
         bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskimpact
@@ -225,7 +225,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
 
         # fetch new/updated IMPACT germline samples using CVR Web service   (must come after normal cvr fetching)
-        drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
+        drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR germline fetch for mskimpact"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_PRIVATE_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
@@ -262,7 +262,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
         # fetch new/updated heme samples using CVR Web service (must come after git fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
-        drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
+        drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
         bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskimpact_heme
@@ -292,7 +292,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
         fi
         # fetch new/updated HEMEPACT germline samples using CVR Web service   (must come after normal cvr fetching)
-        drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
+        drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR germline fetch for hemepact"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_PRIVATE_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
@@ -328,7 +328,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
         # fetch new/updated archer samples using CVR Web service (must come after git fetching).
-        drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
+        drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
         bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskarcher
@@ -365,7 +365,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
         # fetch new/updated access samples using CVR Web service (must come after git fetching).
-        drop_dead_instant_step=$(date --date="+3hours" -Iseconds) # nearly 3 hours from now
+        drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
         bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskaccess
@@ -488,6 +488,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo "ERROR! Sample masterlist $SAMPLE_MASTER_LIST_FOR_FILTERING_FILENAME is empty. Skipping patient/sample filtering for mskimpact!"
         GENERATE_MASTERLIST_FAIL=1
     fi
+
 
     # -----------------------------------------------------------------------------------------------------------
     # IMPORT PROJECTS INTO REDCAP
@@ -792,9 +793,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     #--------------------------------------------------------------
     # CDM Fetch is optional -- does not break import if it fails, but will send notif
+
     sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh
     echo "fetching clinical demographics & timeline updates from S3..."
     sh $PORTAL_HOME/scripts/pull-cdm-data.sh
+
     if [ $? -gt 0 ] ; then
       sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
     else
@@ -806,7 +809,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
       if [ $? -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "Error: Unable to merge CDM MSKIMPACT and MSKSOLIDHEME clinical files"
       else
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt -i /data/portal-cron/scripts/cdm_metadata.json
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Unable to add metadata headers to merged CDM MSKIMPACT and MSKSOLIDHEME clinical files"
         else

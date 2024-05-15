@@ -14,7 +14,6 @@ REDIS_BINARY=$REDIS_HOME/src/redis-server
 REDIS_PING_FAST_TIMEOUT=3
 REDIS_PING_SLOW_TIMEOUT=3
 MAX_REDIS_PING_ATTEMPTS=10
-SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 DEBUG_MODE=0
 
 if ! which redis-cli >> /dev/null ; then
@@ -22,12 +21,16 @@ if ! which redis-cli >> /dev/null ; then
     exit 1
 fi
 
+if [ -z "$PORTAL_HOME" ] ; then
+    export PORTAL_HOME=/data/portal-cron
+fi
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
+
 # Function for alerting slack channel of any failures
 function sendRedisRestartNotification {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"redis server monitor script : $MESSAGE\", \"icon_emoji\": \":flushed:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "redis server monitor script :flushed: : $MESSAGE"
 }
-#" this comment "fixes" the syntax coloring in vi
 
 function ping_reqeust_succeeds {
     if [ $DEBUG_MODE -ne 0 ] ; then echo entering function ping_reqeust_succeeds ; fi
@@ -43,7 +46,7 @@ function test_for_redis_response_and_exit_on_success {
     if [ $DEBUG_MODE -ne 0 ] ; then echo entering function test_for_redis_response_and_exit_on_success ; fi
     if ping_reqeust_succeeds $REDIS_PING_SLOW_TIMEOUT ; then
         exit 0
-    fi   
+    fi
 }
 
 function redis_server_is_in_process_list {

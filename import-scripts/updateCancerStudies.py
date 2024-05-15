@@ -260,7 +260,7 @@ def get_db_cancer_studies(cursor):
     to_return = {}
 
     try:
-        cursor.execute('select cancer_study_id, cancer_study_identifier, groups from cancer_study')
+        cursor.execute('select cancer_study_id, cancer_study_identifier, `groups` from cancer_study')
         for row in cursor.fetchall():
             to_return[row[1]] = CancerStudy(str(row[0]), str(row[1]), str(row[2]))
     except MySQLdb.Error, msg:
@@ -294,7 +294,7 @@ def get_worksheet_cancer_studies(worksheet_feed):
 def update_cancer_studies_in_db(cursor, cancer_studies):
 
     try:
-        cursor.executemany("update cancer_study set groups=%s where cancer_study_id=%s",
+        cursor.executemany("update cancer_study set `groups`=%s where cancer_study_id=%s",
         [(cancer_study.groups, cancer_study.cancer_study_id) for cancer_study in cancer_studies])
     except MySQLdb.Error, msg:
         print >> ERROR_FILE, msg

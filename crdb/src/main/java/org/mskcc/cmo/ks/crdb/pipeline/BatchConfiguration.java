@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2019 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2019, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -45,13 +45,16 @@ import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBSurvey;
 import org.mskcc.cmo.ks.crdb.pipeline.util.CRDBUtils;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.annotation.*;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.SimpleJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.*;
 import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.core.io.Resource;
@@ -67,17 +70,10 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 
 @Configuration
-@EnableBatchProcessing
 public class BatchConfiguration {
 
     public static final String CRDB_IMPACT_JOB = "crdbImpactJob";
     public static final String CRDB_PDX_JOB = "crdbPDXJob";
-
-    @Autowired
-    public JobBuilderFactory jobBuilderFactory;
-
-    @Autowired
-    public StepBuilderFactory stepBuilderFactory;
 
     @Bean
     public CRDBUtils crdbUtils() {
@@ -90,31 +86,38 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Job crdbImpactJob() {
-        return jobBuilderFactory.get(CRDB_IMPACT_JOB)
-            .start(crdbSurveyStep())
-            .next(crdbDatasetStep())
+    public Job crdbImpactJob(JobRepository jobRepository,
+                             @Qualifier("crdbSurveyStep") Step crdbSurveyStep,
+                             @Qualifier("crdbDatasetStep") Step crdbDatasetStep) {
+        return new JobBuilder(CRDB_IMPACT_JOB, jobRepository)
+            .start(crdbSurveyStep)
+            .next(crdbDatasetStep)
             .build();
     }
 
     @Bean
-    public Job crdbPDXJob() {
-        return jobBuilderFactory.get(CRDB_PDX_JOB)
-            .start(crdbPDXClinicalSampleStep())
-            .next(crdbPDXClinicalPatientStep())
-            .next(crdbPDXTimelineStep())
-            .next(crdbPDXSourceToDestinationMappingStep())
-            .next(crdbPDXClinicalAnnotationMappingStep())
+    public Job crdbPDXJob(JobRepository jobRepository,
+                          @Qualifier("crdbPDXClinicalSampleStep") Step crdbPDXClinicalSampleStep,
+                          @Qualifier("crdbPDXClinicalPatientStep") Step crdbPDXClinicalPatientStep,
+                          @Qualifier("crdbPDXTimelineStep") Step crdbPDXTimelineStep,
+                          @Qualifier("crdbPDXSourceToDestinationMappingStep") Step crdbPDXSourceToDestinationMappingStep,
+                          @Qualifier("crdbPDXClinicalAnnotationMappingStep") Step crdbPDXClinicalAnnotationMappingStep) {
+        return new JobBuilder(CRDB_PDX_JOB, jobRepository)
+            .start(crdbPDXClinicalSampleStep)
+            .next(crdbPDXClinicalPatientStep)
+            .next(crdbPDXTimelineStep)
+            .next(crdbPDXSourceToDestinationMappingStep)
+            .next(crdbPDXClinicalAnnotationMappingStep)
             .build();
     }
 
     /**
      * Step 1 reads, processes, and writes the CRDB Survey query results
      */
-    @Bean
-    public Step crdbSurveyStep() {
-        return stepBuilderFactory.get("crdbSurveyStep")
-            .<CRDBSurvey, String> chunk(10)
+    @Bean(name = "crdbSurveyStep")
+    public Step crdbSurveyStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("crdbSurveyStep", jobRepository)
+            .<CRDBSurvey, String> chunk(10, transactionManager)
             .reader(crdbSurveyReader())
             .processor(crdbSurveyProcessor())
             .writer(crdbSurveyWriter())
@@ -141,10 +144,10 @@ public class BatchConfiguration {
     /**
      * Step 2 reads, processes, and writes the CRDB Dataset query results
      */
-    @Bean
-    public Step crdbDatasetStep() {
-        return stepBuilderFactory.get("crdbDatasetStep")
-            .<CRDBDataset, String> chunk(10)
+    @Bean(name = "crdbDatasetStep")
+    public Step crdbDatasetStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("crdbDatasetStep", jobRepository)
+            .<CRDBDataset, String> chunk(10, transactionManager)
             .reader(crdbDatasetReader())
             .processor(crdbDatasetProcessor())
             .writer(crdbDatasetWriter())
@@ -168,10 +171,10 @@ public class BatchConfiguration {
         return new CRDBDatasetWriter();
     }
 
-    @Bean
-    public Step crdbPDXClinicalAnnotationMappingStep() {
-        return stepBuilderFactory.get("crdbPDXClinicalAnnotationMappingStep")
-            .<CRDBPDXClinicalAnnotationMapping, String> chunk(10)
+    @Bean(name = "crdbPDXClinicalAnnotationMappingStep")
+    public Step crdbPDXClinicalAnnotationMappingStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("crdbPDXClinicalAnnotationMappingStep", jobRepository)
+            .<CRDBPDXClinicalAnnotationMapping, String> chunk(10, transactionManager)
             .reader(crdbPDXClinicalAnnotationMappingReader())
             .processor(crdbPDXClinicalAnnotationMappingProcessor())
             .writer(crdbPDXClinicalAnnotationMappingWriter())
@@ -196,10 +199,10 @@ public class BatchConfiguration {
         return new CRDBPDXClinicalAnnotationMappingWriter();
     }
 
-    @Bean
-    public Step crdbPDXSourceToDestinationMappingStep() {
-        return stepBuilderFactory.get("crdbPDXSourceToDestinationMappingStep")
-            .<CRDBPDXSourceToDestinationMapping, String> chunk(10)
+    @Bean(name = "crdbPDXSourceToDestinationMappingStep")
+    public Step crdbPDXSourceToDestinationMappingStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("crdbPDXSourceToDestinationMappingStep", jobRepository)
+            .<CRDBPDXSourceToDestinationMapping, String> chunk(10, transactionManager)
             .reader(crdbPDXSourceToDestinationMappingReader())
             .processor(crdbPDXSourceToDestinationMappingProcessor())
             .writer(crdbPDXSourceToDestinationMappingWriter())
@@ -224,10 +227,10 @@ public class BatchConfiguration {
         return new CRDBPDXSourceToDestinationMappingWriter();
     }
 
-    @Bean
-    public Step crdbPDXClinicalSampleStep() {
-        return stepBuilderFactory.get("crdbPDXClinicalSampleStep")
-            .<CRDBPDXClinicalSampleDataset, String> chunk(10)
+    @Bean(name = "crdbPDXClinicalSampleStep")
+    public Step crdbPDXClinicalSampleStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("crdbPDXClinicalSampleStep", jobRepository)
+            .<CRDBPDXClinicalSampleDataset, String> chunk(10, transactionManager)
             .reader(crdbPDXClinicalSampleReader())
             .processor(crdbPDXClinicalSampleProcessor())
             .writer(crdbPDXClinicalSampleWriter())
@@ -252,10 +255,10 @@ public class BatchConfiguration {
         return new CRDBPDXClinicalSampleWriter();
     }
 
-    @Bean
-    public Step crdbPDXClinicalPatientStep() {
-        return stepBuilderFactory.get("crdbPDXClinicalPatientStep")
-            .<CRDBPDXClinicalPatientDataset, String> chunk(10)
+    @Bean(name = "crdbPDXClinicalPatientStep")
+    public Step crdbPDXClinicalPatientStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("crdbPDXClinicalPatientStep", jobRepository)
+            .<CRDBPDXClinicalPatientDataset, String> chunk(10, transactionManager)
             .reader(crdbPDXClinicalPatientReader())
             .processor(crdbPDXClinicalPatientProcessor())
             .writer(crdbPDXClinicalPatientWriter())
@@ -280,10 +283,10 @@ public class BatchConfiguration {
         return new CRDBPDXClinicalPatientWriter();
     }
 
-    @Bean
-    public Step crdbPDXTimelineStep() {
-        return stepBuilderFactory.get("crdbPDXTimelineStep")
-            .<CRDBPDXTimelineDataset, String> chunk(10)
+    @Bean(name = "crdbPDXTimelineStep")
+    public Step crdbPDXTimelineStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("crdbPDXTimelineStep", jobRepository)
+            .<CRDBPDXTimelineDataset, String> chunk(10, transactionManager)
             .reader(crdbPDXTimelineReader())
             .processor(crdbPDXTimelineProcessor())
             .writer(crdbPDXTimelineWriter())

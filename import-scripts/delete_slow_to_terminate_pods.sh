@@ -17,8 +17,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/delete_slow_to_terminate_pods.loc
     POD_LIST_FILE=$WORK_DIR/pod_list_file
     TRIGGER_STATE="Terminating"
     TRIGGER_STATE_DURATION_FOR_DELETE=300 # 5 minutes observed in the Terminating state causes deletion
-    SLACK_STATUS_WEBHOOK_URL=$(cat /data/portal-cron/pipelines-credentials/slack_status_webhook.url)
-    HASH=$'\x23'
+
+    if [ -z "$PORTAL_HOME" ] ; then
+        export PORTAL_HOME=/data/portal-cron
+    fi
+    source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 
     function check_for_dependencies () {
         if [ ! -x "$TIMEOUT_BINARY" ] ; then
@@ -136,18 +139,16 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/delete_slow_to_terminate_pods.loc
         pod_id=$1
         notification_sent=${pod_to_notification_sent[$pod_id]}
         if [ "$notification_sent" -eq 0 ] ; then
-            # send via slack hook
             message="kubernetes alert : pod $id is still in Terminating state after $TRIGGER_STATE_DURATION_FOR_DELETE seconds."
-            curl -X POST --data-urlencode "payload={\"channel\": \"${HASH}status\", \"username\": \"cbioportal-devops-bot\", \"text\": \"$message\", \"icon_emoji\": \":turtle:\"}" $SLACK_STATUS_WEBHOOK_URL
+            send_slack_message_to_channel "#status" "string" "$message :turtle:"
             pod_to_notification_sent[$pod_id]=1
         fi
     }
 
     function send_deletion_notification () {
         pod_id=$1
-        # send via slack hook
         message="kubernetes alert : pod $id has been successfully deleted by a monitoring script."
-        curl -X POST --data-urlencode "payload={\"channel\": \"${HASH}status\", \"username\": \"cbioportal-devops-bot\", \"text\": \"$message\", \"icon_emoji\": \":toilet:\"}" $SLACK_STATUS_WEBHOOK_URL
+        send_slack_message_to_channel "#status" "string" "$message :toilet:"
     }
 
     function delete_all_slow_to_terminate_pods () {

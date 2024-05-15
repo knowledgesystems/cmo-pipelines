@@ -6,8 +6,8 @@ G2S_HOSTNAME="g2s.genomenexus.org"
 RESPONSE_FILENAME="$TMP_DIR/g2s_cert_response.txt"
 PEM_FILENAME="$TMP_DIR/g2s_certs.pem"
 CERTIFICATE_TEXT_FILENAME="$TMP_DIR/cert.txt"
-G2S_MONITOR_SLACK_URI_FILE="/data/portal-cron/pipelines-credentials/g2s-monitor-webhook-uri"
-G2S_MONITOR_URI=$(cat "$G2S_MONITOR_SLACK_URI_FILE")
+
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 
 function make_tmp_dir_if_necessary() {
     if ! [ -d "$TMP_DIR" ] ; then
@@ -56,9 +56,8 @@ function computes_seconds_until_expiration() {
 }
 
 send_warning() {
-    MESSAGE="Warning : the ssl certificate for host $G2S_HOSTNAME expires in $SEC_TO_EXPIRY seconds"
-    curl -X POST -H 'Content-type: application/json' --data '{"username": "g2smonitor", "text": "'"$MESSAGE"'", "icon_emoji": ":waning_crescent_moon:"}' "$G2S_MONITOR_URI"
-    #curl -X POST -H 'Content-type: application/json' --data-urlencode "payload={\"channel\": \"#g2s\", \"username\": \"g2s-monitor\", \"text\": \"$MESSAGE\", \"icon_emoji\": \":waning_crescent_moon:\"}" "$G2S_MONITOR_URI"
+    MESSAGE="Warning : the ssl certificate for host $G2S_HOSTNAME expires in $SEC_TO_EXPIRY seconds :waning_crescent_moon:"
+    send_slack_message_to_channel "#g2s" "string" "$MESSAGE"
 }
 
 function send_warning_if_necessary() {

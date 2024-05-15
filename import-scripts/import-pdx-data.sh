@@ -14,16 +14,17 @@ declare -a study_list
 
 # Functions
 
-# Function for alerting slack channel of any failures
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
+
 function sendFailureMessageMskPipelineLogsSlack {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"$MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "$MESSAGE :tired_face:"
 }
 
 # Function for alerting slack channel of successful imports
 function sendSuccessMessageMskPipelineLogsSlack {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"$MESSAGE\", \"icon_emoji\": \":tada:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "$MESSAGE"
 }
 
 function purgeOrigFilesUnderDirectory {
@@ -137,7 +138,6 @@ IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
 IMPORTER_DEBUG_PORT=27182
 CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
 importer_notification_file=$(mktemp $CRDB_PDX_TMPDIR/importer-update-notification.$now.XXXXXX)
-SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 ENABLE_DEBUGGING=0
 java_debug_args=""
 if [ $ENABLE_DEBUGGING != "0" ] ; then

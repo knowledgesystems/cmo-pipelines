@@ -48,10 +48,11 @@ function export_java_home() {
 #######################
 # general paths/options for system executables
 #######################
-export_java_home "AUTODETECT"
+# JAVA_HOME / JAVA_BINARY are set below explicitly now (rather than adjusting PATH)
+#export_java_home "AUTODETECT"
 export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
 # the legacy environment variable "JAVA_BINARY" is maintained for older personal scripts. All production scripts now use JAVA_8_BINARY or JAVA_11_BINARY when launching java
-export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-11.0.20.0.8-1.amzn2.0.1.x86_64"
+export JAVA_HOME="/usr/lib/jdk-21.0.2"
 export JAVA_BINARY="$JAVA_HOME/bin/java"
 export PYTHON_BINARY=/usr/bin/python
 export PYTHON3_BINARY=/usr/bin/python3
@@ -74,14 +75,13 @@ export CMO_PIPELINES_HOME=$PORTAL_GIT_HOME/cmo-pipelines
 export PIPELINES_HOME=$PORTAL_GIT_HOME/pipelines
 export CBIOPORTAL_HOME=$PORTAL_GIT_HOME/cbioportal
 export GENOME_NEXUS_ANNOTATOR_HOME=$PORTAL_GIT_HOME/genome-nexus-annotation-pipeline
-export ANNOTATOR_JAR=$GENOME_NEXUS_ANNOTATOR_HOME/annotationPipeline/target/annotationPipeline*.jar
+export ANNOTATOR_JAR=$PORTAL_HOME/lib/annotationPipeline.jar
 export ONCO_HOME=$PORTAL_GIT_HOME/oncotree
 export ONCOKB_ANNOTATOR_HOME=$PORTAL_GIT_HOME/oncokb-annotator
 export CDD_HOME=$PORTAL_GIT_HOME/clinical-data-dictionary
 export DDP_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/application-secure.properties
 export AWS_SSL_TRUSTSTORE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore
 export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore.password
-export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
 export GMAIL_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/gmail.credentials
 export START_GENIE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/genie-import-start-request
 export KILL_GENIE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/genie-import-kill-request
@@ -96,11 +96,11 @@ export START_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-impor
 export KILL_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-kill-request
 export HGNC_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-in-progress
 export HGNC_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-killing
-export START_DEVDB_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-start-request
-export KILL_DEVDB_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-kill-request
-export DEVDB_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-in-progress
-export DEVDB_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/devdb-import-killing
-export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-config
+export START_HGNC_1938_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-start-request
+export KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-kill-request
+export HGNC_1938_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-in-progress
+export HGNC_1938_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-killing
+export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-eks-config
 
 #######################
 # SSL args (for AWS + redcap)

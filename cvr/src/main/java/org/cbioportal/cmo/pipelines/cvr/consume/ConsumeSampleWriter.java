@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2017, 2023, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -33,13 +33,13 @@
 package org.cbioportal.cmo.pipelines.cvr.consume;
 
 import java.time.Instant;
-import java.util.List;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
 import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRConsumeSample;
+import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
@@ -116,7 +116,7 @@ public class ConsumeSampleWriter implements ItemStreamWriter<String> {
     public void close() throws ItemStreamException {}
 
     @Override
-    public void write(List<? extends String> sampleIdList) throws Exception {
+    public void write(Chunk<? extends String> sampleIdList) throws Exception {
         for (String sampleId : sampleIdList) {
             if (testingMode) {
                 log.info("[TESTING MODE]: sample id will not be consumed: " + sampleId);

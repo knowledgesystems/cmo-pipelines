@@ -1,4 +1,4 @@
-/* Copyright (c) 2021, 2022, 2023 Memorial Sloan Kettering Cancer Center.
+/* Copyright (c) 2021, 2022, 2023, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF
@@ -104,11 +104,6 @@ static string KILL_HGNC_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-
 static string HGNC_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-import-in-progress");
 static string HGNC_IMPORT_KILLING_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-import-killing");
 static string HGNC_IMPORT_LOG_FILENAME(IMPORT_LOG_BASEDIR + "/hgnc-importer.log");
-static string START_DEVDB_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/devdb-import-start-request");
-static string KILL_DEVDB_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/devdb-import-kill-request");
-static string DEVDB_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/devdb-import-in-progress");
-static string DEVDB_IMPORT_KILLING_FILENAME(IMPORT_TRIGGER_BASEDIR + "/devdb-import-killing");
-static string DEVDB_IMPORT_LOG_FILENAME(IMPORT_LOG_BASEDIR + "/devdb-importer.log");
 static string START_HGNC_1938_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-1938-import-start-request");
 static string KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-1938-import-kill-request");
 static string HGNC_1938_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-1938-import-in-progress");
@@ -226,7 +221,6 @@ void initialize_static_objects() {
     RECOGNIZED_IMPORTERS.push_back("genie");
     RECOGNIZED_IMPORTERS.push_back("triage");
     RECOGNIZED_IMPORTERS.push_back("hgnc");
-    RECOGNIZED_IMPORTERS.push_back("devdb");
     RECOGNIZED_IMPORTERS.push_back("hgnc1938");
     initialize_static_managed_importers();
     RECOGNIZED_COMMANDS.push_back("start");
@@ -252,7 +246,7 @@ string get_hostname() {
 void print_usage(string program_name) {
     vector<char> program_name_vector = character_vector_from_string(program_name);
     cerr << "Usage: " << basename(&program_name_vector[0]) << " importer_name command [extra_arguments]" << endl;
-    cerr << "       importer_name must be \"genie\" or \"triage\" or \"hgnc\" or \"devdb\" or \"hgnc1938\"" << endl;
+    cerr << "       importer_name must be \"genie\" or \"triage\" or \"hgnc\" or \"hgnc1938\"" << endl;
     cerr << "       valid commands:" << endl;
     cerr << "           start : requests that an import run begins as soon as possible - this may wait for an import in progress to finish before starting" << endl;
     cerr << "           kill : requests that any import in progress be halted and that any requested start be canceled" << endl;
@@ -449,9 +443,6 @@ int request_importer_start(string importer) {
     if (importer == "hgnc") {
         return request_importer_start(importer, START_HGNC_IMPORT_TRIGGER_FILENAME, KILL_HGNC_IMPORT_TRIGGER_FILENAME, HGNC_IMPORT_KILLING_FILENAME);
     }
-    if (importer == "devdb") {
-        return request_importer_start(importer, START_DEVDB_IMPORT_TRIGGER_FILENAME, KILL_DEVDB_IMPORT_TRIGGER_FILENAME, DEVDB_IMPORT_KILLING_FILENAME);
-    }
     if (importer == "hgnc1938") {
         return request_importer_start(importer, START_HGNC_1938_IMPORT_TRIGGER_FILENAME, KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME, HGNC_1938_IMPORT_KILLING_FILENAME);
     }
@@ -468,9 +459,6 @@ int request_importer_kill(string importer) {
     }
     if (importer == "hgnc") {
         return create_trigger_file(KILL_HGNC_IMPORT_TRIGGER_FILENAME);
-    }
-    if (importer == "devdb") {
-        return create_trigger_file(KILL_DEVDB_IMPORT_TRIGGER_FILENAME);
     }
     if (importer == "hgnc1938") {
         return create_trigger_file(KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME);
@@ -523,9 +511,6 @@ int report_importer_status(string importer) {
     }
     if (importer == "hgnc") {
         return report_importer_status(importer, START_HGNC_IMPORT_TRIGGER_FILENAME, KILL_HGNC_IMPORT_TRIGGER_FILENAME, HGNC_IMPORT_IN_PROGRESS_FILENAME, HGNC_IMPORT_KILLING_FILENAME, HGNC_IMPORT_LOG_FILENAME);
-    }
-    if (importer == "devdb") {
-        return report_importer_status(importer, START_DEVDB_IMPORT_TRIGGER_FILENAME, KILL_DEVDB_IMPORT_TRIGGER_FILENAME, DEVDB_IMPORT_IN_PROGRESS_FILENAME, DEVDB_IMPORT_KILLING_FILENAME, DEVDB_IMPORT_LOG_FILENAME);
     }
     if (importer == "hgnc1938") {
         return report_importer_status(importer, START_HGNC_1938_IMPORT_TRIGGER_FILENAME, KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME, HGNC_1938_IMPORT_IN_PROGRESS_FILENAME, HGNC_1938_IMPORT_KILLING_FILENAME, HGNC_1938_IMPORT_LOG_FILENAME);
@@ -595,9 +580,6 @@ int report_importer_log(string importer, vector<string> & extra_args) {
     }
     if (importer == "hgnc") {
         return report_importer_log(importer, HGNC_IMPORT_LOG_FILENAME, extra_args);
-    }
-    if (importer == "devdb") {
-        return report_importer_log(importer, DEVDB_IMPORT_LOG_FILENAME, extra_args);
     }
     if (importer == "hgnc1938") {
         return report_importer_log(importer, HGNC_1938_IMPORT_LOG_FILENAME, extra_args);

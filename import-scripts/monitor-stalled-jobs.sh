@@ -1,11 +1,6 @@
 #!/bin/bash
 
-if [ -z "$SLACK_URL_FILE" ] ; then
-    echo "could not run monitor-stalled-jobs.sh: automation-environment.sh script must be run in order to set needed environment variables (like SLACK_URL_FILE, ...)"
-    exit 1
-fi
-
-SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
+source /data/portal-cron/import-scripts/slack-message-functions.sh
 
 # converts timestamp (D:H:M:S) to seconds
 function convert_to_seconds () {
@@ -26,8 +21,7 @@ function send_email_notification () {
 
 # Function for alerting slack channel of stalled jobs
 function send_slack_warning_message () {
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"A stalled nightly import process has been detected.\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
-    # this comment corrects vim syntax coloring "
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "A stalled nightly import process has been detected. :tired_face:"
 }
 
 # Array of process names being checked

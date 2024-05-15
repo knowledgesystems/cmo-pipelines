@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -41,6 +41,7 @@ import java.util.Map;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
+import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
@@ -54,22 +55,22 @@ import org.springframework.core.io.FileSystemResource;
 public class TimelineWriter  implements ItemStreamWriter<String> {
     @Value("#{jobParameters[directory]}")
     private String directory;
-    
+
     @Value("#{jobParameters[rawData]}")
     private boolean rawData;
 
     @Value("#{stepExecutionContext['timelineHeader']}")
     private List<String> timelineHeader;
-    
+
     @Value("#{stepExecutionContext['projectTitle']}")
     private String projectTitle;
-    
+
     @Value("#{stepExecutionContext['writeTimelineData']}")
     private boolean writeTimelineData;
 
     @Value("#stepExecutionContext['standardTimelineDataFields']")
     private List<String> standardTimelineDataFields;
-    
+
     private static final String OUTPUT_FILENAME_PREFIX = "data_timeline";
     private File stagingFile;
     private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
@@ -100,7 +101,7 @@ public class TimelineWriter  implements ItemStreamWriter<String> {
     public void update(ExecutionContext ec) throws ItemStreamException {
         if (writeTimelineData) {
             ec.put("timelineFile", stagingFile.getName());
-        }        
+        }
     }
 
     @Override
@@ -109,7 +110,7 @@ public class TimelineWriter  implements ItemStreamWriter<String> {
     }
 
     @Override
-    public void write(List<? extends String> items) throws Exception {
+    public void write(Chunk<? extends String> items) throws Exception {
         if (writeTimelineData) {
             flatFileItemWriter.write(items);
         }
@@ -121,7 +122,7 @@ public class TimelineWriter  implements ItemStreamWriter<String> {
             if (metaData.contains(column)) {
                 header.add(column);
             }
-        }        
+        }
         for (String column : metaData) {
             if (!standardTimelineDataFields.contains(column) && !column.equals("RECORD_ID")) {
                 header.add(column);

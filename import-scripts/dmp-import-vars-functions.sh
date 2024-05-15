@@ -7,13 +7,12 @@ PERFORM_CRDB_FETCH=0
 PROCESS_UNLINKED_ARCHER_STUDY=0
 CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
 CVR_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/cvr_fetcher.jar"
-DARWIN_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/darwin_fetcher.jar"
 DDP_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/ddp_fetcher.jar"
 REDCAP_PIPELINE_JAR_FILENAME="$PORTAL_HOME/lib/redcap_pipeline.jar"
 IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-dmp-importer.jar"
+JAVA_DD_AGENT_ARGS="-javaagent:/opt/datadog/apm/library/java/dd-java-agent.jar -Ddd.profiling.enabled=true -Ddd.profiling.directallocation.enabled=true -Ddd.profiling.allocation.enabled=true -Ddd.profiling.ddprof.liveheap.enabled=true -Ddd.service=msk-impact-cvr-fetcher -Ddd.env=dev -Ddd.version=3.0"
 JAVA_CRDB_FETCHER_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED -jar $CRDB_FETCHER_JAR_FILENAME"
-JAVA_CVR_FETCHER_ARGS="-Xmx64g -jar $CVR_FETCHER_JAR_FILENAME"
-JAVA_DARWIN_FETCHER_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED -jar $DARWIN_FETCHER_JAR_FILENAME"
+JAVA_CVR_FETCHER_ARGS="-Xmx70g $JAVA_DD_AGENT_ARGS -jar $CVR_FETCHER_JAR_FILENAME"
 JAVA_DDP_FETCHER_ARGS="-Xmx48g $JAVA_SSL_ARGS -jar $DDP_FETCHER_JAR_FILENAME"
 JAVA_REDCAP_PIPELINE_ARGS="$JAVA_SSL_ARGS -jar $REDCAP_PIPELINE_JAR_FILENAME"
 # the cvr server safety lockouts are no longer in use now that cvr timeout/retry loops are in effect
@@ -28,9 +27,8 @@ ENABLE_DEBUGGING=0
 if [ $ENABLE_DEBUGGING != "0" ] ; then
     java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 fi
-JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 
 DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT=2
 
@@ -40,25 +38,27 @@ FILTER_EMPTY_COLUMNS_KEEP_COLUMN_LIST="PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE,PARTA_
 # -----------------------------------------------------------------------------------------------------------
 ## FUNCTIONS
 
+# import needed function send_slack_message_to_channel
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 # import needed function waitWhileWithinTimePeriod()
-source $PORTAL_HOME/scripts/date-and-time-handling-functions.sh
+source "$PORTAL_HOME/scripts/date-and-time-handling-functions.sh"
 
 # Function for alerting slack channel of any failures
 function sendPreImportFailureMessageMskPipelineLogsSlack() {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines pre-import process failed: $MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines pre-import process failed :tired_face: : $MESSAGE"
 }
 
 # Function for alerting slack channel of any failures
 function sendImportFailureMessageMskPipelineLogsSlack() {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines import process failed: $MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import process failed :tired_face: : $MESSAGE"
 }
 
 # Function for alerting slack channel of successful imports
 function sendImportSuccessMessageMskPipelineLogsSlack() {
     STUDY_ID=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines import success: $STUDY_ID\", \"icon_emoji\": \":tada:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import success: $STUDY_ID"
 }
 
 function printTimeStampedDataProcessingStepMessage {
@@ -163,13 +163,6 @@ function import_crdb_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_crdb_basic.txt mskimpact_crdb_basic ; then return_value=1 ; fi
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_crdb_survey.txt mskimpact_crdb_survey ; then return_value=1 ; fi
-    return $return_value
-}
-
-# Function for importing mskimpact darwin files to redcap
-function import_mskimpact_darwin_caisis_to_redcap {
-    return_value=0
-    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_caisis_gbm.txt mskimpact_clinical_caisis ; then return_value=1 ; fi
     return $return_value
 }
 

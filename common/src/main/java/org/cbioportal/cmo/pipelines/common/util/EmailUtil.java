@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2018, 2023, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -32,11 +32,12 @@
 
 package org.cbioportal.cmo.pipelines.common.util;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.*;
 import java.util.Properties;
 import javax.mail.*;
 import javax.mail.internet.*;
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -101,7 +102,10 @@ public class EmailUtil {
         String body = "An error occured while running the " + pipelineName + " with job parameters " + parameters + ".\n\n";
         List<String> messages = new ArrayList<>();
         for (Throwable exception : exceptions) {
-            messages.add(ExceptionUtils.getFullStackTrace(exception));
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            exception.printStackTrace(pw);
+            messages.add(pw.toString());
         }
         body += String.join("\n\n", messages);
         sendEmailToDefaultRecipient(subject, body);

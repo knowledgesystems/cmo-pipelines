@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2017, 2023, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -34,7 +34,7 @@ package org.cbioportal.cmo.pipelines.cvr.variants;
 
 import java.time.Instant;
 import java.util.Map;
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
 import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;

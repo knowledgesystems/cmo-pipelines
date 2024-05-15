@@ -239,60 +239,6 @@ fi
 # TODO: move other pre-import/data-fetch steps here (i.e exporting raw files from redcap)
 ```
 
-**DARWIN CAISIS GBM CLINICAL AND TIMELINE FETCH**
-
-```
-printTimeStampedDataProcessingStepMessage "MSKIMPACT data processing"
-# fetch darwin caisis data
-printTimeStampedDataProcessingStepMessage "Darwin CAISIS fetch for mskimpact"
-$JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -s mskimpact -d $MSK_IMPACT_DATA_HOME -c
-if [ $? -gt 0 ] ; then
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Darwin CAISIS Fetch"
-else
-    FETCH_DARWIN_CAISIS_FAIL=0
-    echo "committing darwin caisis data"
-    cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Darwin CAISIS"
-fi
-```
-
-> $JAVA_BINARY $JAVA_DARWIN_FETCHER_ARGS -s mskimpact -d $MSK_IMPACT_DATA_HOME -c
-
-**********************************************************************
-
-***[GITHUB | DMP Repository State: 1](#github-dmp-repository-state-1)***
-
-*Untracked files*
-* CAISIS Clinical and Timeline files:
-    * `$MSK_IMPACT_DATA_HOME/data_clinical_supp_caisis_gbm.txt`
-    * `$MSK_IMPACT_DATA_HOME/data_timeline_imaging_caisis_gbm.txt`
-    * `$MSK_IMPACT_DATA_HOME/data_timeline_specimen_caisis_gbm.txt`
-    * `$MSK_IMPACT_DATA_HOME/data_timeline_status_caisis_gbm.txt`
-    * `$MSK_IMPACT_DATA_HOME/data_timeline_surgery_caisis_gbm.txt`
-    * `$MSK_IMPACT_DATA_HOME/data_timeline_treatment_caisis_gbm.txt`
-* Supp Date Added files:
-    * `$MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_supp_date_cbioportal_added.txt`
-    * `$MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical_supp_date.txt`
-    * `$MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical_supp_date.txt`
-    * `$MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical_supp_date.txt`
-    * `$MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical_supp_date.txt`
-* CVR Clinical files:
-    * `$MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt`
-    * `$MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt`
-    * `$MSK_RAINDANCE_DATA_HOME/data_clinical_mskraindance_data_clinical.txt`
-    * `$MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt`
-    * `$MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt`
-
-*FAILURE:*
-> cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-
-**--> Untracked files from [GITHUB | DMP Repository State: 1](#github-dmp-repository-state-1) are not affected by `reset`**
-
-*SUCCESS*
-> cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Darwin CAISIS"
-
-**--> Untracked files from [GITHUB | DMP Repository State: 1](#github-dmp-repository-state-1) in `$MSK_IMPACT_DATA_HOME` and CAISIS clinical and timeline output files are tracked and added during this commit.**
-
 **********************************************************************
 
 **CVR CLINICAL AND GENOMIC FETCH**
@@ -1527,19 +1473,6 @@ if [ $PERFORM_CRDB_FETCH -gt 0 ] && [ $FETCH_CRDB_IMPACT_FAIL -eq 0 ] ; then
 fi
 ```
 
-* **DARWIN CAISIS**
-
-```
-# imports mskimpact darwin data into redcap
-if [ $FETCH_DARWIN_CAISIS_FAIL -eq 0 ] ; then
-    import_mskimpact_darwin_caisis_to_redcap
-    if [ $? -gt 0 ] ; then
-        IMPORT_STATUS_IMPACT=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Darwin CAISIS Redcap Import"
-    fi
-fi
-```
-
 * **DDP**
 
 ```
@@ -1760,15 +1693,9 @@ $GIT_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPA
         * `$MSK_IMPACT_DATA_HOME/data_clinical_ddp_pediatrics.txt`
         * `$MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt`
         * `$MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_supp_date_cbioportal_added.txt`
-        * `$MSK_IMPACT_DATA_HOME/data_clinical_supp_caisis_gbm.txt`
         * `$MSK_IMPACT_DATA_HOME/data_timeline_ddp_chemotherapy.txt`
         * `$MSK_IMPACT_DATA_HOME/data_timeline_ddp_radiation.txt`
         * `$MSK_IMPACT_DATA_HOME/data_timeline_ddp_surgery.txt`
-        * `$MSK_IMPACT_DATA_HOME/data_timeline_imaging_caisis_gbm.txt`
-        * `$MSK_IMPACT_DATA_HOME/data_timeline_specimen_caisis_gbm.txt`
-        * `$MSK_IMPACT_DATA_HOME/data_timeline_status_caisis_gbm.txt`
-        * `$MSK_IMPACT_DATA_HOME/data_timeline_surgery_caisis_gbm.txt`
-        * `$MSK_IMPACT_DATA_HOME/data_timeline_treatment_caisis_gbm.txt`
     * HEMEPACT:
         * `$MSK_HEMEPACT_DATA_HOME/data_clinical_ddp.txt`
         * `$MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt`

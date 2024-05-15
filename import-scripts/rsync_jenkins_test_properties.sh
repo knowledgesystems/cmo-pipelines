@@ -1,6 +1,14 @@
 #!/bin/bash
 
 PATH_TO_AUTOMATION_SCRIPT=/data/portal-cron/scripts/automation-environment.sh
+
+if ! [ -f "$PATH_TO_AUTOMATION_SCRIPT" ] ; then
+    echo "automation-environment.sh could not be found, exiting..."
+    exit 2
+fi
+
+source "$PATH_TO_AUTOMATION_SCRIPT"
+
 # jenkins server paths
 JENKINS_SRV_HOSTNAME=jenkins_hostname_prod
 JENKINS_SRV_HOME_DIRECTORY=/var/lib/jenkins
@@ -8,25 +16,19 @@ JENKINS_SRV_PROPERTIES_DIRECTORY=$JENKINS_SRV_HOME_DIRECTORY/pipelines-configura
 JENKINS_SRV_SCRIPTS_DIRECTORY=$JENKINS_SRV_HOME_DIRECTORY/pipelines-configuration/jenkins
 JENKINS_SRV_PIPELINES_CREDENTIALS=$JENKINS_SRV_HOME_DIRECTORY/pipelines-credentials
 JENKINS_SRV_GIT_CREDENTIALS=$JENKINS_SRV_HOME_DIRECTORY/git-credentials
-# Function for alerting slack channel that something failed
-function sendFailureMessageMskPipelineLogsSlack {
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"$1\", \"icon_emoji\": \":boom:\"}" $SLACK_PIPELINES_MONITOR_URL
-}
-
-if ! [ -f $PATH_TO_AUTOMATION_SCRIPT ] ; then
-    echo "automation-environment.sh could not be found, exiting..."
-    exit 2
-fi
-
-. $PATH_TO_AUTOMATION_SCRIPT
-
 # local jenkins staging paths
 LOCAL_PROPERTIES_DIRECTORY=$PIPELINES_CONFIG_HOME/properties/
 LOCAL_JENKINS_DIRECTORY=$PIPELINES_CONFIG_HOME/jenkins/
 LOCAL_PIPELINES_CREDENTIALS=$PORTAL_HOME/pipelines-credentials/
 LOCAL_GIT_CREDENTIALS=$PIPELINES_CONFIG_HOME/git/git-credentials
 
-SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
+
+# Function for alerting slack channel that something failed
+function sendFailureMessageMskPipelineLogsSlack {
+    MESSAGE="$1"
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "$MESSAGE :boom:"
+}
 
 cd $LOCAL_PROPERTIES_DIRECTORY
 git pull

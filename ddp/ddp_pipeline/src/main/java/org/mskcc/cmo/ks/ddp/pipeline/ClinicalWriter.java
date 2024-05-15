@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2018, 2023, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -87,8 +87,8 @@ public class ClinicalWriter implements ItemStreamWriter<CompositeResult> {
     }
 
     @Override
-    public void write(List<? extends CompositeResult> compositeResults) throws Exception {
-        List<String> records = new ArrayList<>();
+    public void write(Chunk<? extends CompositeResult> compositeResults) throws Exception {
+        Chunk<String> records = new Chunk<>();
         for (CompositeResult result : compositeResults) {
             records.add(result.getClinicalResult());
         }

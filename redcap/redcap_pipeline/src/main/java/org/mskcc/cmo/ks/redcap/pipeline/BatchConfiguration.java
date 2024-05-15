@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -35,21 +35,28 @@ import java.net.MalformedURLException;
 import java.util.*;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
-import org.springframework.batch.core.*;
-import org.springframework.batch.item.*;
-import org.springframework.batch.core.configuration.annotation.*;
-import org.springframework.context.annotation.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.support.SimpleJobLauncher;
+import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemStreamReader;
+import org.springframework.batch.item.ItemStreamWriter;
 import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.batch.item.support.CompositeItemWriter;
 import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
@@ -62,7 +69,6 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 
 @Configuration
-@EnableBatchProcessing
 @ComponentScan(basePackages="org.mskcc.cmo.ks.redcap.source.internal")
 @PropertySource("classpath:application.properties")
 public class BatchConfiguration {
@@ -75,97 +81,112 @@ public class BatchConfiguration {
     @Value("${chunk}")
     private Integer chunkInterval;
 
-    @Autowired
-    public JobBuilderFactory jobBuilderFactory;
-
-    @Autowired
-    public StepBuilderFactory stepBuilderFactory;
-
-    // Will keep calling clinicalDataStep or timelineDataStep based on the exit status from the clinicalDataStepListener
-    @Bean
-    public Job redcapExportJob() {
-        return jobBuilderFactory.get(REDCAP_EXPORT_JOB)
-                .start(exportClinicalDataStep())
-                .next(exportTimelineDataStep())
+    @Bean(name = "redcapExportJob")
+    public Job redcapExportJob(@Qualifier("redcapJobRepository") JobRepository jobRepository,
+                               @Qualifier("exportClinicalDataStep") Step exportClinicalDataStep,
+                               @Qualifier("exportTimelineDataStep") Step exportTimelineDataStep) {
+        return new JobBuilder(REDCAP_EXPORT_JOB, jobRepository)
+                .preventRestart()
+                .start(exportClinicalDataStep)
+                .next(exportTimelineDataStep)
                 .build();
     }
 
     // Will keep calling clinicalDataStep or timelineDataStep based on the exit status from the clinicalDataStepListener
-    @Bean
-    public Job redcapRawExportJob() {
-        return jobBuilderFactory.get(REDCAP_RAW_EXPORT_JOB)
-                .start(exportRawClinicalDataStep())
+    @Bean(name = "redcapRawExportJob")
+    public Job redcapRawExportJob(@Qualifier("redcapJobRepository") JobRepository jobRepository,
+                                  @Qualifier("exportRawClinicalDataStep") Step exportRawClinicalDataStep,
+                                  @Qualifier("exportRawTimelineDataStep") Step exportRawTimelineDataStep) {
+        return new JobBuilder(REDCAP_RAW_EXPORT_JOB, jobRepository)
+                .preventRestart()
+                .start(exportRawClinicalDataStep)
                     .on("CLINICAL")
-                    .to(exportRawClinicalDataStep())
+                    .to(exportRawClinicalDataStep)
                     .on("COMPLETED").end()
                     .on("TIMELINE")
-                        .to(exportRawTimelineDataStep())
+                        .to(exportRawTimelineDataStep)
                         .on("TIMELINE")
-                        .to(exportRawTimelineDataStep())
+                        .to(exportRawTimelineDataStep)
                         .on("COMPLETED").end()
                 .build()
                 .build();
     }
 
-    @Bean
-    public Job redcapImportJob() {
-        return jobBuilderFactory.get(REDCAP_IMPORT_JOB)
-                .start(importRedcapProjectDataStep())
+    @Bean(name = "redcapImportJob")
+    public Job redcapImportJob(@Qualifier("redcapJobRepository") JobRepository jobRepository, @Qualifier("importRedcapProjectDataStep") Step importRedcapProjectDataStep) {
+        return new JobBuilder(REDCAP_IMPORT_JOB, jobRepository)
+                .preventRestart()
+                .start(importRedcapProjectDataStep)
                 .build();
     }
 
     @Bean
-    public Step exportClinicalDataStep() {
-        return stepBuilderFactory.get("exportClinicalDataStep")
+    protected Step exportClinicalDataStep(@Qualifier("redcapJobRepository") JobRepository jobRepository,
+                                          @Qualifier("redcapTransactionManager") PlatformTransactionManager transactionManager,
+                                          @Qualifier("clinicalDataProcessor") CompositeItemProcessor<Map<String, String>, ClinicalDataComposite> processor,
+                                          @Qualifier("clinicalDataWriter") CompositeItemWriter<ClinicalDataComposite> writer) {
+        return new StepBuilder("exportClinicalDataStep", jobRepository)
                 .listener(exportClinicalDataStepListener())
-                .<Map<String, String>, ClinicalDataComposite> chunk(chunkInterval)
+                .<Map<String, String>, ClinicalDataComposite> chunk(chunkInterval, transactionManager)
                 .reader(clinicalDataReader())
-                .processor(clinicalDataProcessor())
-                .writer(clinicalDataWriter())
+                .processor(processor)
+                .writer(writer)
                 .build();
     }
 
     @Bean
-    public Step exportRawClinicalDataStep() {
-        return stepBuilderFactory.get("exportRawClinicalDataStep")
+    protected Step exportRawClinicalDataStep(@Qualifier("redcapJobRepository") JobRepository jobRepository,
+                                             @Qualifier("redcapTransactionManager") PlatformTransactionManager transactionManager,
+                                             @Qualifier("rawClinicalDataProcessor") ItemProcessor<Map<String, String>, String> processor,
+                                             @Qualifier("rawClinicalDataWriter") ItemStreamWriter<String> writer) {
+        return new StepBuilder("exportRawClinicalDataStep", jobRepository)
                 .listener(exportRawClinicalDataStepListener())
-                .<Map<String, String>, String> chunk(chunkInterval)
+                .<Map<String, String>, String> chunk(chunkInterval, transactionManager)
                 .reader(clinicalDataReader())
-                .processor(rawClinicalDataProcessor())
-                .writer(rawClinicalDataWriter())
+                .processor(processor)
+                .writer(writer)
                 .build();
     }
 
     @Bean
-    public Step exportTimelineDataStep() {
-        return stepBuilderFactory.get("exportTimelineDataStep")
+    protected Step exportTimelineDataStep(@Qualifier("redcapJobRepository") JobRepository jobRepository,
+                                          @Qualifier("redcapTransactionManager") PlatformTransactionManager transactionManager,
+                                          @Qualifier("timelineProcessor") TimelineProcessor processor,
+                                          @Qualifier("timelineWriter") TimelineWriter writer) {
+        return new StepBuilder("exportTimelineDataStep", jobRepository)
                 .listener(exportTimelineDataStepListener())
-                .<Map<String, String>, String> chunk(chunkInterval)
+                .<Map<String, String>, String> chunk(chunkInterval, transactionManager)
                 .reader(timelineReader())
-                .processor(timelineProcessor())
-                .writer(timelineWriter())
+                .processor(processor)
+                .writer(writer)
                 .build();
     }
 
     @Bean
-    public Step exportRawTimelineDataStep() {
-        return stepBuilderFactory.get("exportRawTimelineDataStep")
+    protected Step exportRawTimelineDataStep(@Qualifier("redcapJobRepository") JobRepository jobRepository,
+                                             @Qualifier("redcapTransactionManager") PlatformTransactionManager transactionManager,
+                                             @Qualifier("timelineProcessor") TimelineProcessor processor,
+                                             @Qualifier("timelineWriter") TimelineWriter writer) {
+        return new StepBuilder("exportRawTimelineDataStep", jobRepository)
                 .listener(exportRawTimelineDataStepListener())
-                .<Map<String, String>, String> chunk(chunkInterval)
+                .<Map<String, String>, String> chunk(chunkInterval, transactionManager)
                 .reader(timelineReader())
-                .processor(timelineProcessor())
-                .writer(timelineWriter())
+                .processor(processor)
+                .writer(writer)
                 .build();
     }
 
+
     @Bean
-    public Step importRedcapProjectDataStep() {
-        return stepBuilderFactory.get("importRedcapProjectDataStep")
-                .tasklet(importRedcapProjectDataTasklet())
+    protected Step importRedcapProjectDataStep(@Qualifier("redcapJobRepository") JobRepository jobRepository,
+                                               @Qualifier("redcapTransactionManager") PlatformTransactionManager transactionManager,
+                                               @Qualifier("importRedcapProjectData") Tasklet tasklet) {
+        return new StepBuilder("importRedcapProjectDataStep", jobRepository)
+                .tasklet(tasklet, transactionManager)
                 .build();
     }
 
-    @Bean
+    @Bean(name = "importRedcapProjectData")
     @StepScope
     public Tasklet importRedcapProjectDataTasklet() {
         return new ImportRedcapProjectDataTasklet();
@@ -183,9 +204,8 @@ public class BatchConfiguration {
     // which contains the data necessary for the next processor/writer and the result of the processors.
     // The writers pull out the data they need from the composite result.
 
-    @Bean
+    @Bean(name = "clinicalDataProcessor")
     @StepScope
-    @SuppressWarnings("unchecked")
     public CompositeItemProcessor<Map<String, String>, ClinicalDataComposite> clinicalDataProcessor() {
         CompositeItemProcessor<Map<String, String>, ClinicalDataComposite> processor = new CompositeItemProcessor<>();
         //TODO combine clinical data processors into a single class in order to avoid the need for a mixed type list
@@ -196,15 +216,14 @@ public class BatchConfiguration {
         return processor;
     }
 
-    @Bean
+    @Bean(name = "rawClinicalDataProcessor")
     @StepScope
     public RawClinicalDataProcessor rawClinicalDataProcessor() {
         return new RawClinicalDataProcessor();
     }
 
-    @Bean
+    @Bean(name = "clinicalDataWriter")
     @StepScope
-    @SuppressWarnings("unchecked")
     public CompositeItemWriter<ClinicalDataComposite> clinicalDataWriter() {
         CompositeItemWriter<ClinicalDataComposite> writer = new CompositeItemWriter<>();
         //TODO combine clinical data writers into a single class in order to avoid the need for a mixed type list
@@ -215,7 +234,7 @@ public class BatchConfiguration {
         return writer;
     }
 
-    @Bean
+    @Bean(name = "rawClinicalDataWriter")
     @StepScope
     public ItemStreamWriter<String> rawClinicalDataWriter() {
         return new RawClinicalDataWriter();
@@ -295,24 +314,6 @@ public class BatchConfiguration {
     @Value("org/springframework/batch/core/schema-sqlite.sql")
     private Resource dataRepositorySchema;
 
-    /**
-     * Spring Batch datasource.
-     * @return DataSource
-     */
-    @Bean
-    public DataSource dataSource() {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName("org.sqlite.JDBC");
-        dataSource.setUrl("jdbc:sqlite:repository.sqlite");
-        return dataSource;
-    }
-
-    /**
-     * Spring Batch datasource initializer.
-     * @param dataSource
-     * @return DataSourceInitializer
-     * @throws MalformedURLException
-     */
     @Bean
     public DataSourceInitializer dataSourceInitializer(DataSource dataSource) throws MalformedURLException {
         ResourceDatabasePopulator databasePopulator = new ResourceDatabasePopulator();
@@ -326,36 +327,25 @@ public class BatchConfiguration {
         return initializer;
     }
 
-    /**
-     * Spring Batch job repository.
-     * @return JobRepository
-     * @throws Exception
-     */
-    private JobRepository getJobRepository() throws Exception {
+    @Bean
+    public DataSource dataSource() {
+        final DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("org.sqlite.JDBC");
+        dataSource.setUrl("jdbc:sqlite:repository.sqlite");
+        return dataSource;
+    }
+
+    @Bean(name = "redcapTransactionManager")
+    public PlatformTransactionManager getTransactionManager() {
+        return new ResourcelessTransactionManager();
+    }
+
+    @Bean(name = "redcapJobRepository")
+    public JobRepository getJobRepository() throws Exception {
         JobRepositoryFactoryBean factory = new JobRepositoryFactoryBean();
         factory.setDataSource(dataSource());
         factory.setTransactionManager(getTransactionManager());
         factory.afterPropertiesSet();
-        return (JobRepository) factory.getObject();
-    }
-
-    /**
-     * Spring Batch transaction manager.
-     * @return PlatformTransactionManager
-     */
-    private PlatformTransactionManager getTransactionManager() {
-        return new ResourcelessTransactionManager();
-    }
-
-    /**
-     * Spring Batch job launcher.
-     * @return JobLauncher
-     * @throws Exception
-     */
-    public JobLauncher getJobLauncher() throws Exception {
-        SimpleJobLauncher jobLauncher = new SimpleJobLauncher();
-        jobLauncher.setJobRepository(getJobRepository());
-        jobLauncher.afterPropertiesSet();
-        return jobLauncher;
+        return factory.getObject();
     }
 }

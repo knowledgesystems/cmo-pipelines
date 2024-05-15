@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2018-2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 - 2023, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -40,8 +40,8 @@ import org.mskcc.cmo.ks.ddp.source.model.CohortPatient;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDemographics;
 import org.mskcc.cmo.ks.ddp.source.model.PatientDiagnosis;
 
+import jakarta.annotation.Resource;
 import java.util.*;
-import javax.annotation.Resource;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
 import org.junit.Test;

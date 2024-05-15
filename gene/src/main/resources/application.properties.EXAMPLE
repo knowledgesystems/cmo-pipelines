@@ -1,8 +1,0 @@
-spring.batch.job.enabled=false
-chunk.interval=100
-
-db.user=
-db.password=
-db.driver=com.mysql.jdbc.Driver
-db.url=
-db.use_ssl=false

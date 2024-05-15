@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 
-DBS=("devdb" "cgds_triage" "keycloak" "redcap")
+DBS=("cgds_triage" "keycloak" "redcap")
 LOCAL_BACKUP_DIR=/data/mysql-dumps
-SLACK_URL=`cat /data/portal-cron/pipelines-credentials/mskcc-sysadmin-slack.url`
+
+if [ -z "$PORTAL_HOME" ] ; then
+    export PORTAL_HOME=/data/portal-cron
+fi
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 
 for db in ${DBS[@]}; do
   DUMP_FAILURE=0
@@ -40,13 +44,9 @@ for db in ${DBS[@]}; do
 
   if [ $DUMP_FAILURE -eq 0 ]; then
     echo "Dump was successful"
-    if [ ! -z "$SLACK_URL" ]; then
-        curl -X POST --data-urlencode "payload={'channel': '#mskcc-sysadmin', 'username': 'cbioportal_importer', 'text': 'eks-pipelines backed up local db (${db})', 'icon_emoji': ':cbioportal:'}" "$SLACK_URL"
-    fi
+    send_slack_message_to_channel "#mskcc-sysadmin" "string" "eks-pipelines backed up local db (${db})"
   else
     echo "Dump failed"
-    if [ ! -z "$SLACK_URL" ]; then
-        curl -X POST --data-urlencode "payload={'channel': '#mskcc-sysadmin', 'username': 'cbioportal_importer', 'text': 'ERROR: eks-pipelines failed to back up local db (${db})', 'icon_emoji': ':cbioportal:'}" "$SLACK_URL"
-    fi
+    send_slack_message_to_channel "#mskcc-sysadmin" "string" "ERROR: eks-pipelines failed to back up local db :fire: (${db})"
   fi
 done

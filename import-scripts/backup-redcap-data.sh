@@ -3,7 +3,6 @@
 # take snapshot of REDCap projects for MSKIMPACT, HEMEPACT, ARCHER
 echo $(date)
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 
 # flags for REDCap export status
 MSKIMPACT_REDCAP_EXPORT_FAIL=0
@@ -19,17 +18,21 @@ ACCESS_VALIDATION_FAIL=0
 # -----------------------------------------------------------------------------------------------------------
 # FUNCTIONS
 
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
+
 # Function for alerting slack channel of any failures
 function sendFailureMessageMskPipelineLogsSlack {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"REDCap backup failed: $MESSAGE\", \"icon_emoji\": \":fire:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "REDCap backup failed :fire: : $MESSAGE"
 }
 
 # Function for alerting slack channel of successful imports
 function sendSuccessMessageMskPipelineLogsSlack {
     MESSAGE=$1
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"REDCap data backup succeeded! $MESSAGE\", \"icon_emoji\": \":tada:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "REDCap backup succeeded : $MESSAGE"
 }
+
+
 
 # Validate exported REDCap data
 function validateRedcapExportForStudy {

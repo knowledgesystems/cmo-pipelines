@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2022, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
  * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * is on an "as is" basis, and Memorial Sloan Kettering Cancer Center has no
  * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * modifications. In no event shall Memorial Sloan Kettering Cancer Center be
  * liable to any party for direct, indirect, special, incidental or
  * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * software and its documentation, even if Memorial Sloan Kettering Cancer
  * Center has been advised of the possibility of such damage.
  */
 
@@ -33,43 +33,46 @@
 package org.cbioportal.cmo.pipelines.cvr;
 
 import java.net.MalformedURLException;
-import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSvRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSegRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeClinicalRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSegRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRGenePanelRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
+import java.util.*;
+import javax.sql.DataSource;
+import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.clinical.*;
 import org.cbioportal.cmo.pipelines.cvr.cna.*;
 import org.cbioportal.cmo.pipelines.cvr.consume.*;
 import org.cbioportal.cmo.pipelines.cvr.genepanel.*;
 import org.cbioportal.cmo.pipelines.cvr.linkedimpactcase.*;
-import org.cbioportal.cmo.pipelines.cvr.samplelist.CvrSampleListsTasklet;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSegRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSvRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRGenePanelRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSegRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
+import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
 import org.cbioportal.cmo.pipelines.cvr.mutation.*;
 import org.cbioportal.cmo.pipelines.cvr.requeue.*;
+import org.cbioportal.cmo.pipelines.cvr.samplelist.CvrSampleListsTasklet;
 import org.cbioportal.cmo.pipelines.cvr.seg.*;
+import org.cbioportal.cmo.pipelines.cvr.smile.SmilePublisherTasklet;
 import org.cbioportal.cmo.pipelines.cvr.sv.*;
 import org.cbioportal.cmo.pipelines.cvr.variants.*;
 import org.cbioportal.cmo.pipelines.cvr.whitelist.ZeroVariantWhitelistTasklet;
 import org.cbioportal.models.*;
-
-import java.util.*;
-import javax.sql.DataSource;
-import org.apache.log4j.Logger;
-import org.cbioportal.cmo.pipelines.cvr.smile.SmilePublisherTasklet;
 import org.mskcc.cmo.messaging.Gateway;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.annotation.*;
 import org.springframework.batch.core.job.builder.FlowBuilder;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.job.flow.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.SimpleJobLauncher;
+import org.springframework.batch.core.repository.dao.Jackson2ExecutionContextStringSerializer;
+import org.springframework.batch.core.repository.ExecutionContextSerializer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.support.CompositeItemWriter;
@@ -86,8 +89,8 @@ import org.springframework.transaction.PlatformTransactionManager;
  * @author heinsz
  */
 @Configuration
-@EnableBatchProcessing
 @ComponentScan(basePackages = {"org.cbioportal.annotator", "org.mskcc.cmo.messaging", "org.mskcc.cmo.common.*"})
+@EnableBatchProcessing(executionContextSerializerRef = "jacksonSerializer")
 public class BatchConfiguration {
     public static final String CVR_JOB = "cvrJob";
     public static final String JSON_JOB = "jsonJob";
@@ -95,12 +98,6 @@ public class BatchConfiguration {
     public static final String GML_JSON_JOB = "gmlJsonJob";
     public static final String CONSUME_SAMPLES_JOB = "consumeSamplesJob";
     public static final String EMAIL_UTIL= "EmailUtil";
-
-    @Autowired
-    public JobBuilderFactory jobBuilderFactory;
-
-    @Autowired
-    public StepBuilderFactory stepBuilderFactory;
 
     @Value("${chunk}")
     private int chunkInterval;
@@ -131,326 +128,358 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Job gmlJob() {
-        return jobBuilderFactory.get(GML_JOB)
-                .start(cvrSampleListsStep())
-                .next(gmlJsonStep())
-                .next(gmlClinicalStep())
-                .next(gmlMutationStep())
-                .next(gmlSvStep())
+    public Job gmlJob(JobRepository jobRepository,
+                      @Qualifier("cvrSampleListsStep") Step cvrSampleListsStep,
+                      @Qualifier("gmlJsonStep") Step gmlJsonStep,
+                      @Qualifier("gmlClinicalStep") Step gmlClinicalStep,
+                      @Qualifier("gmlMutationStep") Step gmlMutationStep,
+                      @Qualifier("gmlSvStep") Step gmlSvStep) {
+        return new JobBuilder(GML_JOB, jobRepository)
+                .start(cvrSampleListsStep)
+                .next(gmlJsonStep)
+                .next(gmlClinicalStep)
+                .next(gmlMutationStep)
+                .next(gmlSvStep)
                 .build();
     }
 
     @Bean
-    public Job jsonJob() {
-        return jobBuilderFactory.get(JSON_JOB)
-                .start(cvrJsonJobFlow())
+    public Job jsonJob(JobRepository jobRepository,
+                       @Qualifier("cvrJsonJobFlow") Flow cvrJsonJobFlow) {
+        return new JobBuilder(JSON_JOB, jobRepository)
+                .start(cvrJsonJobFlow)
                 .build().build();
     }
 
     @Bean
-    public Job cvrJob() {
-        return jobBuilderFactory.get(CVR_JOB)
-                .start(cvrResponseStep())
-                .next(checkCvrReponse())
+    public Job cvrJob(JobRepository jobRepository,
+                      @Qualifier("cvrResponseStep") Step cvrResponseStep,
+                      @Qualifier("cvrJobFlow") Flow cvrJobFlow) {
+        return new JobBuilder(CVR_JOB, jobRepository)
+                .start(cvrResponseStep)
+                .next(checkCvrResponse())
                     .on("RUN")
-                    .to(cvrJobFlow())
-                .from(checkCvrReponse())
+                    .to(cvrJobFlow)
+                .from(checkCvrResponse())
                     .on("STOP").end()
                 .build().build();
     }
 
     @Bean
-    public Job gmlJsonJob() {
-        return jobBuilderFactory.get(GML_JSON_JOB)
-                .start(cvrSampleListsStep())
-                .next(gmlClinicalStep())
-                .next(gmlMutationStep())
-                .next(gmlSvStep())
+    public Job gmlJsonJob(JobRepository jobRepository,
+                          @Qualifier("cvrSampleListsStep") Step cvrSampleListsStep,
+                          @Qualifier("gmlClinicalStep") Step gmlClinicalStep,
+                          @Qualifier("gmlMutationStep") Step gmlMutationStep,
+                          @Qualifier("gmlSvStep") Step gmlSvStep) {
+        return new JobBuilder(GML_JSON_JOB, jobRepository)
+                .start(cvrSampleListsStep)
+                .next(gmlClinicalStep)
+                .next(gmlMutationStep)
+                .next(gmlSvStep)
                 .build();
     }
 
     @Bean
-    public Job consumeSamplesJob() {
-        return jobBuilderFactory.get(CONSUME_SAMPLES_JOB)
-                .start(consumeSampleStep())
-                .next(smilePublisherStep())
+    public Job consumeSamplesJob(JobRepository jobRepository,
+                                 @Qualifier("consumeSampleStep") Step consumeSampleStep,
+                                 @Qualifier("smilePublisherStep") Step smilePublisherStep) {
+        return new JobBuilder(CONSUME_SAMPLES_JOB, jobRepository)
+                .start(consumeSampleStep)
+                .next(smilePublisherStep)
                 .build();
     }
 
-    @Bean
-    public Flow cvrJsonJobFlow() {
+    @Bean(name = "cvrJsonJobFlow")
+    public Flow cvrJsonJobFlow(@Qualifier("cvrSampleListsStep") Step cvrSampleListsStep,
+                               @Qualifier("linkedMskimpactCaseFlow") Flow linkedMskimpactCaseFlow,
+                               @Qualifier("clinicalStep") Step clinicalStep,
+                               @Qualifier("mutationsStepFlow") Flow mutationsStepFlow,
+                               @Qualifier("cnaStepFlow") Flow cnaStepFlow,
+                               @Qualifier("svStepFlow") Flow svStepFlow,
+                               @Qualifier("genePanelStep") Step genePanelStep) {
         return new FlowBuilder<Flow>("cvrJsonJobFlow")
-                .start(cvrSampleListsStep())
-                .next(linkedMskimpactCaseFlow())
-                .next(clinicalStep())
-                .next(mutationsStepFlow())
-                .next(cnaStepFlow())
-                .next(svStepFlow())
-                .next(genePanelStep())
+                .start(cvrSampleListsStep)
+                .next(linkedMskimpactCaseFlow)
+                .next(clinicalStep)
+                .next(mutationsStepFlow)
+                .next(cnaStepFlow)
+                .next(svStepFlow)
+                .next(genePanelStep)
                 .build();
     }
 
-    @Bean
-    public Flow cvrJobFlow() {
+    @Bean(name = "cvrJobFlow")
+    public Flow cvrJobFlow(@Qualifier("cvrSampleListsStep") Step cvrSampleListsStep,
+                           @Qualifier("cvrJsonStep") Step cvrJsonStep,
+                           @Qualifier("linkedMskimpactCaseFlow") Flow linkedMskimpactCaseFlow,
+                           @Qualifier("clinicalStep") Step clinicalStep,
+                           @Qualifier("mutationsStepFlow") Flow mutationsStepFlow,
+                           @Qualifier("cnaStepFlow") Flow cnaStepFlow,
+                           @Qualifier("svStepFlow") Flow svStepFlow,
+                           @Qualifier("segmentStepFlow") Flow segmentStepFlow,
+                           @Qualifier("genePanelStep") Step genePanelStep,
+                           @Qualifier("cvrRequeueStep") Step cvrRequeueStep,
+                           @Qualifier("zeroVariantWhitelistFlow") Flow zeroVariantWhitelistFlow) {
         return new FlowBuilder<Flow>("cvrJobFlow")
-                .start(cvrSampleListsStep())
-                .next(cvrJsonStep())
-                .next(linkedMskimpactCaseFlow())
-                .next(clinicalStep())
-                .next(mutationsStepFlow())
-                .next(cnaStepFlow())
-                .next(svStepFlow())
-                .next(segmentStepFlow())
-                .next(genePanelStep())
-                .next(cvrRequeueStep())
-                .next(zeroVariantWhitelistFlow())
+                .start(cvrSampleListsStep)
+                .next(cvrJsonStep)
+                .next(linkedMskimpactCaseFlow)
+                .next(clinicalStep)
+                .next(mutationsStepFlow)
+                .next(cnaStepFlow)
+                .next(svStepFlow)
+                .next(segmentStepFlow)
+                .next(genePanelStep)
+                .next(cvrRequeueStep)
+                .next(zeroVariantWhitelistFlow)
                 .build();
     }
 
-    @Bean
-    public Flow linkedMskimpactCaseFlow() {
+    @Bean(name = "linkedMskimpactCaseFlow")
+    public Flow linkedMskimpactCaseFlow(@Qualifier("linkedMskimpactCaseStep") Step linkedMskimpactCaseStep) {
         return new FlowBuilder<Flow>("linkedMskimpactCaseFlow")
-                .start(linkedMskimpactCaseDecider()).on("RUN").to(linkedMskimpactCaseStep())
+                .start(linkedMskimpactCaseDecider()).on("RUN").to(linkedMskimpactCaseStep)
                 .from(linkedMskimpactCaseDecider()).on("SKIP").end().build();
     }
 
-    @Bean
-    public Flow mutationsStepFlow() {
+    @Bean(name = "mutationsStepFlow")
+    public Flow mutationsStepFlow(@Qualifier("mutationStep") Step mutationStep,
+                                  @Qualifier("nonSignedoutMutationStep") Step nonSignedoutMutationStep) {
         return new FlowBuilder<Flow>("mutationsStepFlow")
                 .start(mutationsStepExecutionDecider())
                     .on("RUN")
-                        .to(mutationStep())
-                        .next(nonSignedoutMutationStep())
+                        .to(mutationStep)
+                        .next(nonSignedoutMutationStep)
                 .from(mutationsStepExecutionDecider())
                     .on("SKIP")
                         .end()
                 .build();
     }
 
-    @Bean
-    public Flow cnaStepFlow() {
+    @Bean(name = "cnaStepFlow")
+    public Flow cnaStepFlow(@Qualifier("cnaStep") Step cnaStep) {
         return new FlowBuilder<Flow>("cnaStepFlow")
                 .start(cnaStepExecutionDecider())
                     .on("RUN")
-                        .to(cnaStep())
+                        .to(cnaStep)
                 .from(cnaStepExecutionDecider())
                     .on("SKIP")
                         .end()
                 .build();
     }
 
-    @Bean
-    public Flow svStepFlow() {
+    @Bean(name = "svStepFlow")
+    public Flow svStepFlow(@Qualifier("svStep") Step svStep) {
         return new FlowBuilder<Flow>("svStepFlow")
                 .start(svStepExecutionDecider())
                     .on("RUN")
-                        .to(svStep())
+                        .to(svStep)
                 .from(svStepExecutionDecider())
                     .on("SKIP")
                         .end()
                 .build();
     }
 
-    @Bean
-    public Flow segmentStepFlow() {
+    @Bean(name = "segmentStepFlow")
+    public Flow segmentStepFlow(@Qualifier("segStep") Step segStep) {
         return new FlowBuilder<Flow>("segmentStepFlow")
                 .start(segStepExecutionDecider())
                     .on("RUN")
-                        .to(segStep())
+                        .to(segStep)
                 .from(segStepExecutionDecider())
                     .on("SKIP")
                         .end()
                 .build();
     }
 
-    @Bean
-    public Flow zeroVariantWhitelistFlow() {
+    @Bean(name = "zeroVariantWhitelistFlow")
+    public Flow zeroVariantWhitelistFlow(@Qualifier("zeroVariantWhitelistStep") Step zeroVariantWhitelistStep) {
         // use datatype = mutations since whitelist is for mutations data
         return new FlowBuilder<Flow>("zeroVariantWhitelistFlow")
                 .start(mutationsStepExecutionDecider())
                     .on("RUN")
-                        .to(zeroVariantWhitelistStep())
+                        .to(zeroVariantWhitelistStep)
                 .from(mutationsStepExecutionDecider())
                     .on("SKIP")
                         .end()
                 .build();
     }
 
-    @Bean
-    public Step gmlJsonStep() {
-        return stepBuilderFactory.get("gmlJsonStep")
-                .<GMLVariant, String> chunk(chunkInterval)
+    @Bean(name = "gmlJsonStep")
+    public Step gmlJsonStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("gmlJsonStep", jobRepository)
+                .<GMLVariant, String> chunk(chunkInterval, transactionManager)
                 .reader(gmlJsonReader())
                 .processor(gmlJsonProcessor())
                 .writer(gmlJsonWriter())
                 .build();
     }
 
-    @Bean
-    public Step gmlMutationStep() {
-        return stepBuilderFactory.get("gmlMutationStep")
-                .<AnnotatedRecord, String> chunk(chunkInterval)
+    @Bean(name = "gmlMutationStep")
+    public Step gmlMutationStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("gmlMutationStep", jobRepository)
+                .<AnnotatedRecord, String> chunk(chunkInterval, transactionManager)
                 .reader(gmlMutationReader())
                 .processor(mutationDataProcessor())
                 .writer(mutationDataWriter())
                 .build();
     }
 
-    @Bean
-    public Step gmlClinicalStep() {
-        return stepBuilderFactory.get("gmlClinicalStep")
-                .tasklet(gmlClinicalTasklet())
+    @Bean(name = "gmlClinicalStep")
+    public Step gmlClinicalStep(JobRepository jobRepository, PlatformTransactionManager transactionManager, @Qualifier("gmlClinicalTasklet") Tasklet gmlClinicalTasklet) {
+        return new StepBuilder("gmlClinicalStep", jobRepository)
+                .tasklet(gmlClinicalTasklet, transactionManager)
                 .build();
     }
 
-    @Bean
+    @Bean(name = "gmlClinicalTasklet")
     @StepScope
     public Tasklet gmlClinicalTasklet() {
         return new GMLClinicalTasklet();
     }
 
-    @Bean
-    public Step gmlSvStep() {
-        return stepBuilderFactory.get("gmlSvStep")
-                .<CVRSvRecord, CompositeSvRecord> chunk(chunkInterval)
+    @Bean(name = "gmlSvStep")
+    public Step gmlSvStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("gmlSvStep", jobRepository)
+                .<CVRSvRecord, CompositeSvRecord> chunk(chunkInterval, transactionManager)
                 .reader(gmlSvDataReader())
                 .processor(svDataProcessor())
                 .writer(svDataWriter())
                 .build();
     }
 
-    @Bean
-    public Step cvrJsonStep() {
-        return stepBuilderFactory.get("cvrJsonStep")
+    @Bean(name = "cvrJsonStep")
+    public Step cvrJsonStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("cvrJsonStep", jobRepository)
                 .listener(cvrResponseListener())
-                .<CvrResponse, String> chunk(chunkInterval)
-                .reader(cvrJsonreader())
-                .processor(cvrJsonprocessor())
-                .writer(cvrJsonwriter())
+                .<CvrResponse, String> chunk(chunkInterval, transactionManager)
+                .reader(cvrJsonReader())
+                .processor(cvrJsonProcessor())
+                .writer(cvrJsonWriter())
                 .build();
     }
 
-    @Bean
-    public Step clinicalStep() {
-        return stepBuilderFactory.get("clinicalStep")
-                .<CVRClinicalRecord, CompositeClinicalRecord> chunk(chunkInterval)
+    @Bean(name = "clinicalStep")
+    public Step clinicalStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("clinicalStep", jobRepository)
+                .<CVRClinicalRecord, CompositeClinicalRecord> chunk(chunkInterval, transactionManager)
                 .reader(clinicalDataReader())
                 .processor(clinicalDataProcessor())
                 .writer(compositeClinicalDataWriter())
                 .build();
     }
 
-    @Bean
-    public Step linkedMskimpactCaseStep() {
-        return stepBuilderFactory.get("linkedMskimpactCaseStep")
-                .<LinkedMskimpactCaseRecord, String> chunk(chunkInterval)
+    @Bean(name = "linkedMskimpactCaseStep")
+    public Step linkedMskimpactCaseStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("linkedMskimpactCaseStep", jobRepository)
+                .<LinkedMskimpactCaseRecord, String> chunk(chunkInterval, transactionManager)
                 .reader(linkedMskimpactCaseReader())
                 .processor(linkedMskimpactCaseProcessor())
                 .writer(linkedMskimpactCaseWriter())
                 .build();
     }
 
-    @Bean
-    public Step mutationStep() {
-        return stepBuilderFactory.get("mutationStep")
-                .<AnnotatedRecord, String> chunk(chunkInterval)
+    @Bean(name = "mutationStep")
+    public Step mutationStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("mutationStep", jobRepository)
+                .<AnnotatedRecord, String> chunk(chunkInterval, transactionManager)
                 .reader(mutationDataReader())
                 .processor(mutationDataProcessor())
                 .writer(mutationDataWriter())
                 .build();
     }
 
-    @Bean
-    public Step nonSignedoutMutationStep() {
-        return stepBuilderFactory.get("nonSignedoutMutationStep")
-                .<AnnotatedRecord, String> chunk(chunkInterval)
+    @Bean(name = "nonSignedoutMutationStep")
+    public Step nonSignedoutMutationStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("nonSignedoutMutationStep", jobRepository)
+                .<AnnotatedRecord, String> chunk(chunkInterval, transactionManager)
                 .reader(nonSignedoutMutationDataReader())
                 .processor(mutationDataProcessor())
                 .writer(mutationDataWriter())
                 .build();
     }
 
-    @Bean
-    public Step cnaStep() {
-        return stepBuilderFactory.get("cnaStep")
-                .<CompositeCnaRecord, CompositeCnaRecord> chunk(chunkInterval)
+    @Bean(name = "cnaStep")
+    public Step cnaStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("cnaStep", jobRepository)
+                .<CompositeCnaRecord, CompositeCnaRecord> chunk(chunkInterval, transactionManager)
                 .reader(cnaDataReader())
                 .writer(cnaDataWriter())
                 .build();
     }
 
-    @Bean
-    public Step svStep() {
-        return stepBuilderFactory.get("svStep")
-                .<CVRSvRecord, CompositeSvRecord> chunk(chunkInterval)
+    @Bean(name = "svStep")
+    public Step svStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("svStep", jobRepository)
+                .<CVRSvRecord, CompositeSvRecord> chunk(chunkInterval, transactionManager)
                 .reader(svDataReader())
                 .processor(svDataProcessor())
                 .writer(svDataWriter())
                 .build();
     }
 
-    @Bean
-    public Step segStep() {
-        return stepBuilderFactory.get("segStep")
-                .<CVRSegRecord, CompositeSegRecord> chunk(chunkInterval)
+    @Bean(name = "segStep")
+    public Step segStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("segStep", jobRepository)
+                .<CVRSegRecord, CompositeSegRecord> chunk(chunkInterval, transactionManager)
                 .reader(segDataReader())
                 .processor(segDataProcessor())
                 .writer(segDataWriter())
                 .build();
     }
 
-    @Bean
-    public Step genePanelStep() {
-        return stepBuilderFactory.get("genePanelStep").<CVRGenePanelRecord, String> chunk(chunkInterval)
+    @Bean(name = "genePanelStep")
+    public Step genePanelStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("genePanelStep", jobRepository)
+                .<CVRGenePanelRecord, String> chunk(chunkInterval, transactionManager)
                 .reader(genePanelReader())
                 .processor(genePanelProcessor())
                 .writer(genePanelWriter())
                 .build();
     }
 
-    @Bean
-    public Step cvrRequeueStep() {
-        return stepBuilderFactory.get("cvrRequeueStep")
+    @Bean(name = "cvrRequeueStep")
+    public Step cvrRequeueStep(JobRepository jobRepository, PlatformTransactionManager transactionManager, @Qualifier("cvrRequeueTasklet") Tasklet cvrRequeueTasklet) {
+        return new StepBuilder("cvrRequeueStep", jobRepository)
                 .listener(cvrRequeueListener())
-                .tasklet(cvrRequeueTasklet())
+                .tasklet(cvrRequeueTasklet, transactionManager)
                 .build();
     }
 
-    @Bean
-    public Step smilePublisherStep() {
-        return stepBuilderFactory.get("smilePublisherStep")
-                .tasklet(smilePublisherTasklet())
+    @Bean(name = "smilePublisherStep")
+    public Step smilePublisherStep(JobRepository jobRepository, PlatformTransactionManager transactionManager, @Qualifier("smilePublisherTasklet") Tasklet smilePublisherTasklet) {
+        return new StepBuilder("smilePublisherStep", jobRepository)
+                .tasklet(smilePublisherTasklet, transactionManager)
                 .build();
     }
 
-    @Bean
-    public Step consumeSampleStep() {
-        return stepBuilderFactory.get("consumeSampleStep")
-                .<String, String> chunk(chunkInterval)
+    @Bean(name = "consumeSampleStep")
+    public Step consumeSampleStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("consumeSampleStep", jobRepository)
+                .<String, String> chunk(chunkInterval, transactionManager)
                 .reader(consumeSampleReader())
                 .writer(consumeSampleWriter())
                 .build();
     }
 
-    @Bean
-    public Step cvrSampleListsStep() {
-        return stepBuilderFactory.get("cvrSampleListsStep")
-                .tasklet(cvrSampleListsTasklet())
+    @Bean(name = "cvrSampleListsStep")
+    public Step cvrSampleListsStep(JobRepository jobRepository, PlatformTransactionManager transactionManager, @Qualifier("cvrSampleListsTasklet") Tasklet cvrSampleListsTasklet) {
+        return new StepBuilder("cvrSampleListsStep", jobRepository)
+                .tasklet(cvrSampleListsTasklet, transactionManager)
                 .build();
     }
 
-    @Bean
-    public Step cvrResponseStep() {
-        return stepBuilderFactory.get("cvrResponseStep")
-                .tasklet(cvrResponseTasklet())
+    @Bean(name = "cvrResponseStep")
+    public Step cvrResponseStep(JobRepository jobRepository, PlatformTransactionManager transactionManager, @Qualifier("cvrResponseTasklet") Tasklet cvrResponseTasklet) {
+        return new StepBuilder("cvrResponseStep", jobRepository)
+                .tasklet(cvrResponseTasklet, transactionManager)
                 .build();
     }
 
-    @Bean
-    public Step zeroVariantWhitelistStep() {
-        return stepBuilderFactory.get("zeroVariantWhitelistStep")
-                .tasklet(zeroVariantWhitelistTasklet())
+    @Bean(name = "zeroVariantWhitelistStep")
+    public Step zeroVariantWhitelistStep(JobRepository jobRepository, PlatformTransactionManager transactionManager, @Qualifier("zeroVariantWhitelistTasklet") Tasklet zeroVariantWhitelistTasklet) {
+        return new StepBuilder("zeroVariantWhitelistStep", jobRepository)
+                .tasklet(zeroVariantWhitelistTasklet, transactionManager)
                 .build();
     }
 
@@ -482,21 +511,21 @@ public class BatchConfiguration {
     // Reader to get json data from CVR
     @Bean
     @StepScope
-    public ItemStreamReader<CvrResponse> cvrJsonreader() {
+    public ItemStreamReader<CvrResponse> cvrJsonReader() {
         return new CVRVariantsReader();
     }
 
     // Processor for processing the json data from CVR
     @Bean
     @StepScope
-    public CVRVariantsProcessor cvrJsonprocessor() {
+    public CVRVariantsProcessor cvrJsonProcessor() {
         return new CVRVariantsProcessor();
     }
 
     // Writer for writing out json from CVR to file
     @Bean
     @StepScope
-    public ItemStreamWriter<String> cvrJsonwriter() {
+    public ItemStreamWriter<String> cvrJsonWriter() {
         return new CVRVariantsWriter();
     }
 
@@ -661,13 +690,13 @@ public class BatchConfiguration {
         return new CVRGenePanelWriter();
     }
 
-    @Bean
+    @Bean(name = "cvrSampleListsTasklet")
     @StepScope
     public Tasklet cvrSampleListsTasklet() {
         return new CvrSampleListsTasklet();
     }
 
-    @Bean
+    @Bean(name = "cvrRequeueTasklet")
     @StepScope
     public Tasklet cvrRequeueTasklet() {
         return new CvrRequeueTasklet();
@@ -695,7 +724,7 @@ public class BatchConfiguration {
         return new ConsumeSampleWriter();
     }
 
-    @Bean
+    @Bean(name = "smilePublisherTasklet")
     @StepScope
     public Tasklet smilePublisherTasklet() {
         return new SmilePublisherTasklet();
@@ -717,20 +746,20 @@ public class BatchConfiguration {
         };
     }
 
-    @Bean
+    @Bean(name = "cvrResponseTasklet")
     @StepScope
     public Tasklet cvrResponseTasklet() {
         return new CvrResponseTasklet();
     }
 
-    @Bean
+    @Bean(name = "zeroVariantWhitelistTasklet")
     @StepScope
     public Tasklet zeroVariantWhitelistTasklet() {
         return new ZeroVariantWhitelistTasklet();
     }
 
     @Bean
-    public JobExecutionDecider checkCvrReponse() {
+    public JobExecutionDecider checkCvrResponse() {
         return new JobExecutionDecider() {
             @Override
             public FlowExecutionStatus decide(JobExecution je, StepExecution se) {
@@ -859,4 +888,8 @@ public class BatchConfiguration {
         return jobLauncher;
     }
 
+    @Bean
+    public ExecutionContextSerializer jacksonSerializer() {
+        return new Jackson2ExecutionContextStringSerializer();
+    }
 }

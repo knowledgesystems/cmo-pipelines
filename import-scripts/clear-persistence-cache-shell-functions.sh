@@ -53,11 +53,6 @@ function clearPersistenceCachesForHgnc1938Portals() {
     clearPersistenceCachesForPortals "$all_hgnc_1938_portals"
 }
 
-function clearPersistenceCachesForDevdbPortals() {
-    all_devdb_portals="devdb"
-    clearPersistenceCachesForPortals "$all_devdb_portals"
-}
-
 function clearPersistenceCachesForPublicPortals() {
     all_public_portals="public"
     clearPersistenceCachesForPortals "$all_public_portals"
@@ -71,4 +66,9 @@ function clearPersistenceCachesForGeniePortals() {
 function clearPersistenceCachesForGenieArchivePortals() {
     all_genie_archive_portals="genie-archive"
     clearPersistenceCachesForPortals "$all_genie_archive_portals"
+}
+
+function clearPersistenceCachesForCrdcPortals() {
+    all_crdc_portals="crdc"
+    clearPersistenceCachesForPortals "$all_crdc_portals"
 }

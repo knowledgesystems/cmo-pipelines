@@ -39,7 +39,7 @@ def sample_missing_required_metadata(metadata, problematic_metadata):
         if metadata[required_field] is None:
             problematic_metadata["gene-panel"] = None
             return True
-        if required_field == "gene-panel" and metadata[required_field].casefold() in {"unknown", "archer-solid-cv4"}:
+        if required_field == "gene-panel" and metadata[required_field].casefold() in {"unknown"}:
             problematic_metadata["gene-panel"] = metadata[required_field]
             return True
     return False

@@ -14,14 +14,13 @@ CMO_PIPELINES_DIRECTORY="$(pwd)"
 CMO_REDCAP_DIRECTORY=$CMO_PIPELINES_DIRECTORY/redcap
 CMO_INTEGRATION_TESTS_DIRECTORY=$CMO_PIPELINES_DIRECTORY/integration-tests
 REDCAP_JAR=$CMO_REDCAP_DIRECTORY/redcap_pipeline/target/redcap_pipeline.jar
-SLACK_PIPELINES_MONITOR_URL=`cat $JENKINS_PIPELINES_CREDENTIALS/slack.url`
 SSL_TRUSTSTORE=$JENKINS_PIPELINES_CREDENTIALS/AwsSsl.truststore
 SSL_TRUSTSTORE_PASSWORD=`cat $JENKINS_PIPELINES_CREDENTIALS/AwsSsl.truststore.password` 
 TEST_SUCCESS=0
 
 # Function for alerting slack channel of any failures
 function sendFailureMessageMskPipelineLogsSlack {
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"jenkins\", \"text\": \"Redcap ID mappings integration test failed! Please fix before the production run.\", \"icon_emoji\": \":face_palm:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "Redcap ID mappings integration test failed! :face_palm: Please fix before the production run."
 }
 
 mkdir -p $REDCAP_EXPORTS_DIRECTORY $LIB_DIRECTORY

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2019, 2023, 2024 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -92,9 +92,9 @@ public class SuppNaaccrMappingsWriter implements ItemStreamWriter<CompositeResul
     }
 
     @Override
-    public void write(List<? extends CompositeResult> compositeResults) throws Exception {
+    public void write(Chunk<? extends CompositeResult> compositeResults) throws Exception {
         if (DDPUtils.isMskimpactCohort(cohortName) || DDPUtils.isHemepactCohort(cohortName) || DDPUtils.isMskaccessCohort(cohortName)) {
-            List<String> records = new ArrayList<>();
+            Chunk<String> records = new Chunk<>();
             for (CompositeResult result : compositeResults) {
                 if (Strings.isNullOrEmpty(result.getSuppNaccrMappingsResult())) {
                     continue;

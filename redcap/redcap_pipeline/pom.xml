@@ -3,23 +3,18 @@
   <name>MSKCC CMO Redcap Pipeline</name>
   <description>Redcap Pipeline</description>
   <artifactId>redcap_pipeline</artifactId>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
   <groupId>org.mskcc.cmo.ks.redcap.pipeline</groupId>
   <parent>
     <groupId>org.mskcc.cmo.ks.redcap</groupId>
     <artifactId>redcap</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
   </parent>
   <dependencies>
     <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <version>1.9.13</version>
-    </dependency>
-    <dependency>
       <groupId>org.mskcc.cmo.ks.redcap.source</groupId>
       <artifactId>redcap_source</artifactId>
-      <version>0.1.0</version>
+      <version>1.0.0</version>
       <type>jar</type>
     </dependency>
   </dependencies>
