@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] ; then
   echo "`date`: Unable to locate automation_env, exiting..."
   exit 1
