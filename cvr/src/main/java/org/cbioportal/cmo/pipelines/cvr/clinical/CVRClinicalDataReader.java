@@ -94,10 +94,12 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             throw new RuntimeException(message);
         }
         processClinicalFile(ec);
-        processJsonFile();
         if (CVRUtilities.SUPPORTED_SEQ_DATE_STUDY_IDS.contains(studyId)) {
             processSeqDateFile(ec);
         }
+        // It's important that we process the JSON file *after* backfilling the sequencing date.
+        // Otherwise, the old SEQ_DATE value from the clinical file will overwrite the value from the CVR queue.
+        processJsonFile();
         // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
         // portalSamples list is only updated if threshold check for max num samples to remove passes
         cvrSampleListUtil.updateSampleLists(masterListDoesNotExcludeSamples);
