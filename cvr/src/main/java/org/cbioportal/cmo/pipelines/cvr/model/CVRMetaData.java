@@ -54,7 +54,7 @@ import jakarta.annotation.Generated;
 @JsonPropertyOrder({
     "alys2sample_id",
     "cbx_patient_id",
-    "cbx_sample_id","ct",
+    "cbx_sample_id",
     "ct",
     "date_tumor_sequencing",
     "dmp_alys_task_id",
