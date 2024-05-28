@@ -42,7 +42,7 @@ def check(description):
             errors, warnings = validator.flush_logs()
             return {
                 "method": fn.__name__,
-                "description": description,
+                "checks": description,
                 "errors": errors,
                 "warnings": warnings
             }
@@ -155,7 +155,7 @@ class ValidatorMixin(ABC):
     def make_report(self, checks):
         return {
             "generated_at": str(datetime.now()),
-            "checks": checks
+            "report": checks
         }
     
     def error(self, msg):
