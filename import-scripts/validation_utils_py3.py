@@ -214,10 +214,13 @@ class AZValidator(ValidatorMixin):
         ])
 
     @check("Gene panels are present")
-    def validate_gene_panels(self):
+    def validate_gene_panels(self, gene_panel_dir=None):
         """
         Checks that the gene panels referenced in data_gene_matrix.txt are present in the gene panels directory.
         """
+        if not gene_panel_dir:
+            gene_panel_dir = os.path.realpath(os.path.join(self.study_dir, "..", "gene_panels"))
+        
         # Get unique list of referenced gene panels
         df = self.load_file("data_gene_matrix.txt")
         required_panels = set()
@@ -226,16 +229,15 @@ class AZValidator(ValidatorMixin):
         required_panels.update(df['structural_variants'])
         
         # Get list of gene panels we actually have
-        actual_panels = self.load_gene_panel_ids()
+        actual_panels = self.load_gene_panel_ids(gene_panel_dir)
         
         if not required_panels.issubset(actual_panels):
             missing_panels = required_panels - actual_panels
             self.error(f"Could not find the required gene panels: {missing_panels}")
     
-    def load_gene_panel_ids(self):
+    def load_gene_panel_ids(self, gene_panel_dir):
         stable_ids = []
         
-        gene_panel_dir = os.path.realpath(os.path.join(self.study_dir, "..", "gene_panels"))
         for basename in os.listdir(gene_panel_dir):
             file = os.path.join(gene_panel_dir, basename)
             if not os.path.isfile(file) or not re.match(r"data_gene_panel_.*\.txt", basename):
