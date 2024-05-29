@@ -90,7 +90,7 @@ class ValidatorMixin(ABC):
         """
         file_path = os.path.join(self.study_dir, file_path)
         
-        header = None
+        header = []
         start_read = 0
         if parse_header:
             with open(file_path, "r") as f:
@@ -139,7 +139,7 @@ class ValidatorMixin(ABC):
         # Write header to file
         if header:
             with open(file_path, "w") as f:
-                for line in self.header:
+                for line in header:
                     f.write(f"{line}\n")
 
         # Write data to file
@@ -177,7 +177,7 @@ class CDMValidator(ValidatorMixin):
     """
 
     @check("Sample IDs match patient IDs in clinical sample file")
-    def validate_sids_match_pids(self):
+    def validate_sids_match_pids(self, out_fname=None):
         """
         Extracts the patient ID from the SAMPLE_ID column and verifies that it matches the PATIENT_ID column for each
         row in the dataframe. If the two do not match, the row is removed.
@@ -195,7 +195,8 @@ class CDMValidator(ValidatorMixin):
                 f"The following {num_mismatched} records were dropped due to mismatched patient and sample IDs:\n{non_matching}"
             )
         
-        self.write_to_file("data_clinical_sample.txt", df, header=header)
+        out_fname = out_fname or "data_clinical_sample.txt"
+        self.write_to_file(out_fname, df, header=header)
 
     def validate_study(self):
         return self.make_report([
