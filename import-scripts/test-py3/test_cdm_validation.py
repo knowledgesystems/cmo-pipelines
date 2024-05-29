@@ -32,9 +32,9 @@ class TestCDMValidation(unittest.TestCase):
         sub_dir = os.path.join(self.base_dir, sub_dir)
         output_file = os.path.join(sub_dir, "data_clinical_sample_output.txt")
         expected_file = os.path.join(sub_dir, "data_clinical_sample_expected.txt")
-        sample_file_validator = CDMValidator(study_dir=sub_dir)
+        cdm_validator = CDMValidator(study_dir=sub_dir)
 
-        sample_file_validator.validate_sids_match_pids(out_fname="data_clinical_sample_output.txt")
+        cdm_validator.validate_sids_match_pids(out_fname="data_clinical_sample_output.txt")
 
         # Read output file and compare it to expected output
         with open(expected_file, "r") as expected_out:

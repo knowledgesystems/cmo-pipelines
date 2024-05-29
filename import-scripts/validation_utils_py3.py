@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """ validation_utils_py3.py
-This script can be used to validate the format of an arbitrary study file.
-As of 5/14/24 only CDM clinical sample file validation has been implemented but
-this should be extended for future use-cases.
+This script can be used to validate / format a supported study.
+It generates a JSON report containing any errors / warnings encountered.
+(TODO in the future, set up Slack notifs)
 
 This differs from the existing validation tool used by the curators, in that it performs different checks--
 the curators' tool is more general-purpose and suited to all studies published to the public + internal portals.

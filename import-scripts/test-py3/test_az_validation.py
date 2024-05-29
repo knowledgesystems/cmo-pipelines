@@ -11,7 +11,7 @@ import os
 from validation_utils_py3 import AZValidator
 
 
-class TestCDMValidation(unittest.TestCase):
+class TestAZValidation(unittest.TestCase):
 
     def test_gene_panel_missing(self):
         base_dir = "test-py3/resources/validation_utils/az_gene_panel"
