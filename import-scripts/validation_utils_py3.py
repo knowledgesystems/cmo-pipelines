@@ -26,6 +26,7 @@ from datetime import datetime
 import json
 import logging
 import os
+import sys
 import pandas as pd
 
 import re
@@ -42,7 +43,7 @@ def check(description):
             errors, warnings = validator.flush_logs()
             return {
                 "method": fn.__name__,
-                "checks": description,
+                "description": description,
                 "errors": errors,
                 "warnings": warnings
             }
@@ -155,7 +156,7 @@ class ValidatorMixin(ABC):
     def make_report(self, checks):
         return {
             "generated_at": str(datetime.now()),
-            "report": checks
+            "checks": checks
         }
     
     def error(self, msg):
@@ -274,7 +275,7 @@ def main():
     parser.add_argument(
         "-r",
         "--report-file",
-        required=True,
+        required=False,
         help="Path to report file"
     )
 
@@ -292,12 +293,21 @@ def main():
     
     # Run validation and write the report file
     report = validator.validate_study()
-    with open(report_file, 'w') as fh:
-        json.dump(report, fh, indent=4)
+    if report_file:
+        with open(report_file, 'w') as fh:
+            json.dump(report, fh, indent=4)
     
     # TODO send Slack notifs
     
-    print("Done")
+    num_errors = 0
+    checks = report.checks
+    for check in checks:
+        if len(check.errors) == 0:
+            continue
+        print("The following check FAILED:", check.description)
+
+    print(f"Finished {validation_type} validation")
+    sys.exit(num_errors)
 
 if __name__ == "__main__":
     main()
