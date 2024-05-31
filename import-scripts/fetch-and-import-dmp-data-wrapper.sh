@@ -55,6 +55,8 @@ source "$PORTAL_HOME/scripts/slack-message-functions.sh"
     date
     echo "executing update-msk-spectrum-cohort.sh"
     /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
+    echo "executing import-msk-extract-projects.sh"
+    /data/portal-cron/scripts/import-msk-extract-projects.sh
     # Only run AstraZeneca updates on Sunday->Monday
     if [ "$day_of_week_at_process_start" -eq 7 ] ; then
         date
