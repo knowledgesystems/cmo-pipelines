@@ -62,4 +62,4 @@ fi
 # clean up extract-projects repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/extract-projects
 EMAIL_BODY=`cat $extract_projects_notification_file`
-echo -e "The following Extract projects have been added or update in the MSK cBioPortal:\n\n$EMAIL_BODY" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Updates to MSK cBioPortal (Extract Projects)" $PIPELINES_EMAIL_LIST
+echo -e "The following Extract projects have been added or updated in the MSK cBioPortal:\n\n$EMAIL_BODY" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Updates to MSK cBioPortal (Extract Projects)" $PIPELINES_EMAIL_LIST
