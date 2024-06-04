@@ -5,6 +5,8 @@ if ! [ -n "$PORTAL_HOME" ] ; then
     exit 1
 fi
 
+source $PORTAL_HOME/scripts/slack-message-functions.sh
+
 # Function for alerting slack channel of clear cache failures
 function sendClearCacheFailureMessage() {
     CACHE_GROUP_NAME="$1"
@@ -31,6 +33,7 @@ function clearPersistenceCachesForPortals() {
 function clearPersistenceCachesForMskPortals() {
     all_msk_portals="msk msk-beta"
     clearPersistenceCachesForPortals "$all_msk_portals"
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK portal persistence cache was cleared :recycle:"
 }
 
 function clearPersistenceCachesForExternalPortals() {
