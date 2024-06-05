@@ -18,9 +18,20 @@ class TestAZValidation(unittest.TestCase):
         sub_dir = os.path.join(base_dir, "missing_panels")
         validator = AZValidator(study_dir=sub_dir)
         
-        report = validator.validate_gene_panels(gene_panel_dir=sub_dir)
+        validator.validate_gene_panels(gene_panel_dir=sub_dir)
+        num_errors = validator.num_errors
         
-        self.assertGreater(len(report["errors"]), 0, "AZ validator should fail on missing gene panels")
+        self.assertGreater(num_errors, 0, "AZ validator should fail on missing gene panels")
+    
+    def test_all_gene_panels_present(self):
+        base_dir = "test-py3/resources/validation_utils/az_gene_panel"
+        sub_dir = os.path.join(base_dir, "all_panels_present")
+        validator = AZValidator(study_dir=sub_dir)
+        
+        validator.validate_gene_panels(gene_panel_dir=sub_dir)
+        num_errors = validator.num_errors
+        
+        self.assertEqual(num_errors, 0, "AZ validator should succeed if all gene panels are present")
 
 if __name__ == "__main__":
     unittest.main()
