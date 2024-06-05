@@ -240,14 +240,7 @@ function generate_case_lists() {
 }
 
 function run_validation_script() {
-    # TODO decide where to put JSON file, and return an error code if there are any errors
-    REPORT_DIR="$AZ_MSK_IMPACT_DATA_HOME/validation_reports"
-    if ! [ -d "$REPORT_DIR" ] ; then
-        if ! mkdir -p "$REPORT_DIR" ; then
-            return 1
-        fi
-    fi
-    $PYTHON_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py -v az -s "$AZ_MSK_IMPACT_DATA_HOME" -r "$REPORT_DIR/report.json"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py -v az -s "$AZ_MSK_IMPACT_DATA_HOME"
 }
 
 # ------------------------------------------------------------------------------------------------------------------------

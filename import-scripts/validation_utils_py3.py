@@ -2,7 +2,6 @@
 
 """ validation_utils_py3.py
 This script can be used to validate / format a supported study.
-(TODO in the future, set up Slack notifs)
 
 This differs from the existing validation tool used by the curators, in that it performs different checks--
 the curators' tool is more general-purpose and suited to all studies published to the public + internal portals.
@@ -220,7 +219,8 @@ class AZValidator(ValidatorMixin):
     
 def main():
     # Setup logging
-    logging.basicConfig(filename="validation_utils_py3.log",
+    LOG_FILE = "/data/portal-cron/logs/validation_utils_py3.log"
+    logging.basicConfig(filename=LOG_FILE,
                         encoding="utf-8",
                         level=logging.DEBUG)
     
@@ -255,8 +255,6 @@ def main():
     validator.validate_study()
     num_errors = validator.num_errors
     num_warnings = validator.num_warnings
-    
-    # TODO send Slack notifs
 
     print(f"Finished {validation_type} validation")
     sys.exit(num_errors)
