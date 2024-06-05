@@ -219,6 +219,7 @@ class AZValidator(ValidatorMixin):
     
 def main():
     # Setup logging
+    # TODO output logs as JSON for better Datadog integration? see: https://docs.datadoghq.com/logs/log_collection/python/
     LOG_FILE = "/data/portal-cron/logs/validation_utils_py3.log"
     logging.basicConfig(filename=LOG_FILE,
                         encoding="utf-8",
