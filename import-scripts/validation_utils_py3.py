@@ -2,7 +2,6 @@
 
 """ validation_utils_py3.py
 This script can be used to validate / format a supported study.
-It generates a JSON report containing any errors / warnings encountered.
 (TODO in the future, set up Slack notifs)
 
 This differs from the existing validation tool used by the curators, in that it performs different checks--
@@ -22,8 +21,6 @@ Example:
 from abc import ABC, abstractmethod
 import argparse
 import csv
-from datetime import datetime
-import json
 import logging
 import os
 import sys
@@ -31,24 +28,7 @@ import pandas as pd
 
 import re
 
-def check(description):
-    """
-    Decorator for methods that perform a single validation check.
-    The decorated method returns additional metadata to be used in the JSON report.
-    """
-    
-    def decorator(fn):
-        def fn_wrapper(validator, *args, **kw):
-            fn(validator, *args, **kw)
-            errors, warnings = validator.flush_logs()
-            return {
-                "method": fn.__name__,
-                "description": description,
-                "errors": errors,
-                "warnings": warnings
-            }
-        return fn_wrapper
-    return decorator
+LOG = logging.getLogger(__name__)
 
 class ValidatorMixin(ABC):
     """
@@ -58,9 +38,8 @@ class ValidatorMixin(ABC):
     def __init__(self, study_dir):
         assert os.path.isdir(study_dir), f"{study_dir} does not exist"
         self.study_dir = study_dir
-        # These logs are specific to one check and are cleared out upon task completion.
-        self.errors = []
-        self.warnings = []
+        self.num_errors = 0
+        self.num_warnings = 0
 
     @abstractmethod
     def validate_study(self):
@@ -152,33 +131,21 @@ class ValidatorMixin(ABC):
             index=index,
             **opts,
         )
-
-    def make_report(self, checks):
-        return {
-            "generated_at": str(datetime.now()),
-            "checks": checks
-        }
+        
+    def error(self, message):
+        LOG.error(message)
+        self.num_errors += 1
     
-    def error(self, msg):
-        self.errors.append(msg)
-    
-    def warning(self, msg):
-        self.warnings.append(msg)
-    
-    def flush_logs(self):
-        t = (self.errors, self.warnings)
-        # Clear out the logs for the next check
-        self.errors = []
-        self.warnings = []
-        return t
+    def warning(self, message):
+        LOG.warning(message)
+        self.num_warnings += 1
 
 class CDMValidator(ValidatorMixin):
     """
     Class to validate all CDM data. Currently, this class only validates the clinical sample file.
     """
 
-    @check("Sample IDs match patient IDs in clinical sample file")
-    def validate_sids_match_pids(self, out_fname=None):
+    def validate_sample_file_sids_match_pids(self, out_fname=None):
         """
         Extracts the patient ID from the SAMPLE_ID column and verifies that it matches the PATIENT_ID column for each
         row in the dataframe. If the two do not match, the row is removed.
@@ -200,9 +167,7 @@ class CDMValidator(ValidatorMixin):
         self.write_to_file(out_fname, df, header=header)
 
     def validate_study(self):
-        return self.make_report([
-            self.validate_sids_match_pids()
-        ])
+        self.validate_sample_file_sids_match_pids()
 
 class AZValidator(ValidatorMixin):
     """
@@ -210,12 +175,9 @@ class AZValidator(ValidatorMixin):
     """
     
     def validate_study(self):
-        return self.make_report([
-            self.validate_gene_panels()
-        ])
+        self.validate_gene_panels_present()
 
-    @check("Gene panels are present")
-    def validate_gene_panels(self, gene_panel_dir=None):
+    def validate_gene_panels_present(self, gene_panel_dir=None):
         """
         Checks that the gene panels referenced in data_gene_matrix.txt are present in the gene panels directory.
         """
@@ -257,6 +219,11 @@ class AZValidator(ValidatorMixin):
         return set(stable_ids)
     
 def main():
+    # Setup logging
+    logging.basicConfig(filename="validation_utils_py3.log",
+                        encoding="utf-8",
+                        level=logging.DEBUG)
+    
     # Parse arguments
     parser = argparse.ArgumentParser(prog="validation_utils_py3.py")
     parser.add_argument(
@@ -272,17 +239,10 @@ def main():
         required=True,
         help="Path to study directory",
     )
-    parser.add_argument(
-        "-r",
-        "--report-file",
-        required=False,
-        help="Path to report file"
-    )
 
     args = parser.parse_args()
     validation_type = args.validation_type
     study_dir = args.study_dir
-    report_file = args.report_file
 
     # Set up validator
     validator_cls = {
@@ -291,20 +251,12 @@ def main():
     }[validation_type]
     validator = validator_cls(study_dir)
     
-    # Run validation and write the report file
-    report = validator.validate_study()
-    if report_file:
-        with open(report_file, 'w') as fh:
-            json.dump(report, fh, indent=4)
+    # Run validation
+    validator.validate_study()
+    num_errors = validator.num_errors
+    num_warnings = validator.num_warnings
     
     # TODO send Slack notifs
-    
-    num_errors = 0
-    checks = report.checks
-    for check in checks:
-        if len(check.errors) == 0:
-            continue
-        print("The following check FAILED:", check.description)
 
     print(f"Finished {validation_type} validation")
     sys.exit(num_errors)

@@ -18,7 +18,7 @@ class TestAZValidation(unittest.TestCase):
         sub_dir = os.path.join(base_dir, "missing_panels")
         validator = AZValidator(study_dir=sub_dir)
         
-        validator.validate_gene_panels(gene_panel_dir=sub_dir)
+        validator.validate_gene_panels_present(gene_panel_dir=sub_dir)
         num_errors = validator.num_errors
         
         self.assertGreater(num_errors, 0, "AZ validator should fail on missing gene panels")
@@ -28,7 +28,7 @@ class TestAZValidation(unittest.TestCase):
         sub_dir = os.path.join(base_dir, "all_panels_present")
         validator = AZValidator(study_dir=sub_dir)
         
-        validator.validate_gene_panels(gene_panel_dir=sub_dir)
+        validator.validate_gene_panels_present(gene_panel_dir=sub_dir)
         num_errors = validator.num_errors
         
         self.assertEqual(num_errors, 0, "AZ validator should succeed if all gene panels are present")
