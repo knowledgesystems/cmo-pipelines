@@ -29,6 +29,20 @@ import re
 
 LOG = logging.getLogger(__name__)
 
+def check(description):
+    """
+    Decorator to be used on each check performed by a validator.
+    """
+    
+    def decorator(fn):
+        def fn_wrapper(*args, **kw):
+            logging.info(f"Starting check: {description}")
+            fn(*args, **kw)
+        
+        return fn_wrapper
+    
+    return decorator
+
 class ValidatorMixin(ABC):
     """
     Abstract base class for study validators. Override as needed for your pipeline.
@@ -144,6 +158,7 @@ class CDMValidator(ValidatorMixin):
     Class to validate all CDM data. Currently, this class only validates the clinical sample file.
     """
 
+    @check("Patient IDs match sample IDs in clinical sample file")
     def validate_sample_file_sids_match_pids(self, out_fname=None):
         """
         Extracts the patient ID from the SAMPLE_ID column and verifies that it matches the PATIENT_ID column for each
@@ -176,6 +191,7 @@ class AZValidator(ValidatorMixin):
     def validate_study(self):
         self.validate_gene_panels_present()
 
+    @check("Gene panels referenced by gene matrix file are all present")
     def validate_gene_panels_present(self, gene_panel_dir=None):
         """
         Checks that the gene panels referenced in data_gene_matrix.txt are present in the gene panels directory.
@@ -222,8 +238,9 @@ def main():
     # TODO output logs as JSON for better Datadog integration? see: https://docs.datadoghq.com/logs/log_collection/python/
     LOG_FILE = "/data/portal-cron/logs/validation_utils_py3.log"
     logging.basicConfig(filename=LOG_FILE,
-                        encoding="utf-8",
-                        level=logging.DEBUG)
+                        # Setting level=DEBUG results in too much spam from Datadog trace statements
+                        level=logging.INFO,
+                        format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
     
     # Parse arguments
     parser = argparse.ArgumentParser(prog="validation_utils_py3.py")
@@ -243,7 +260,9 @@ def main():
 
     args = parser.parse_args()
     validation_type = args.validation_type
-    study_dir = args.study_dir
+    study_dir = os.path.realpath(args.study_dir)
+    
+    LOG.info(f"Starting {validation_type} validation of study at {study_dir}")
 
     # Set up validator
     validator_cls = {
@@ -257,7 +276,9 @@ def main():
     num_errors = validator.num_errors
     num_warnings = validator.num_warnings
 
-    print(f"Finished {validation_type} validation")
+    LOG.info(f"Finished {validation_type} validation")
+    LOG.info(f"Total errors: {num_errors}")
+    LOG.info(f"Total warnings: {num_warnings}")
     sys.exit(num_errors)
 
 if __name__ == "__main__":
