@@ -53,6 +53,16 @@ class ValidatorMixin(ABC):
         self.study_dir = study_dir
         self.num_errors = 0
         self.num_warnings = 0
+        
+        self.load_required_files()
+    
+    @abstractmethod
+    def load_required_files(self):
+        """
+        Loads the study files needed by this validator to run all of its checks.
+        Study files are loaded once and stored as instance fields--this improves performance
+        when two different validator checks reference the same file.
+        """
 
     @abstractmethod
     def validate_study(self):
@@ -104,7 +114,7 @@ class ValidatorMixin(ABC):
             **opts,
         )
 
-        return (header, df) if parse_header else df
+        return (df, header) if parse_header else df
 
     def write_to_file(
         self,
@@ -157,6 +167,9 @@ class CDMValidator(ValidatorMixin):
     """
     Class to validate all CDM data. Currently, this class only validates the clinical sample file.
     """
+    
+    def load_required_files(self):
+        self.samples, self.sample_header = self.load_file("data_clinical_sample.txt", parse_header=True)
 
     @check("Patient IDs match sample IDs in clinical sample file")
     def validate_sample_file_sids_match_pids(self, out_fname=None):
@@ -164,12 +177,10 @@ class CDMValidator(ValidatorMixin):
         Extracts the patient ID from the SAMPLE_ID column and verifies that it matches the PATIENT_ID column for each
         row in the dataframe. If the two do not match, the row is removed.
         """
-        header, df = self.load_file("data_clinical_sample.txt", parse_header=True)
-        
-        non_matching = df.query(
+        non_matching = self.samples.query(
             "PATIENT_ID != SAMPLE_ID.str.extract('(P-[0-9]*)-*')[0]"
         )
-        df = df.drop(index=non_matching.index)
+        self.samples = self.samples.drop(index=non_matching.index)
 
         num_mismatched = len(non_matching.index)
         if num_mismatched > 0:
@@ -178,7 +189,7 @@ class CDMValidator(ValidatorMixin):
             )
         
         out_fname = out_fname or "data_clinical_sample.txt"
-        self.write_to_file(out_fname, df, header=header)
+        self.write_to_file(out_fname, self.samples, header=header)
 
     def validate_study(self):
         self.validate_sample_file_sids_match_pids()
@@ -187,6 +198,9 @@ class AZValidator(ValidatorMixin):
     """
     Validates all AstraZeneca study data.
     """
+    
+    def load_required_files(self):
+        self.gene_matrix = self.load_file("data_gene_matrix.txt")
     
     def validate_study(self):
         self.validate_gene_panels_present()
@@ -200,11 +214,10 @@ class AZValidator(ValidatorMixin):
             gene_panel_dir = os.path.realpath(os.path.join(self.study_dir, "..", "gene_panels"))
         
         # Get unique list of referenced gene panels
-        df = self.load_file("data_gene_matrix.txt")
         required_panels = set()
-        required_panels.update(df['mutations'])
-        required_panels.update(df['cna'])
-        required_panels.update(df['structural_variants'])
+        required_panels.update(self.gene_matrix['mutations'])
+        required_panels.update(self.gene_matrix['cna'])
+        required_panels.update(self.gene_matrix['structural_variants'])
         
         # Get list of gene panels we actually have
         actual_panels = self.load_gene_panel_ids(gene_panel_dir)
