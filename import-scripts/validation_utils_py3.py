@@ -295,4 +295,8 @@ def main():
     sys.exit(num_errors)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except:
+        LOG.exception("An exception was thrown while validating the study")
+        raise
