@@ -24,10 +24,21 @@ import logging
 import os
 import sys
 import pandas as pd
+from pythonjsonlogger import jsonlogger
 
 import re
 
 LOG = logging.getLogger(__name__)
+
+# Storing logs in JSON format, rather than individual lines in a text file, integrates better with Datadog.
+# Datadog will parse text logs line-by-line, so it's unable to effectively deal with
+# tracebacks since they span multiple lines.
+# Using JSON helps it to understand the logs better and group different lines of a traceback.
+# See here for more info: https://docs.datadoghq.com/logs/log_collection/python/
+log_handler = logging.StreamHandler()
+formatter = jsonlogger.JsonFormatter()
+log_handler.setFormatter(formatter)
+LOG.addHandler(log_handler)
 
 def check(description):
     """
@@ -245,15 +256,43 @@ class AZValidator(ValidatorMixin):
         if len(set(stable_ids)) != len(stable_ids):
             self.warning("Found duplicate stable ids. Please check the gene panel files.")
         return set(stable_ids)
+
+def setup_logging():
+    # This is only called from the main method-- if other scripts are using this module
+    # programatically, they may have their own logging set up and so we don't want to be
+    # writing both to that log + this one.
+    
+    LOG_FILE = "/data/portal-cron/logs/validation_utils_py3.json"
+    # Setting DEBUG results in too much spam from Datadog trace statements
+    LOG_LEVEL = logging.INFO
+    
+    def text_handler():
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setLevel(LOG_LEVEL)
+        format_str = '[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s'
+        formatter = logging.Formatter(format_str)
+        handler.setFormatter(formatter)
+        return handler
+    
+    def json_handler():
+        handler = logging.FileHandler(LOG_FILE)
+        handler.setLevel(LOG_LEVEL)
+        # Configure the fields to include in the JSON output. message is the main log string itself
+        format_str = '%(asctime)%(filename)%(lineno)%(levelname)%(message)'
+        formatter = jsonlogger.JsonFormatter(format_str)
+        handler.setFormatter(formatter)
+        return handler
+        
+    LOG.setLevel(LOG_LEVEL)
+    # Output log statements as text to stderr, and JSON to the log file
+    LOG.handlers.clear()
+    LOG.addHandler(text_handler())
+    LOG.addHandler(json_handler())
+    # Normally we would attach the handler to the root logger, and this would be unnecessary
+    LOG.propagate = False
     
 def main():
-    # Setup logging
-    # TODO output logs as JSON for better Datadog integration? see: https://docs.datadoghq.com/logs/log_collection/python/
-    LOG_FILE = "/data/portal-cron/logs/validation_utils_py3.log"
-    logging.basicConfig(filename=LOG_FILE,
-                        # Setting level=DEBUG results in too much spam from Datadog trace statements
-                        level=logging.INFO,
-                        format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
+    setup_logging()
     
     # Parse arguments
     parser = argparse.ArgumentParser(prog="validation_utils_py3.py")
