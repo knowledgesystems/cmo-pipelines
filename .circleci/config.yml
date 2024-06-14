@@ -37,6 +37,9 @@ jobs:
       - run:
            name: Install GitPython in python 3
            command: python3 -m pip install GitPython
+      - run:
+           name: Install python-json-logger in python 3
+           command: python3 -m pip install python-json-logger
       # Use mvn clean and package as the standard maven build phase
       - run:
           name: Build
