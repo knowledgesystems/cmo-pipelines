@@ -8,10 +8,10 @@ directory of this script:
 import unittest
 import os
 
-from validation_utils_py3 import CDMSampleFileValidator
+from validation_utils_py3 import CDMValidator
 
 
-class TestCDMSampleFileValidation(unittest.TestCase):
+class TestCDMValidation(unittest.TestCase):
 
     # Show the diff even if it is very big
     maxDiff = None
@@ -29,17 +29,12 @@ class TestCDMSampleFileValidation(unittest.TestCase):
         self.compare_expected_output_to_actual(sub_dir)
 
     def compare_expected_output_to_actual(self, sub_dir):
-        input_sample_file = os.path.join(TestCDMSampleFileValidation.base_dir, sub_dir, "data_clinical_sample.txt")
-        output_file = os.path.join(TestCDMSampleFileValidation.base_dir, sub_dir, "data_clinical_sample_output.txt")
-        expected_file = os.path.join(TestCDMSampleFileValidation.base_dir, sub_dir, "data_clinical_sample_expected.txt")
-        sample_file_validator = CDMSampleFileValidator(input_sample_file, output_file_path=output_file)
+        sub_dir = os.path.join(self.base_dir, sub_dir)
+        output_file = os.path.join(sub_dir, "data_clinical_sample_output.txt")
+        expected_file = os.path.join(sub_dir, "data_clinical_sample_expected.txt")
+        cdm_validator = CDMValidator(study_dir=sub_dir)
 
-        try:
-            sample_file_validator.validate()
-        except (KeyError, ValueError):  # TODO fix error types
-            if os.path.exists(output_file):
-                os.remove(output_file)
-            raise
+        cdm_validator.validate_sample_file_sids_match_pids(out_fname="data_clinical_sample_output.txt")
 
         # Read output file and compare it to expected output
         with open(expected_file, "r") as expected_out:

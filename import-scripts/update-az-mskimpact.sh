@@ -239,6 +239,10 @@ function generate_case_lists() {
     $PYTHON_BINARY /data/portal-cron/scripts/generate_case_lists.py --case-list-config-file $CASE_LIST_CONFIG_FILE --case-list-dir $CASE_LIST_DIR --study-dir $AZ_MSK_IMPACT_DATA_HOME --study-id $AZ_MSKIMPACT_STABLE_ID -o
 }
 
+function run_validation_script() {
+    $PYTHON_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py -v az -s "$AZ_MSK_IMPACT_DATA_HOME"
+}
+
 # ------------------------------------------------------------------------------------------------------------------------
 # Pull latest from AstraZeneca repo (az-data)
 printTimeStampedDataProcessingStepMessage "Pull of AstraZeneca MSK-IMPACT data updates"
@@ -402,6 +406,14 @@ printTimeStampedDataProcessingStepMessage "Generate case list files for AstraZen
 
 if ! generate_case_lists ; then
     report_error "ERROR: Failed to generate case lists for AstraZeneca MSK-IMPACT. Exiting."
+fi
+
+# ------------------------------------------------------------------------------------------------------------------------
+# Run validation script to check for missing gene panels
+printTimeStampedDataProcessingStepMessage "Running validation script for AstraZeneca MSK-IMPACT"
+
+if ! run_validation_script ; then
+    report_error "ERROR: Validation failed for AstraZeneca MSK-IMPACT. Exiting."
 fi
 
 # ------------------------------------------------------------------------------------------------------------------------
