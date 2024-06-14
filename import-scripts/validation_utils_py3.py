@@ -94,7 +94,7 @@ class ValidatorMixin(ABC):
     ):
         """
         Loads the given file into a pandas dataframe.
-        Accepts an arbitrary number of arguments to pass to the pandas read_table function,
+        Accepts an arbitrary number of arguments to pass to the pandas read_csv function,
         with defaults for the following arguments:
             parse_header=False : When true, parse and return a list of commented lines starting with '#' @ the beginning of the file
             sep="\t" : Tab delimiter for the input file
@@ -115,7 +115,7 @@ class ValidatorMixin(ABC):
                         break
                     header.append(line.strip())
 
-        df = pd.read_table(
+        df = pd.read_csv(
             file_path,
             sep=sep,
             float_precision=float_precision,
