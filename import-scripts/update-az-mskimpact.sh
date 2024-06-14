@@ -240,7 +240,7 @@ function generate_case_lists() {
 }
 
 function run_validation_script() {
-    $PYTHON_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py -v az -s "$AZ_MSK_IMPACT_DATA_HOME"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py --validation-type az --study-dir "$AZ_MSK_IMPACT_DATA_HOME"
 }
 
 # ------------------------------------------------------------------------------------------------------------------------

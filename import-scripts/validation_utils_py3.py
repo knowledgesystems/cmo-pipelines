@@ -11,9 +11,9 @@ There is also a validation_utils.py file in this directory, but that one is writ
 and contains a bunch of one-off functions rather than being a cohesive tool of its own.
 
 Usage:
-    python3 validation_utils_py3.py --validation-type $VALIDATION_TYPE --file-path $FILE_PATH
+    python3 validation_utils_py3.py --validation-type $VALIDATION_TYPE --study-dir $STUDY_DIR
 Example:
-    python3 validation_utils_py3.py --validation-type cdm --file-path data_clinical_sample.txt 
+    python3 validation_utils_py3.py --validation-type cdm --study-dir /path/to/cdm/data
 """
 
 
