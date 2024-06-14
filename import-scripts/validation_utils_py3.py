@@ -200,7 +200,7 @@ class CDMValidator(ValidatorMixin):
             )
         
         out_fname = out_fname or "data_clinical_sample.txt"
-        self.write_to_file(out_fname, self.samples, header=header)
+        self.write_to_file(out_fname, self.samples, header=self.sample_header)
 
     def validate_study(self):
         self.validate_sample_file_sids_match_pids()
