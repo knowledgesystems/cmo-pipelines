@@ -331,7 +331,8 @@ def main():
     LOG.info(f"Finished {validation_type} validation")
     LOG.info(f"Total errors: {num_errors}")
     LOG.info(f"Total warnings: {num_warnings}")
-    sys.exit(num_errors)
+    if num_errors != 0:
+        sys.exit(num_errors)
 
 if __name__ == "__main__":
     try:
