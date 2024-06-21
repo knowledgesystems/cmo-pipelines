@@ -76,7 +76,13 @@ def load_age_at_seq_reported_years(clinical_sample_file, convert_to_days):
 		# Skip samples not found in the clinical file
 		if not sample_id in PATIENT_SAMPLE_MAP.keys():
 			continue
-		age_at_seq_reported_years = line[AGE_AT_SEQ_REPORTED_YEARS_FIELD]
+		age_at_seq_reported_years = line[AGE_AT_SEQ_REPORTED_YEARS_FIELD].strip()
+
+		# Handle values beginning with < or >
+		first_char = ''
+		if age_at_seq_reported_years[0] == '<' or age_at_seq_reported_years[0] == '>':
+			first_char = age_at_seq_reported_years[0]
+			age_at_seq_reported_years = age_at_seq_reported_years[1:]
 
 		# Convert AGE_AT_SEQ_REPORTED_YEARS to days and store the value
 		# Default to NA if type conversion fails
@@ -86,7 +92,7 @@ def load_age_at_seq_reported_years(clinical_sample_file, convert_to_days):
 			age_at_seq_report_value = int(age_at_seq_reported_years)
 			if convert_to_days:
 				age_at_seq_report_value = age_at_seq_report_value * AVERAGE_DAYS_PER_YEAR
-			SAMPLE_AGE_AT_SEQ_REPORT_MAP[sample_id] = str(int(math.ceil(age_at_seq_report_value)))
+			SAMPLE_AGE_AT_SEQ_REPORT_MAP[sample_id] = first_char + str(int(math.ceil(age_at_seq_report_value)))
 		except ValueError:
 			print AGE_AT_SEQ_REPORTED_YEARS_FIELD + " not found for '" + sample_id + "'"
 			SAMPLE_AGE_AT_SEQ_REPORT_MAP[sample_id] = 'NA'
