@@ -23,6 +23,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
         README.md
     """
 
+    MAF_MUTATION_STATUS_COLUMN_INDEX=27
+
     function send_failure_messages() {
         email_message=$1
         email_subject=$2
@@ -304,12 +306,18 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
         echo $(date)
         echo "Beginning somatic clinical annotation..."
-        # Generate somatic-only MAF by excluding lines including 'GERMLINE'
-        awk -F'\t' '$26 != "GERMLINE"' $ONCOKB_MAF_FILE > $ONCOKB_SOMATIC_MAF_FILE
-        $PYTHON3_BINARY $CLINICAL_ANNOTATOR_SCRIPT -i $STAGING_SAMPLE_FILE -o $ONCOKB_SOMATIC_SAMPLE_FILE -a $ONCOKB_SOMATIC_MAF_FILE,$ONCOKB_CNA_FILE,$ONCOKB_SV_FILE
-        if [ $? -ne 0 ] ; then
-            echo "Failed to annotate somatic clinical file, exiting..."
+        expected_germline_header=$(head -n 1 $ONCOKB_MAF_FILE | cut -f $MAF_MUTATION_STATUS_COLUMN_INDEX)
+        if [ "$expected_germline_header" != "Mutation_Status" ] ; then
+            echo "Failure: Mutation_Status column not at expected position ($MAF_MUTATION_STATUS_COLUMN_INDEX) in MAF, exiting..."
             ONCOKB_ANNOTATION_SUCCESS=0
+        else
+            # Generate somatic-only MAF by excluding lines including 'GERMLINE'
+            awk -F'\t' "\$$MAF_MUTATION_STATUS_COLUMN_INDEX != \"GERMLINE\"" $ONCOKB_MAF_FILE > $ONCOKB_SOMATIC_MAF_FILE
+            $PYTHON3_BINARY $CLINICAL_ANNOTATOR_SCRIPT -i $STAGING_SAMPLE_FILE -o $ONCOKB_SOMATIC_SAMPLE_FILE -a $ONCOKB_SOMATIC_MAF_FILE,$ONCOKB_CNA_FILE,$ONCOKB_SV_FILE
+            if [ $? -ne 0 ] ; then
+                echo "Failed to annotate somatic clinical file, exiting..."
+                ONCOKB_ANNOTATION_SUCCESS=0
+            fi
         fi
     fi
 
