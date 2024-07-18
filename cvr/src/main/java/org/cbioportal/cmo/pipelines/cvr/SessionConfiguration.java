@@ -87,6 +87,12 @@ public class SessionConfiguration {
     @Value("${dmp.tokens.retrieve_master_list.access}")
     private String dmpMasterListAccess;
 
+    @Value("${dmp.tokens.retrieve_variants.accessheme")
+    private String retrieveVariantsAccessHeme;
+
+    @Value("${dmp.tokens.retrieve_master_list.accessheme}")
+    private String dmpMasterListAccessHeme;
+
     private Logger log = Logger.getLogger(SessionConfiguration.class);
 
     @Bean
@@ -106,7 +112,7 @@ public class SessionConfiguration {
         map.put("mskimpact_heme", retrieveVariantsHeme);
         map.put("mskarcher", retrieveVariantsArcher);
         map.put("mskaccess", retrieveVariantsAccess);
-
+        map.put("mskaccess_heme", retrieveVariantsAccessHeme);
         return map;
     }
 
@@ -118,7 +124,7 @@ public class SessionConfiguration {
         map.put("mskimpact_heme", dmpMasterListHeme);
         map.put("mskarcher", dmpMasterListArcher);
         map.put("mskaccess", dmpMasterListAccess);
-
+        map.put("mskaccess_heme", retrieveVariantsAccessHeme);
         return map;
     }
 
