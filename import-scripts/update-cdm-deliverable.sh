@@ -64,10 +64,14 @@ AIRFLOW_CREDS=$(cat $AIRFLOW_ADMIN_CREDENTIALS_FILE)
 AIRFLOW_CERT=$PORTAL_HOME/pipelines-credentials/airflow-dev-cert.pem
 DAG_ID="cdm_etl_cbioportal_s3_pull"
 AIRFLOW_URL="https://airflow.cbioportal.dev.aws.mskcc.org"
+TMP_LOG_FILE="$PORTAL_HOME/tmp/trigger_s3_dag.log"
 
 # Trigger CDM DAG to pull updated data_clinical_sample.txt from S3
 # This DAG will kick off the rest of the CDM pipeline when it completes
-curl -X POST --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --cacert $AIRFLOW_CERT --data "{}" "${AIRFLOW_URL}/api/v1/dags/${DAG_ID}/dagRuns"
-if [ $? -ne 0 ] ; then
-  echo "`date`: Failed to trigger DAG ${DAG_ID} on ${AIRFLOW_URL}, exiting..."
+HTTP_STATUS_CODE=$(curl -X POST --write-out "%{http_code}" --silent --output FILE?? --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --cacert $AIRFLOW_CERT --data "{}" "${AIRFLOW_URL}/api/v1/dags/${DAG_ID}/dagRuns")
+if [ $HTTP_STATUS_CODE -ne 200 ] ; then
+  # Send alert for HTTP status code if not 200
+  echo "`date`: Failed attempt to trigger DAG ${DAG_ID} on Airflow server ${AIRFLOW_URL}. HTTP status code = ${HTTP_STATUS_CODE}, exiting..."
+  cat $TMP_LOG_FILE
+  exit 1
 fi
