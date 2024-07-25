@@ -58,3 +58,16 @@ rm $TMP_MERGED_SEQ_DATE
 rm $CDM_DELIVERABLE
 
 echo "`date`: CDM deliverable generation and upload complete"
+
+AIRFLOW_ADMIN_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/airflow-admin.credentials
+AIRFLOW_CREDS=$(cat $AIRFLOW_ADMIN_CREDENTIALS_FILE)
+AIRFLOW_CERT=$PORTAL_HOME/pipelines-credentials/airflow-dev-cert.pem
+DAG_ID="cdm_etl_cbioportal_s3_pull"
+AIRFLOW_URL="https://airflow.cbioportal.dev.aws.mskcc.org"
+
+# Trigger CDM DAG to pull updated data_clinical_sample.txt from S3
+# This DAG will kick off the rest of the CDM pipeline when it completes
+curl -X POST --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --cacert $AIRFLOW_CERT --data "{}" "${AIRFLOW_URL}/api/v1/dags/${DAG_ID}/dagRuns"
+if [ $? -ne 0 ] ; then
+  echo "`date`: Failed to trigger DAG ${DAG_ID} on ${AIRFLOW_URL}, exiting..."
+fi

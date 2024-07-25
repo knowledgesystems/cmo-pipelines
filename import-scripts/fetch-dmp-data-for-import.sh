@@ -794,7 +794,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     #--------------------------------------------------------------
     # CDM Fetch is optional -- does not break import if it fails, but will send notif
 
+    # Generate and upload data_clinical_sample.txt to S3 bucket for CDM use
     sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh
+
     echo "fetching clinical demographics & timeline updates from S3..."
     sh $PORTAL_HOME/scripts/pull-cdm-data.sh
 
