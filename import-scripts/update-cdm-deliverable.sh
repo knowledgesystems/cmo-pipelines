@@ -2,6 +2,11 @@
 
 DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE CANCER_TYPE_DETAILED"
 
+if ! [ -n "$PORTAL_HOME" ] ; then
+    echo "Error : update-cdm-deliverable.sh cannot be run without setting the PORTAL_HOME environment variable."
+    exit 1
+fi
+
 if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] || [ ! -f $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh ] ; then
   echo "`date`: Unable to locate automation_env and additional modules, exiting..."
   exit 1
@@ -59,13 +64,13 @@ rm $CDM_DELIVERABLE
 
 echo "`date`: CDM deliverable generation and upload complete"
 
+TMP_LOG_FILE="${PORTAL_HOME}/tmp/trigger_s3_dag.log"
 AIRFLOW_ADMIN_CREDENTIALS_FILE="${PORTAL_HOME}/pipelines-credentials/airflow-admin.credentials"
 AIRFLOW_CREDS=$(cat $AIRFLOW_ADMIN_CREDENTIALS_FILE)
 AIRFLOW_CERT="${PORTAL_HOME}/pipelines-credentials/airflow-dev-cert.pem"
-DAG_ID="cdm_etl_cbioportal_s3_pull"
 AIRFLOW_URL="https://airflow.cbioportal.dev.aws.mskcc.org"
+DAG_ID="cdm_etl_cbioportal_s3_pull"
 API_ENDPOINT="${AIRFLOW_URL}/api/v1/dags/${DAG_ID}/dagRuns"
-TMP_LOG_FILE="${PORTAL_HOME}/tmp/trigger_s3_dag.log"
 
 # Trigger CDM DAG to pull updated data_clinical_sample.txt from S3
 # This DAG will kick off the rest of the CDM pipeline when it completes
