@@ -59,13 +59,13 @@ rm $CDM_DELIVERABLE
 
 echo "`date`: CDM deliverable generation and upload complete"
 
-AIRFLOW_ADMIN_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/airflow-admin.credentials
+AIRFLOW_ADMIN_CREDENTIALS_FILE="${PORTAL_HOME}/pipelines-credentials/airflow-admin.credentials"
 AIRFLOW_CREDS=$(cat $AIRFLOW_ADMIN_CREDENTIALS_FILE)
-AIRFLOW_CERT=$PORTAL_HOME/pipelines-credentials/airflow-dev-cert.pem
+AIRFLOW_CERT="${PORTAL_HOME}/pipelines-credentials/airflow-dev-cert.pem"
 DAG_ID="cdm_etl_cbioportal_s3_pull"
 AIRFLOW_URL="https://airflow.cbioportal.dev.aws.mskcc.org"
 API_ENDPOINT="${AIRFLOW_URL}/api/v1/dags/${DAG_ID}/dagRuns"
-TMP_LOG_FILE="$PORTAL_HOME/tmp/trigger_s3_dag.log"
+TMP_LOG_FILE="${PORTAL_HOME}/tmp/trigger_s3_dag.log"
 
 # Trigger CDM DAG to pull updated data_clinical_sample.txt from S3
 # This DAG will kick off the rest of the CDM pipeline when it completes
