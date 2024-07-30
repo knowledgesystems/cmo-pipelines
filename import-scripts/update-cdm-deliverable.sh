@@ -3,8 +3,8 @@
 DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE CANCER_TYPE_DETAILED"
 
 if ! [ -n "$PORTAL_HOME" ] ; then
-    echo "Error : update-cdm-deliverable.sh cannot be run without setting the PORTAL_HOME environment variable."
-    exit 1
+  echo "Error : update-cdm-deliverable.sh cannot be run without setting the PORTAL_HOME environment variable."
+  exit 1
 fi
 
 if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] || [ ! -f $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh ] ; then
