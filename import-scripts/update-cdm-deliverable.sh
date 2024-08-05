@@ -54,7 +54,7 @@ $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$MSK_ACCESS_SEQ_DA
 
 # Combines filtered clinical sample file with seq data file and outputs to tmp file for upload
 # Uses left join -- SAMPLE_ID in the clinical_sample_file (first arg) will be valid keys
-$PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$TMP_SAMPLE_FILE" "$TMP_MERGED_SEQ_DATE" -o "$CDM_DELIVERABLE" -c SAMPLE_ID -m left
+$PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$TMP_SAMPLE_FILE" "$TMP_MERGED_SEQ_DATE" -o "$CDM_DELIVERABLE" -c SAMPLE_ID PATIENT_ID -m left
 if [ $? -ne 0 ] ; then
   echo "`date`: Failed to combine files, exiting..."
   exit 1
