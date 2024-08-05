@@ -34,8 +34,9 @@ AIRFLOW_URL="https://airflow.cbioportal.dev.aws.mskcc.org"
 DAG_ID="cdm_etl_cbioportal_s3_pull"
 AIRFLOW_API_ENDPOINT="${AIRFLOW_URL}/api/v1/dags/${DAG_ID}/dagRuns"
 
-if [ ! -f $MSK_SOLID_HEME_CLINICAL_FILE ] || [ ! -f $MSK_ACCESS_SEQ_DATE ] || [ ! -f $MSK_HEMEPACT_SEQ_DATE ] || [ ! -f $MSK_IMPACTSEQ_DATE ] ; then
+if [ ! -f $MSK_SOLID_HEME_CLINICAL_FILE ] || [ ! -f $MSK_ACCESS_SEQ_DATE ] || [ ! -f $MSK_HEMEPACT_SEQ_DATE ] || [ ! -f $MSK_IMPACT_SEQ_DATE ] ; then
   echo "`date`: Unable to locate required files, exiting..."
+  exit 1
 fi
 
 # Copy sample file to tmp file since script overwrites existing file (don't want to overwrite DMP pipeline files)
