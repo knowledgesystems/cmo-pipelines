@@ -254,6 +254,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_IMPACT_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR Germline"
             fi
         fi
+
+        # UPLOAD MSKIMPACT SAMPLE LIST TO S3
+        # TRIGGER S3 PULL DAG VIA API
+        # Should this happen in one of the if blocks above?
+        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskimpact
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -321,6 +326,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_HEMEPACT_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: CVR Germline"
             fi
         fi
+
+        # UPLOAD HEMEPACT SAMPLE LIST TO S3
+        # TRIGGER S3 PULL DAG VIA API
+        # Should this happen in one of the if blocks above?
+        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskimpact_heme
     fi
     # -----------------------------------------------------------------------------------------------------------
     # ARCHER DATA FETCHES
@@ -357,6 +367,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED dataset"
             fi
         fi
+
+        # UPLOAD ARCHER SAMPLE LIST TO S3
+        # TRIGGER S3 PULL DAG VIA API
+        # Should this happen in one of the if blocks above?
+        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskarcher
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -394,6 +409,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 cd $MSK_ACCESS_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS dataset"
             fi
         fi
+
+        # UPLOAD ACCESS SAMPLE LIST TO S3
+        # TRIGGER S3 PULL DAG VIA API
+        # Should this happen in one of the if blocks above?
+        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskaccess
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -795,7 +815,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # CDM Fetch is optional -- does not break import if it fails, but will send notif
 
     # Generate and upload data_clinical_sample.txt to S3 bucket for CDM use
-    sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh
+    #sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh
 
     echo "fetching clinical demographics & timeline updates from S3..."
     sh $PORTAL_HOME/scripts/pull-cdm-data.sh
