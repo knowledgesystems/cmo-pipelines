@@ -43,8 +43,7 @@ function set_cohort_filepaths() {
     SEQ_DATE_FILEPATH="$MSK_HEMEPACT_DATA_HOME/$SEQ_DATE_FILENAME"
     CLINICAL_SAMPLE_FILEPATH="$MSK_HEMEPACT_DATA_HOME/$CLINICAL_SAMPLE_FILENAME"
   elif [ "$COHORT" == "mskarcher" ] ; then
-    # TODO archer doesn't have? seq date?
-    # TODO check this var
+    SEQ_DATE_FILEPATH="$MSK_ARCHER_DATA_HOME/$SEQ_DATE_FILENAME"
     CLINICAL_SAMPLE_FILEPATH="$MSK_ARCHER_DATA_HOME/$CLINICAL_SAMPLE_FILENAME"
   elif [ "$COHORT" == "mskaccess" ] ; then
     SEQ_DATE_FILEPATH="$MSK_ACCESS_DATA_HOME/$SEQ_DATE_FILENAME"
@@ -71,7 +70,6 @@ function filter_sample_file() {
     echo "`date`: Failed to subset clinical sample file, exiting..."
     exit 1
   fi
-  rm $TMP_PROCESSING_FILE
 }
 
 function add_seq_date_to_sample_file() {
@@ -86,10 +84,10 @@ function add_seq_date_to_sample_file() {
 }
 
 function upload_to_s3() {
-  # Authenticate and upload into S3 bucket
-  $PORTAL_HOME/scripts/authenticate_service_account.sh eks
   BUCKET_NAME="cdm-deliverable"
 
+  # Authenticate and upload into S3 bucket
+  $PORTAL_HOME/scripts/authenticate_service_account.sh eks
   aws s3 cp $CDM_DELIVERABLE s3://$BUCKET_NAME/$CLINICAL_SAMPLE_S3_FILEPATH --profile saml
   if [ $? -ne 0 ] ; then
     echo "`date`: Failed to upload CDM deliverable to S3, exiting..."
@@ -98,17 +96,17 @@ function upload_to_s3() {
 }
 
 function trigger_cdm_dags() {
-  TMP_LOG_FILE="${PORTAL_HOME}/tmp/trigger_s3_dag.log"
+  TMP_LOG_FILE=$(mktemp -q)
   AIRFLOW_ADMIN_CREDENTIALS_FILE="${PORTAL_HOME}/pipelines-credentials/airflow-admin.credentials"
   AIRFLOW_CREDS=$(cat $AIRFLOW_ADMIN_CREDENTIALS_FILE)
-  DATA='{"conf": {"sample_filepath": "'"$CLINICAL_SAMPLE_S3_FILEPATH"'", "cohort": "'"$COHORT"'"}}'
+  DATA='{"conf": {"sample_filepath": "'"$CLINICAL_SAMPLE_S3_FILEPATH"'", "cohort_name": "'"$COHORT"'"}}'
   AIRFLOW_URL="https://airflow.cbioportal.aws.mskcc.org"
   DAG_ID="cdm_etl_cbioportal_s3_pull"
   AIRFLOW_API_ENDPOINT="${AIRFLOW_URL}/api/v1/dags/${DAG_ID}/dagRuns"
 
   # Trigger CDM DAG to pull updated data_clinical_sample.txt from S3
   # This DAG will kick off the rest of the CDM pipeline when it completes
-  HTTP_STATUS_CODE=$(curl -X POST --write-out "%{http_code}" --silent --output $TMP_LOG_FILE --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --data $DATA $AIRFLOW_API_ENDPOINT)
+  HTTP_STATUS_CODE=$(curl -X POST --write-out "%{http_code}" --silent --output $TMP_LOG_FILE --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --data "$DATA" $AIRFLOW_API_ENDPOINT)
   if [ $HTTP_STATUS_CODE -ne 200 ] ; then
     # Send alert for HTTP status code if not 200
     echo "`date`: Failed attempt to trigger DAG ${DAG_ID} on Airflow server ${AIRFLOW_URL}. HTTP status code = ${HTTP_STATUS_CODE}, exiting..."
