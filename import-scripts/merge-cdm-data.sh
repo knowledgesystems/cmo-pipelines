@@ -1,5 +1,17 @@
 #!/bin/bash
 
+if ! [ -n "$PORTAL_HOME" ] ; then
+    echo "Error : merge-cdm-data.sh cannot be run without setting the PORTAL_HOME environment variable."
+    exit 1
+fi
+
+if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] ; then
+    echo "`date`: Unable to locate automation_env, exiting..."
+    exit 1
+fi
+
+source $PORTAL_HOME/scripts/automation-environment.sh
+
 COHORT=$1
 CDM_DATA_DIR=""
 PROD_DATA_DIR=""
@@ -34,9 +46,9 @@ function set_cohort_filepaths() {
         COHORT_NAME_FOR_COMMIT_MSG="ACCESS"
     fi
 
-    # Check that required files exist
-    if [ ! -f $SEQ_DATE_FILEPATH ] || [ ! -f $CLINICAL_SAMPLE_FILEPATH ] ; then
-        echo "`date`: Unable to locate required files, exiting..."
+    # Check that required directories exist
+    if [ ! -d $CDM_DATA_DIR ] || [ ! -d $PROD_DATA_DIR ] ; then
+        echo "`date`: Unable to locate required data directories, exiting..."
         exit 1
     fi
 }
@@ -51,9 +63,9 @@ function validate_sample_file() {
 }
 
 function merge_cdm_data_and_commit() {
-    # create temp directory for merging mskimpact and cdm clinical files
-    # all processing is done in tmp and only copied over if everything succeeds
-    # no git cleanup needed - will just remove the tmpdir at the end
+    # Create tmp_processing_directory for merging mskimpact and cdm clinical files
+    # All processing is done here and only copied over if everything succeeds
+    # No git cleanup needed - tmp_processing_directory removed at the end
     TMP_PROCESSING_DIRECTORY=$(mktemp --tmpdir=$MSK_DMP_TMPDIR -d merge.XXXXXXXX)
     $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $TMP_PROCESSING_DIRECTORY -i "merged_cdm_${COHORT}" -m true -f clinical_patient,clinical_sample $CDM_DATA_DIR $PROD_DATA_DIR
     if [ $? -gt 0 ] ; then
