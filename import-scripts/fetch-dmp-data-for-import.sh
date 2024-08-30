@@ -255,10 +255,13 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
         fi
 
-        # UPLOAD MSKIMPACT SAMPLE LIST TO S3
-        # TRIGGER S3 PULL DAG VIA API
-        # Should this happen in one of the if blocks above?
-        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskimpact
+        # Upload MSKIMPACT sample list to S3 for CDM use
+        if [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
+            sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskimpact
+            if [ $? -gt 0 ] ; then
+                sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT sample list upload to CDM S3 bucket failed"
+            fi
+        fi
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -327,10 +330,13 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
         fi
 
-        # UPLOAD HEMEPACT SAMPLE LIST TO S3
-        # TRIGGER S3 PULL DAG VIA API
-        # Should this happen in one of the if blocks above?
-        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskimpact_heme
+        # Upload HEMEPACT sample list to S3 for CDM use
+        if [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
+            sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskimpact_heme
+            if [ $? -gt 0 ] ; then
+                sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT sample list upload to CDM S3 bucket failed"
+            fi
+        fi
     fi
     # -----------------------------------------------------------------------------------------------------------
     # ARCHER DATA FETCHES
@@ -368,10 +374,13 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
         fi
 
-        # UPLOAD ARCHER SAMPLE LIST TO S3
-        # TRIGGER S3 PULL DAG VIA API
-        # Should this happen in one of the if blocks above?
-        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskarcher
+        # Upload ARCHER sample list to S3 for CDM use
+        if [ $FETCH_CVR_ARCHER_FAIL -eq 0 ] ; then
+            sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskarcher
+            if [ $? -gt 0 ] ; then
+                sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER sample list upload to CDM S3 bucket failed"
+            fi
+        fi
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -410,10 +419,13 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
         fi
 
-        # UPLOAD ACCESS SAMPLE LIST TO S3
-        # TRIGGER S3 PULL DAG VIA API
-        # Should this happen in one of the if blocks above?
-        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskaccess
+        # Upload ACCESS sample list to S3 for CDM use
+        if [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
+            sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh mskaccess
+            if [ $? -gt 0 ] ; then
+                sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS sample list upload to CDM S3 bucket failed"
+            fi
+        fi
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -725,6 +737,38 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     #--------------------------------------------------------------
+    # CDM Fetch is optional -- does not break import if it fails, but will send notif
+
+    echo "fetching CDM clinical demographics & timeline updates from S3..."
+    sh $PORTAL_HOME/scripts/pull-cdm-data.sh
+
+    if [ $? -gt 0 ] ; then
+        sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
+    else
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
+        fi
+
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
+        fi
+
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
+        fi
+
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
+        fi
+    fi
+
+    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+
+    #----------------------------------------------------------
     ## MERGE STUDIES FOR MIXEDPACT, MSKSOLIDHEME:
     # Note: RAINDANCE is no longer being updated but the data will still be included in MIXEDPACT
     #   (1) MSK-IMPACT, HEMEPACT, RAINDANCE, ARCHER, and ACCESS (MIXEDPACT)
@@ -811,45 +855,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset"
     fi
 
-    #--------------------------------------------------------------
-    # CDM Fetch is optional -- does not break import if it fails, but will send notif
-
-    # Generate and upload data_clinical_sample.txt to S3 bucket for CDM use
-    #sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh
-
-    echo "fetching clinical demographics & timeline updates from S3..."
-    sh $PORTAL_HOME/scripts/pull-cdm-data.sh
-
-    if [ $? -gt 0 ] ; then
-      sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
-    else
-      # Validate the clinical sample file
-      $PYTHON3_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py --validation-type cdm --study-dir $MSK_CHORD_DATA_HOME
-      if [ $? -gt 0 ] ; then
-        sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM study validation failure"
-      fi
-
-      # create temp directory for merging mskimpact and cdm clinical files
-      # all processing is done in tmp and only copied over if everything succeeds
-      # no git cleanup needed - will just remove the tmpdir at the end
-      TMP_PROCESSING_DIRECTORY=$(mktemp --tmpdir=$MSK_DMP_TMPDIR -d merge.XXXXXXXX)
-      $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $TMP_PROCESSING_DIRECTORY -i merged_cdm_mskimpact -m true -f clinical_patient,clinical_sample $MSK_CHORD_DATA_HOME $MSK_SOLID_HEME_DATA_HOME
-      if [ $? -gt 0 ] ; then
-        sendPreImportFailureMessageMskPipelineLogsSlack "Error: Unable to merge CDM MSKIMPACT and MSKSOLIDHEME clinical files"
-      else
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt -i /data/portal-cron/scripts/cdm_metadata.json
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Unable to add metadata headers to merged CDM MSKIMPACT and MSKSOLIDHEME clinical files"
-        else
-            cp -a $TMP_PROCESSING_DIRECTORY/data_clinical*.txt $MSK_SOLID_HEME_DATA_HOME
-            cp -a $MSK_CHORD_DATA_HOME/data_timeline*.txt $MSK_SOLID_HEME_DATA_HOME
-            cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset: CDM Annotation"
-        fi
-      fi
-      rm -rf $TMP_PROCESSING_DIRECTORY
-    fi
-
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     #--------------------------------------------------------------
     # AFFILIATE COHORTS
     printTimeStampedDataProcessingStepMessage "subset of affiliate cohorts"
