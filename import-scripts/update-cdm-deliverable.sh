@@ -5,8 +5,8 @@ if ! [ -n "$PORTAL_HOME" ] ; then
     exit 1
 fi
 
-if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] || [ ! -f $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh ] ; then
-    echo "`date`: Unable to locate automation_env and additional modules, exiting..."
+if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] ; then
+    echo "`date`: Unable to locate automation_env, exiting..."
     exit 1
 fi
 
