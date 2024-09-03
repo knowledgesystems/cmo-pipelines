@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import ssl
 import os
 import sys
 import urllib
@@ -10,8 +11,8 @@ from email.mime.text import MIMEText
 import smtplib
 import optparse
 
-PARTA_CONSENTED_URL = 'http://draco.mskcc.org:9890/get_12245_list_parta'
-PARTC_CONSENTED_URL = 'http://draco.mskcc.org:9890/get_12245_list_partc'
+PARTA_CONSENTED_URL = 'https://consent.mpath.k8.mskcc.org/api/consent/patient/deid/type/parta'
+PARTC_CONSENTED_URL = 'https://consent.mpath.k8.mskcc.org/api/consent/patient/deid/type/partc' 
 
 PARTA_FIELD_NAME = 'PARTA_CONSENTED_12_245'
 PARTC_FIELD_NAME = 'PARTC_CONSENTED_12_245'
@@ -37,9 +38,10 @@ def fetch_expected_consent_status_values():
         Fetches expected consent status values for 12-245
         Part A and C from CVR web service.
     '''
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
     expected_consent_status_values = {}
     for field,url in CVR_CONSENT_STATUS_ENDPOINTS.items():
-        response = urllib.urlopen(url)
+        response = urllib.urlopen(url, ssl_context)
         data = json.loads(response.read())
 
         consent_values = {}
