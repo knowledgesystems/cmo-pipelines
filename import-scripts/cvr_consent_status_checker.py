@@ -210,7 +210,9 @@ def email_consent_status_report(
     message['To'] = COMMASPACE.join(MESSAGE_RECIPIENTS)
     message['Date'] = formatdate(localtime=True)
 
-    s = smtplib.SMTP_SSL(SMTP_SERVER, 465)
+    s = smtplib.SMTP(SMTP_SERVER, 587)
+    s.ehlo()
+    s.starttls()
     s.login(gmail_username, gmail_password)
     s.sendmail(MESSAGE_SENDER, MESSAGE_RECIPIENTS, message.as_string())
     s.quit()
