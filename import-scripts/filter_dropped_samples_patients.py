@@ -165,7 +165,9 @@ def main():
 
     # Only send out report if something was dropped
     if (len(dropped_sample_list) > 0 or len(dropped_patient_list) > 0 or len(dropped_timeline_list) > 0):
-        s = smtplib.SMTP_SSL(SMTP_SERVER, 465)
+        s = smtplib.SMTP(SMTP_SERVER, 587)
+        s.ehlo()
+        s.starttls()
         s.login(gmail_username, gmail_password)
         s.sendmail(MESSAGE_SENDER, all_recipients_list, msg.as_string())
         s.quit()
