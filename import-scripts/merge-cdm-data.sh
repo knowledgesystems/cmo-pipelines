@@ -39,7 +39,7 @@ function set_cohort_filepaths() {
         PROD_DATA_DIR="$MSK_HEMEPACT_DATA_HOME"
         COHORT_NAME_FOR_COMMIT_MSG="HEMEPACT"
     elif [ "$COHORT" == "mskarcher" ] ; then
-        PROD_DATA_DIR="$MSK_ARCHER_DATA_HOME"
+        PROD_DATA_DIR="$MSK_ARCHER_UNFILTERED_DATA_HOME"
         COHORT_NAME_FOR_COMMIT_MSG="ARCHER"
     elif [ "$COHORT" == "mskaccess" ] ; then
         PROD_DATA_DIR="$MSK_ACCESS_DATA_HOME"
@@ -72,7 +72,7 @@ function merge_cdm_data_and_commit() {
         echo "Error: Unable to merge CDM and $COHORT_NAME_FOR_COMMIT_MSG clinical files"
         exit 1
     else
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s $COHORT -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt -i /data/portal-cron/scripts/cdm_metadata.json
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt -i /data/portal-cron/scripts/cdm_metadata.json
         if [ $? -gt 0 ] ; then
             echo "Unable to add metadata headers to merged CDM and $COHORT_NAME_FOR_COMMIT_MSG clinical files"
             exit 1
