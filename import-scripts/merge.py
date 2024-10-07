@@ -774,7 +774,7 @@ def organize_files(studies, file_types, merge_clinical):
                     file_types[GENE_MATRIX_META_PATTERN].append(study_file)
                 elif SV_META_PATTERN in study_file:
                     file_types[SV_META_PATTERN].append(study_file)
-                elif TIMELINE_META_PATTERN in study_file:
+                elif re.search(TIMELINE_META_PATTERN, study_file):
                     file_types[TIMELINE_META_PATTERN].append(study_file)
                 # FILE PATTERN MATCHING
                 elif MUTATION_FILE_PATTERN in study_file:
