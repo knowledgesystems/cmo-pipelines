@@ -67,8 +67,8 @@ RNASEQ_EXPRESSION_META_PATTERN = 'meta_RNA_Seq_expression_median.txt'
 RPPA_FILE_PATTERN = 'data_rppa.txt'
 RPPA_META_PATTERN = 'meta_rppa.txt'
 
-TIMELINE_FILE_PATTERN = 'data_timeline'
-TIMELINE_META_PATTERN = 'meta_timeline'
+TIMELINE_FILE_PATTERN = 'data_timeline.txt'
+TIMELINE_META_PATTERN = 'meta_timeline.txt'
 
 CLINICAL_PATIENT_FILE_PATTERN = 'data_clinical_patient.txt'
 CLINICAL_PATIENT_META_PATTERN = 'meta_clinical_patient.txt'
@@ -227,7 +227,7 @@ def merge_files(data_filenames, file_type, reference_set, keep_match, output_dir
 
     if file_type in [SEG_HG18_META_PATTERN, SEG_HG19_META_PATTERN]:
         output_filename = os.path.join(output_directory, study_id + META_FILE_MAP[file_type][0])
-    elif file_type in ['SUPP_DATA', TIMELINE_FILE_PATTERN, TIMELINE_META_PATTERN] or DATA_CLINICAL_SUPP_PREFIX in data_filenames[0]:
+    elif file_type == 'SUPP_DATA' or DATA_CLINICAL_SUPP_PREFIX in data_filenames[0]:
         output_filename = os.path.join(output_directory, os.path.basename(data_filenames[0]))
     else:
         output_filename = os.path.join(output_directory, META_FILE_MAP[file_type][0])
