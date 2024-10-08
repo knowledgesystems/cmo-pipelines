@@ -67,7 +67,7 @@ function merge_cdm_data_and_commit() {
     # All processing is done here and only copied over if everything succeeds
     # No git cleanup needed - tmp_processing_directory removed at the end
     TMP_PROCESSING_DIRECTORY=$(mktemp --tmpdir=$MSK_DMP_TMPDIR -d merge.XXXXXXXX)
-    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $TMP_PROCESSING_DIRECTORY -i "merged_cdm_${COHORT}" -m true -f clinical_patient,clinical_sample,timeline $CDM_DATA_DIR $PROD_DATA_DIR
+    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $TMP_PROCESSING_DIRECTORY -i "merged_cdm_${COHORT}" -m true -f clinical_patient,clinical_sample $CDM_DATA_DIR $PROD_DATA_DIR
     if [ $? -gt 0 ] ; then
         echo "Error: Unable to merge CDM and $COHORT_NAME_FOR_COMMIT_MSG clinical files"
         exit 1
@@ -78,6 +78,7 @@ function merge_cdm_data_and_commit() {
             exit 1
         else
             cp -a $TMP_PROCESSING_DIRECTORY/data_clinical*.txt $PROD_DATA_DIR
+            cp -a $CDM_DATA_DIR/data_timeline*.txt $PROD_DATA_DIR
             cd $PROD_DATA_DIR ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest $COHORT_NAME_FOR_COMMIT_MSG dataset: CDM Annotation"
         fi
     fi
