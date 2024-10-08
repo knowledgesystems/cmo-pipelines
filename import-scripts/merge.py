@@ -70,9 +70,6 @@ RPPA_META_PATTERN = 'meta_rppa.txt'
 TIMELINE_FILE_PATTERN = re.compile('^data_timeline.*\.txt$')
 TIMELINE_META_PATTERN = re.compile('^meta_timeline.*\.txt$')
 
-TIMELINE_FILE_PATTERN = 'data_timeline'
-TIMELINE_META_PATTERN = 'meta_timeline'
-
 CLINICAL_PATIENT_FILE_PATTERN = 'data_clinical_patient.txt'
 CLINICAL_PATIENT_META_PATTERN = 'meta_clinical_patient.txt'
 
@@ -230,7 +227,7 @@ def merge_files(data_filenames, file_type, reference_set, keep_match, output_dir
 
     if file_type in [SEG_HG18_META_PATTERN, SEG_HG19_META_PATTERN]:
         output_filename = os.path.join(output_directory, study_id + META_FILE_MAP[file_type][0])
-    elif file_type in ['SUPP_DATA', TIMELINE_FILE_PATTERN, TIMELINE_META_PATTERN] or DATA_CLINICAL_SUPP_PREFIX in data_filenames[0]:
+    elif file_type in {'SUPP_DATA', TIMELINE_FILE_PATTERN, TIMELINE_META_PATTERN} or DATA_CLINICAL_SUPP_PREFIX in data_filenames[0]:
         output_filename = os.path.join(output_directory, os.path.basename(data_filenames[0]))
     else:
         output_filename = os.path.join(output_directory, META_FILE_MAP[file_type][0])
@@ -777,9 +774,7 @@ def organize_files(studies, file_types, merge_clinical):
                     file_types[GENE_MATRIX_META_PATTERN].append(study_file)
                 elif SV_META_PATTERN in study_file:
                     file_types[SV_META_PATTERN].append(study_file)
-                #elif re.search(TIMELINE_META_PATTERN, study_file):
-                elif TIMELINE_META_PATTERN in study_file:
-                    print >> OUTPUT_FILE, 'TIMELINE META PATTERN FOUND: ' + study_file
+                elif re.search(TIMELINE_META_PATTERN, study_file):
                     file_types[TIMELINE_META_PATTERN].append(study_file)
                 # FILE PATTERN MATCHING
                 elif MUTATION_FILE_PATTERN in study_file:
@@ -814,10 +809,8 @@ def organize_files(studies, file_types, merge_clinical):
                     file_types[GENE_MATRIX_FILE_PATTERN].append(study_file)
                 elif SV_FILE_PATTERN in study_file:
                     file_types[SV_FILE_PATTERN].append(study_file)
-                #elif re.search(TIMELINE_FILE_PATTERN, study_file):
-                elif TIMELINE_FILE_PATTERN in study_file:
+                elif re.search(TIMELINE_FILE_PATTERN, study_file):
                     file_types[TIMELINE_FILE_PATTERN].append(study_file)
-                    print >> OUTPUT_FILE, 'TIMELINE FILE PATTERN FOUND: ' + study_file
                 # CLINICAL FILE PATTERN MATCHING
                 elif CLINICAL_META_PATTERN in study_file:
                     file_types[CLINICAL_META_PATTERN].append(study_file)
