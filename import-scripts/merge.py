@@ -70,6 +70,9 @@ RPPA_META_PATTERN = 'meta_rppa.txt'
 TIMELINE_FILE_PATTERN = 'data_timeline.txt'
 TIMELINE_META_PATTERN = 'meta_timeline.txt'
 
+TIMELINE_FILE_PATTERN_CDM = 'data_timeline_'
+TIMELINE_META_PATTERN_CDM = 'meta_timeline_'
+
 CLINICAL_PATIENT_FILE_PATTERN = 'data_clinical_patient.txt'
 CLINICAL_PATIENT_META_PATTERN = 'meta_clinical_patient.txt'
 
@@ -826,7 +829,8 @@ def organize_files(studies, file_types, merge_clinical):
                     file_types[CLINICAL_SAMPLE_FILE_PATTERN].append(study_file)
                 elif DATA_CLINICAL_SUPP_PREFIX in study_file:
                     file_types[SUPP_DATA].append(study_file)
-                else:
+                # Don't merge CDM timeline files because it takes too long
+                elif TIMELINE_FILE_PATTERN_CDM not in study_file and TIMELINE_META_PATTERN_CDM not in study_file:
                     file_types[SUPP_DATA].append(study_file)
             except KeyError:
                 print >> ERROR_FILE, "File " + study_file + " not supported and will not be merged"
