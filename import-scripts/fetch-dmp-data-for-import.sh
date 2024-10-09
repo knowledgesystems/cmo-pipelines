@@ -797,6 +797,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     else
         echo "MIXEDPACT merge successful!"
         echo $(date)
+        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mixedpact
+        if [ $? -gt 0 ] ; then
+          sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM timeline file merge for MIXEDPACT"
+        fi
     fi
 
     printTimeStampedDataProcessingStepMessage "merge of MSK-IMPACT, HEMEPACT, ACCESS data for MSKSOLIDHEME"
@@ -819,6 +823,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
           touch $MSK_SOLID_HEME_IMPORT_TRIGGER
         fi
         addCancerTypeCaseLists $MSK_SOLID_HEME_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
+        # Merge CDM timeline files
+        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mskimpact
+        if [ $? -gt 0 ] ; then
+          sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM timeline file merge for MSKSOLIDHEME"
+        fi
     fi
 
     #----------------------------------------------------------
