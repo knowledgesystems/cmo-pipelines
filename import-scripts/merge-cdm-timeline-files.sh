@@ -60,7 +60,7 @@ function merge_timeline_files() {
             # Check if the file exists before adding to command
             FILE_TO_MERGE="$MERGE_DIR/$TIMELINE_FILE"
             if [ -f $FILE_TO_MERGE ]; then
-                FILES_TO_MERGE += " $FILE_TO_MERGE"
+                FILES_TO_MERGE="$FILES_TO_MERGE $FILE_TO_MERGE"
             fi
         done
         $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i $FILES_TO_MERGE -o $OUTPUT_DIR/$TIMELINE_FILE
