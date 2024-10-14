@@ -40,12 +40,13 @@ function set_cohort_filepaths() {
         COHORT="MSKSOLIDHEME"
         OUTPUT_DIR=$MSK_SOLID_HEME_DATA_HOME
         MERGE_DIRS=("$MSK_IMPACT_DATA_HOME" "$MSK_HEMEPACT_DATA_HOME" "$MSK_ACCESS_DATA_HOME")
+    fi
 
     # This gets the base filename for each of the timeline files
     FILE_LIST=($(cd ${MERGE_DIRS[0]} && ls data_timeline_*.txt))
     
     # Check that required directories exist
-    if [ ! -d $OUTPUT_DIR ] || [ ! -d $MSK_IMPACT_DATA_HOME ] || [ ! -d $MSK_HEMEPACT_DATA_HOME ] || [ ! -d $MSK_RAINDANCE_DATA_HOME ] || [ ! -d $MSK_ARCHER_UNFILTERED_DATA_HOME ] || [ ! -d $MSK_ACCESS_DATA_HOME ]; then
+    if [ ! -d $OUTPUT_DIR ] || [ ! -d $MSK_IMPACT_DATA_HOME ] || [ ! -d $MSK_HEMEPACT_DATA_HOME ] || [ ! -d $MSK_RAINDANCE_DATA_HOME ] || [ ! -d $MSK_ARCHER_UNFILTERED_DATA_HOME ] || [ ! -d $MSK_ACCESS_DATA_HOME ] ; then
         echo "`date`: Unable to locate required data directories, exiting..."
         exit 1
     fi
