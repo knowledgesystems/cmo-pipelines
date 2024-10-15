@@ -146,7 +146,7 @@ else
             # add clinical meta data headers if clinical sample file exists
             if [ -f $OUTPUT_DIRECTORY/data_clinical_sample.txt ]; then
                 echo "Adding clinical attribute meta data headers..."
-                $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add_clinical_attribute_metadata_headers.py -f $OUTPUT_DIRECTORY/data_clinical*
+                $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add_clinical_attribute_metadata_headers.py -f $OUTPUT_DIRECTORY/data_clinical* -i /data/portal-cron/scripts/cdm_metadata.json
                 if [ $? -gt 0 ]; then
                     ADD_METADATA_HEADERS_FAILURE=1
                 fi

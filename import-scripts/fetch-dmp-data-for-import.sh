@@ -715,7 +715,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 echo "UNLINKED_ARCHER subset successful! Creating cancer type case lists..."
                 echo $(date)
                 # add metadata headers and overrides before importing
-                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical*
+                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical* -i /data/portal-cron/scripts/cdm_metadata.json
                 if [ $? -gt 0 ] ; then
                     echo "Error: Adding metadata headers for UNLINKED_ARCHER failed! Study will not be updated in portal."
                     cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
@@ -815,8 +815,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo "MSKSOLIDHEME merge successful! Creating cancer type case lists..."
         echo $(date)
         # add metadata headers and overrides before importing
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -i /data/portal-cron/scripts/cdm_metadata.json
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt -i /data/portal-cron/scripts/cdm_metadata.json
         if [ $? -gt 0 ] ; then
           echo "Error: Adding metadata headers for MSKSOLIDHEME failed! Study will not be updated in portal."
         else
@@ -1166,7 +1166,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
             else
                 # add metadata headers before importing
-                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $LYMPHOMA_SUPER_COHORT_DATA_HOME/data_clinical*
+                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $LYMPHOMA_SUPER_COHORT_DATA_HOME/data_clinical* -i /data/portal-cron/scripts/cdm_metadata.json
                 if [ $? -gt 0 ] ; then
                     echo "Error: Adding metadata headers for LYMPHOMA_SUPER_COHORT failed! Study will not be updated in portal."
                 else
