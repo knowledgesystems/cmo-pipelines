@@ -63,7 +63,7 @@ function merge_timeline_files() {
                 FILES_TO_MERGE="$FILES_TO_MERGE $FILE_TO_MERGE"
             fi
         done
-        $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i $FILES_TO_MERGE -o $OUTPUT_DIR/$TIMELINE_FILE
+        $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i $FILES_TO_MERGE -o $OUTPUT_DIR/$TIMELINE_FILE -m outer
     done
 
 }
