@@ -886,6 +886,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             echo "MSK Kings County subset successful!"
             addCancerTypeCaseLists $MSK_KINGS_DATA_HOME "msk_kingscounty" "data_clinical_sample.txt" "data_clinical_patient.txt"
             standardizeGenePanelMatrix $MSK_KINGS_DATA_HOME
+            sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "msk_kingscounty" $MSK_KINGS_DATA_HOME $MSK_MIXEDPACT_DATA_HOME
             touch $MSK_KINGS_IMPORT_TRIGGER
         fi
     fi
@@ -914,6 +915,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             echo "MSK Lehigh Valley subset successful!"
             addCancerTypeCaseLists $MSK_LEHIGH_DATA_HOME "msk_lehighvalley" "data_clinical_sample.txt" "data_clinical_patient.txt"
             standardizeGenePanelMatrix $MSK_LEHIGH_DATA_HOME
+            sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "msk_lehighvalley" $MSK_LEHIGH_DATA_HOME $MSK_MIXEDPACT_DATA_HOME
             touch $MSK_LEHIGH_IMPORT_TRIGGER
         fi
     fi
@@ -942,6 +944,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             echo "MSK Queens Cancer Center subset successful!"
             addCancerTypeCaseLists $MSK_QUEENS_DATA_HOME "msk_queenscancercenter" "data_clinical_sample.txt" "data_clinical_patient.txt"
             standardizeGenePanelMatrix $MSK_QUEENS_DATA_HOME
+            sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "msk_queenscancercenter" $MSK_QUEENS_DATA_HOME $MSK_MIXEDPACT_DATA_HOME
             touch $MSK_QUEENS_IMPORT_TRIGGER
         fi
     fi
@@ -970,6 +973,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             echo "MSK Miami Cancer Institute subset successful!"
             addCancerTypeCaseLists $MSK_MCI_DATA_HOME "msk_miamicancerinstitute" "data_clinical_sample.txt" "data_clinical_patient.txt"
             standardizeGenePanelMatrix $MSK_MCI_DATA_HOME
+            sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "msk_miamicancerinstitute" $MSK_MCI_DATA_HOME $MSK_MIXEDPACT_DATA_HOME
             touch $MSK_MCI_IMPORT_TRIGGER
         fi
     fi
@@ -998,6 +1002,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             echo "MSK Hartford Healthcare subset successful!"
             addCancerTypeCaseLists $MSK_HARTFORD_DATA_HOME "msk_hartfordhealthcare" "data_clinical_sample.txt" "data_clinical_patient.txt"
             standardizeGenePanelMatrix $MSK_HARTFORD_DATA_HOME
+            sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "msk_hartfordhealthcare" $MSK_HARTFORD_DATA_HOME $MSK_MIXEDPACT_DATA_HOME
             touch $MSK_HARTFORD_IMPORT_TRIGGER
         fi
     fi
@@ -1026,6 +1031,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             echo "MSK Ralph Lauren subset successful!"
             addCancerTypeCaseLists $MSK_RALPHLAUREN_DATA_HOME "msk_ralphlauren" "data_clinical_sample.txt" "data_clinical_patient.txt"
             standardizeGenePanelMatrix $MSK_RALPHLAUREN_DATA_HOME
+            sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "msk_ralphlauren" $MSK_RALPHLAUREN_DATA_HOME $MSK_MIXEDPACT_DATA_HOME
             touch $MSK_RALPHLAUREN_IMPORT_TRIGGER
         fi
     fi
@@ -1054,6 +1060,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             echo "MSK Tailor Med Japan subset successful!"
             addCancerTypeCaseLists $MSK_RIKENGENESISJAPAN_DATA_HOME "msk_rikengenesisjapan" "data_clinical_sample.txt" "data_clinical_patient.txt"
             standardizeGenePanelMatrix $MSK_RIKENGENESISJAPAN_DATA_HOME
+            sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "msk_rikengenesisjapan" $MSK_RIKENGENESISJAPAN_DATA_HOME $MSK_MIXEDPACT_DATA_HOME
             touch $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER
         fi
     fi
@@ -1085,6 +1092,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             echo "MSKIMPACT SCLC subset successful!"
             addCancerTypeCaseLists $MSK_SCLC_DATA_HOME "sclc_mskimpact_2017" "data_clinical_sample.txt" "data_clinical_patient.txt"
             standardizeGenePanelMatrix $MSK_SCLC_DATA_HOME
+            sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "sclc_mskimpact_2017" $MSK_SCLC_DATA_HOME $MSK_IMPACT_DATA_HOME
             touch $MSK_SCLC_IMPORT_TRIGGER
         fi
     fi
@@ -1165,6 +1173,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 echo "Lymphoma super subset clinical attribute filtering step failed! Study will not be updated in the portal."
                 LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
             else
+                # ADD CDM HANDLING HERE?
                 # add metadata headers before importing
                 $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $LYMPHOMA_SUPER_COHORT_DATA_HOME/data_clinical* -i /data/portal-cron/scripts/cdm_metadata.json
                 if [ $? -gt 0 ] ; then
