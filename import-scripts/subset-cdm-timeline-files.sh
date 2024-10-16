@@ -37,21 +37,6 @@ function usage {
     echo -e "\t\$SUBSET_DIR                     name of affiliate cohort"
 }
 
-function merge_timeline_files() {
-    # Merge each type of timeline file in each data directory
-    for TIMELINE_FILE in ${FILE_LIST[@]}; do
-        FILES_TO_MERGE=""
-        for MERGE_DIR in ${MERGE_DIRS[@]}; do
-            # Check if the file exists before adding to command
-            FILE_TO_MERGE="$MERGE_DIR/$TIMELINE_FILE"
-            if [ -f $FILE_TO_MERGE ]; then
-                FILES_TO_MERGE="$FILES_TO_MERGE $FILE_TO_MERGE"
-            fi
-        done
-        $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i $FILES_TO_MERGE -o $OUTPUT_DIR/$TIMELINE_FILE -m outer
-    done
-}
-
 function subset_timeline_files() {
     # get patient list file
     TMP_PATIENT_FILE=$(mktemp -q)
