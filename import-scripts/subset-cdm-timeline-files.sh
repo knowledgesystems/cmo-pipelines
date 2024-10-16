@@ -16,7 +16,6 @@ COHORT=$1
 OUTPUT_DIR=$2
 SUBSET_DIR=$3
 
-
 function check_args() {
     if [[ -z $COHORT ]] || [[ -z $OUTPUT_DIR ]] || [[ -z $SUBSET_DIR ]] ; then
         usage
