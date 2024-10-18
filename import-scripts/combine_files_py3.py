@@ -67,11 +67,12 @@ def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="
     if drop_na:
         df_merged.dropna(axis=0, inplace=True)
 
-    write_tsv(
-        df_merged,
-        output_file,
-        quoting=csv.QUOTE_NONE,
-    )
+    if not df_merged.empty:
+        write_tsv(
+            df_merged,
+            output_file,
+            quoting=csv.QUOTE_NONE,
+        )
 
 
 def main():
