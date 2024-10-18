@@ -48,7 +48,7 @@ function subset_timeline_files() {
     for TIMELINE_FILE in ${FILE_LIST[@]}; do
         INPUT_TIMELINE_FILEPATH="$SUBSET_DIR/$TIMELINE_FILE"
         OUTPUT_TIMELINE_FILEPATH="$OUTPUT_DIR/$TIMELINE_FILE"
-        $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i $TMP_PATIENT_FILE $INPUT_TIMELINE_FILEPATH -o $OUTPUT_TIMELINE_FILEPATH -m left
+        $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i $TMP_PATIENT_FILE $INPUT_TIMELINE_FILEPATH -o $OUTPUT_TIMELINE_FILEPATH -m left --drop-na
     done
 }
 
