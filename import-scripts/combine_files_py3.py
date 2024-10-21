@@ -56,7 +56,8 @@ def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="
             float_precision="round_trip",
             na_filter=False,
             low_memory=False,
-            skiprows=start_read
+            skiprows=start_read,
+            dtype='object' # this is to prevent ints from being converted to floats
         )
         data_frames.append(df)
 
@@ -64,9 +65,14 @@ def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="
         lambda left, right: pd.merge(left, right, on=columns, how=merge_type), data_frames
     )
 
+    # Drop rows with blank/NA values if specified
     if drop_na:
         df_merged.dropna(axis=0, inplace=True)
 
+    # Drop duplicate rows
+    df_merged.drop_duplicates(inplace=True)
+
+    # Write out the combined file (if not empty)
     if not df_merged.empty:
         write_tsv(
             df_merged,
