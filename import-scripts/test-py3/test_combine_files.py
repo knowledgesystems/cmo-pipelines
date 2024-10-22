@@ -28,16 +28,6 @@ class TestCombineFiles(unittest.TestCase):
         ]
         merge_type='outer'
         self.compare_expected_output_to_actual(sub_dir, ddp_files, merge_type)
-
-    """
-    def test_not_on_masterlist(self):
-        sub_dir = 'not_on_masterlist'
-        ddp_files = [
-            os.path.join(TestCombineFiles.base_dir, sub_dir, 'ddp_naaccr1.txt'),
-            os.path.join(TestCombineFiles.base_dir, sub_dir, 'ddp_naaccr2.txt'),
-        ]
-        self.compare_expected_output_to_actual(sub_dir, ddp_files)
-    """
   
     def test_diff_headers(self):
         sub_dir = 'diff_headers'
@@ -53,6 +43,16 @@ class TestCombineFiles(unittest.TestCase):
         ddp_files = [
             os.path.join(TestCombineFiles.base_dir, sub_dir, 'ddp_vital_status1.txt'),
             os.path.join(TestCombineFiles.base_dir, sub_dir, 'ddp_vital_status2.txt'),
+        ]
+        merge_type='outer'
+        self.compare_expected_output_to_actual(sub_dir, ddp_files, merge_type)
+
+    def test_maintain_int_datatypes(self):
+        sub_dir = 'maintain_int_datatypes'
+        ddp_files = [
+            os.path.join(TestCombineFiles.base_dir, sub_dir, 'ddp_naaccr1.txt'),
+            os.path.join(TestCombineFiles.base_dir, sub_dir, 'ddp_naaccr2.txt'),
+            os.path.join(TestCombineFiles.base_dir, sub_dir, 'ddp_naaccr3.txt'),
         ]
         merge_type='outer'
         self.compare_expected_output_to_actual(sub_dir, ddp_files, merge_type)
