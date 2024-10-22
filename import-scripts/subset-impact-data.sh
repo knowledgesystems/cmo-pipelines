@@ -37,6 +37,10 @@ case $i in
     CLINICAL_FILENAME="${i#*=}"
     shift # past argument=value
     ;;
+    -m=*|--metadata-filename=*)
+    METADATA_FILENAME="${i#*=}"
+    shift # past argument=value
+    ;;
     *)
       # default option
       echo "This option does not exist!  " "${i#*=}"
@@ -53,12 +57,17 @@ echo -e "\tCLINICAL_FILENAME="$CLINICAL_FILENAME
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="$PORTAL_HOME/scripts"
 fi
+if [ -z $METADATA_FILENAME ]; then
+    METADATA_FILENAME="$PORTAL_SCRIPTS_DIRECTORY/cdm_metadata.json"
+fi
+
 echo -e "\tPORTAL_SCRIPTS_DIRECTORY="$PORTAL_SCRIPTS_DIRECTORY
 
 # status flags
 GEN_SUBSET_LIST_FAILURE=0
 MERGE_SCRIPT_FAILURE=0
 ADD_METADATA_HEADERS_FAILURE=0
+SUBSET_CDM_TIMELINE_FILES_FAILURE=0
 
 if [ $STUDY_ID == "genie" ]; then
     # in the case of genie data, the input data directory must be the mskimpact data home, where we expect to see ddp_naaccr.txt
@@ -146,9 +155,17 @@ else
             # add clinical meta data headers if clinical sample file exists
             if [ -f $OUTPUT_DIRECTORY/data_clinical_sample.txt ]; then
                 echo "Adding clinical attribute meta data headers..."
-                $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add_clinical_attribute_metadata_headers.py -f $OUTPUT_DIRECTORY/data_clinical* -i /data/portal-cron/scripts/cdm_metadata.json
+                $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add_clinical_attribute_metadata_headers.py -f $OUTPUT_DIRECTORY/data_clinical* -i $METADATA_FILENAME
                 if [ $? -gt 0 ]; then
                     ADD_METADATA_HEADERS_FAILURE=1
+                fi
+            fi
+
+            # subset CDM timeline files if they exist
+            if [ "$(ls -l $INPUT_DIRECTORY/data_timeline_*.txt 2>/dev/null | wc -l)" -gt 0 ]; then
+                sh $PORTAL_SCRIPTS_DIRECTORY/subset-cdm-timeline-files.sh "$STUDY_ID" $OUTPUT_DIRECTORY $INPUT_DIRECTORY
+                if [ $? -gt 0 ]; then
+                    SUBSET_CDM_TIMELINE_FILES_FAILURE=1
                 fi
             fi
         fi
@@ -169,8 +186,11 @@ fi
 if [ $ADD_METADATA_HEADERS_FAILURE -ne 0 ] ; then
     echo "Error while attempting to add clinical attribute meta data headers to $OUTPUT_DIRECTORY/data_clinical*"
 fi
+if [ $SUBSET_CDM_TIMELINE_FILES_FAILURE -ne 0 ] ; then
+    echo "Error while attempting to subset CDM timeline files from $INPUT_DIRECTORY to $OUTPUT_DIRECTORY"
+fi
 # exit accordingly
-if [[ $GEN_SUBSET_LIST_FAILURE -eq 0 && $MERGE_SCRIPT_FAILURE -eq 0 && $ADD_METADATA_HEADERS_FAILURE -eq 0 ]] ; then
+if [[ $GEN_SUBSET_LIST_FAILURE -eq 0 && $MERGE_SCRIPT_FAILURE -eq 0 && $ADD_METADATA_HEADERS_FAILURE -eq 0 && $SUBSET_CDM_TIMELINE_FILES_FAILURE -eq 0 ]] ; then
     echo "Successfully subset data from $INPUT_DIRECTORY by filter criteria $FILTER_CRITERIA"
     exit 0
 else
