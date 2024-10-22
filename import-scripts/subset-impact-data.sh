@@ -157,11 +157,8 @@ else
             # add clinical meta data headers if clinical sample file exists
             if [ -f $OUTPUT_DIRECTORY/data_clinical_sample.txt ]; then
                 echo "Adding clinical attribute meta data headers..."
-                METADATA_FLAG="" 
-                if [ ! -z $METADATA_FILENAME ] ;
-                    METADATA_FLAG="-i $METADATA_FILENAME"
-                fi
-                $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add_clinical_attribute_metadata_headers.py -f $OUTPUT_DIRECTORY/data_clinical* $METADATA_FLAG
+                if [ -z ${METADATA_FILENAME} ]; then METADATA_ARGS=""; else METADATA_ARGS="-i $METADATA_FILENAME"; fi
+                $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add_clinical_attribute_metadata_headers.py -f $OUTPUT_DIRECTORY/data_clinical* $METADATA_ARGS
                 if [ $? -gt 0 ]; then
                     ADD_METADATA_HEADERS_FAILURE=1
                 fi
