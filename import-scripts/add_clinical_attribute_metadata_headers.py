@@ -167,7 +167,6 @@ def main():
         sys.exit(2)
     if (study_id):
         check_valid_studyid(study_id, base_cdd_url)
-    independently_determined_attributes_json = "{}"
     all_attributes = set()
     # get a set of attributes used across all input files
     for clinical_file in clinical_files:
