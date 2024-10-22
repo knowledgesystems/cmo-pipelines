@@ -32,8 +32,8 @@ function check_args() {
 function usage {
     echo "subset-cdm-timeline-files.sh \$COHORT_ID \$OUTPUT_DIR \$SUBSET_DIR"
     echo -e "\t\$COHORT_ID                      name of affiliate cohort"
-    echo -e "\t\$OUTPUT_DIR                     name of affiliate cohort"
-    echo -e "\t\$SUBSET_DIR                     name of affiliate cohort"
+    echo -e "\t\$OUTPUT_DIR                     where to write subsetted timeline files"
+    echo -e "\t\$SUBSET_DIR                     directory to subset off of"
 }
 
 function subset_timeline_files() {
