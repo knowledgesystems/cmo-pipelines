@@ -58,7 +58,9 @@ if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="$PORTAL_HOME/scripts"
 fi
 if [ -z $METADATA_FILENAME ]; then
-    METADATA_FILENAME="$PORTAL_SCRIPTS_DIRECTORY/cdm_metadata.json"
+    if [ ! -f $PORTAL_SCRIPTS_DIRECTORY/cdm_metadata.json ] ; then
+        METADATA_FILENAME="$PORTAL_SCRIPTS_DIRECTORY/cdm_metadata.json"
+    fi
 fi
 
 echo -e "\tPORTAL_SCRIPTS_DIRECTORY="$PORTAL_SCRIPTS_DIRECTORY
