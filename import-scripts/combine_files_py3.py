@@ -2,11 +2,13 @@
 
 """ combine_files_py3.py
 This script merges an arbitrary number of files into one combined file.
-Its primary use is to:
-- merge DDP files from MSK-IMPACT, HEMEPACT, ACCESS to generate merged DDP files
-for the msk_solid_heme cohort. This merged DDP file is only used for GENIE cohort creation.
+Its primary uses:
+- generate CDM deliverable by merging clinical sample file with sequencing date data
+- merge and subset CDM timeline files (legacy merge.py script is not efficient enough)
 - merge cvr/seq_date.txt files from MSK-IMPACT, HEMEPACT, ACCESS to generate a merged seq_date file
 for the msk_solid_heme cohort. This merged seq_date.txt file is only used for the Sophia cohort.
+- merge DDP files from MSK-IMPACT, HEMEPACT, ACCESS to generate merged DDP files
+for the msk_solid_heme cohort. This merged DDP file is only used for GENIE cohort creation.
 Usage:
     python3 combine_files_py3.py --input-files $FILE1 $FILE2 <...> --output-file $OUTPUT_FILE
 Example:
@@ -68,9 +70,6 @@ def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="
     # Drop rows with blank/NA values if specified
     if drop_na:
         df_merged.dropna(axis=0, inplace=True)
-
-    # Drop duplicate rows
-    df_merged.drop_duplicates(inplace=True)
 
     # Write out the combined file (if not empty)
     if not df_merged.empty:
