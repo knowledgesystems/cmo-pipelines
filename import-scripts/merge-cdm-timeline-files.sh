@@ -19,7 +19,7 @@ FILE_LIST=()
 COHORT_NAME_FOR_COMMIT_MSG=""
 
 function check_args() {
-    if [[ -z $COHORT ]] || [[ "$COHORT" != "mixedpact" && "$COHORT" != "mskimpact" ]]; then
+    if [[ -z $COHORT ]] || [[ "$COHORT" != "mixedpact" && "$COHORT" != "mskimpact" && "$COHORT" != "lymphoma_super_cohort_fmi_msk" ]]; then
         usage
         exit 1
     fi
@@ -27,7 +27,7 @@ function check_args() {
 
 function usage {
     echo "merge-cdm-timeline-files.sh \$COHORT_ID"
-    echo -e "\t\$COHORT_ID                      one of: ['mixedpact', 'mskimpact']"
+    echo -e "\t\$COHORT_ID                      one of: ['mixedpact', 'mskimpact', 'lymphoma_super_cohort_fmi_msk']"
 }
 
 function set_cohort_filepaths() {
