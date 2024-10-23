@@ -1175,18 +1175,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 if [ $? -gt 0 ] ; then
                     echo "Error: Adding metadata headers for LYMPHOMA_SUPER_COHORT failed! Study will not be updated in portal."
                 else
-                    # TODO not sure if the CDM steps here are correct - FMI BAT study doesn't have CDM data
-                    # Should it have CDM data?
-                    # Can I just subset these timeline files from mixedpact or msksolidheme without doing another merge first?
-
-                    # Merge timeline files from mskimpact, hemepact, FMI BAT study
-                    sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh lymphoma_super_cohort_fmi_msk
-                    if [ $? -gt 0 ] ; then
-                        echo "Error: CDM timeline file merge for LYMPHOMA_SUPER_COHORT"
-                    fi
-
                     # Subset Lymphoma super cohort timeline files
-                    sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh lymphoma_super_cohort_fmi_msk $LYMPHOMA_SUPER_COHORT_DATA_HOME $LYMPHOMA_SUPER_COHORT_DATA_HOME
+                    sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh lymphoma_super_cohort_fmi_msk $LYMPHOMA_SUPER_COHORT_DATA_HOME $MSK_SOLID_HEME_DATA_HOME
                     if [ $? -gt 0 ] ; then
                         echo "Error: CDM timeline file subset for LYMPHOMA_SUPER_COHORT"
                     fi
