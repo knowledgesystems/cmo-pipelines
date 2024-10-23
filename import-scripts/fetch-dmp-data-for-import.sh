@@ -1182,13 +1182,13 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                     # Merge timeline files from mskimpact, hemepact, FMI BAT study
                     sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh lymphoma_super_cohort_fmi_msk
                     if [ $? -gt 0 ] ; then
-                        echo "Error: Adding metadata headers for LYMPHOMA_SUPER_COHORT failed! Study will not be updated in portal."
+                        echo "Error: CDM timeline file merge for LYMPHOMA_SUPER_COHORT"
                     fi
 
                     # Subset Lymphoma super cohort timeline files
                     sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh lymphoma_super_cohort_fmi_msk $LYMPHOMA_SUPER_COHORT_DATA_HOME $LYMPHOMA_SUPER_COHORT_DATA_HOME
                     if [ $? -gt 0 ] ; then
-                        echo "Error: Adding metadata headers for LYMPHOMA_SUPER_COHORT failed! Study will not be updated in portal."
+                        echo "Error: CDM timeline file subset for LYMPHOMA_SUPER_COHORT"
                     fi
 
                     touch $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER
