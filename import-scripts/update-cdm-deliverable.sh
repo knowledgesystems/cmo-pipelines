@@ -91,6 +91,7 @@ function upload_to_s3() {
     aws s3 cp $CDM_DELIVERABLE s3://$BUCKET_NAME/$CLINICAL_SAMPLE_S3_FILEPATH --profile saml
     if [ $? -ne 0 ] ; then
         echo "`date`: Failed to upload CDM deliverable to S3, exiting..."
+        exit 1
     fi
     rm $CDM_DELIVERABLE
 }
