@@ -694,6 +694,38 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
     fi
 
+    #--------------------------------------------------------------
+    # CDM Fetch is optional -- does not break import if it fails, but will send notif
+
+    echo "fetching CDM clinical demographics & timeline updates from S3..."
+    sh $PORTAL_HOME/scripts/pull-cdm-data.sh
+
+    if [ $? -gt 0 ] ; then
+        sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
+    else
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
+        fi
+
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
+        fi
+
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
+        fi
+
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess
+        if [ $? -gt 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
+        fi
+    fi
+
+    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+
     # -------------------------------------------------------------
     # UNLINKED ARCHER DATA PROCESSING
     # NOTE: This processing should only occur if (1) PROCESS_UNLINKED_ARCHER_STUDY=1 and
@@ -740,38 +772,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [[ $IMPORT_STATUS_ARCHER -eq 0 && $FETCH_CVR_ARCHER_FAIL -eq 0 ]] ; then
         touch $MSK_ARCHER_IMPORT_TRIGGER
     fi
-
-    #--------------------------------------------------------------
-    # CDM Fetch is optional -- does not break import if it fails, but will send notif
-
-    echo "fetching CDM clinical demographics & timeline updates from S3..."
-    sh $PORTAL_HOME/scripts/pull-cdm-data.sh
-
-    if [ $? -gt 0 ] ; then
-        sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
-    else
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
-        fi
-    fi
-
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
 
     #----------------------------------------------------------
     ## MERGE STUDIES FOR MIXEDPACT, MSKSOLIDHEME:
