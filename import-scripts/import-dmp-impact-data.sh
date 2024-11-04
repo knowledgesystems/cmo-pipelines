@@ -8,9 +8,9 @@ if [ -z "$PORTAL_HOME" ] ; then
     exit 1
 fi
 
-SKIP_AFFILIATE_STUDIES_IMPORT=1
-SKIP_SCLC_MSKIMPACT_IMPORT=1
-SKIP_LYMPHOMA_IMPORT=1
+SKIP_AFFILIATE_STUDIES_IMPORT=0
+SKIP_SCLC_MSKIMPACT_IMPORT=0
+SKIP_LYMPHOMA_IMPORT=0
 
 # localize global variables / jar names and functions
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
