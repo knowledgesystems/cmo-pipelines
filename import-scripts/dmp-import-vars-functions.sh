@@ -263,6 +263,20 @@ function import_access_ddp_to_redcap {
     return $return_value
 }
 
+# Function for importing access cvr files to redcap
+function import_accessheme_cvr_to_redcap {
+    return_value=0
+    if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_heme_data_clinical.txt mskaccess_heme_data_clinical ; then return_value=1 ; fi
+    return $return_value
+}
+
+# Function for importing access supp date files to redcap
+function import_accessheme_supp_date_to_redcap {
+    return_value=0
+    if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_heme_data_clinical_supp_date.txt mskaccess_heme_data_clinical_supp_date ; then return_value=1 ; fi
+    return $return_value
+}
+
 # Function for removing raw clinical and timeline files from study directory
 function remove_raw_clinical_timeline_data_files {
     STUDY_DIRECTORY=$1
@@ -332,6 +346,11 @@ function consumeSamplesAfterSolidHemeImport {
         echo "Consuming mskaccess samples from cvr"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_ACCESS_CONSUME_TRIGGER
+    fi
+    if [ -f $MSK_ACCESSHEME_CONSUME_TRIGGER ] ; then
+        echo "Consuming mskaccessheme samples from cvr"
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESSHEME_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        rm -f $MSK_ACCESSHEME_CONSUME_TRIGGER
     fi
 }
 

@@ -67,7 +67,7 @@ public class CVRPipeline {
             .addOption("j", "json", false, "To read or not to read. This can be used alone or in combination with --gml")
             .addOption("g", "gml", false, "Run germline job")
             .addOption("s", "skipSeg", false, "Flag to skip fetching seg data")
-            .addOption("i", "study_id", true, "Study identifier (i.e., mskimpact, mskraindance, mskarcher, mskimpact_heme)")
+            .addOption("i", "study_id", true, "Study identifier (i.e., mskimpact, mskraindance, mskarcher, mskimpact_heme, mskaccess, mskaccess_heme)")
             .addOption("t", "test", false, "Flag for running pipeline in testing mode so that samples are not requeued or consumed")
             .addOption("c", "consume_samples", true, "Path to CVR json filename")
             .addOption("r", "max_samples_to_remove", true, "The max number of samples that can be removed from data")
