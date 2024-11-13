@@ -119,14 +119,18 @@ function rename_files_in_delivery_directory() {
 function filter_clinical_cols() {
     PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.filtered"
-    filter_clinical_attribute_columns "$PATIENT_INPUT_FILEPATH" "$DELIVERED_PATIENT_ATTRIBUTES" "$PATIENT_OUTPUT_FILEPATH"
-    # TODO return status?
+    if ! filter_clinical_attribute_columns "$PATIENT_INPUT_FILEPATH" "$DELIVERED_PATIENT_ATTRIBUTES" "$PATIENT_OUTPUT_FILEPATH" ; then
+        echo "Failed to filter clinical patient attributes"
+        return 1
+    fi
 
     # Determine which columns to exclude in the sample file
     SAMPLE_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
     SAMPLE_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
-    filter_clinical_attribute_columns "$SAMPLE_INPUT_FILEPATH" "$DELIVERED_SAMPLE_ATTRIBUTES" "$SAMPLE_OUTPUT_FILEPATH"
-    # TODO return status?
+    if ! filter_clinical_attribute_columns "$SAMPLE_INPUT_FILEPATH" "$DELIVERED_SAMPLE_ATTRIBUTES" "$SAMPLE_OUTPUT_FILEPATH" ; then
+        echo "Failed to filter clinical sample attributes"
+        return 1
+    fi
 }
 
 function rename_cdm_clinical_attribute_columns() {
@@ -287,7 +291,7 @@ function filter_files_in_delivery_directory() {
 }
 
 function generate_changelog() {
-    # Changelog describes number of new patients, new samples, and 
+    # Generate report summary of new patients and samples 
     $PYTHON3_BINARY $PORTAL_HOME/scripts/generate_az_study_changelog_py3.py $AZ_MSK_IMPACT_DATA_HOME
 }
 
@@ -303,6 +307,7 @@ function generate_case_lists() {
 }
 
 function run_validation_script() {
+    # Validate study contents
     $PYTHON3_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py --validation-type az --study-dir "$AZ_MSK_IMPACT_DATA_HOME"
 }
 
@@ -372,6 +377,7 @@ if ! filter_clinical_cols ; then
     report_error "Failed to filter non-delivered clinical attribute columns"
 fi
 
+# Rename columns coming from CDM
 if ! rename_cdm_clinical_attribute_columns ; then
     report_error "Failed to rename CDM clinical attribute columns"
 fi
