@@ -117,6 +117,7 @@ function rename_files_in_delivery_directory() {
 }
 
 function filter_clinical_cols() {
+    # Determine which columns to exclude in the patient file
     PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.filtered"
     if ! filter_clinical_attribute_columns "$PATIENT_INPUT_FILEPATH" "$DELIVERED_PATIENT_ATTRIBUTES" "$PATIENT_OUTPUT_FILEPATH" ; then
@@ -348,9 +349,9 @@ function cleanup_repo() {
 }
 
 # ------------------------------------------------------------------------------------------------------------------------
-# Pull latest from AstraZeneca repo (az-data)
 printTimeStampedDataProcessingStepMessage "Generate subset of MSKSOLIDHEME for AstraZeneca MSK-IMPACT"
 
+# Pull latest from AstraZeneca repo (az-data)
 if ! pull_latest_data_from_az_git_repo ; then
     report_error "Failed git pull"
 fi
@@ -411,7 +412,7 @@ if ! remove_duplicate_maf_variants ; then
     report_error "Failed to remove duplicate variants from MAF files"
 fi
 
-# Filter germline events from mutation file and structural variant file
+# Filter germline events from mutation files
 if ! filter_germline_events_from_maf ; then
     report_error "Failed to filter MAF germline events"
 fi
@@ -423,7 +424,7 @@ if ! standardize_structural_variant_data ; then
     report_error "Failed to standardize structural variant data"
 fi
 
-# Filter germline events from mutation file and structural variant file
+# Filter germline events structural variant file
 if ! filter_germline_events_from_sv ; then
     report_error "Failed to filter SV germline events"
 fi
