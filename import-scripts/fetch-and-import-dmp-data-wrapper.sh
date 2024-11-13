@@ -49,9 +49,9 @@ source "$PORTAL_HOME/scripts/slack-message-functions.sh"
         echo "executing import-pdx-data.sh"
         /data/portal-cron/scripts/import-pdx-data.sh
     fi
-    date
-    echo "executing update-msk-mind-cohort.sh"
-    /data/portal-cron/scripts/update-msk-mind-cohort.sh
+    #date
+    #echo "executing update-msk-mind-cohort.sh"
+    #/data/portal-cron/scripts/update-msk-mind-cohort.sh
     date
     echo "executing update-msk-spectrum-cohort.sh"
     /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
