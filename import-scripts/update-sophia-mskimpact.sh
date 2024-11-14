@@ -519,6 +519,11 @@ if ! push_updates_to_sophia_git_repo ; then
     report_error "Failed git push"
 fi
 
+# Compress files for easier download
+if ! zip_files_for_delivery ; then
+    report_error "Failed to compress study files"
+fi
+
 # Cleanup Sophia git repo
 if ! cleanup_repo ; then
     report_error "Failed to cleanup git repository"
