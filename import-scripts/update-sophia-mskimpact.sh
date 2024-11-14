@@ -8,7 +8,6 @@ export CDD_URL="https://cdd.cbioportal.mskcc.org/api/"
 
 export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_DATA_HOME/$COHORT_NAME"
 export SOPHIA_TMPDIR="$SOPHIA_MSK_IMPACT_DATA_HOME/tmp"
-export SOLID_HEME_ARCHER_TMPDIR="$SOPHIA_MSK_IMPACT_DATA_HOME/solidhemearcher"
 
 # Patient and sample attributes that we want to deliver in our data
 DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 RACE SEX ETHNICITY"
@@ -68,7 +67,7 @@ function merge_solid_heme_and_archer() {
     # Merge solid heme and archer to use as source dataset
     $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
         --study-id="mskimpact" \
-        --output-directory="$SOLID_HEME_ARCHER_TMPDIR" \
+        --output-directory="$SOPHIA_TMPDIR" \
         --merge-clinical="true" \
         $MSK_SOLID_HEME_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME
     if [ $? -gt 0 ] ; then
@@ -77,7 +76,7 @@ function merge_solid_heme_and_archer() {
     fi
 
     # Add clinical attribute headers
-    INPUT_FILENAMES="$SOLID_HEME_ARCHER_TMPDIR/data_clinical_sample.txt $SOLID_HEME_ARCHER_TMPDIR/data_clinical_patient.txt"
+    INPUT_FILENAMES="$SOPHIA_TMPDIR/data_clinical_sample.txt $SOPHIA_TMPDIR/data_clinical_patient.txt"
     $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
     if [ $? -gt 0 ] ; then
         echo "Failed to add clinical attribute metadata headers to MSK_SOLID_HEME and MSKARCHER merged dataset"
@@ -85,21 +84,21 @@ function merge_solid_heme_and_archer() {
     fi
 
     # Copy over metadata files
-    cp $MSK_SOLID_HEME_DATA_HOME/meta_* $SOLID_HEME_ARCHER_TMPDIR
+    cp $MSK_SOLID_HEME_DATA_HOME/meta_* $SOPHIA_TMPDIR
     if [ $? -gt 0 ] ; then
         echo "Failed to copy metadata files to MSK_SOLID_HEME and MSKARCHER merged dataset"
         return 1
     fi
-
 }
 
-function subset_consented_patients() {
+function subset_consented_cohort_patients() {
     CONSENTED_SUBSET_FILE=$(mktemp -q)
+    CONSENTED_COHORT_SUBSET_FILE=$(mktemp -q)
 
     # Generate subset of Part A consented patients from merged solid heme and archer
     $PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py \
         --study-id="mskimpact" \
-        --clinical-file="$SOLID_HEME_ARCHER_TMPDIR/data_clinical_patient.txt" \
+        --clinical-file="$SOPHIA_TMPDIR/data_clinical_patient.txt" \
         --filter-criteria="PARTA_CONSENTED_12_245=YES" \
         --subset-filename="$CONSENTED_SUBSET_FILE"
     if [ $? -gt 0 ] ; then
@@ -107,30 +106,23 @@ function subset_consented_patients() {
         return 1
     fi
 
+    # Get intersection of consented patients and patients in current cohort
+    comm -12 <(sort $SUBSET_FILE) <(sort $CONSENTED_SUBSET_FILE) > $CONSENTED_COHORT_SUBSET_FILE
+    if [ $? -gt 0 ] ; then
+        echo "Failed to generate list of consented patients in $COHORT_NAME cohort"
+        return 1
+    fi
+
+
     # Write out the subsetted data
     $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
         --study-id="mskimpact" \
-        --subset="$CONSENTED_SUBSET_FILE" \
-        --output-directory="$SOPHIA_TMPDIR" \
+        --subset="$CONSENTED_COHORT_SUBSET_FILE" \
+        --output-directory="$SOPHIA_MSK_IMPACT_DATA_HOME" \
         --merge-clinical="true" \
-        $SOLID_HEME_ARCHER_TMPDIR
+        $SOPHIA_TMPDIR
     if [ $? -gt 0 ] ; then
         echo "Failed to subset on list of consented patients"
-        return 1
-    fi
-
-    # Add clinical attribute headers in
-    INPUT_FILENAMES="$SOPHIA_TMPDIR/data_clinical_sample.txt $SOPHIA_TMPDIR/data_clinical_patient.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
-    if [ $? -gt 0 ] ; then
-        echo "Failed to add clinical attribute metadata headers to MSK_SOLID_HEME and MSKARCHER consented subset"
-        return 1
-    fi
-
-    # Copy over metadata files
-    cp $SOLID_HEME_ARCHER_TMPDIR/meta_* $SOLID_HEME_ARCHER_TMPDIR
-    if [ $? -gt 0 ] ; then
-        echo "Failed to copy metadata files to MSK_SOLID_HEME and MSKARCHER consented subset"
         return 1
     fi
 }
@@ -138,7 +130,7 @@ function subset_consented_patients() {
 function subset_cohort_patients() {
     # Subset the consented MSK_SOLID_HEME and MSKARCHER dataset on the list of cohort patients
     $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
-        --study-id="az_mskimpact" \
+        --study-id="mskimpact" \
         --subset="$SUBSET_FILE" \
         --output-directory="$SOPHIA_MSK_IMPACT_DATA_HOME" \
         --merge-clinical="true" \
@@ -151,8 +143,7 @@ function subset_cohort_patients() {
 
 function generate_cohort() {
     merge_solid_heme_and_archer &&
-    subset_consented_patients &&
-    subset_cohort_patients
+    subset_consented_cohort_patients
 }
 
 function rename_files_in_delivery_directory() {
@@ -398,7 +389,7 @@ function zip_files_for_delivery() {
 function cleanup_repo() {
     # Remove temporary directory now that the subset has been merged and post-processed
     if [[ -d "$SOPHIA_TMPDIR" && "$SOPHIA_TMPDIR" != "/" ]] ; then
-        rm -rf "$SOPHIA_TMPDIR" "$SOLID_HEME_ARCHER_TMPDIR"
+        rm -rf "$SOPHIA_TMPDIR"
     fi
 
     # Clean up untracked files and LFS objects
