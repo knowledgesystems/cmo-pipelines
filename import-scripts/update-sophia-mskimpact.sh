@@ -113,7 +113,6 @@ function subset_consented_cohort_patients() {
         return 1
     fi
 
-
     # Write out the subsetted data
     $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
         --study-id="mskimpact" \
@@ -259,12 +258,10 @@ function transpose_cna_data() {
 
 function standardize_mutations_data() {
     MUTATIONS_EXTD_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
-    MUTATIONS_MAN_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_manual.txt"
-    NSOUT_MUTATIONS_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
+    NSOUT_MUTATIONS_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout.txt"
 
     # Standardize the mutations files to check for valid values in the 'NCBI_Build' column
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$MUTATIONS_MAN_INPUT_FILEPATH" &&
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$NSOUT_MUTATIONS_INPUT_FILEPATH"
 }
 
@@ -286,23 +283,23 @@ function remove_duplicate_maf_variants() {
 }
 
 function filter_germline_events_from_maf() {
-    mutation_filepath="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
-    mutation_filtered_filepath="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt.filtered"
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
+    MUTATION_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
+    MUTATION_FILTERED_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt.filtered"
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $MUTATION_FILEPATH $MUTATION_FILTERED_FILEPATH --event-type mutation
     if [ $? -gt 0 ] ; then
         echo "Failed to filter germline events from mutation file"
         return 1
     fi
-    mv $mutation_filtered_filepath $mutation_filepath
+    mv $MUTATION_FILTERED_FILEPATH $MUTATION_FILEPATH
 
-    mutation_filepath="$SOPHIA_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
-    mutation_filtered_filepath="$SOPHIA_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt.filtered"
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
+    MUTATION_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout.txt"
+    MUTATION_FILTERED_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout.txt.filtered"
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $MUTATION_FILEPATH $MUTATION_FILTERED_FILEPATH --event-type mutation
     if [ $? -gt 0 ] ; then
         echo "Failed to filter germline events from nonsignedout mutation file"
         return 1
     fi
-    mv $mutation_filtered_filepath $mutation_filepath
+    mv $MUTATION_FILTERED_FILEPATH $MUTATION_FILEPATH
 }
 
 function remove_sequenced_samples_header() {
@@ -334,14 +331,20 @@ function standardize_structural_variant_data() {
 }
 
 function filter_germline_events_from_sv() {
-    sv_filepath="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt"
-    sv_filtered_filepath="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $sv_filepath $sv_filtered_filepath --event-type structural_variant
+    SV_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt"
+    SV_FILTERED_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $SV_FILEPATH $SV_FILTERED_FILEPATH --event-type structural_variant
     if [ $? -gt 0 ] ; then
         echo "Failed to filter germline events from structural variant file"
         return 1
     fi
-    mv $sv_filtered_filepath $sv_filepath
+    mv $SV_FILTERED_FILEPATH $SV_FILEPATH
+}
+
+function remove_duplicate_archer_events_from_sv() {
+    SV_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt"
+    SV_FILTERED_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
+    awk '!/ - Archer/' $SV_FILEPATH > $SV_FILTERED_FILEPATH && mv $SV_FILTERED_FILEPATH $SV_FILEPATH
 }
 
 function filter_files_in_delivery_directory() {
@@ -494,6 +497,11 @@ fi
 # Filter germline events from mutation file and structural variant file
 if ! filter_germline_events_from_sv ; then
     report_error "Failed to filter SV germline events"
+fi
+
+# Because we have already merged Archer samples, remove linked Archer events
+if ! remove_duplicate_archer_events_from_sv ; then
+    report_error "Failed to demove duplicate Archer events from SV file"
 fi
 
 printTimeStampedDataProcessingStepMessage "Finalize and validate study contents of Sophia MSK-IMPACT"
