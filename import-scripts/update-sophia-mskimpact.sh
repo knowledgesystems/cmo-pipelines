@@ -126,20 +126,6 @@ function subset_consented_cohort_patients() {
     fi
 }
 
-function subset_cohort_patients() {
-    # Subset the consented MSK_SOLID_HEME and MSKARCHER dataset on the list of cohort patients
-    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
-        --study-id="mskimpact" \
-        --subset="$SUBSET_FILE" \
-        --output-directory="$SOPHIA_MSK_IMPACT_DATA_HOME" \
-        --merge-clinical="true" \
-        $SOPHIA_TMPDIR
-    if [ $? -gt 0 ] ; then
-        echo "Failed to subset on cohort patients"
-        return 1
-    fi
-}
-
 function generate_cohort() {
     merge_solid_heme_and_archer &&
     subset_consented_cohort_patients
@@ -344,7 +330,10 @@ function filter_germline_events_from_sv() {
 function remove_duplicate_archer_events_from_sv() {
     SV_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt"
     SV_FILTERED_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
-    awk '!/ - Archer/' $SV_FILEPATH > $SV_FILTERED_FILEPATH && mv $SV_FILTERED_FILEPATH $SV_FILEPATH
+
+    # Remove all lines that contain the string ' - Archer' in the 'Event_Info' column
+    event_info_index=$(awk -F '\t' -v col='Event_Info' 'NR==1{for (i=1; i<=NF; i++) if ($i==col) {print i;exit}}' $SV_FILEPATH)
+    awk -F'\t' '$event_info_index ~ !/-\sArcher$/' $SV_FILEPATH  > $SV_FILTERED_FILEPATH && mv $SV_FILTERED_FILEPATH $SV_FILEPATH
 }
 
 function filter_files_in_delivery_directory() {
