@@ -96,12 +96,15 @@ function filter_clinical_attribute_columns() {
     output_filepath="$3"
 
     # Determine which columns to exclude in the patient file
-    find_clinical_attributes_to_filter_arg "$clinical_attribute_filepath" "$attributes_to_deliver"
+    if ! find_clinical_attributes_to_filter_arg "$clinical_attribute_filepath" "$attributes_to_deliver" ; then
+        return 1
+    fi
     EXCLUDED_HEADER_FIELD_LIST="$clinical_attributes_to_filter_arg"
 
     # Filter out the columns we want to exclude
-    $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$clinical_attribute_filepath" -e "$EXCLUDED_HEADER_FIELD_LIST" > "$output_filepath" &&
-
-    # Rewrite file with updated data
+    $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$clinical_attribute_filepath" -e "$EXCLUDED_HEADER_FIELD_LIST" > "$output_filepath"
+    if [ $? -gt 0 ] ; then
+        return 1
+    fi
     mv "$output_filepath" "$clinical_attribute_filepath"
 }

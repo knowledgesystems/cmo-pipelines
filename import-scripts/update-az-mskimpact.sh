@@ -22,7 +22,7 @@ function report_error() {
     error_message="$1"
 
     # Send Slack message and email reporting the error
-    sendPreImportFailureMessageMskPipelineLogsSlack "$error_message"
+    sendPreImportFailureMessageMskPipelineLogsSlack "ERROR: $error_message for AstraZeneca MSK-IMPACT. Exiting."
     echo -e "Sending email $error_message"
     echo -e "$error_message" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
@@ -42,68 +42,55 @@ function pull_latest_data_from_az_git_repo() {
     )
 }
 
-function push_updates_to_az_git_repo() {
-    (   # Executed in a subshell to avoid changing the actual working directory
-        # If any statement fails, the return value of the entire expression is the failure status
-        cd $AZ_DATA_HOME &&
-        $GIT_BINARY add * &&
-        $GIT_BINARY commit -m "Latest AstraZeneca MSK-IMPACT dataset" &&
-        $GIT_BINARY push origin
-    )
-}
-
-function transfer_to_az_sftp_server() {
-    # Get server credentials
-    TRANSFER_KEY="/home/cbioportal_importer/.ssh/id_rsa_astrazeneca_sftp"
-    SFTP_USER=$(cat $AZ_SFTP_USER_FILE)
-    SERVICE_ENDPOINT=$(cat $AZ_SERVICE_ENDPOINT_FILE)
-
-    # Connect and transfer data
-    # With use of here-doc, there must be no leading whitespace until EOF
-    sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" -b <<EOF
-put -R "$AZ_MSK_IMPACT_DATA_HOME" "$AZ_REPO_NAME"
-put -R "$AZ_DATA_HOME/gene_panels" "$AZ_REPO_NAME"
-put "$AZ_DATA_HOME/README.md" "$AZ_REPO_NAME"
-exit
-EOF
-}
-
-function filter_files_in_delivery_directory() {
-    unset filenames_to_deliver
-    declare -A filenames_to_deliver
-
-    # Data files to deliver
-    filenames_to_deliver[data_clinical_patient.txt]+=1
-    filenames_to_deliver[data_clinical_sample.txt]+=1
-    filenames_to_deliver[data_CNA.txt]+=1
-    filenames_to_deliver[data_gene_matrix.txt]+=1
-    filenames_to_deliver[data_mutations_extended.txt]+=1
-    filenames_to_deliver[data_mutations_manual.txt]+=1
-    filenames_to_deliver[data_nonsignedout_mutations.txt]+=1
-    filenames_to_deliver[data_sv.txt]+=1
-    filenames_to_deliver[az_mskimpact_data_cna_hg19.seg]+=1
-    filenames_to_deliver[case_lists]+=1
-
-    # Meta files to deliver
-    filenames_to_deliver[meta_clinical_patient.txt]+=1
-    filenames_to_deliver[meta_clinical_sample.txt]+=1
-    filenames_to_deliver[meta_CNA.txt]+=1
-    filenames_to_deliver[meta_gene_matrix.txt]+=1
-    filenames_to_deliver[meta_mutations_extended.txt]+=1
-    filenames_to_deliver[meta_study.txt]+=1
-    filenames_to_deliver[meta_sv.txt]+=1
-    filenames_to_deliver[az_mskimpact_meta_cna_hg19_seg.txt]+=1
-
-    # Remove any files/directories that are not specified above
-    for filepath in $AZ_MSK_IMPACT_DATA_HOME/* ; do
-        filename=$(basename $filepath)
-        if [ -z ${filenames_to_deliver[$filename]} ] ; then
-            if ! rm -rf $filepath ; then
-                return 1
-            fi
+function setup_data_directories() {
+    # Create temporary directory to store data before subsetting
+    if ! [ -d "$AZ_TMPDIR" ] ; then
+        if ! mkdir -p "$AZ_TMPDIR" ; then
+            echo "Failed to create temporary directory"
+            return 1
         fi
-    done
-    return 0
+    fi
+    
+    # If tmp dir exists and is not empty, remove the contents
+    if [[ -d "$AZ_TMPDIR" && "$AZ_TMPDIR" != "/" ]] ; then
+        rm -rf "$AZ_TMPDIR"/*
+        if [ $? -gt 0 ] ; then
+            echo "Failed to remove contents of temporary directory"
+            return 1
+        fi
+    fi
+
+    # Copy MSKSOLIDHEME dataset to the temporary directory
+    cp -a $MSK_SOLID_HEME_DATA_HOME/* $AZ_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to populate temporary directory"
+        return 1
+    fi
+}
+
+function generate_subset() {
+    # Generate subset of Part A consented patients from MSK-Impact
+    $PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py \
+        --study-id="mskimpact" \
+        --clinical-file="$AZ_TMPDIR/data_clinical_patient.txt" \
+        --filter-criteria="PARTA_CONSENTED_12_245=YES" \
+        --subset-filename="$AZ_TMPDIR/part_a_subset.txt"
+    if [ $? -gt 0 ] ; then
+        echo "Failed to generate list of consented patients"
+        return 1
+    fi
+
+    # Write out the subsetted data
+    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
+        --study-id="mskimpact" \
+        --subset="$AZ_TMPDIR/part_a_subset.txt" \
+        --output-directory="$AZ_MSK_IMPACT_DATA_HOME" \
+        --merge-clinical="true" \
+        $AZ_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to subset on list of consented patients"
+        return 1
+    fi
 }
 
 function rename_files_in_delivery_directory() {
@@ -130,14 +117,21 @@ function rename_files_in_delivery_directory() {
 }
 
 function filter_clinical_cols() {
+    # Determine which columns to exclude in the patient file
     PATIENT_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.filtered"
-    filter_clinical_attribute_columns "$PATIENT_INPUT_FILEPATH" "$DELIVERED_PATIENT_ATTRIBUTES" "$PATIENT_OUTPUT_FILEPATH"
+    if ! filter_clinical_attribute_columns "$PATIENT_INPUT_FILEPATH" "$DELIVERED_PATIENT_ATTRIBUTES" "$PATIENT_OUTPUT_FILEPATH" ; then
+        echo "Failed to filter clinical patient attributes"
+        return 1
+    fi
 
     # Determine which columns to exclude in the sample file
     SAMPLE_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
     SAMPLE_OUTPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
-    filter_clinical_attribute_columns "$SAMPLE_INPUT_FILEPATH" "$DELIVERED_SAMPLE_ATTRIBUTES" "$SAMPLE_OUTPUT_FILEPATH"
+    if ! filter_clinical_attribute_columns "$SAMPLE_INPUT_FILEPATH" "$DELIVERED_SAMPLE_ATTRIBUTES" "$SAMPLE_OUTPUT_FILEPATH" ; then
+        echo "Failed to filter clinical sample attributes"
+        return 1
+    fi
 }
 
 function rename_cdm_clinical_attribute_columns() {
@@ -207,9 +201,40 @@ function remove_duplicate_maf_variants() {
     mv "$NSOUT_MUTATIONS_OUTPUT_FILEPATH" "$NSOUT_MUTATIONS_INPUT_FILEPATH"
 }
 
+function filter_germline_events_from_maf() {
+    mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
+    mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt.filtered"
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
+    if [ $? -gt 0 ] ; then
+        echo "Failed to filter germline events from mutation file"
+        return 1
+    fi
+    mv $mutation_filtered_filepath $mutation_filepath
+
+    mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
+    mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt.filtered"
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
+    if [ $? -gt 0 ] ; then
+        echo "Failed to filter germline events from nonsignedout mutation file"
+        return 1
+    fi
+    mv $mutation_filtered_filepath $mutation_filepath
+}
+
 function standardize_structural_variant_data() {
     DATA_SV_INPUT_FILEPATH="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt"
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_structural_variant_data.py -f "$DATA_SV_INPUT_FILEPATH"
+}
+
+function filter_germline_events_from_sv() {
+    sv_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt"
+    sv_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $sv_filepath $sv_filtered_filepath --event-type structural_variant
+    if [ $? -gt 0 ] ; then
+        echo "Failed to filter germline events from structural variant file"
+        return 1
+    fi
+    mv $sv_filtered_filepath $sv_filepath
 }
 
 function anonymize_age_at_seq_with_cap() {
@@ -228,6 +253,49 @@ function anonymize_age_at_seq_with_cap() {
     mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
 }
 
+function filter_files_in_delivery_directory() {
+    unset filenames_to_deliver
+    declare -A filenames_to_deliver
+
+    # Data files to deliver
+    filenames_to_deliver[data_clinical_patient.txt]+=1
+    filenames_to_deliver[data_clinical_sample.txt]+=1
+    filenames_to_deliver[data_CNA.txt]+=1
+    filenames_to_deliver[data_gene_matrix.txt]+=1
+    filenames_to_deliver[data_mutations_extended.txt]+=1
+    filenames_to_deliver[data_mutations_manual.txt]+=1
+    filenames_to_deliver[data_nonsignedout_mutations.txt]+=1
+    filenames_to_deliver[data_sv.txt]+=1
+    filenames_to_deliver[az_mskimpact_data_cna_hg19.seg]+=1
+    filenames_to_deliver[case_lists]+=1
+
+    # Meta files to deliver
+    filenames_to_deliver[meta_clinical_patient.txt]+=1
+    filenames_to_deliver[meta_clinical_sample.txt]+=1
+    filenames_to_deliver[meta_CNA.txt]+=1
+    filenames_to_deliver[meta_gene_matrix.txt]+=1
+    filenames_to_deliver[meta_mutations_extended.txt]+=1
+    filenames_to_deliver[meta_study.txt]+=1
+    filenames_to_deliver[meta_sv.txt]+=1
+    filenames_to_deliver[az_mskimpact_meta_cna_hg19_seg.txt]+=1
+
+    # Remove any files/directories that are not specified above
+    for filepath in $AZ_MSK_IMPACT_DATA_HOME/* ; do
+        filename=$(basename $filepath)
+        if [ -z ${filenames_to_deliver[$filename]} ] ; then
+            if ! rm -rf $filepath ; then
+                return 1
+            fi
+        fi
+    done
+    return 0
+}
+
+function generate_changelog() {
+    # Generate report summary of new patients and samples 
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/generate_az_study_changelog_py3.py $AZ_MSK_IMPACT_DATA_HOME
+}
+
 function generate_case_lists() {
     # Generate case lists based on our subset of patients + samples
     CASE_LIST_DIR="$AZ_MSK_IMPACT_DATA_HOME/case_lists"
@@ -240,204 +308,170 @@ function generate_case_lists() {
 }
 
 function run_validation_script() {
+    # Validate study contents
     $PYTHON3_BINARY $PORTAL_HOME/scripts/validation_utils_py3.py --validation-type az --study-dir "$AZ_MSK_IMPACT_DATA_HOME"
 }
 
-# ------------------------------------------------------------------------------------------------------------------------
-# Pull latest from AstraZeneca repo (az-data)
-printTimeStampedDataProcessingStepMessage "Pull of AstraZeneca MSK-IMPACT data updates"
+function push_updates_to_az_git_repo() {
+    (   # Executed in a subshell to avoid changing the actual working directory
+        # If any statement fails, the return value of the entire expression is the failure status
+        cd $AZ_DATA_HOME &&
+        $GIT_BINARY add * &&
+        $GIT_BINARY commit -m "Latest AstraZeneca MSK-IMPACT dataset" &&
+        $GIT_BINARY push origin
+    )
+}
 
-if ! pull_latest_data_from_az_git_repo ; then
-    report_error "ERROR: Failed git pull for AstraZeneca MSK-IMPACT. Exiting."
-fi
+function transfer_to_az_sftp_server() {
+    # Get server credentials
+    TRANSFER_KEY="/home/cbioportal_importer/.ssh/id_rsa_astrazeneca_sftp"
+    SFTP_USER=$(cat $AZ_SFTP_USER_FILE)
+    SERVICE_ENDPOINT=$(cat $AZ_SERVICE_ENDPOINT_FILE)
 
-# ------------------------------------------------------------------------------------------------------------------------
-# Copy data from local clone of MSK Solid Heme repo to local clone of AZ repo
+    # Connect and transfer data
+    # With use of here-doc, there must be no leading whitespace until EOF
+    sftp -i "$TRANSFER_KEY" "$SFTP_USER"@"$SERVICE_ENDPOINT" -b <<EOF
+put -R "$AZ_MSK_IMPACT_DATA_HOME" "$AZ_REPO_NAME"
+put -R "$AZ_DATA_HOME/gene_panels" "$AZ_REPO_NAME"
+put "$AZ_DATA_HOME/README.md" "$AZ_REPO_NAME"
+exit
+EOF
+}
 
-# Create temporary directory to store data before subsetting
-if ! [ -d "$AZ_TMPDIR" ] ; then
-    if ! mkdir -p "$AZ_TMPDIR" ; then
-        report_error "ERROR: Failed to create temporary directory for AstraZeneca MSK-IMPACT. Exiting."
+function cleanup_repo() {
+    # Remove temporary directory now that the subset has been merged and post-processed
+    if [[ -d "$AZ_TMPDIR" && "$AZ_TMPDIR" != "/" ]] ; then
+        rm -rf "$AZ_TMPDIR" "$AZ_MSK_IMPACT_DATA_HOME/part_a_subset.txt"
     fi
-fi
-if [[ -d "$AZ_TMPDIR" && "$AZ_TMPDIR" != "/" ]] ; then
-    rm -rf "$AZ_TMPDIR"/*
-fi
 
-cp -a $MSK_SOLID_HEME_DATA_HOME/* $AZ_TMPDIR
-
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to populate temporary directory for AstraZeneca MSK-IMPACT. Exiting."
-fi
+    # Clean up untracked files and LFS objects
+    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $AZ_DATA_HOME
+}
 
 # ------------------------------------------------------------------------------------------------------------------------
-# Post-process the dataset
+printTimeStampedDataProcessingStepMessage "Generate subset of MSKSOLIDHEME for AstraZeneca MSK-IMPACT"
 
-printTimeStampedDataProcessingStepMessage "Subset and merge of Part A Consented patients for AstraZeneca MSK-IMPACT"
-
-# Generate subset of Part A consented patients from MSK-Impact
-$PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py \
-    --study-id="mskimpact" \
-    --clinical-file="$AZ_TMPDIR/data_clinical_patient.txt" \
-    --filter-criteria="PARTA_CONSENTED_12_245=YES" \
-    --subset-filename="$AZ_TMPDIR/part_a_subset.txt"
-
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to subset consented patients for AstraZeneca MSK-IMPACT. Exiting."
+# Pull latest from AstraZeneca repo (az-data)
+if ! pull_latest_data_from_az_git_repo ; then
+    report_error "Failed git pull"
 fi
 
-# Write out the subsetted data
-$PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
-    --study-id="mskimpact" \
-    --subset="$AZ_TMPDIR/part_a_subset.txt" \
-    --output-directory="$AZ_MSK_IMPACT_DATA_HOME" \
-    --merge-clinical="true" \
-    $AZ_TMPDIR
-
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to write out subsetted data for AstraZeneca MSK-IMPACT. Exiting."
+# Create temporary directories and create a copy of MSKSOLIDHEME
+if ! setup_data_directories ; then 
+    report_error "Failed to set up data directories"
 fi
 
-printTimeStampedDataProcessingStepMessage "Post-processing for AstraZeneca MSK-IMPACT"
+# Generate Part A consented subset of MSKSOLIDHEME
+if ! generate_subset ; then 
+    report_error "Failed to generate subset of MSKSOLIDHEME"
+fi
 
 # Rename files that need to be renamed
 if ! rename_files_in_delivery_directory ; then
-    report_error "ERROR: Failed to rename files for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to rename files"
 fi
+
+printTimeStampedDataProcessingStepMessage "Post-process clinical files for AstraZeneca MSK-IMPACT"
 
 # Filter clinical attribute columns from clinical files
 if ! filter_clinical_cols ; then
-    report_error "ERROR: Failed to filter non-delivered clinical attribute columns for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to filter non-delivered clinical attribute columns"
 fi
 
+# Rename columns coming from CDM
 if ! rename_cdm_clinical_attribute_columns ; then
-    report_error "ERROR: Failed to rename CDM clinical attribute columns for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to rename CDM clinical attribute columns"
 fi
 
 # Add metadata headers to clinical files
 if ! add_metadata_headers ; then
-    report_error "ERROR: Failed to add metadata headers to clinical attribute files for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to add metadata headers to clinical attribute files"
 fi
 
 # Standardize blank clinical data values to NA
 if ! standardize_clinical_data ; then
-    report_error "ERROR: Failed to standardize blank clinical data values to NA for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to standardize blank clinical data values to NA"
 fi
+
+printTimeStampedDataProcessingStepMessage "Post-process CNA file for AstraZeneca MSK-IMPACT"
 
 # Standardize blank CNA data values to NA
 if ! standardize_cna_data ; then
-    report_error "ERROR: Failed to standardize blank CNA data values to NA for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to standardize blank CNA data values to NA"
 fi
+
+printTimeStampedDataProcessingStepMessage "Post-process MAF file for AstraZeneca MSK-IMPACT"
 
 # Standardize mutations files
 if ! standardize_mutations_data ; then
-    report_error "ERROR: Failed to standardize mutations files for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to standardize mutations files"
 fi
 
 # Remove duplicate variants from MAF files
 if ! remove_duplicate_maf_variants ; then
-    report_error "ERROR: Failed to remove duplicate variants from MAF files for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to remove duplicate variants from MAF files"
 fi
+
+# Filter germline events from mutation files
+if ! filter_germline_events_from_maf ; then
+    report_error "Failed to filter MAF germline events"
+fi
+
+printTimeStampedDataProcessingStepMessage "Post-process SV file for AstraZeneca MSK-IMPACT"
 
 # Standardize structural variant data by removing records with invalid genes and standardizing the file header
 if ! standardize_structural_variant_data ; then
-    report_error "ERROR: Failed to standardize structural variant data for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to standardize structural variant data"
+fi
+
+# Filter germline events structural variant file
+if ! filter_germline_events_from_sv ; then
+    report_error "Failed to filter SV germline events"
 fi
 
 # Anonymize ages
 #if ! anonymize_age_at_seq_with_cap ; then
-#    report_error "ERROR: Failed to anonymize AGE_AT_SEQUENCING_REPORTED_YEARS for AstraZeneca MSK-IMPACT. Exiting."
+#    report_error "ERROR: Failed to anonymize AGE_AT_SEQUENCING_REPORTED_YEARS"
 #fi
 
-printTimeStampedDataProcessingStepMessage "Filter non-delivered files and include delivered meta files for AstraZeneca MSK-IMPACT"
+printTimeStampedDataProcessingStepMessage "Finalize and validate study contents of AstraZeneca MSK-IMPACT"
 
 # Filter out files which are not delivered
 if ! filter_files_in_delivery_directory ; then
-    report_error "ERROR: Failed to filter non-delivered files for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to filter non-delivered files"
 fi
 
-# Remove temporary directory now that the subset has been merged and post-processed
-if [[ -d "$AZ_TMPDIR" && "$AZ_TMPDIR" != "/" ]] ; then
-    rm -rf "$AZ_TMPDIR" "$AZ_MSK_IMPACT_DATA_HOME/part_a_subset.txt"
-fi
-
-# ------------------------------------------------------------------------------------------------------------------------
 # Run changelog script
-printTimeStampedDataProcessingStepMessage "Generate changelog for AstraZeneca MSK-IMPACT"
-
-$PYTHON3_BINARY $PORTAL_HOME/scripts/generate_az_study_changelog_py3.py $AZ_MSK_IMPACT_DATA_HOME
-
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to generate changelog summary for AstraZeneca MSK-IMPACT. Exiting."
+if ! generate_changelog ; then
+    report_error "Failed to generate changelog summary"
 fi
 
-# ------------------------------------------------------------------------------------------------------------------------
-# Filter germline events from mutation file and structural variant file
-printTimeStampedDataProcessingStepMessage "Filter germline events for AstraZeneca MSK-IMPACT"
-
-mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
-mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt.filtered"
-$PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to filter germline events from mutation file for AstraZeneca MSK-IMPACT. Exiting."
-fi
-mv $mutation_filtered_filepath $mutation_filepath
-
-mutation_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt"
-mutation_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_nonsignedout_mutations.txt.filtered"
-$PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $mutation_filepath $mutation_filtered_filepath --event-type mutation
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to filter germline events from nonsignedout mutation file for AstraZeneca MSK-IMPACT. Exiting."
-fi
-mv $mutation_filtered_filepath $mutation_filepath
-
-sv_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt"
-sv_filtered_filepath="$AZ_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
-$PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $sv_filepath $sv_filtered_filepath --event-type structural_variant
-
-if [ $? -gt 0 ] ; then
-    report_error "ERROR: Failed to filter germline events from structural variant file for AstraZeneca MSK-IMPACT. Exiting."
-fi
-mv $sv_filtered_filepath $sv_filepath
-
-# ------------------------------------------------------------------------------------------------------------------------
 # Generate case list files
-printTimeStampedDataProcessingStepMessage "Generate case list files for AstraZeneca MSK-IMPACT"
-
 if ! generate_case_lists ; then
-    report_error "ERROR: Failed to generate case lists for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to generate case lists"
 fi
 
-# ------------------------------------------------------------------------------------------------------------------------
 # Run validation script to check for missing gene panels
-printTimeStampedDataProcessingStepMessage "Running validation script for AstraZeneca MSK-IMPACT"
-
 if ! run_validation_script ; then
-    report_error "ERROR: Validation failed for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Validation failed"
 fi
 
-# ------------------------------------------------------------------------------------------------------------------------
+printTimeStampedDataProcessingStepMessage "Push AstraZeneca MSK-IMPACT to GitHub and SFTP server"
+
 # Push the updated data to GitHub
-printTimeStampedDataProcessingStepMessage "Push data updates to AstraZeneca MSK-IMPACT git repository"
-
 if ! push_updates_to_az_git_repo ; then
-    report_error "ERROR: Failed git push for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed git push"
 fi
 
-# ------------------------------------------------------------------------------------------------------------------------
 # Push the updated data to AstraZeneca's SFTP server
-
-printTimeStampedDataProcessingStepMessage "Transfer data updates to SFTP server for AstraZeneca MSK-IMPACT"
-
 if ! transfer_to_az_sftp_server ; then
-    report_error "ERROR: Failed to transfer data updates to SFTP server for AstraZeneca MSK-IMPACT. Exiting."
+    report_error "Failed to transfer data updates to SFTP server"
 fi
 
-# ------------------------------------------------------------------------------------------------------------------------
 # Cleanup AZ git repo
-
-printTimeStampedDataProcessingStepMessage "Cleaning up untracked files from AZ repo"
-bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $AZ_DATA_HOME
+if ! cleanup_repo ; then
+    report_error "Failed to cleanup git repository"
+fi
 
 # Send a message on success
 sendImportSuccessMessageMskPipelineLogsSlack "ASTRAZENECA MSKIMPACT"
