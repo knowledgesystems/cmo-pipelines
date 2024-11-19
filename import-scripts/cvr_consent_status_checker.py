@@ -41,11 +41,12 @@ def fetch_expected_consent_status_values():
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
     expected_consent_status_values = {}
     for field,url in CVR_CONSENT_STATUS_ENDPOINTS.items():
-        response = urllib.urlopen(url, ssl_context)
+        response = urllib.urlopen(url, context=ssl_context)
         data = json.loads(response.read())
-
+        status_code = response.getcode()
+        
         consent_values = {}
-        if 'status' not in data or data['status'] != "SUCCESS":
+        if status_code != 200 or 'cases' not in data or len(data['cases']) == 0:
             print >> ERROR_FILE, "WARNING: Could not retrieve %s consent values from germline server at %s" % (field, url)
         else:
             for pt,status in data['cases'].items():
@@ -210,7 +211,9 @@ def email_consent_status_report(
     message['To'] = COMMASPACE.join(MESSAGE_RECIPIENTS)
     message['Date'] = formatdate(localtime=True)
 
-    s = smtplib.SMTP_SSL(SMTP_SERVER, 465)
+    s = smtplib.SMTP(SMTP_SERVER, 587)
+    s.ehlo()
+    s.starttls()
     s.login(gmail_username, gmail_password)
     s.sendmail(MESSAGE_SENDER, MESSAGE_RECIPIENTS, message.as_string())
     s.quit()
