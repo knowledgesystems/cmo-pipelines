@@ -333,7 +333,7 @@ function remove_duplicate_archer_events_from_sv() {
 
     # Remove all lines that contain the string ' - Archer' in the 'Event_Info' column
     event_info_index=$(awk -F '\t' -v col='Event_Info' 'NR==1{for (i=1; i<=NF; i++) if ($i==col) {print i;exit}}' $SV_FILEPATH)
-    awk -F'\t' "\$$event_info_index!~/-\sArcher$/" $SV_FILEPATH > $SV_FILTERED_FILEPATH && mv $SV_FILTERED_FILEPATH $SV_FILEPATH
+    awk -F'\t' "\$$event_info_index !~ /-\sArcher$/" $SV_FILEPATH > $SV_FILTERED_FILEPATH && mv $SV_FILTERED_FILEPATH $SV_FILEPATH
 }
 
 function filter_files_in_delivery_directory() {
