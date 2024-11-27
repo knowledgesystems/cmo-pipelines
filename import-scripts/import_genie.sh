@@ -2,16 +2,23 @@
 
 # Script for running GENIE import
 # Consists of the following:
-# - import of cancer types
-# - import from genie-portal column in spreadsheet
-
-. /data/portal-cron/scripts/automation-environment.sh
+# - Import of cancer types
+# - Import from genie-portal column in spreadsheet
 
 IMPORTER=$1
-SCRIPTS_DIRECTORY=$2
+PORTAL_SCRIPTS_DIRECTORY=$2
+if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
+    PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
+fi
+if [ ! -f $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh ] ; then
+    echo "`date`: Unable to locate automation_env, exiting..."
+    exit 1
+fi
+source $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh
 
-
-current_production_database_color=$(sh $PORTAL_HOME/scripts/get_database_currently_in_production.sh $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+# Get the current production database color
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties
+current_production_database_color=$(sh $PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
 destination_database_color="unset"
 if [ ${current_production_database_color:0:4} == "blue" ] ; then
     destination_database_color="green"
@@ -32,6 +39,7 @@ tmp=$PORTAL_HOME/tmp/import-cron-genie
 echo "would have used $IMPORTER_JAR_FILENAME"
 #echo "Importing cancer type updates into genie portal database..."
 #$JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
+# TODO error check
 
 #echo "Importing study data into genie portal database..."
 #$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
