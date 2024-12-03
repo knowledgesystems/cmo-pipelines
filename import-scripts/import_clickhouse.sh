@@ -38,21 +38,18 @@ fi
 # Drop ClickHouse tables
 echo "copying tables from mysql database $destination_database_color to clickhouse database $destination_database_color..."
 if ! $DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
-    echo "Error during dropping of tables from clickhouse database $destination_database_color"  >&2
+    echo "Error during dropping of tables from clickhouse database $destination_database_color" >&2
     exit 1
-    #TODO : recover from this error
 fi
 
 # Copy MySQL tables to ClickHouse
 if ! $COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
-    echo "Error during copying of tables from mysql database $destination_database_color to clickhouse database $destination_database_color"  >&2
+    echo "Error during copying of tables from mysql database $destination_database_color to clickhouse database $destination_database_color" >&2
     exit 1
-    #TODO : recover from this error
 fi
 
 # Create derived ClickHouse tables
 if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
-    echo "Error during creation of derived tables in clickhouse database $destination_database_color"  >&2
+    echo "Error during creation of derived tables in clickhouse database $destination_database_color" >&2
     exit 1
-    #TODO : recover from this error
 fi

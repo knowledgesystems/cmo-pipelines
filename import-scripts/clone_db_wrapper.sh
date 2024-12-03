@@ -38,7 +38,6 @@ CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/clone_mysql_datab
 if ! $SET_UPDATE_PROCESS_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH running > "$SET_UPDATE_PROCESS_OUTPUT_FILEPATH" ; then
     echo "Error during execution of $SET_UPDATE_PROCESS_SCRIPT_FILEPATH : could not set running state" >&2
     exit 1
-    #TODO : recover from this error
 fi
 
 # Get the current production database color
@@ -61,13 +60,13 @@ fi
 # Drop tables in the non-production database to make space for cloning
 if ! $DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
     message="Error during dropping of tables from mysql database $destination_database_color"
-    echo $message >&2 # TODO in other parts of this script we are writing these error messages to stdout
+    echo $message >&2
     exit 1
 else
     # Clone the content of the production MySQL database into the non-production database
     if ! $CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $source_database_color $destination_database_color ; then
         message="Error during cloning the mysql database (from $source_database_color to $destination_database_color)"
-        echo $message >&2 # TODO in other parts of this script we are writing these error messages to stdout
+        echo $message >&2
         exit 1
     fi
 fi
