@@ -200,28 +200,36 @@ function standardize_clinical_data() {
 }
 
 function add_seq_date_to_sample_file() {
-    SEQ_DATE_FILENAME="cvr/seq_date.txt"
-    MSK_ACCESS_SEQ_DATE="$MSK_ACCESS_DATA_HOME/$SEQ_DATE_FILENAME"
-    MSK_HEMEPACT_SEQ_DATE="$MSK_HEMEPACT_DATA_HOME/$SEQ_DATE_FILENAME"
-    MSK_IMPACT_SEQ_DATE="$MSK_IMPACT_DATA_HOME/$SEQ_DATE_FILENAME"
-    MSK_ARCHER_SEQ_DATE="$MSK_ARCHER_UNFILTERED_DATA_HOME/$SEQ_DATE_FILENAME"
-    MERGED_SEQ_DATE="$SOPHIA_MSK_IMPACT_DATA_HOME/merged_seq_date.txt"
-
-    MERGED_SEQ_DATE_FORMATTED="$SOPHIA_MSK_IMPACT_DATA_HOME/merged_seq_date_formatted.txt"
-    DATE_COLUMN="SEQ_DATE"
+    DATABRICKS_SERVER_HOSTNAME=`grep server_hostname $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
+    DATABRICKS_HTTP_PATH=`grep http_path $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
+    DATABRICKS_TOKEN=`grep access_token $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
+    DATABRICKS_SEQ_DATE_FILEPATH="/Volumes/cdsi_prod/cdm_impact_pipeline_prod/cdm-data/cbioportal/seq_date.txt"
+    SEQ_DATE_FILEPATH="$CDSI_DATA_HOME/seq_date.txt"
 
     SAMPLE_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
-    SAMPLE_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
+    SAMPLE_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.with_seq_date"
     KEY_COLUMNS="SAMPLE_ID PATIENT_ID"
 
-    # Merge all seq date files
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$MSK_ACCESS_SEQ_DATE" "$MSK_HEMEPACT_SEQ_DATE" "$MSK_IMPACT_SEQ_DATE" "$MSK_ARCHER_SEQ_DATE" -o "$MERGED_SEQ_DATE" -m outer &&
-	# Convert SEQ_DATE format in merged file to YYYY-MM-DD
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/convert_date_col_format_py3.py -i "$MERGED_SEQ_DATE" -o "$MERGED_SEQ_DATE_FORMATTED" -c "$DATE_COLUMN" &&
-    # Add SEQ_DATE to sample file
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$MERGED_SEQ_DATE_FORMATTED" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
-    # Overwrite the previous sample file
+    # Download seq_date.txt file from DataBricks
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/databricks_query_py3.py \
+        --hostname $DATABRICKS_SERVER_HOSTNAME \
+        --http-path $DATABRICKS_HTTP_PATH \
+        --access-token $DATABRICKS_TOKEN \
+        --mode get \
+        --input-file $DATABRICKS_SEQ_DATE_FILEPATH \
+        --output-file $SEQ_DATE_FILEPATH
+    if [ $? -gt 0 ] ; then
+        echo "Failed to query DataBricks for SEQ_DATE file"
+        return 1
+    fi
+
+    # Add SEQ_DATE column to sample file and overwrite the previous sample file
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$SEQ_DATE_FILEPATH" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
     mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
+    if [ $? -gt 0 ] ; then
+        echo "Failed to merge $SAMPLE_INPUT_FILEPATH and $SEQ_DATE_FILEPATH"
+        return 1
+    fi
 }
 
 function add_metadata_headers() {
