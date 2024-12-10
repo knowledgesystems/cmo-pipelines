@@ -1,9 +1,34 @@
+#!/usr/bin/env python3
+
+""" databricks_query_py3.py
+This script can write local files to DataBricks Unity Catalog volumes, download files from volumes,
+and delete files from volumes. To authenticate, you must specify DataBricks server hostname, HTTP path,
+and personal access token.
+
+Usage:
+   python3 databricks_query_py3.py \
+        --hostname $DATABRICKS_SERVER_HOSTNAME \
+        --http-path $DATABRICKS_HTTP_PATH \
+        --access-token $DATABRICKS_TOKEN \
+        --mode get|put|remove \
+        --input-file $INPUT_FILE \
+        --output-file $OUTPUT_FILE
+"""
+
 from databricks import sql
 import os, sys
 import argparse
 
 ERROR_FILE = sys.stderr
 
+
+def get_connection_personal_access_token(server_hostname, http_path, access_token, staging_allowed_local_path=""):
+    return sql.connect(
+        server_hostname=server_hostname,
+        http_path=http_path,
+        access_token=access_token,
+        staging_allowed_local_path=staging_allowed_local_path
+    )
 
 def execute_query(server_hostname, http_path, access_token, input_file, output_file, mode):
     # For writing local files to volumes and downloading files from volumes,
@@ -18,7 +43,7 @@ def execute_query(server_hostname, http_path, access_token, input_file, output_f
     elif mode == "get":
         staging_allowed_local_path = os.path.dirname(output_file)
 
-    with sql.connect(
+    with get_connection_personal_access_token(
         server_hostname=server_hostname,
         http_path=http_path,
         access_token=access_token,
@@ -48,7 +73,7 @@ def main():
         help="DataBricks server hostname",
     )
     parser.add_argument(
-        "-h",
+        "-p",
         "--http-path",
         dest="http_path",
         action="store",
