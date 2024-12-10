@@ -213,7 +213,8 @@ export CRDB_FETCHER_PDX_HOME=$PDX_DATA_HOME/crdb_pdx_raw_data
 export ONCOKB_TOKEN_FILE=$PORTAL_HOME/pipelines-credentials/oncokb.token
 
 #######################
-# environment variables used in the update-az-mskimpact script
+# environment variables used for AstraZeneca and Sophia cohort generation
 #######################
 export AZ_SFTP_USER_FILE=$PORTAL_HOME/pipelines-credentials/astrazeneca_sftp.user
 export AZ_SERVICE_ENDPOINT_FILE=$PORTAL_HOME/pipelines-credentials/astrazeneca_sftp.service_endpoint
+export DATABRICKS_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/databricks.credentials
