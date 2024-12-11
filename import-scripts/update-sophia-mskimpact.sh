@@ -212,7 +212,7 @@ function add_seq_date_to_sample_file() {
 
     # Download seq_date.txt file from DataBricks
     $PYTHON3_BINARY $PORTAL_HOME/scripts/databricks_query_py3.py \
-        --hostname $DATABRICKS_SERVER_HOSTNAME \
+        --server-hostname $DATABRICKS_SERVER_HOSTNAME \
         --http-path $DATABRICKS_HTTP_PATH \
         --access-token $DATABRICKS_TOKEN \
         --mode get \
