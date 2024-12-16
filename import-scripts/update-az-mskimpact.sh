@@ -2,7 +2,7 @@
 
 export AZ_REPO_NAME="az-data"
 export AZ_MSKIMPACT_STABLE_ID="az_mskimpact"
-export AZ_TMPDIR=$AZ_DATA_HOME/tmp
+export AZ_TMPDIR=$AZ_MSK_IMPACT_DATA_HOME/tmp
 
 # Patient and sample attributes that we want to deliver in our data
 DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 CURRENT_AGE_DEID RACE GENDER ETHNICITY OS_STATUS OS_MONTHS"
