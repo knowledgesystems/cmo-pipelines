@@ -14,7 +14,6 @@ source $PORTAL_HOME/scripts/automation-environment.sh
 source $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh
 
 COHORT=$1
-SEQ_DATE_FILEPATH=""
 CLINICAL_SAMPLE_FILEPATH=""
 CLINICAL_SAMPLE_FILENAME="data_clinical_sample.txt"
 CLINICAL_SAMPLE_S3_FILEPATH="sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
@@ -34,25 +33,19 @@ function usage {
 }
 
 function set_cohort_filepaths() {
-    SEQ_DATE_FILENAME="cvr/seq_date.txt"
-
-    # SET DATA DIRECTORY for seq date file and clinical file
+    # SET DATA DIRECTORY for clinical file
     if [ "$COHORT" == "mskimpact" ] ; then
-        SEQ_DATE_FILEPATH="$MSK_IMPACT_DATA_HOME/$SEQ_DATE_FILENAME"
         CLINICAL_SAMPLE_FILEPATH="$MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt"
     elif [ "$COHORT" == "mskimpact_heme" ] ; then
-        SEQ_DATE_FILEPATH="$MSK_HEMEPACT_DATA_HOME/$SEQ_DATE_FILENAME"
         CLINICAL_SAMPLE_FILEPATH="$MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt"
     elif [ "$COHORT" == "mskarcher" ] ; then
-        SEQ_DATE_FILEPATH="$MSK_ARCHER_UNFILTERED_DATA_HOME/$SEQ_DATE_FILENAME"
         CLINICAL_SAMPLE_FILEPATH="$MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt"
     elif [ "$COHORT" == "mskaccess" ] ; then
-        SEQ_DATE_FILEPATH="$MSK_ACCESS_DATA_HOME/$SEQ_DATE_FILENAME"
         CLINICAL_SAMPLE_FILEPATH="$MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt"
     fi
 
     # Check that required files exist
-    if [ ! -f $SEQ_DATE_FILEPATH ] || [ ! -f $CLINICAL_SAMPLE_FILEPATH ] ; then
+    if [ ! -f $CLINICAL_SAMPLE_FILEPATH ] ; then
         echo "`date`: Unable to locate required files, exiting..."
         exit 1
     fi
@@ -71,17 +64,6 @@ function filter_sample_file() {
         echo "`date`: Failed to subset clinical sample file, exiting..."
         exit 1
     fi
-}
-
-function add_seq_date_to_sample_file() {
-    # Combines filtered clinical sample file with seq data file and outputs to tmp file for upload
-    # Uses left join -- SAMPLE_ID and PATIENT_ID in the clinical sample file (first arg) will be valid keys
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$TMP_SAMPLE_FILE" "$SEQ_DATE_FILEPATH" -o "$CDM_DELIVERABLE" -c SAMPLE_ID PATIENT_ID -m left
-    if [ $? -ne 0 ] ; then
-        echo "`date`: Failed to combine files, exiting..."
-        exit 1
-    fi
-    rm $TMP_SAMPLE_FILE
 }
 
 function upload_to_s3() {
@@ -123,7 +105,6 @@ date
 check_args
 set_cohort_filepaths
 filter_sample_file
-add_seq_date_to_sample_file
 upload_to_s3
 trigger_cdm_dags
 
