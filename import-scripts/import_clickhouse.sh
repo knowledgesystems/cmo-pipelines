@@ -16,7 +16,7 @@ if [ ! -f $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh ] ; then
 fi
 source $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh
 
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties.test
 DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
 COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/copy_mysql_database_tables_to_clickhouse.sh"
 CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
@@ -36,20 +36,22 @@ if [ "$destination_database_color" == "unset" ] ; then
 fi
 
 # Drop ClickHouse tables
-echo "copying tables from mysql database $destination_database_color to clickhouse database $destination_database_color..."
-if ! $DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
-    echo "Error during dropping of tables from clickhouse database $destination_database_color" >&2
-    exit 1
-fi
+echo "dropping tables from clickhouse database $destination_database_color..."
+#if ! $DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
+#    echo "Error during dropping of tables from clickhouse database $destination_database_color" >&2
+#    exit 1
+#fi
 
 # Copy MySQL tables to ClickHouse
-if ! $COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
-    echo "Error during copying of tables from mysql database $destination_database_color to clickhouse database $destination_database_color" >&2
-    exit 1
-fi
+echo "copying tables from mysql database $destination_database_color to clickhouse database $destination_database_color..."
+#if ! $COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
+#    echo "Error during copying of tables from mysql database $destination_database_color to clickhouse database $destination_database_color" >&2
+#    exit 1
+#fi
 
 # Create derived ClickHouse tables
-if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
-    echo "Error during creation of derived tables in clickhouse database $destination_database_color" >&2
-    exit 1
-fi
+echo "creating derived tables in clickhouse database $destination_database_color..."
+#if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
+#    echo "Error during creation of derived tables in clickhouse database $destination_database_color" >&2
+#    exit 1
+#fi

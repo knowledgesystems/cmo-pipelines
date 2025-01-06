@@ -16,7 +16,7 @@ if [ ! -f $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh ] ; then
 fi
 source $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh
 
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties.test
 IMPORTER_JAR_FILENAME="/data/portal-cron/lib/$IMPORTER-aws-importer-$destination_database_color-test.jar"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 ONCOTREE_VERSION="oncotree_2019_12_01"
@@ -42,7 +42,7 @@ echo "would have used $IMPORTER_JAR_FILENAME"
 # TODO error check
 
 #echo "Importing study data into genie portal database..."
-#$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
+#$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-archive-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
 #IMPORT_EXIT_STATUS=$?
 #if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
 #    echo "Genie import failed!" >&2
