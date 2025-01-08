@@ -17,7 +17,7 @@ COHORT=$1
 CLINICAL_SAMPLE_FILEPATH=""
 CLINICAL_SAMPLE_FILENAME="data_clinical_sample.txt"
 CLINICAL_SAMPLE_S3_FILEPATH="sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
-CDM_DELIVERABLE="$MSK_CHORD_DATA_HOME/sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
+CDM_DELIVERABLE="$CDSI_DATA_HOME/sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
 
 function check_args() {
     if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
@@ -75,7 +75,6 @@ function upload_to_s3() {
         echo "`date`: Failed to upload CDM deliverable to S3, exiting..."
         exit 1
     fi
-    rm $CDM_DELIVERABLE
 }
 
 function trigger_cdm_dags() {
