@@ -17,8 +17,7 @@ COHORT=$1
 CLINICAL_SAMPLE_FILEPATH=""
 CLINICAL_SAMPLE_FILENAME="data_clinical_sample.txt"
 CLINICAL_SAMPLE_S3_FILEPATH="sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
-TMP_SAMPLE_FILE=$(mktemp -q)
-CDM_DELIVERABLE=$(mktemp -q)
+CDM_DELIVERABLE="$MSK_CHORD_DATA_HOME/sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
 
 function check_args() {
     if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
@@ -58,8 +57,8 @@ function filter_sample_file() {
     # Copy sample file to tmp file since script overwrites existing file (don't want to overwrite DMP pipeline files)
     # Removes all clinical attributes except those specified in $DELIVERED_SAMPLE_ATTRIBUTES set
     # TMP_PROCESSING_FILE automatically removed // TODO: move TMP_FILE creation to filter_clinical function
-    cp -a $CLINICAL_SAMPLE_FILEPATH $TMP_SAMPLE_FILE
-    filter_clinical_attribute_columns "$TMP_SAMPLE_FILE" "$DELIVERED_SAMPLE_ATTRIBUTES" "$TMP_PROCESSING_FILE"
+    cp -a $CLINICAL_SAMPLE_FILEPATH $CDM_DELIVERABLE
+    filter_clinical_attribute_columns "$CDM_DELIVERABLE" "$DELIVERED_SAMPLE_ATTRIBUTES" "$TMP_PROCESSING_FILE"
     if [ $? -ne 0 ] ; then
         echo "`date`: Failed to subset clinical sample file, exiting..."
         exit 1
