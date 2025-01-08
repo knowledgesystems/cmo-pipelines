@@ -29,13 +29,13 @@ if [[ -d "$tmp" && "$tmp" != "/" ]]; then
 fi
 
 # This file will be used throughout entire import job to determine directionality
-SET_UPDATE_PROCESS_OUTPUT_FILEPATH="$tmp/update_process_output.txt"
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties.test
-DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_mysql_database.sh
-CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/clone_mysql_database.sh
+SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process_state.sh"
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties.test"
+DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_mysql_database.sh"
+CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/clone_mysql_database.sh"
 
 # Update the process status database
-if ! $SET_UPDATE_PROCESS_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH running > "$SET_UPDATE_PROCESS_OUTPUT_FILEPATH" ; then
+if ! $SET_UPDATE_PROCESS_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH running ; then
     echo "Error during execution of $SET_UPDATE_PROCESS_SCRIPT_FILEPATH : could not set running state" >&2
     exit 1
 fi
