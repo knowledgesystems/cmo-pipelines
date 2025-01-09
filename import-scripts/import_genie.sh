@@ -37,25 +37,25 @@ JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdi
 ONCOTREE_VERSION="oncotree_2019_12_01"
 
 echo "would have used $IMPORTER_JAR_FILENAME"
-#echo "Importing cancer type updates into genie portal database..."
-#$JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
+echo "Importing cancer type updates into genie portal database..."
+$JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
 # TODO error check
 
-#echo "Importing study data into genie portal database..."
-#$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-archive-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
-#IMPORT_EXIT_STATUS=$?
-#if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
-#    echo "Genie import failed!" >&2
-#    exit 1
-#fi
+echo "Importing study data into genie portal database..."
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-archive-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
+IMPORT_EXIT_STATUS=$?
+if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
+    echo "Genie import failed!" >&2
+    exit 1
+fi
 
-#num_studies_updated=''
-#num_studies_updated_filename="$tmp/num_studies_updated.txt"
-#if [ -r "$num_studies_updated_filename" ] ; then
-#    num_studies_updated=$(cat "$num_studies_updated_filename")
-#fi
-#if [[ -z $num_studies_updated ] || $num_studies_updated == "0" ]] ; then
-#    echo "No studies updated, either due to error or failure to mark a study in the spreadsheet" >&2
-#    exit 1
-#fi
-#echo $num_studies_updated number of studies were updated
+num_studies_updated=''
+num_studies_updated_filename="$tmp/num_studies_updated.txt"
+if [ -r "$num_studies_updated_filename" ] ; then
+    num_studies_updated=$(cat "$num_studies_updated_filename")
+fi
+if [[ -z $num_studies_updated ]] || [[ $num_studies_updated == "0" ]] ; then
+    echo "No studies updated, either due to error or failure to mark a study in the spreadsheet" >&2
+    exit 1
+fi
+echo "$num_studies_updated number of studies were updated"
