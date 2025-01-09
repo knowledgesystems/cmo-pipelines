@@ -57,6 +57,7 @@ if [ "$destination_database_color" == "unset" ] ; then
     exit 1
 fi
 
+echo "we are going to clone $source_database_color into $destination_database_color and then import into $destination_database_color"
 # Drop tables in the non-production database to make space for cloning
 if ! $DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
     message="Error during dropping of tables from mysql database $destination_database_color"
