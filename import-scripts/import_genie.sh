@@ -50,7 +50,7 @@ if [ $? -gt 0 ]; then
 fi
 
 echo "Importing study data into genie portal database..."
-$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-archive-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
 if [ $? -gt 0 ]; then
     echo "Genie import failed!" >&2
     exit 1
