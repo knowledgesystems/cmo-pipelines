@@ -104,11 +104,6 @@ static string KILL_HGNC_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-
 static string HGNC_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-import-in-progress");
 static string HGNC_IMPORT_KILLING_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-import-killing");
 static string HGNC_IMPORT_LOG_FILENAME(IMPORT_LOG_BASEDIR + "/hgnc-importer.log");
-static string START_HGNC_1938_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-1938-import-start-request");
-static string KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-1938-import-kill-request");
-static string HGNC_1938_IMPORT_IN_PROGRESS_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-1938-import-in-progress");
-static string HGNC_1938_IMPORT_KILLING_FILENAME(IMPORT_TRIGGER_BASEDIR + "/hgnc-1938-import-killing");
-static string HGNC_1938_IMPORT_LOG_FILENAME(IMPORT_LOG_BASEDIR + "/hgnc-1938-importer.log");
 
 /* used for command line argument checking */
 static vector<string> RECOGNIZED_IMPORTERS;
@@ -221,7 +216,6 @@ void initialize_static_objects() {
     RECOGNIZED_IMPORTERS.push_back("genie");
     RECOGNIZED_IMPORTERS.push_back("triage");
     RECOGNIZED_IMPORTERS.push_back("hgnc");
-    RECOGNIZED_IMPORTERS.push_back("hgnc1938");
     initialize_static_managed_importers();
     RECOGNIZED_COMMANDS.push_back("start");
     RECOGNIZED_COMMANDS.push_back("kill");
@@ -246,7 +240,7 @@ string get_hostname() {
 void print_usage(string program_name) {
     vector<char> program_name_vector = character_vector_from_string(program_name);
     cerr << "Usage: " << basename(&program_name_vector[0]) << " importer_name command [extra_arguments]" << endl;
-    cerr << "       importer_name must be \"genie\" or \"triage\" or \"hgnc\" or \"hgnc1938\"" << endl;
+    cerr << "       importer_name must be \"genie\" or \"triage\" or \"hgnc\"" << endl;
     cerr << "       valid commands:" << endl;
     cerr << "           start : requests that an import run begins as soon as possible - this may wait for an import in progress to finish before starting" << endl;
     cerr << "           kill : requests that any import in progress be halted and that any requested start be canceled" << endl;
@@ -443,9 +437,6 @@ int request_importer_start(string importer) {
     if (importer == "hgnc") {
         return request_importer_start(importer, START_HGNC_IMPORT_TRIGGER_FILENAME, KILL_HGNC_IMPORT_TRIGGER_FILENAME, HGNC_IMPORT_KILLING_FILENAME);
     }
-    if (importer == "hgnc1938") {
-        return request_importer_start(importer, START_HGNC_1938_IMPORT_TRIGGER_FILENAME, KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME, HGNC_1938_IMPORT_KILLING_FILENAME);
-    }
     cerr << "Error : unrecognized importer " << importer << " during attempt to start import." << endl;
     return 1;
 }
@@ -459,9 +450,6 @@ int request_importer_kill(string importer) {
     }
     if (importer == "hgnc") {
         return create_trigger_file(KILL_HGNC_IMPORT_TRIGGER_FILENAME);
-    }
-    if (importer == "hgnc1938") {
-        return create_trigger_file(KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME);
     }
     cerr << "Error : unrecognized importer " << importer << " during attempt to kill import." << endl;
     return 1;
@@ -511,9 +499,6 @@ int report_importer_status(string importer) {
     }
     if (importer == "hgnc") {
         return report_importer_status(importer, START_HGNC_IMPORT_TRIGGER_FILENAME, KILL_HGNC_IMPORT_TRIGGER_FILENAME, HGNC_IMPORT_IN_PROGRESS_FILENAME, HGNC_IMPORT_KILLING_FILENAME, HGNC_IMPORT_LOG_FILENAME);
-    }
-    if (importer == "hgnc1938") {
-        return report_importer_status(importer, START_HGNC_1938_IMPORT_TRIGGER_FILENAME, KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME, HGNC_1938_IMPORT_IN_PROGRESS_FILENAME, HGNC_1938_IMPORT_KILLING_FILENAME, HGNC_1938_IMPORT_LOG_FILENAME);
     }
     cerr << "Error : unrecognized importer " << importer << " during attempt to report status." << endl;
     return 1;
@@ -580,9 +565,6 @@ int report_importer_log(string importer, vector<string> & extra_args) {
     }
     if (importer == "hgnc") {
         return report_importer_log(importer, HGNC_IMPORT_LOG_FILENAME, extra_args);
-    }
-    if (importer == "hgnc1938") {
-        return report_importer_log(importer, HGNC_1938_IMPORT_LOG_FILENAME, extra_args);
     }
     cerr << "Error : unrecognized importer " << importer << " during attempt to report log." << endl;
     return 1;

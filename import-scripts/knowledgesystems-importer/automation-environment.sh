@@ -48,11 +48,8 @@ function export_java_home() {
 #######################
 # general paths/options for system executables
 #######################
-# JAVA_HOME / JAVA_BINARY are set below explicitly now (rather than adjusting PATH)
-#export_java_home "AUTODETECT"
-export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
-# the legacy environment variable "JAVA_BINARY" is maintained for older personal scripts. All production scripts now use JAVA_8_BINARY or JAVA_11_BINARY when launching java
-export JAVA_HOME="/usr/lib/jdk-21.0.2"
+export_java_home "AUTODETECT"
+export JAVA_PROXY_ARGS="-Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
 export JAVA_BINARY="$JAVA_HOME/bin/java"
 export PYTHON_BINARY=/usr/bin/python
 export PYTHON3_BINARY=/usr/bin/python3
@@ -82,6 +79,7 @@ export CDD_HOME=$PORTAL_GIT_HOME/clinical-data-dictionary
 export DDP_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/application-secure.properties
 export AWS_SSL_TRUSTSTORE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore
 export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore.password
+export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
 export GMAIL_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/gmail.credentials
 export START_GENIE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/genie-import-start-request
 export KILL_GENIE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/genie-import-kill-request
@@ -96,11 +94,7 @@ export START_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-impor
 export KILL_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-kill-request
 export HGNC_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-in-progress
 export HGNC_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-killing
-export START_HGNC_1938_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-start-request
-export KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-kill-request
-export HGNC_1938_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-in-progress
-export HGNC_1938_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-killing
-export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-eks-config
+export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-config
 
 #######################
 # SSL args (for AWS + redcap)
