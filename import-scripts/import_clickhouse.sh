@@ -17,6 +17,7 @@ fi
 source $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh
 
 MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties
+GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
 DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
 COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/copy_mysql_database_tables_to_clickhouse.sh"
 CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
@@ -24,7 +25,7 @@ CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SQL_1_FILEPATH="$PORTAL_HOME/create_derived_
 CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SQL_2_FILEPATH="$PORTAL_HOME/create_derived_clickhouse_tables/genie/materialized_views.sql"
 
 # Get the current production database color
-current_production_database_color=$(sh $PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
 destination_database_color="unset"
 if [ ${current_production_database_color:0:4} == "blue" ] ; then
     destination_database_color="green"
