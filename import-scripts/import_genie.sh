@@ -42,12 +42,14 @@ tail -f $PORTAL_HOME/logs/genie-aws-importer.log &
 echo "Importing with $IMPORTER_JAR_FILENAME"
 echo "Importing cancer type updates into genie portal database..."
 $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
-# TODO error check
+if [ $? -gt 0 ]; then
+    echo "Cancer type import failed!" >&2
+    exit 1
+fi
 
 echo "Importing study data into genie portal database..."
 $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-archive-portal --update-worksheet --notification-file "$genie_portal_notification_file" --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
-IMPORT_EXIT_STATUS=$?
-if [ $IMPORT_EXIT_STATUS -ne 0 ]; then
+if [ $? -gt 0 ]; then
     echo "Genie import failed!" >&2
     exit 1
 fi

@@ -2,8 +2,8 @@
 
 # Script for running pre-import steps
 # Consists of the following:
-# - Database check (given a specific importer) // maybe convert to pipeline name
-# - Data fetch from provided sources // add arg for accepting other sources
+# - Database check (given a specific importer)
+# - Data fetch from provided sources
 # - Refreshing CDD/Oncotree caches
 
 IMPORTER=$1
