@@ -10,11 +10,12 @@ PORTAL_SCRIPTS_DIRECTORY=$1
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
-if [ ! -f $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh ] ; then
-    echo "`date`: Unable to locate automation_env, exiting..."
+AUTOMATION_ENV_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh"
+if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
+    echo "`date`: Unable to locate $AUTOMATION_ENV_SCRIPT_FILEPATH, exiting..."
     exit 1
 fi
-source $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh
+source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
 # Create tmp directory for processing
 tmp=$PORTAL_HOME/tmp/import-cron-genie
