@@ -17,7 +17,7 @@ fi
 source $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh
 
 # Get the current production database color
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties.test
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties
 current_production_database_color=$(sh $PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
 destination_database_color="unset"
 if [ ${current_production_database_color:0:4} == "blue" ] ; then
@@ -32,11 +32,14 @@ if [ "$destination_database_color" == "unset" ] ; then
 fi
 
 tmp=$PORTAL_HOME/tmp/import-cron-genie
-IMPORTER_JAR_FILENAME="/data/portal-cron/lib/$IMPORTER-aws-importer-$destination_database_color-test.jar"
+IMPORTER_JAR_FILENAME="/data/portal-cron/lib/$IMPORTER-aws-importer-$destination_database_color.jar"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 ONCOTREE_VERSION="oncotree_2019_12_01"
 
-echo "would have used $IMPORTER_JAR_FILENAME"
+# Direct importer logs to stdout
+tail -f $PORTAL_HOME/logs/genie-aws-importer.log &
+
+echo "Importing with $IMPORTER_JAR_FILENAME"
 echo "Importing cancer type updates into genie portal database..."
 $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
 # TODO error check

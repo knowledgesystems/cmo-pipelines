@@ -30,7 +30,7 @@ fi
 
 # This file will be used throughout entire import job to determine directionality
 SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process_state.sh"
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties.test"
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties"
 DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_mysql_database.sh"
 CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/clone_mysql_database.sh"
 
