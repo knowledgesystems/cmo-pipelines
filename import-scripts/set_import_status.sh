@@ -1,0 +1,19 @@
+IMPORT_STATUS=$1
+PORTAL_SCRIPTS_DIRECTORY=$2
+if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
+    PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
+fi
+if [ ! -f $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh ] ; then
+    echo "`date`: Unable to locate automation_env, exiting..."
+    exit 1
+fi
+source $PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh
+
+SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process_state.sh"
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/airflowdb.properties"
+
+# Update import status
+if ! $SET_UPDATE_PROCESS_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $IMPORT_STATUS ; then
+    echo "Error during execution of $SET_UPDATE_PROCESS_SCRIPT_FILEPATH : could not set $IMPORT_STATUS state" >&2
+    exit 1
+fi
