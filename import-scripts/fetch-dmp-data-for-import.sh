@@ -878,7 +878,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # subset the mixedpact study for Queens Cancer Center, Lehigh Valley, Kings County Cancer Center, Miami Cancer Institute, and Hartford Health Care
 
     # KINGSCOUNTY subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_kingscounty -o=$MSK_KINGS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Kings County Cancer Center" -s=$MSK_DMP_TMPDIR/kings_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_kingscounty -o=$MSK_KINGS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Kings County Cancer Center" -s=$MSK_DMP_TMPDIR/kings_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Kings County subset failed! Study will not be updated in the portal."
         MSK_KINGS_SUBSET_FAIL=1
@@ -906,7 +906,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # LEHIGHVALLEY subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_lehighvalley -o=$MSK_LEHIGH_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Lehigh Valley Health Network" -s=$MSK_DMP_TMPDIR/lehigh_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_lehighvalley -o=$MSK_LEHIGH_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Lehigh Valley Health Network" -s=$MSK_DMP_TMPDIR/lehigh_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Lehigh Valley subset failed! Study will not be updated in the portal."
         MSK_LEHIGH_SUBSET_FAIL=1
@@ -934,7 +934,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # QUEENSCANCERCENTER subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_queenscancercenter -o=$MSK_QUEENS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Queens Cancer Center,Queens Hospital Cancer Center" -s=$MSK_DMP_TMPDIR/queens_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_queenscancercenter -o=$MSK_QUEENS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Queens Cancer Center,Queens Hospital Cancer Center" -s=$MSK_DMP_TMPDIR/queens_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Queens Cancer Center subset failed! Study will not be updated in the portal."
         MSK_QUEENS_SUBSET_FAIL=1
@@ -962,7 +962,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # MIAMICANCERINSTITUTE subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_miamicancerinstitute -o=$MSK_MCI_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Miami Cancer Institute" -s=$MSK_DMP_TMPDIR/mci_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_miamicancerinstitute -o=$MSK_MCI_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Miami Cancer Institute" -s=$MSK_DMP_TMPDIR/mci_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Miami Cancer Institute subset failed! Study will not be updated in the portal."
         MSK_MCI_SUBSET_FAIL=1
@@ -990,7 +990,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # HARTFORDHEALTHCARE subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_hartfordhealthcare -o=$MSK_HARTFORD_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Hartford Healthcare" -s=$MSK_DMP_TMPDIR/hartford_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_hartfordhealthcare -o=$MSK_HARTFORD_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Hartford Healthcare" -s=$MSK_DMP_TMPDIR/hartford_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Hartford Healthcare subset failed! Study will not be updated in the portal."
         MSK_HARTFORD_SUBSET_FAIL=1
@@ -1018,7 +1018,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # RALPHLAUREN subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_ralphlauren -o=$MSK_RALPHLAUREN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Ralph Lauren Center" -s=$MSK_DMP_TMPDIR/ralphlauren_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_ralphlauren -o=$MSK_RALPHLAUREN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Ralph Lauren Center" -s=$MSK_DMP_TMPDIR/ralphlauren_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Ralph Lauren subset failed! Study will not be updated in the portal."
         MSK_RALPHLAUREN_SUBSET_FAIL=1
@@ -1046,7 +1046,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # RIKENGENESISJAPAN subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_rikengenesisjapan -o=$MSK_RIKENGENESISJAPAN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Riken Genesis" -s=$MSK_DMP_TMPDIR/rikengenesisjapan_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_rikengenesisjapan -o=$MSK_RIKENGENESISJAPAN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Riken Genesis" -s=$MSK_DMP_TMPDIR/rikengenesisjapan_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Tailor Med Japan subset failed! Study will not be updated in the portal."
         MSK_RIKENGENESISJAPAN_SUBSET_FAIL=1

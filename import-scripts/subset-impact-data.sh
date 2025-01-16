@@ -6,7 +6,11 @@
 # (4): data filter criteria to subset IMPACT data with (either SEQ_DATE or <ATTRIBUTE_NAME>=[ATTRIBUTE_VAL1,ATTRIBUTE_VAL2,...])
 # (5): output subset filename
 # (6): data_clinical filename containing attribute being filtered in (4)
+# (7): portal scripts directory
+# (8): independent metadata filename
+# (9): whether to include MSK-CHORD data elements in the subset
 
+INCLUDE_MSK_CHORD_DATA="false"
 for i in "$@"; do
 case $i in
     -i=*|--study-id=*)
@@ -29,16 +33,20 @@ case $i in
     SUBSET_FILENAME="${i#*=}"
     shift # past argument=value
     ;;
-    -p=*|--portal-scripts-directory=*)
-    PORTAL_SCRIPTS_DIRECTORY="${i#*=}"
-    shift # past argument=value
-    ;;
     -c=*|--clinical-filename=*)
     CLINICAL_FILENAME="${i#*=}"
     shift # past argument=value
     ;;
+    -p=*|--portal-scripts-directory=*)
+    PORTAL_SCRIPTS_DIRECTORY="${i#*=}"
+    shift # past argument=value
+    ;;
     -m=*|--metadata-filename=*)
     METADATA_FILENAME="${i#*=}"
+    shift # past argument=value
+    ;;
+    -h=*|--include-msk-chord-data)
+    INCLUDE_MSK_CHORD_DATA="true"
     shift # past argument=value
     ;;
     *)
@@ -47,13 +55,6 @@ case $i in
     ;;
 esac
 done
-echo "Input arguments: "
-echo -e "\tSTUDY_ID="$STUDY_ID
-echo -e "\tOUTPUT_DIRECTORY="$OUTPUT_DIRECTORY
-echo -e "\tINPUT_DIRECTORY="$INPUT_DIRECTORY
-echo -e "\tFILTER_CRITERIA="$FILTER_CRITERIA
-echo -e "\tSUBSET_FILENAME="$SUBSET_FILENAME
-echo -e "\tCLINICAL_FILENAME="$CLINICAL_FILENAME
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="$PORTAL_HOME/scripts"
 fi
@@ -63,13 +64,24 @@ if [ -z $METADATA_FILENAME ]; then
     fi
 fi
 
+echo "Input arguments: "
+echo -e "\tSTUDY_ID="$STUDY_ID
+echo -e "\tOUTPUT_DIRECTORY="$OUTPUT_DIRECTORY
+echo -e "\tINPUT_DIRECTORY="$INPUT_DIRECTORY
+echo -e "\tFILTER_CRITERIA="$FILTER_CRITERIA
+echo -e "\tSUBSET_FILENAME="$SUBSET_FILENAME
+echo -e "\tCLINICAL_FILENAME="$CLINICAL_FILENAME
 echo -e "\tPORTAL_SCRIPTS_DIRECTORY="$PORTAL_SCRIPTS_DIRECTORY
+echo -e "\tMETADATA_FILENAME="$METADATA_FILENAME
+echo -e "\tINCLUDE_MSK_CHORD_DATA="$INCLUDE_MSK_CHORD_DATA
 
 # status flags
 GEN_SUBSET_LIST_FAILURE=0
 MERGE_SCRIPT_FAILURE=0
 ADD_METADATA_HEADERS_FAILURE=0
 SUBSET_CDM_TIMELINE_FILES_FAILURE=0
+
+source $PORTAL_SCRIPTS_DIRECTORY/filter-clinical-arg-functions.sh
 
 if [ $STUDY_ID == "genie" ]; then
     # in the case of genie data, the input data directory must be the mskimpact data home, where we expect to see ddp_naaccr.txt
@@ -154,6 +166,11 @@ else
         if [ $? -gt 0 ]; then
             MERGE_SCRIPT_FAILURE=1
         else
+            # Filter CDM elements from clinical files if necessary
+            if [ $INCLUDE_MSK_CHORD_DATA == "false" ]; then
+                filter_cdm_clinical_elements $OUTPUT_DIRECTORY
+            fi
+
             # add clinical meta data headers if clinical sample file exists
             if [ -f $OUTPUT_DIRECTORY/data_clinical_sample.txt ]; then
                 echo "Adding clinical attribute meta data headers..."
@@ -169,11 +186,14 @@ else
                 fi
             fi
 
-            # subset CDM timeline files if they exist
-            if [ "$(ls -l $INPUT_DIRECTORY/data_timeline_*.txt 2>/dev/null | wc -l)" -gt 0 ]; then
-                sh $PORTAL_SCRIPTS_DIRECTORY/subset-cdm-timeline-files.sh "$STUDY_ID" $OUTPUT_DIRECTORY $INPUT_DIRECTORY
-                if [ $? -gt 0 ]; then
-                    SUBSET_CDM_TIMELINE_FILES_FAILURE=1
+            if [ $INCLUDE_MSK_CHORD_DATA == "true" ]; then
+                # Subset CDM timeline files if they exist
+                # This is separate from the merge.py script because it takes too long to subset the quantity of CDM timeline files
+                if [ "$(ls -l $INPUT_DIRECTORY/data_timeline_*.txt 2>/dev/null | wc -l)" -gt 0 ]; then
+                    sh $PORTAL_SCRIPTS_DIRECTORY/subset-cdm-timeline-files.sh "$STUDY_ID" $OUTPUT_DIRECTORY $INPUT_DIRECTORY
+                    if [ $? -gt 0 ]; then
+                        SUBSET_CDM_TIMELINE_FILES_FAILURE=1
+                    fi
                 fi
             fi
         fi
