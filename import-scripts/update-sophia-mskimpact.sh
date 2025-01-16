@@ -155,18 +155,16 @@ function rename_files_in_delivery_directory() {
 }
 
 function filter_clinical_cols() {
-    # Determine which columns to exclude in the patient file
+    # Filter columns from patient file
     PATIENT_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
-    PATIENT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.filtered"
-    if ! filter_clinical_attribute_columns "$PATIENT_INPUT_FILEPATH" "$DELIVERED_PATIENT_ATTRIBUTES" "$PATIENT_OUTPUT_FILEPATH" ; then
+    if ! filter_clinical_attribute_columns "$PATIENT_INPUT_FILEPATH" "$DELIVERED_PATIENT_ATTRIBUTES" ; then
         echo "Failed to filter clinical patient attributes"
         return 1
     fi
 
-    # Determine which columns to exclude in the sample file
+    # Filter columns from sample file
     SAMPLE_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
-    SAMPLE_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.filtered"
-    if ! filter_clinical_attribute_columns "$SAMPLE_INPUT_FILEPATH" "$DELIVERED_SAMPLE_ATTRIBUTES" "$SAMPLE_OUTPUT_FILEPATH" ; then
+    if ! filter_clinical_attribute_columns "$SAMPLE_INPUT_FILEPATH" "$DELIVERED_SAMPLE_ATTRIBUTES" ; then
         echo "Failed to filter clinical sample attributes"
         return 1
     fi

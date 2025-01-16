@@ -52,13 +52,11 @@ function set_cohort_filepaths() {
 
 function filter_sample_file() {
     DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE CANCER_TYPE_DETAILED"
-    TMP_PROCESSING_FILE=$(mktemp -q)
 
     # Copy sample file to tmp file since script overwrites existing file (don't want to overwrite DMP pipeline files)
     # Removes all clinical attributes except those specified in $DELIVERED_SAMPLE_ATTRIBUTES set
-    # TMP_PROCESSING_FILE automatically removed // TODO: move TMP_FILE creation to filter_clinical function
     cp -a $CLINICAL_SAMPLE_FILEPATH $CDM_DELIVERABLE
-    filter_clinical_attribute_columns "$CDM_DELIVERABLE" "$DELIVERED_SAMPLE_ATTRIBUTES" "$TMP_PROCESSING_FILE"
+    filter_clinical_attribute_columns "$CDM_DELIVERABLE" "$DELIVERED_SAMPLE_ATTRIBUTES"
     if [ $? -ne 0 ] ; then
         echo "`date`: Failed to subset clinical sample file, exiting..."
         exit 1
