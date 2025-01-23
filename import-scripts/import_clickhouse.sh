@@ -21,9 +21,8 @@ MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/pipelines-cr
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
 DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
 COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/copy_mysql_database_tables_to_clickhouse.sh"
+DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/download_clickhouse_sql_scripts_py3.py"
 CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
-CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SQL_1_FILEPATH="$PORTAL_HOME/create_derived_clickhouse_tables/genie/clickhouse.sql"
-CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SQL_2_FILEPATH="$PORTAL_HOME/create_derived_clickhouse_tables/genie/materialized_views.sql"
 
 # Get the current production database color
 current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
@@ -53,9 +52,30 @@ if ! $COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL
     exit 1
 fi
 
+# Check if derived table sql script dirpath exists
+# If not, try to create it
+derived_table_sql_script_dirpath="$tmp/create_derived_clickhouse_tables"
+if ! [ -e "$derived_table_sql_script_dirpath" ] ; then
+    if ! mkdir -p "$derived_table_sql_script_dirpath" ; then
+        echo "Error : could not create target directory '$derived_table_sql_script_dirpath'" >&2
+        exit 1
+    fi
+fi
+
+# Remove any scripts currently in the derived table sql script dirpath
+if [[ -d "$derived_table_sql_script_dirpath" && "$derived_table_sql_script_dirpath" != "/" ]]; then
+    rm -rf "$derived_table_sql_script_dirpath"/*
+fi
+
+# Attempt to download the derived table SQL files from github
+if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH "$derived_table_sql_script_dirpath" ; then
+    echo "Error : could not download needed derived table construction .sql files from github" >&2
+    exit 1
+fi
+
 # Create the additional derived tables inside of non-production Clickhouse DB
 echo "creating derived tables in clickhouse database $destination_database_color..."
-if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SQL_1_FILEPATH $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SQL_2_FILEPATH ; then
-    echo "Error during creation of derived tables in clickhouse database $destination_database_color" >&2
+if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color "$derived_table_sql_script_dirpath"/* ; then
+    echo "Error during derivation of clickhouse tables in clickhouse database $destination_database_color" >&2
     exit 1
 fi
