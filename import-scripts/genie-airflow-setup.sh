@@ -36,29 +36,31 @@ fi
 
 tmp=$PORTAL_HOME/tmp/import-cron-genie
 IMPORTER_JAR_FILENAME="/data/portal-cron/lib/$IMPORTER-aws-importer-$destination_database_color.jar"
-echo "Checking using $IMPORTER_JAR_FILENAME"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
+echo "Destination DB color: $destination_database_color"
+echo "Importing with $IMPORTER_JAR_FILENAME"
+
 # Database check
-echo "Checking if database version is compatible"
+echo "Checking if mysql database version is compatible"
 $JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ]; then
-    echo "Database version expected by portal does not match version in database!" >&2
+    echo "Error: Database version expected by portal does not match version in database!" >&2
     exit 1
 fi
 
 # Fetch updates in genie repository
-echo "Fetching updates from genie..."
+echo "Fetching updates from genie repository"
 $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source genie --run-date latest
 if [ $? -gt 0 ]; then
-    echo "GENIE fetch failed!" >&2
+    echo "Error: GENIE fetch failed!" >&2
     exit 1
 fi
 
 # Refresh CDD/Oncotree cache to pull latest metadata
-echo "Refreshing CDD/ONCOTREE caches..."
+echo "Refreshing CDD/ONCOTREE caches"
 bash $PORTAL_SCRIPTS_DIRECTORY/refresh-cdd-oncotree-cache.sh
 if [ $? -gt 0 ]; then
-    echo "Failed to refresh CDD and/or ONCOTREE cache during GENIE import!" >&2
+    echo "Error: Failed to refresh CDD and/or ONCOTREE cache during GENIE import!" >&2
     exit 1
 fi

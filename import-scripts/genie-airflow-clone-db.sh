@@ -21,7 +21,7 @@ source $AUTOMATION_ENV_SCRIPT_FILEPATH
 tmp=$PORTAL_HOME/tmp/import-cron-genie
 if ! [ -d "$tmp" ] ; then
     if ! mkdir -p "$tmp" ; then
-        echo "Error : could not create tmp directory '$tmp'" >&2
+        echo "Error: could not create tmp directory '$tmp'" >&2
         exit 1
     fi
 fi
@@ -58,14 +58,18 @@ if [ "$destination_database_color" == "unset" ] ; then
     exit 1
 fi
 
-echo "we are going to clone $source_database_color into $destination_database_color and then import into $destination_database_color"
+echo "Source DB color: $source_database_color"
+echo "Destination DB color: $destination_database_color"
+
 # Drop tables in the non-production database to make space for cloning
+echo "dropping tables from mysql database $destination_database_color"
 if ! $DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
     message="Error during dropping of tables from mysql database $destination_database_color"
     echo $message >&2
     exit 1
 else
     # Clone the content of the production MySQL database into the non-production database
+    echo "copying tables from mysql database $source_database_color to $destination_database_color"
     if ! $CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $source_database_color $destination_database_color ; then
         message="Error during cloning the mysql database (from $source_database_color to $destination_database_color)"
         echo $message >&2

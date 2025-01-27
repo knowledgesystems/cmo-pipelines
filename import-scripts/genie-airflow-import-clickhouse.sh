@@ -38,15 +38,17 @@ if [ "$destination_database_color" == "unset" ] ; then
     exit 1
 fi
 
+echo "Destination DB color: $destination_database_color"
+
 # Drop tables from non-production ClickHouse DB to make room for incoming copy
-echo "dropping tables from clickhouse database $destination_database_color..."
+echo "dropping tables from clickhouse database $destination_database_color to make room for incoming copy"
 if ! $DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
     echo "Error during dropping of tables from clickhouse database $destination_database_color" >&2
     exit 1
 fi
 
 # Use Sling to copy data from non-production MySQL DB to non-production ClickHouse DB
-echo "copying tables from mysql database $destination_database_color to clickhouse database $destination_database_color..."
+echo "copying tables from mysql database $destination_database_color to clickhouse database $destination_database_color"
 if ! $COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
     echo "Error during copying of tables from mysql database $destination_database_color to clickhouse database $destination_database_color" >&2
     exit 1
@@ -57,7 +59,7 @@ fi
 derived_table_sql_script_dirpath="$tmp/create_derived_clickhouse_tables"
 if ! [ -e "$derived_table_sql_script_dirpath" ] ; then
     if ! mkdir -p "$derived_table_sql_script_dirpath" ; then
-        echo "Error : could not create target directory '$derived_table_sql_script_dirpath'" >&2
+        echo "Error: could not create target directory '$derived_table_sql_script_dirpath'" >&2
         exit 1
     fi
 fi
@@ -69,12 +71,12 @@ fi
 
 # Attempt to download the derived table SQL files from github
 if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH "$derived_table_sql_script_dirpath" ; then
-    echo "Error : could not download needed derived table construction .sql files from github" >&2
+    echo "Error during download of derived table construction .sql files from github" >&2
     exit 1
 fi
 
 # Create the additional derived tables inside of non-production Clickhouse DB
-echo "creating derived tables in clickhouse database $destination_database_color..."
+echo "creating derived tables in clickhouse database $destination_database_color"
 if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color "$derived_table_sql_script_dirpath"/* ; then
     echo "Error during derivation of clickhouse tables in clickhouse database $destination_database_color" >&2
     exit 1

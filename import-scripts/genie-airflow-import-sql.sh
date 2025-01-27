@@ -41,18 +41,19 @@ ONCOTREE_VERSION="oncotree_2019_12_01"
 # Direct importer logs to stdout
 tail -f $PORTAL_HOME/logs/genie-aws-importer.log &
 
+echo "Destination DB color: $destination_database_color"
 echo "Importing with $IMPORTER_JAR_FILENAME"
-echo "Importing cancer type updates into genie portal database..."
+echo "Importing cancer type updates into mysql database $destination_database_color"
 $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
 if [ $? -gt 0 ]; then
-    echo "Cancer type import failed!" >&2
+    echo "Error: Cancer type import failed!" >&2
     exit 1
 fi
 
-echo "Importing study data into genie portal database..."
+echo "Importing genie study data into mysql database $destination_database_color"
 $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal genie-portal --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source mskcc --disable-redcap-export
 if [ $? -gt 0 ]; then
-    echo "Genie import failed!" >&2
+    echo "Error: Genie import failed!" >&2
     exit 1
 fi
 
@@ -62,7 +63,7 @@ if [ -r "$num_studies_updated_filename" ] ; then
     num_studies_updated=$(cat "$num_studies_updated_filename")
 fi
 if [[ -z $num_studies_updated ]] || [[ $num_studies_updated == "0" ]] ; then
-    echo "No studies updated, either due to error or failure to mark a study in the spreadsheet" >&2
+    echo "Error: No studies updated, either due to error or failure to mark a study in the spreadsheet" >&2
     exit 1
 fi
 echo "$num_studies_updated number of studies were updated"
