@@ -104,6 +104,7 @@ function filter_clinical_attribute_columns() {
     # Filter out the columns we want to exclude
     $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$clinical_filepath" -e "$excluded_header_field_list" > "$tmp_processing_file"
     if [ $? -gt 0 ] ; then
+        echo "Failed to filter columns from clinical file $clinical_filepath, see output at $tmp_processing_file"
         return 1
     fi
     mv "$tmp_processing_file" "$clinical_filepath"
