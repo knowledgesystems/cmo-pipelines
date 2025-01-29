@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 MAX_ATTEMPTS=5
 
 function usage {
@@ -45,11 +44,13 @@ fi
 
 ## FUNCTIONS
 
+source "$PORTAL_HOME/scripts/slack-message-functions.sh"
+
 # Function for alerting pipelines team via slack and email
 function sendFailureMessageSlackEmail {
     MESSAGE_BODY=$1
     SUBJECT_MESSAGE=$2
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines recache process status: $MESSAGE_BODY\", \"icon_emoji\": \":fire:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines recache process status :fire: : $MESSAGE_BODY"
     echo -e "$MESSAGE_BODY" | mail -s "$SUBJECT_MESSAGE" $EMAIL_LIST
 }
 
@@ -57,7 +58,7 @@ function sendFailureMessageSlackEmail {
 function sendSuccessMessageSlackEmail {
     MESSAGE_BODY=$1
     SUBJECT_MESSAGE=$2
-    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines recache process status: $MESSAGE_BODY\", \"icon_emoji\": \":arrows_counterclockwise:\"}" $SLACK_PIPELINES_MONITOR_URL
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines recache process status :arrows_counterclockwise: : $MESSAGE_BODY"
     echo -e "$MESSAGE_BODY" | mail -s "$SUBJECT_MESSAGE" $EMAIL_LIST
 }
 
