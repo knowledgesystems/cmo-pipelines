@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
+SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 MAX_ATTEMPTS=5
 
 function usage {
@@ -44,13 +45,11 @@ fi
 
 ## FUNCTIONS
 
-source "$PORTAL_HOME/scripts/slack-message-functions.sh"
-
 # Function for alerting pipelines team via slack and email
 function sendFailureMessageSlackEmail {
     MESSAGE_BODY=$1
     SUBJECT_MESSAGE=$2
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines recache process status :fire: : $MESSAGE_BODY"
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines recache process status: $MESSAGE_BODY\", \"icon_emoji\": \":fire:\"}" $SLACK_PIPELINES_MONITOR_URL
     echo -e "$MESSAGE_BODY" | mail -s "$SUBJECT_MESSAGE" $EMAIL_LIST
 }
 
@@ -58,7 +57,7 @@ function sendFailureMessageSlackEmail {
 function sendSuccessMessageSlackEmail {
     MESSAGE_BODY=$1
     SUBJECT_MESSAGE=$2
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines recache process status :arrows_counterclockwise: : $MESSAGE_BODY"
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines recache process status: $MESSAGE_BODY\", \"icon_emoji\": \":arrows_counterclockwise:\"}" $SLACK_PIPELINES_MONITOR_URL
     echo -e "$MESSAGE_BODY" | mail -s "$SUBJECT_MESSAGE" $EMAIL_LIST
 }
 
@@ -177,9 +176,8 @@ function checkForValidStaleCache {
 function refreshCddCache {
     # attempt to recache CDD
     ENDPOINT="refreshCache"
-    CDD_SERVER1="http://dashi.cbio.mskcc.org:8280/cdd/api"
-    CDD_SERVER2="http://dashi2.cbio.mskcc.org:8280/cdd/api"
-    CDD_SERVER_LIST=($CDD_SERVER1 $CDD_SERVER2)
+    CDD_SERVER1="https://cdd.cbioportal.mskcc.org/api"
+    CDD_SERVER_LIST=($CDD_SERVER1)
     refreshCache "CDD" $MAX_ATTEMPTS $ENDPOINT ${CDD_SERVER_LIST[@]}; return_value=$?
     if [ $return_value -gt 0 ] ; then
         # query cdd for known clinical attribute and check response - if still failed then alert pipelines team
@@ -195,9 +193,8 @@ function refreshCddCache {
 function refreshOncotreeCache {
     # attempt to recache ONCOTREE
     ENDPOINT="api/refreshCache"
-    ONCOTREE_SERVER1="http://dashi.cbio.mskcc.org:8280"
-    ONCOTREE_SERVER2="http://dashi2.cbio.mskcc.org:8280"
-    ONCOTREE_SERVER_LIST=($ONCOTREE_SERVER1 $ONCOTREE_SERVER2)
+    ONCOTREE_SERVER1="https://oncotree.info"
+    ONCOTREE_SERVER_LIST=($ONCOTREE_SERVER1)
     refreshCache "ONCOTREE" $MAX_ATTEMPTS $ENDPOINT ${ONCOTREE_SERVER_LIST[@]}; return_value=$?
     if [ $return_value -gt 0 ] ; then
         # query oncotree for known oncotree code and check response - if still failed then alert pipelines team
