@@ -66,7 +66,7 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CVRGenePanelRecord> genePanelRecords = new ArrayList();
+    private Deque<CVRGenePanelRecord> genePanelRecords = new LinkedList<>();
     private Set<String> processedRecords = new HashSet();
     List<String> geneticProfiles;
 
@@ -168,10 +168,10 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
     @Override
     public CVRGenePanelRecord read() throws Exception {
         while (!genePanelRecords.isEmpty()) {
-            CVRGenePanelRecord record = genePanelRecords.remove(0);
+            CVRGenePanelRecord record = genePanelRecords.pollFirst();
             // if we've already seen this sample id or sample id is not in master list then skip it by just calling read again.
             if (!cvrSampleListUtil.getPortalSamples().contains(record.getSAMPLE_ID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSAMPLE_ID());
+                //cvrSampleListUtil.addSampleRemoved(record.getSAMPLE_ID());
                 continue;
             }
             if (processedRecords.contains(record.getSAMPLE_ID())) {

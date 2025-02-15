@@ -49,19 +49,28 @@ public class MskimpactAgeFieldSetMapper implements  FieldSetMapper<MskimpactAge>
 
     @Override
     public MskimpactAge mapFieldSet(FieldSet fs) throws BindException {
-        MskimpactAge record = new MskimpactAge();        
+        MskimpactAge record = new MskimpactAge();
         List<String> fields = MskimpactAge.getFieldNames();
 
         for (int i = 0; i < fields.size(); i++) {
             String field = fields.get(i);
-            try {
-                record.getClass().getMethod("set" + field, String.class).invoke(record, fs.readString(i));
-            } catch (Exception e) {
-                if (e.getClass().equals(NoSuchMethodException.class)) {
-                    log.info("No set method exists for " + field);
-                }
-            }
+            String value = (i < fs.getFieldCount()) ? fs.readString(i) : "";  // default to empty string if out of bounds
+            setFieldValue(record, field, value);
         }
         return record;
+    }
+
+    private void setFieldValue(MskimpactAge record, String field, String value) {
+        switch (field) {
+            case "PATIENT_ID":
+                record.setPATIENT_ID(value);
+                break;
+            case "AGE":
+                record.setAGE(value);
+                break;
+            default:
+                log.info("No set method exists for " + field);
+                break;
+        }
     }
 }

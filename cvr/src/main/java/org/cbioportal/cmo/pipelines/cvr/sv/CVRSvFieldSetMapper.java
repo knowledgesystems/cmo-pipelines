@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -56,14 +56,137 @@ public class CVRSvFieldSetMapper implements  FieldSetMapper<CVRSvRecord> {
             if (field == "Class") {
                 field = "SV_Class";
             }
-            try {
-                record.getClass().getMethod("set" + field, String.class).invoke(record, fs.readString(i).trim());
-            } catch (Exception e) {
-                if (e.getClass().equals(NoSuchMethodException.class)) {
-                    log.info("No set method exists for " + field);
-                }
-            }
+            String value = (i < fs.getFieldCount()) ? fs.readString(i).trim() : "";  // default to empty string if out of bounds
+            setFieldValue(record, field, value);
         }
         return record;
+    }
+
+    /*
+     * Sets the field value in the CVRSvRecord.
+     */
+    private void setFieldValue(CVRSvRecord record, String field, String value) {
+        switch (field) {
+            case "Sample_ID":
+                record.setSample_ID(value);
+                break;
+            case "SV_Status":
+                record.setSV_Status(value);
+                break;
+            case "Site1_Hugo_Symbol":
+                record.setSite1_Hugo_Symbol(value);
+                break;
+            case "Site2_Hugo_Symbol":
+                record.setSite2_Hugo_Symbol(value);
+                break;
+            case "Site1_Ensembl_Transcript_Id":
+                record.setSite1_Ensembl_Transcript_Id(value);
+                break;
+            case "Site2_Ensembl_Transcript_Id":
+                record.setSite2_Ensembl_Transcript_Id(value);
+                break;
+            case "Site1_Entrez_Gene_Id":
+                record.setSite1_Entrez_Gene_Id(value);
+                break;
+            case "Site2_Entrez_Gene_Id":
+                record.setSite2_Entrez_Gene_Id(value);
+                break;
+            case "Site1_Region_Number":
+                record.setSite1_Region_Number(value);
+                break;
+            case "Site2_Region_Number":
+                record.setSite2_Region_Number(value);
+                break;
+            case "Site1_Region":
+                record.setSite1_Region(value);
+                break;
+            case "Site2_Region":
+                record.setSite2_Region(value);
+                break;
+            case "Site1_Chromosome":
+                record.setSite1_Chromosome(value);
+                break;
+            case "Site2_Chromosome":
+                record.setSite2_Chromosome(value);
+                break;
+            case "Site1_Contig":
+                record.setSite1_Contig(value);
+                break;
+            case "Site2_Contig":
+                record.setSite2_Contig(value);
+                break;
+            case "Site1_Position":
+                record.setSite1_Position(value);
+                break;
+            case "Site2_Position":
+                record.setSite2_Position(value);
+                break;
+            case "Site1_Description":
+                record.setSite1_Description(value);
+                break;
+            case "Site2_Description":
+                record.setSite2_Description(value);
+                break;
+            case "Site2_Effect_On_Frame":
+                record.setSite2_Effect_On_Frame(value);
+                break;
+            case "NCBI_Build":
+                record.setNCBI_Build(value);
+                break;
+            case "SV_Class":
+                record.setSV_Class(value);
+                break;
+            case "Tumor_Split_Read_Count":
+                record.setTumor_Split_Read_Count(value);
+                break;
+            case "Tumor_Paired_End_Read_Count":
+                record.setTumor_Paired_End_Read_Count(value);
+                break;
+            case "Event_Info":
+                record.setEvent_Info(value);
+                break;
+            case "Breakpoint_Type":
+                record.setBreakpoint_Type(value);
+                break;
+            case "Connection_Type":
+                record.setConnection_Type(value);
+                break;
+            case "Annotation":
+                record.setAnnotation(value);
+                break;
+            case "DNA_Support":
+                record.setDNA_Support(value);
+                break;
+            case "RNA_Support":
+                record.setRNA_Support(value);
+                break;
+            case "SV_Length":
+                record.setSV_Length(value);
+                break;
+            case "Normal_Read_Count":
+                record.setNormal_Read_Count(value);
+                break;
+            case "Tumor_Read_Count":
+                record.setTumor_Read_Count(value);
+                break;
+            case "Normal_Variant_Count":
+                record.setNormal_Variant_Count(value);
+                break;
+            case "Tumor_Variant_Count":
+                record.setTumor_Variant_Count(value);
+                break;
+            case "Normal_Paired_End_Read_Count":
+                record.setNormal_Paired_End_Read_Count(value);
+                break;
+            case "Normal_Split_End_Read_Count":
+                record.setNormal_Split_End_Read_Count(value);
+                break;
+            case "Comments":
+                record.setComments(value);
+                break;
+            default:
+                log.info("No set method exists for " + field);
+                break;
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -55,14 +55,23 @@ public class LinkedImpactCaseFieldSetMapper implements FieldSetMapper<LinkedMski
 
         for (int i = 0; i < fields.size(); i++) {
             String field = fields.get(i);
-            try {
-                record.getClass().getMethod("set" + field, String.class).invoke(record, fs.readString(i));
-            } catch (Exception e) {
-                if (e.getClass().equals(NoSuchMethodException.class)) {
-                    log.info("No set method exists for " + field);
-                }
-            }
+            String value = (i < fs.getFieldCount()) ? fs.readString(i) : "";  // default to empty string if out of bounds
+            setFieldValue(record, field, value);
         }
         return record;
+    }
+
+    private void setFieldValue(LinkedMskimpactCaseRecord record, String field, String value) {
+        switch (field) {
+            case "SAMPLE_ID":
+                record.setSAMPLE_ID(value);
+                break;
+            case "LINKED_MSKIMPACT_CASE":
+                record.setLINKED_MSKIMPACT_CASE(value);
+                break;
+            default:
+                log.info("No set method exists for " + field);
+                break;
+        }
     }
 }

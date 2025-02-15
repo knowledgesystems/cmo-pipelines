@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -60,20 +60,20 @@ public class CVRSegDataReader implements ItemStreamReader<CVRSegRecord> {
 
     @Value("#{jobParameters[studyId]}")
     private String studyId;
-    
+
     @Autowired
     public CVRUtilities cvrUtilities;
-    
+
     @Autowired
     private CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CVRSegRecord> cvrSegRecords = new ArrayList();
+    private final Deque<CVRSegRecord> cvrSegRecords = new LinkedList<>();
 
     Logger log = Logger.getLogger(CVRSegDataReader.class);
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        CVRData cvrData = new CVRData();        
+        CVRData cvrData = new CVRData();
         // load cvr data from cvr_data.json file
         File cvrFile = new File(privateDirectory, cvrUtilities.CVR_FILE);
         try {
@@ -94,17 +94,18 @@ public class CVRSegDataReader implements ItemStreamReader<CVRSegRecord> {
             DefaultLineMapper<CVRSegRecord> mapper = new DefaultLineMapper<>();
             mapper.setLineTokenizer(tokenizer);
             mapper.setFieldSetMapper(new CVRSegFieldSetMapper());
-            
+
             FlatFileItemReader<CVRSegRecord> reader = new FlatFileItemReader<>();
             reader.setResource(new FileSystemResource(segFile));
             reader.setLineMapper(mapper);
             reader.setLinesToSkip(1);
             reader.open(ec);
-            
+
             try {
                 CVRSegRecord to_add;
                 while ((to_add = reader.read()) != null && to_add.getID() !=  null) {
-                    if (!cvrSampleListUtil.getNewDmpSamples().contains(to_add.getID())) {
+                    if (!cvrSampleListUtil.getNewDmpSamples().contains(to_add.getID())
+                        && cvrSampleListUtil.getPortalSamples().contains(to_add.getID())) {
                         cvrSegRecords.add(to_add);
                     }
                 }
@@ -115,7 +116,7 @@ public class CVRSegDataReader implements ItemStreamReader<CVRSegRecord> {
             }
             reader.close();
         }
-        
+
         // merge cvr SEG data existing SEG data and new data from CVR
         for (CVRMergedResult result : cvrData.getResults()) {
             CVRSegData cvrSegData = result.getSegData();
@@ -125,25 +126,22 @@ public class CVRSegDataReader implements ItemStreamReader<CVRSegRecord> {
             HashMap<Integer,String> indexMap = new HashMap<>();
             boolean first = true;
             String id = result.getMetaData().getDmpSampleId();
-            for (List<String> segData : cvrSegData.getSegData()) {                
-                if (first) {
-                    for (int i=0;i<segData.size();i++) {
-                        indexMap.put(i, segData.get(i));
-                    }
-                    first = false;
-                } else {
-                    CVRSegRecord cvrSegRecord = new CVRSegRecord();
-                    for (int i=0;i<segData.size();i++) {
-                        cvrSegRecord.setID(id);
-                        String field = indexMap.get(i).replace(".", "_");//dots in source; replaced for method
-                        try {
-                            cvrSegRecord.getClass().getMethod("set" + field, String.class).invoke(cvrSegRecord, segData.get(i));
-                        } 
-                        catch (Exception e) {
-                            log.warn("No such method 'set" + field + "' for CVRSegRecord");
+            if (cvrSampleListUtil.getPortalSamples().contains(id)) {
+                for (List<String> segData : cvrSegData.getSegData()) {
+                    if (first) {
+                        for (int i=0;i<segData.size();i++) {
+                            indexMap.put(i, segData.get(i));
                         }
+                        first = false;
+                    } else {
+                        CVRSegRecord cvrSegRecord = new CVRSegRecord();
+                        for (int i=0;i<segData.size();i++) {
+                            cvrSegRecord.setID(id);
+                            String field = indexMap.get(i).replace(".", "_"); //dots in source; replaced for method
+                            CVRSegFieldSetMapper.setFieldValue(cvrSegRecord, field, segData.get(i));
+                        }
+                        cvrSegRecords.add(cvrSegRecord);
                     }
-                    cvrSegRecords.add(cvrSegRecord);
                 }
             }
         }
@@ -152,9 +150,8 @@ public class CVRSegDataReader implements ItemStreamReader<CVRSegRecord> {
     @Override
     public CVRSegRecord read() throws Exception {
         while (!cvrSegRecords.isEmpty()) {
-            CVRSegRecord record = cvrSegRecords.remove(0);
+            CVRSegRecord record = cvrSegRecords.pollFirst();
             if (!cvrSampleListUtil.getPortalSamples().contains(record.getID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getID());
                 continue;
             }
             return record;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -54,14 +54,107 @@ public class CVRClinicalFieldSetMapper implements  FieldSetMapper<CVRClinicalRec
 
         for (int i = 0; i < fields.size(); i++) {
             String field = fields.get(i);
-            try {
-                record.getClass().getMethod("set" + field, String.class).invoke(record, fs.readString(i));
-            } catch (Exception e) {
-                if (e.getClass().equals(NoSuchMethodException.class)) {
-                    log.info("No set method exists for " + field);
-                }
-            }
+            String value = (i < fs.getFieldCount()) ? fs.readString(i) : "";  // default to empty string if out of bounds
+            setFieldValue(record, field, value);
         }
         return record;
+    }
+
+    /*
+     * Sets the field value in the CVRClinicalRecord.
+     */
+    private void setFieldValue(CVRClinicalRecord record, String field, String value) {
+        switch (field) {
+            case "SAMPLE_ID":
+                record.setSAMPLE_ID(value);
+                break;
+            case "PATIENT_ID":
+                record.setPATIENT_ID(value);
+                break;
+            case "CANCER_TYPE":
+                record.setCANCER_TYPE(value);
+                break;
+            case "SAMPLE_TYPE":
+                record.setSAMPLE_TYPE(value);
+                break;
+            case "SAMPLE_CLASS":
+                record.setSAMPLE_CLASS(value);
+                break;
+            case "METASTATIC_SITE":
+                record.setMETASTATIC_SITE(value);
+                break;
+            case "PRIMARY_SITE":
+                record.setPRIMARY_SITE(value);
+                break;
+            case "CANCER_TYPE_DETAILED":
+                record.setCANCER_TYPE_DETAILED(value);
+                break;
+            case "GENE_PANEL":
+                record.setGENE_PANEL(value);
+                break;
+            case "OTHER_PATIENT_ID":
+                record.setOTHER_PATIENT_ID(value);
+                break;
+            case "SO_COMMENTS":
+                record.setSO_COMMENTS(value);
+                break;
+            case "SAMPLE_COVERAGE":
+                record.setSAMPLE_COVERAGE(value);
+                break;
+            case "CYCLE_THRESHOLD":
+                record.setCYCLE_THRESHOLD(value);
+                break;
+            case "TUMOR_PURITY":
+                record.setTUMOR_PURITY(value);
+                break;
+            case "ONCOTREE_CODE":
+                record.setONCOTREE_CODE(value);
+                break;
+            case "PARTA_CONSENTED_12_245":
+                record.setPARTA_CONSENTED_12_245(value);
+                break;
+            case "PARTC_CONSENTED_12_245":
+                record.setPARTC_CONSENTED_12_245(value);
+                break;
+            case "MSI_COMMENT":
+                record.setMSI_COMMENT(value);
+                break;
+            case "MSI_SCORE":
+                record.setMSI_SCORE(value);
+                break;
+            case "MSI_TYPE":
+                record.setMSI_TYPE(value);
+                break;
+            case "INSTITUTE":
+                record.setINSTITUTE(value);
+                break;
+            case "SOMATIC_STATUS":
+                record.setSOMATIC_STATUS(value);
+                break;
+            case "SEQ_DATE":
+                record.setSEQ_DATE(value);
+                break;
+            case "ARCHER":
+                record.setARCHER(value);
+                break;
+            case "CVR_TMB_COHORT_PERCENTILE":
+                record.setCVR_TMB_COHORT_PERCENTILE(value);
+                break;
+            case "CVR_TMB_SCORE":
+                record.setCVR_TMB_SCORE(value);
+                break;
+            case "CVR_TMB_TT_COHORT_PERCENTILE":
+                record.setCVR_TMB_TT_COHORT_PERCENTILE(value);
+                break;
+            case "PATH_SLIDE_EXISTS":
+                record.setPATH_SLIDE_EXISTS(value);
+                break;
+            case "MSK_SLIDE_ID":
+                record.setMSK_SLIDE_ID(value);
+                break;
+            default:
+                log.info("No set method exists for " + field);
+                break;
+        }
     }
 }

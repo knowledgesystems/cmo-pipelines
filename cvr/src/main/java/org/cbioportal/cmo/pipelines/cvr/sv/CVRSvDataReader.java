@@ -67,7 +67,7 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CVRSvRecord> svRecords = new ArrayList();
+    private final Deque<CVRSvRecord> svRecords = new LinkedList<>();
 
     Logger log = Logger.getLogger(CVRSvDataReader.class);
 
@@ -133,9 +133,9 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
     @Override
     public CVRSvRecord read() throws Exception {
         while (!svRecords.isEmpty()) {
-            CVRSvRecord record = svRecords.remove(0);
+            CVRSvRecord record = svRecords.pollFirst();
             if (!cvrSampleListUtil.getPortalSamples().contains(record.getSample_ID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSample_ID());
+                //cvrSampleListUtil.addSampleRemoved(record.getSample_ID());
                 continue;
             }
             return record;

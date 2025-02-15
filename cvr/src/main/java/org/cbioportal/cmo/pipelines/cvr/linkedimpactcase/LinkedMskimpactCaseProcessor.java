@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -51,12 +51,20 @@ public class LinkedMskimpactCaseProcessor implements ItemProcessor<LinkedMskimpa
     public String process(LinkedMskimpactCaseRecord i) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : LinkedMskimpactCaseRecord.getFieldNames()) {
-            String value = cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString());
+            String value = cvrUtilities.convertWhitespace(getFieldValue(i, field).toString());
             if (value.equals("NA") || value.isEmpty()) {
                 return null;
             }
             record.add(value);
         }
         return String.join("\t", record);
+    }
+
+    private String getFieldValue(LinkedMskimpactCaseRecord record, String field) {
+        switch (field) {
+            case "SAMPLE_ID": return record.getSAMPLE_ID();
+            case "LINKED_MSKIMPACT_CASE": return record.getLINKED_MSKIMPACT_CASE();
+            default: return "";
+        }
     }
 }
