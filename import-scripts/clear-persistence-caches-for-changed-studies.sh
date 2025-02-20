@@ -101,23 +101,18 @@ TMP_DIR_ROOT="/data/portal-cron/tmp/clear-persistence-cache"
 MYSQL_COMMAND_FILE_TO_GET_STUDY_LIST="$TMP_DIR_ROOT/get_study_list_with_info.sql"
 unset PORTAL_DB_LIST
 PORTAL_DB_LIST="public"
-#PORTAL_DB_LIST="public genie-public"
 unset PORTAL_DB_TO_CONFIG_MAP_FILE
 declare -A PORTAL_DB_TO_CONFIG_MAP_FILE
 PORTAL_DB_TO_CONFIG_MAP_FILE["public"]="/data/portal-cron/git-repos/portal-configuration/k8s-config-vars/public/config_map.yaml"
-PORTAL_DB_TO_CONFIG_MAP_FILE["genie-public"]="/data/portal-cron/git-repos/portal-configuration/k8s-config-vars/public/config_map_genie_public.yaml"
 unset PORTAL_DB_TO_PORTAL_API_BASE_URI
 declare -A PORTAL_DB_TO_PORTAL_API_BASE_URI
 PORTAL_DB_TO_PORTAL_API_BASE_URI["public"]="https://www.cbioportal.org/api"
-PORTAL_DB_TO_PORTAL_API_BASE_URI["genie-public"]="https://genie.cbioportal.org/api"
 unset portal_db_to_cache_api_key
 declare -A portal_db_to_cache_api_key
 portal_db_to_cache_api_key["public"]="unknown"
-portal_db_to_cache_api_key["genie-public"]="unknown"
 unset portal_db_to_full_cache_clearing_function
 declare -A portal_db_to_full_cache_clearing_function
 portal_db_to_full_cache_clearing_function["public"]="clearPersistenceCachesForPublicPortals"
-portal_db_to_full_cache_clearing_function["genie-public"]="clearPersistenceCachesForGeniePortals"
 MAXIMUM_TIME_FOR_STUDY_RESET_BEFORE_ESCALATION=480  # 480 seconds (8 minutes)
 CACHE_RESET_NEEDED_FILENAME="CACHE_RESET_NEEDED"
 CACHE_RESET_SUCCEEDED_FILENAME="CACHE_RESET_SUCCEEDED"

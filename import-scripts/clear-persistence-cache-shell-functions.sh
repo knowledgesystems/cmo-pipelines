@@ -30,6 +30,7 @@ function clearPersistenceCachesForPortals() {
     return $exit_status
 }
 
+# Cache clearing is organized by database. All portals based on the same (updated) cBioPortal mysql database are cleared
 function clearPersistenceCachesForMskPortals() {
     all_msk_portals="msk msk-beta"
     clearPersistenceCachesForPortals "$all_msk_portals"
@@ -56,8 +57,13 @@ function clearPersistenceCachesForPublicPortals() {
     clearPersistenceCachesForPortals "$all_public_portals"
 }
 
-function clearPersistenceCachesForGeniePortals() {
-    all_genie_portals="genie-public genie-private"
+function clearPersistenceCachesForGenieBluePortals() {
+    all_genie_portals="genie-public-blue genie-private-blue"
+    clearPersistenceCachesForPortals "$all_genie_portals"
+}
+
+function clearPersistenceCachesForGenieGreenPortals() {
+    all_genie_portals="genie-public-green genie-private-green"
     clearPersistenceCachesForPortals "$all_genie_portals"
 }
 
