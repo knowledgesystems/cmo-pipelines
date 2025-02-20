@@ -36,18 +36,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-portal-users.lock"
     $PYTHON_BINARY $PORTAL_HOME/scripts/importUsers.py --port 3306 --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/${GENIE_PRODUCTION_DATABASE_PROPERTIES_FILENAME} --send-email-confirm false --sender GENIE --ssl-ca $PORTAL_HOME/pipelines-credentials/pipelines-genie-db-aws-rds-combined-ca-bundle.pem --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD >> "$USERSGENIELOGFILENAME" 2>&1
     CGDS_GENIE_IMPORT_STATUS=$?
 
-    echo "### Starting import" >> "$USERSGENIELOGFILENAME"
-    date >> "$USERSGENIELOGFILENAME"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/importUsers.py --port 3306 --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.genie.archive --send-email-confirm false --sender GENIE --ssl-ca $PORTAL_HOME/pipelines-credentials/pipelines-genie-db-aws-rds-combined-ca-bundle.pem --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD >> "$USERSGENIELOGFILENAME" 2>&1
-    CGDS_GENIE_ARCHIVE_IMPORT_STATUS=$?
-    
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
     FAILED_DATABASES=""
     if [[ $CGDS_GENIE_IMPORT_STATUS -ne 0 ]] ; then
         FAILED_DATABASES="$FAILED_DATABASES cgds_genie"
-    fi
-    if [[ $CGDS_GENIE_ARCHIVE_IMPORT_STATUS -ne 0 ]] ; then
-        FAILED_DATABASES="$FAILED_DATABASES genie_archive"
     fi
     if ! [ -z "$FAILED_DATABASES" ] ; then
         MINUTES_NOW=$(date "+%M")

@@ -61,11 +61,6 @@ function clearPersistenceCachesForGeniePortals() {
     clearPersistenceCachesForPortals "$all_genie_portals"
 }
 
-function clearPersistenceCachesForGenieArchivePortals() {
-    all_genie_archive_portals="genie-archive"
-    clearPersistenceCachesForPortals "$all_genie_archive_portals"
-}
-
 function clearPersistenceCachesForCrdcPortals() {
     all_crdc_portals="crdc"
     clearPersistenceCachesForPortals "$all_crdc_portals"
