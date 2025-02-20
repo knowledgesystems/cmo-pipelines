@@ -46,8 +46,6 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         exit 1
     fi
 
-    source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
-
     tmp=$PORTAL_HOME/tmp/import-cron-genie
     if ! [ -d "$tmp" ] ; then
         if ! mkdir -p "$tmp" ; then
@@ -75,7 +73,6 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
     else
         oncotree_version_to_use=oncotree_2019_12_01
     fi
-    CLEAR_PERSISTENCE_CACHE=0 # 0 = do not clear cache, non-0 = clear cache
 
     # import is beginning - create status file showing "in_progress", and remove trigger
     rm -f "$START_GENIE_IMPORT_TRIGGER_FILENAME"
@@ -135,24 +132,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-genie-data.lock"
         fi
         if [ -z $num_studies_updated ] ; then
             echo "could not determine the number of studies that have been updated"
-            # if import fails [presumed to have failed if num_studies_updated.txt is missing or empty], some checked-off studies still may have been successfully imported, so clear the persistence caches
-            CLEAR_PERSISTENCE_CACHE=1
         else
             echo "'$num_studies_updated' studies have been updated"
-            if [[ $num_studies_updated != "0" ]]; then
-                # if at least 1 study was imported, clear the persistence cache
-                CLEAR_PERSISTENCE_CACHE=1
-            fi
-        fi
-
-        # clear persistence cache
-        if [ $CLEAR_PERSISTENCE_CACHE -ne 0 ] ; then
-            echo "clearing persistence cache for genie portal ..."
-            if ! clearPersistenceCachesForGeniePortals ; then
-                sendClearCacheFailureMessage genie import-genie-data.sh
-            fi
-        else
-            echo "No studies have been updated, skipping redeployment of genie portal pods"
         fi
     fi
 
