@@ -9,13 +9,11 @@ import subprocess
 import sys
 import time
 
-DEPLOYMENTS = ["cbioportal-backend-genie-archive",
-                "cbioportal-backend-genie-public",
+DEPLOYMENTS = ["cbioportal-backend-genie-public",
                 "cbioportal-backend-genie-private",
                 "cbioportal-backend-master"]
 
-DEPLOYMENT_TO_URL_MAP = {"cbioportal-backend-genie-archive":"genie-archive", 
-                         "cbioportal-backend-genie-public":"genie",
+DEPLOYMENT_TO_URL_MAP = {"cbioportal-backend-genie-public":"genie",
                          "cbioportal-backend-genie-private":"genie-private"
                         }
 

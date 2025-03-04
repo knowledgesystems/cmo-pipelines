@@ -101,9 +101,6 @@ ERROR_EMAIL_BODY_GENIE = "Thank you for your interest in the AACR Project GENIE 
 ERROR_EMAIL_SUBJECT_CMO = "cBioPortal User Registration - Failed to register"
 ERROR_EMAIL_BODY_CMO = "Thank you for your interest in the cBioPortal. There was a problem creating an account for you. Please check that you have a valid email account and try to register again. If the problem persists please send an email to " + MESSAGE_FROM_CMO +"."
 
-# hacks for genie-archive special case
-GENIE_ARCHIVE_DB_NAME = "genie_archive"
-GENIE_ARCHIVE_APP_NAME = "genie-archive"
 # ------------------------------------------------------------------------------
 # class definitions
 
@@ -567,12 +564,11 @@ def main():
             spreadsheet_title = get_spreadsheet_title(client, google_spreadsheet)
            
             print >> OUTPUT_FILE, 'Importing ' + spreadsheet_title + ' ...'
-            app_name = GENIE_ARCHIVE_APP_NAME if portal_properties.cgds_database_name == GENIE_ARCHIVE_DB_NAME else portal_name_map[spreadsheet_title]
+            app_name = portal_name_map[spreadsheet_title]
             
             # the 'guts' of the script
-            # special case genie-archive because
-            # original script depended on one to one mapping of spreadsheet to app name - and lookup was by spreadsheet
-            # with genie-archive we want to do one to many mapping (one spreadsheet to multiple apps)
+            # note: original script depended on one to one mapping of spreadsheet to app name - and lookup was by spreadsheet
+            # with a now decommissioned app (genie-archive) we wanted to be able to do one to many mapping (one spreadsheet to multiple apps)
             # to fit this logic would have to rework how we specify properties or introduce new column (db name) as index but might have other effects
             new_user_map, emails_to_remove = manage_users(client, google_spreadsheet, cursor, sheet_records, app_name)
             
