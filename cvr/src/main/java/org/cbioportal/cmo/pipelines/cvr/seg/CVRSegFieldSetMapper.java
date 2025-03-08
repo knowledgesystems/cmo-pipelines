@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -45,7 +45,7 @@ import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;
 
 public class CVRSegFieldSetMapper implements FieldSetMapper<CVRSegRecord> {
-    Logger log = Logger.getLogger(CVRSegFieldSetMapper.class);
+    static Logger log = Logger.getLogger(CVRSegFieldSetMapper.class);
 
     @Override
     public CVRSegRecord mapFieldSet(FieldSet fs) throws BindException {
@@ -53,14 +53,36 @@ public class CVRSegFieldSetMapper implements FieldSetMapper<CVRSegRecord> {
         List<String> fields = CVRSegRecord.getFieldNames();
         for (int i = 0; i < fields.size(); i++) {
             String field = fields.get(i);
-            try {
-                record.getClass().getMethod("set" + field, String.class).invoke(record, fs.readString(i));
-            } catch (Exception e) {
-                if (e.getClass().equals(NoSuchMethodException.class)) {
-                    log.info("No set method exists for " + field);
-                }
-            }
+            String value = (i < fs.getFieldCount()) ? fs.readString(i) : "";  // default to empty string if out of bounds
+            setFieldValue(record, field, value);
         }
         return record;
     }
+
+    public static void setFieldValue(CVRSegRecord record, String field, String value) {
+        switch (field) {
+            case "chrom":
+                record.setchrom(value);
+                break;
+            case "loc_start":
+                record.setloc_start(value);
+                break;
+            case "loc_end":
+                record.setloc_end(value);
+                break;
+            case "num_mark":
+                record.setnum_mark(value);
+                break;
+            case "seg_mean":
+                record.setseg_mean(value);
+                break;
+            case "ID":
+                record.setID(value);
+                break;
+            default:
+                log.warn("No such method 'set" + field + "' for CVRSegRecord");
+                break;
+        }
+    }
+
 }

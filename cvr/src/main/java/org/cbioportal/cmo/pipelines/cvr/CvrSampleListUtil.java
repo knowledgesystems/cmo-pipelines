@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2017, 2023, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -54,7 +54,7 @@ public class CvrSampleListUtil {
     private Set<String> newDmpGmlPatients = new HashSet<>();
     private Map<String, List<String>> gmlPatientSampleMap = new HashMap<>();
     private Integer maxNumSamplesToRemove;
-    private Set<String> samplesRemovedList = new HashSet<>();
+    //private Set<String> samplesRemovedList = new HashSet<>();
     private Set<String> samplesInvalidPatientIdList = new HashSet<>();
     private Map<String, String> sampleListStats = new HashMap<>();
     private Map<String, Integer> signedoutSampleSnpCounts = new HashMap<>();
@@ -137,16 +137,16 @@ public class CvrSampleListUtil {
      * @return the portalSamples
      */
     public Set<String> getPortalSamples() {
-        portalSamples.removeAll(samplesInvalidPatientIdList);
+        //portalSamples.removeAll(samplesInvalidPatientIdList);
         return portalSamples;
     }
 
     /**
      * @param portalSamples the portalSamples to set
      */
-    public void setPortalSamples(Set<String> portalSamples) {
+    /*public void setPortalSamples(Set<String> portalSamples) {
         this.portalSamples = portalSamples;
-    }
+    }*/
 
     /**
      * @param portalSamples the portalSamples to add
@@ -287,23 +287,23 @@ public class CvrSampleListUtil {
     /**
      * @return the samplesRemovedList
      */
-    public Set<String> getSamplesRemovedList() {
+    /*public Set<String> getSamplesRemovedList() {
         return samplesRemovedList;
-    }
+    }*/
 
     /**
      * @param samplesRemovedList the samplesRemovedList to set
      */
-    public void setSamplesRemovedList(Set<String> samplesRemovedList) {
+    /*public void setSamplesRemovedList(Set<String> samplesRemovedList) {
         this.samplesRemovedList = samplesRemovedList;
-    }
+    }*/
 
     /**
      * @param sampleId the sampleId to add
      */
-    public void addSampleRemoved(String sampleId) {
+    /*public void addSampleRemoved(String sampleId) {
         this.samplesRemovedList.add(sampleId);
-    }
+    }*/
 
     /**
      * @return the samplesInvalidPatientIdList
@@ -317,7 +317,8 @@ public class CvrSampleListUtil {
      */
     public void addSamplesInvalidPatientIdList(String sampleId) {
         this.samplesInvalidPatientIdList.add(sampleId);
-        this.samplesRemovedList.add(sampleId);
+        //this.samplesRemovedList.add(sampleId);
+	this.portalSamples.remove(sampleId);
     }
 
     /**

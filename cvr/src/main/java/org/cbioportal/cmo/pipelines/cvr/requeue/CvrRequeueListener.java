@@ -76,7 +76,7 @@ public class CvrRequeueListener implements StepExecutionListener {
 
         String studyId = stepExecution.getJobParameters().getString("studyId");
         Set<String> portalSamplesNotInDmp = cvrSampleListUtil.getPortalSamplesNotInDmp();
-        Set<String> samplesRemoved = cvrSampleListUtil.getSamplesRemovedList();
+        //Set<String> samplesRemoved = cvrSampleListUtil.getSamplesRemovedList();
         Map<String, String> sampleListStats = cvrSampleListUtil.getSampleListStats();
         List<CVRRequeueRecord> failedToRequeueSamples = (List<CVRRequeueRecord>) stepExecution.getJobExecution().getExecutionContext().get("failedToRequeueSamples");
         Set<String> zeroVariantSamples = cvrSampleListUtil.getNonWhitelistedZeroVariantSamples();
@@ -136,7 +136,7 @@ public class CvrRequeueListener implements StepExecutionListener {
         }
 
         // build email body text for samples that were removed from data
-        if (samplesRemoved != null && samplesRemoved.size() > 0) {
+        /*if (samplesRemoved != null && samplesRemoved.size() > 0) {
             log.warn("Data for " + samplesRemoved.size() + " samples removed from " + studyId);
             body.append("\nData was removed from the staging files for the following " + samplesRemoved.size() + " samples: ");
             for (String sample : samplesRemoved) {
@@ -145,7 +145,7 @@ public class CvrRequeueListener implements StepExecutionListener {
                 log.warn("Portal sample '" + sample + "' is not in the dmp master list or is linked to invalid patient id");
             }
             body.append("\n");
-        }
+        }*/
 
         // build email body text for samples that have zero variants and are not whitelisted
         if (zeroVariantSamples != null && zeroVariantSamples.size() > 0) {

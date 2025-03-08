@@ -57,7 +57,7 @@ public class LinkedMskimpactCaseReader implements ItemStreamReader<LinkedMskimpa
     private final Double DROP_THRESHOLD = 0.9;
     private Map<String, LinkedMskimpactCaseRecord> existingLinkedIdsMap = new HashMap<>();
     private Map<String, LinkedMskimpactCaseRecord> compiledLinkedIdsMap = new HashMap<>();
-    private List<LinkedMskimpactCaseRecord> linkedIds = new ArrayList<>();
+    private Deque<LinkedMskimpactCaseRecord> linkedIds = new LinkedList<>();
 
     private static final Logger LOG = Logger.getLogger(LinkedMskimpactCaseReader.class);
 
@@ -96,7 +96,7 @@ public class LinkedMskimpactCaseReader implements ItemStreamReader<LinkedMskimpa
             // existing linkages will override data for any overlapping sample ids
             compiledLinkedIdsMap.putAll(existingLinkedIdsMap);
         }
-        this.linkedIds = new ArrayList(compiledLinkedIdsMap.values());
+        this.linkedIds = new LinkedList<>(compiledLinkedIdsMap.values());
     }
 
     private void loadNewLinkedIds() {
@@ -164,7 +164,7 @@ public class LinkedMskimpactCaseReader implements ItemStreamReader<LinkedMskimpa
     @Override
     public LinkedMskimpactCaseRecord read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
         if (!linkedIds.isEmpty()) {
-            return linkedIds.remove(0);
+            return linkedIds.pollFirst();
         }
         return null;
     }

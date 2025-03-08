@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2022, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -80,7 +80,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CVRClinicalRecord> clinicalRecords = new ArrayList();
+    private final Deque<CVRClinicalRecord> clinicalRecords = new LinkedList<>();
     private Map<String, List<CVRClinicalRecord>> patientToRecordMap = new HashMap();
 
     Logger log = Logger.getLogger(CVRClinicalDataReader.class);
@@ -116,7 +116,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
     @Override
     public CVRClinicalRecord read() throws Exception {
         while (!clinicalRecords.isEmpty()) {
-            CVRClinicalRecord record = clinicalRecords.remove(0);
+            CVRClinicalRecord record = clinicalRecords.pollFirst();
             // portal samples may or may not be filtered by 'portalSamplesNotInDmp' is threshold check above
             // so we want to skip samples that aren't in this list
             if (!record.getSAMPLE_ID().startsWith(record.getPATIENT_ID())) {
@@ -124,7 +124,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
                 continue;
             }
             if (!cvrSampleListUtil.getPortalSamples().contains(record.getSAMPLE_ID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSAMPLE_ID());
+                //cvrSampleListUtil.addSampleRemoved(record.getSAMPLE_ID());
                 continue;
             }
             return record;
@@ -212,7 +212,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             while ((mskimpactSeqDate = reader.read()) != null) {
                 // using the same patient - record map for now. If patients start to have significant number
                 // of samples, we might want a separate sampleToRecordMap for performance
-                if (patientToRecordMap.keySet().contains(mskimpactSeqDate.getPATIENT_ID())) {
+                if (patientToRecordMap.containsKey(mskimpactSeqDate.getPATIENT_ID())) {
                     for(CVRClinicalRecord record : patientToRecordMap.get(mskimpactSeqDate.getPATIENT_ID())) {
                         if (record.getSAMPLE_ID().equals(mskimpactSeqDate.getSAMPLE_ID())) {
                             record.setSEQ_DATE(mskimpactSeqDate.getSEQ_DATE());

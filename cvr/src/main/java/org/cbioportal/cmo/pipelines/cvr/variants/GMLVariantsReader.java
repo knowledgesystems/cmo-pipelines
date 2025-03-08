@@ -67,7 +67,7 @@ public class GMLVariantsReader implements ItemStreamReader<GMLVariant> {
     @Value("#{jobParameters[dropDeadInstantString]}")
     private String dropDeadInstantString;
 
-    private List<GMLVariant> gmlVariants = new ArrayList<>();
+    private final Deque<GMLVariant> gmlVariants = new LinkedList<>();
 
     private Logger log = Logger.getLogger(GMLVariantsReader.class);
 
@@ -111,7 +111,7 @@ public class GMLVariantsReader implements ItemStreamReader<GMLVariant> {
     @Override
     public GMLVariant read() throws Exception {
         if (!gmlVariants.isEmpty()) {
-            return gmlVariants.remove(0);
+            return gmlVariants.pollFirst();
         }
         return null;
     }

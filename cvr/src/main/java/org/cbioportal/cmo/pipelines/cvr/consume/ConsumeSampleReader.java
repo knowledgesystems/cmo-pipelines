@@ -34,8 +34,8 @@ package org.cbioportal.cmo.pipelines.cvr.consume;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedList;
+import java.util.Deque;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRData;
@@ -66,7 +66,7 @@ public class ConsumeSampleReader implements ItemStreamReader<String> {
     @Autowired
     public CVRUtilities cvrUtilities;
 
-    private List<String> cvrSampleList = new ArrayList();
+    private Deque<String> cvrSampleList = new LinkedList<>();
 
     Logger log = Logger.getLogger(ConsumeSampleReader.class);
 
@@ -83,7 +83,7 @@ public class ConsumeSampleReader implements ItemStreamReader<String> {
         }
     }
 
-    private List<String> loadSamplesFromJson(File cvrFile) {
+    private Deque<String> loadSamplesFromJson(File cvrFile) {
         CVRData cvrData = new CVRData();
         try {
             cvrData = cvrUtilities.readJson(cvrFile);
@@ -92,14 +92,14 @@ public class ConsumeSampleReader implements ItemStreamReader<String> {
             throw new ItemStreamException(e);
         }
         // add samples to list
-        List<String> sampleList = new ArrayList();
+        Deque<String> sampleList = new LinkedList<>();
         for (CVRMergedResult result : cvrData.getResults()) {
             sampleList.add(result.getMetaData().getDmpSampleId());
         }
         return sampleList;
     }
 
-    private List<String> loadSamplesFromGmlJson(File cvrGmlFile) {
+    private Deque<String> loadSamplesFromGmlJson(File cvrGmlFile) {
         GMLData gmlData = new GMLData();
         try {
             gmlData = cvrUtilities.readGMLJson(cvrGmlFile);
@@ -107,7 +107,7 @@ public class ConsumeSampleReader implements ItemStreamReader<String> {
             log.error("Error reading file: " + cvrGmlFile);
             throw new ItemStreamException(e);
         }
-        List<String> sampleList = new ArrayList();
+        Deque<String> sampleList = new LinkedList<>();
         for (GMLResult result : gmlData.getResults()) {
             sampleList.add(result.getMetaData().getDmpSampleId());
         }
@@ -123,7 +123,7 @@ public class ConsumeSampleReader implements ItemStreamReader<String> {
     @Override
     public String read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
         if (!cvrSampleList.isEmpty()) {
-            return cvrSampleList.remove(0);
+            return cvrSampleList.pollFirst();
         }
         return null;
     }
