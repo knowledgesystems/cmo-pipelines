@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2022, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -179,7 +179,7 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             addRecordToMap(to_add);
         }
         reader.close();
-        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF (excluding any not in cvrSampleListUtil.getPortalSamples())");
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
         annotateRecordsWithPOST(recordsToAnnotate, forceAnnotation);
     }
 

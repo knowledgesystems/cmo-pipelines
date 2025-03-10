@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -100,7 +100,6 @@ public class CVRMutationDataProcessor implements ItemProcessor<AnnotatedRecord, 
             case "GNOMAD_OTH_AF": return record.getGNOMAD_OTH_AF();
             case "GNOMAD_SAS_AF": return record.getGNOMAD_SAS_AF();
             case "ANNOTATION_STATUS": return record.getANNOTATION_STATUS();
-            case "ErrorMessage": return record.getErrorMessage();
             case "HUGO_SYMBOL": return record.getHUGO_SYMBOL();
             case "ENTREZ_GENE_ID": return record.getENTREZ_GENE_ID();
             case "CENTER": return record.getCENTER();

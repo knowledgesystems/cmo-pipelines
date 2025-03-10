@@ -131,19 +131,19 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             String sampleId = result.getMetaData().getDmpSampleId();
             int countSignedOutSnps = result.getAllSignedoutCvrSnps().size();
             cvrSampleListUtil.updateSignedoutSampleSnpCounts(sampleId, countSignedOutSnps);
-	    if (cvrSampleListUtil.getPortalSamples().contains(sampleId)) {
-            	String somaticStatus = result.getMetaData().getSomaticStatus() != null ? result.getMetaData().getSomaticStatus() : "N/A";
+            if (cvrSampleListUtil.getPortalSamples().contains(sampleId)) {
+                String somaticStatus = result.getMetaData().getSomaticStatus() != null ? result.getMetaData().getSomaticStatus() : "N/A";
                 for (CVRSnp snp : result.getAllSignedoutCvrSnps()) {
                     MutationRecord to_add = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
                     recordsToAnnotate.add(to_add);
                     addRecordToMap(to_add);
                 }
-	    }
+            }
             if (!stopZeroVariantWarnings && countSignedOutSnps == 0) {
                 log.warn(sampleId + " has no snps (might be whitelisted)");
             }
         }
-        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from JSON (excluing any not in cvrSampleListUtil.getPortalSamples())");
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from JSON");
         try {
             annotateRecordsWithPOST(recordsToAnnotate, true);
         } catch (Exception e) {
@@ -175,7 +175,7 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
             // skip if new sample or if mutation record for sample seen already
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
-	            !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
+                !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
                 continue;
             }
@@ -184,7 +184,7 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
             addRecordToMap(to_add);
         }
         reader.close();
-        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF (excluing any not in cvrSampleListUtil.getPortalSamples())");
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
         annotateRecordsWithPOST(recordsToAnnotate, forceAnnotation);
     }
 
@@ -227,6 +227,6 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
 
     private void addRecordToMap(MutationRecord record) {
         String sampleId = record.getTUMOR_SAMPLE_BARCODE();
-	mutationMap.computeIfAbsent(sampleId, k -> new ArrayList<>()).add(record);
+        mutationMap.computeIfAbsent(sampleId, k -> new ArrayList<>()).add(record);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2022, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -136,7 +136,7 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
                 }
 	    }
         }
-        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from JSON (any samples not included in cvrSampleListUtil.getPortalSamples() not in count)");
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from JSON");
         try {
             annotateRecordsWithPOST(recordsToAnnotate, true);
         } catch (Exception e) {
@@ -176,7 +176,7 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
             addRecordToMap(to_add);
         }
         reader.close();
-        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF (excluding those not in cvrSampleListUtil.getPortalSamples())");
+        log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from MAF");
         annotateRecordsWithPOST(recordsToAnnotate, forceAnnotation);
     }
 

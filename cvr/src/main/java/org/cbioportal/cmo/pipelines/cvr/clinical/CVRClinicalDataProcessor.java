@@ -101,7 +101,6 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
             case "MSI_TYPE": return record.getMSI_TYPE();
             case "INSTITUTE": return record.getINSTITUTE();
             case "SOMATIC_STATUS": return record.getSOMATIC_STATUS();
-            case "SEQ_DATE": return record.getSEQ_DATE();
             case "ARCHER": return record.getARCHER();
             case "CVR_TMB_COHORT_PERCENTILE": return record.getCVR_TMB_COHORT_PERCENTILE();
             case "CVR_TMB_SCORE": return record.getCVR_TMB_SCORE();

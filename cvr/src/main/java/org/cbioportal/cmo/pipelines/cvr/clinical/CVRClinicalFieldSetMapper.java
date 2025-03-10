@@ -131,9 +131,6 @@ public class CVRClinicalFieldSetMapper implements  FieldSetMapper<CVRClinicalRec
             case "SOMATIC_STATUS":
                 record.setSOMATIC_STATUS(value);
                 break;
-            case "SEQ_DATE":
-                record.setSEQ_DATE(value);
-                break;
             case "ARCHER":
                 record.setARCHER(value);
                 break;
