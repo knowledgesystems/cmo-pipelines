@@ -126,15 +126,15 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
             String sampleId = result.getMetaData().getDmpSampleId();
             int countNonSignedoutSampleSnps = result.getAllNonSignedoutCvrSnps().size();
             cvrSampleListUtil.updateNonSignedoutSampleSnpCount(sampleId, countNonSignedoutSampleSnps);
-	    // only handle things in cvrSampleListUtil.getPortalSamples()
-	    if (cvrSampleListUtil.getPortalSamples().contains(sampleId)) {
+            // only handle things in cvrSampleListUtil.getPortalSamples()
+            if (cvrSampleListUtil.getPortalSamples().contains(sampleId)) {
                 String somaticStatus = result.getMetaData().getSomaticStatus() != null ? result.getMetaData().getSomaticStatus() : "N/A";
                 for (CVRSnp snp : result.getAllNonSignedoutCvrSnps()) {
                     MutationRecord to_add = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
                     recordsToAnnotate.add(to_add);
                     addRecordToMap(to_add);
                 }
-	    }
+            }
         }
         log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from JSON");
         try {
@@ -167,7 +167,7 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         MutationRecord to_add;
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
-	            !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
+                !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
                 continue;
             }
