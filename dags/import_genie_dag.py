@@ -10,7 +10,6 @@ from airflow.models.param import Param
 from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.utils.trigger_rule import TriggerRule
 
-
 args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -116,6 +115,16 @@ with DAG(
     )
 
     """
+    Transfers Genie deployment to newly updated database
+    """
+    transfer_deployment = SSHOperator(
+        task_id="transfer_deployment",
+        ssh_conn_id=conn_id,
+        command=f"{import_scripts_path}/genie-airflow-transfer-deployment.sh {import_scripts_path} {db_properties_filepath}",
+        dag=dag,
+    )
+
+    """
     If any upstream tasks failed, mark the import attempt as abandoned.
     """
     set_import_status = SSHOperator(
@@ -138,5 +147,5 @@ with DAG(
     )
 
     parsed_args = parse_args("{{ params.importer }}", "{{ params.data_repos }}")
-    parsed_args >> clone_database >> setup_import >> import_genie >> import_clickhouse >> set_import_status >> cleanup_genie
+    parsed_args >> clone_database >> setup_import >> import_genie >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_genie
     list(dag.tasks) >> watcher()
