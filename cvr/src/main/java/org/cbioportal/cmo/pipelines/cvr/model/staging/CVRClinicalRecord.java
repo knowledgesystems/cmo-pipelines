@@ -397,8 +397,8 @@ public class CVRClinicalRecord {
         List<String> fieldNames = new ArrayList<String>();
         fieldNames.add("SAMPLE_ID");
         fieldNames.add("PATIENT_ID");
-        fieldNames.add("CANCER_TYPE");
         fieldNames.add("SAMPLE_TYPE");
+        fieldNames.add("CANCER_TYPE");
         fieldNames.add("SAMPLE_CLASS");
         fieldNames.add("METASTATIC_SITE");
         fieldNames.add("PRIMARY_SITE");

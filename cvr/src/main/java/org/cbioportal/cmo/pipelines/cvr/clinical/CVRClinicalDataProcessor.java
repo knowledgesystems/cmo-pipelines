@@ -57,20 +57,32 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
     Logger log = Logger.getLogger(CVRClinicalDataProcessor.class);
 
     @Override
-    public CompositeClinicalRecord process(CVRClinicalRecord i) throws Exception {
-        if (i == null) return null;
+    public CompositeClinicalRecord process(CVRClinicalRecord clinicalRecord) throws Exception {
+        if (clinicalRecord == null) return null;
         List<String> record = new ArrayList<>();
         List<String> seqDateRecord = new ArrayList<>();
         for (String field : CVRClinicalRecord.getFieldNames()) {
-            record.add(cvrUtilities.convertWhitespace(getFieldValue(i, field).toString().trim()));
+            if ("SAMPLE_ID".equals(field)) {
+                String value = getFieldValue(clinicalRecord, field).toString();
+                if ("P-0055905-T02-IM7".equals(value)) {
+                    String f = CVRClinicalRecord.getFieldNames().get(21);
+                    log.info("PROCESSING THE CLINICAL FILE AND FOUND...");                
+                    log.info("Found: '" + value + "'");                             
+                    log.info("Field at 21: '" + f + "'");                 
+                    log.info("Value for the field at 21: '" + getFieldValue(clinicalRecord, f) + "'");              
+                }
+            }
+            record.add(cvrUtilities.convertWhitespace(getFieldValue(clinicalRecord, field).toString().trim()));
         }
         for (String field : MskimpactSeqDate.getFieldNames()) {
-            seqDateRecord.add(cvrUtilities.convertWhitespace(getFieldValue(i, field).toString().trim()));
+            seqDateRecord.add(cvrUtilities.convertWhitespace(getFieldValue(clinicalRecord, field).toString().trim()));
         }
         CompositeClinicalRecord compRecord = new CompositeClinicalRecord();
-        if (cvrSampleListUtil.getNewDmpSamples().contains(i.getSAMPLE_ID())) {
+        if (cvrSampleListUtil.getNewDmpSamples().contains(clinicalRecord.getSAMPLE_ID())) {
+            log.info("getNewDmpSamples().contains(" + clinicalRecord.getSAMPLE_ID() + ") so use that");
             compRecord.setNewClinicalRecord(String.join("\t", record));
         } else {
+            log.info("getNewDmpSamples() DOES NOT contains(" + clinicalRecord.getSAMPLE_ID() + ") set this (sample id is '" + clinicalRecord.getSAMPLE_ID() + "') as the old clinical record");
             compRecord.setOldClinicalRecord(String.join("\t", record));
         }
         compRecord.setSeqDateRecord(String.join("\t", seqDateRecord));

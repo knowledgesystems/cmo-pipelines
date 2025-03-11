@@ -132,6 +132,39 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
         return null;
     }
 
+    private FlatFileItemReader<CVRClinicalRecord> createReader(File mskimpactClinicalFile) throws IOException {
+        // Read the first line (header) from the file
+        BufferedReader br = new BufferedReader(new FileReader(mskimpactClinicalFile));
+        String headerLine = br.readLine();
+        br.close();  // Close after reading the first line
+
+        if (headerLine == null || headerLine.isEmpty()) {
+            throw new IllegalStateException("The file is empty or has no header.");
+        }
+
+        // Extract column names from the header
+        String[] columnNames = headerLine.split("\t");
+
+        // Configure the tokenizer with dynamic column names
+        DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
+        tokenizer.setNames(columnNames);  // Dynamically set field names
+        tokenizer.setQuoteCharacter('\0'); // Use the null character to effectively disable quotes 
+                                           // The default quote character is a " which was causing issues in a record where there was a single unclosed "
+
+        // Create the reader
+        FlatFileItemReader<CVRClinicalRecord> reader = new FlatFileItemReader<>();
+        reader.setResource(new FileSystemResource(mskimpactClinicalFile));
+        reader.setLinesToSkip(1);  // Skip the header row after reading it
+
+        // Set up the line mapper
+        DefaultLineMapper<CVRClinicalRecord> lineMapper = new DefaultLineMapper<>();
+        lineMapper.setLineTokenizer(tokenizer);
+        lineMapper.setFieldSetMapper(new CVRClinicalFieldSetMapper());
+
+        reader.setLineMapper(lineMapper);
+        return reader;
+    }
+
     private void processClinicalFile(ExecutionContext ec) {
         File mskimpactClinicalFile = new File(stagingDirectory, clinicalFilename);
         if (!mskimpactClinicalFile.exists()) {
@@ -139,21 +172,16 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             return;
         }
         log.info("Loading clinical data from: " + mskimpactClinicalFile.getName());
-        DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
-        DefaultLineMapper<CVRClinicalRecord> mapper = new DefaultLineMapper<>();
-        mapper.setLineTokenizer(tokenizer);
-        mapper.setFieldSetMapper(new CVRClinicalFieldSetMapper());
-
-        FlatFileItemReader<CVRClinicalRecord> reader = new FlatFileItemReader<>();
-        reader.setResource(new FileSystemResource(mskimpactClinicalFile));
-        reader.setLineMapper(mapper);
-        reader.setLinesToSkip(1);
-        reader.open(ec);
-
+        FlatFileItemReader<CVRClinicalRecord> reader = null;
         try {
+            reader = createReader(mskimpactClinicalFile);
+            reader.open(ec);
             CVRClinicalRecord to_add;
             while ((to_add = reader.read()) != null) {
-                if (!cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSAMPLE_ID()) && to_add.getSAMPLE_ID() != null) {
+                if (to_add.getSAMPLE_ID() != null && !cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSAMPLE_ID())) {
+                    if ("P-0055905-T02-IM7".equals(to_add.getSAMPLE_ID())) {
+                        log.info("Adding record for '" + to_add.getSAMPLE_ID() + "'");
+                    }
                     clinicalRecords.add(to_add);
                     cvrSampleListUtil.addPortalSample(to_add.getSAMPLE_ID());
                     List<CVRClinicalRecord> records = patientToRecordMap.getOrDefault(to_add.getPATIENT_ID(), new ArrayList<CVRClinicalRecord>());
@@ -167,7 +195,9 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             throw new ItemStreamException(e);
         }
         finally {
-            reader.close();
+            if (reader != null) {
+                reader.close();
+            }
         }
     }
 
