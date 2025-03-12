@@ -209,6 +209,9 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
             if ("P-0013704-T01-IM5".equals(ar.getTUMOR_SAMPLE_BARCODE())) {
                 log.info("Annotated P-0013704-T01-IM5 start: " + ar.getSTART_POSITION());
                 log.info("getDBSNP_RS(): " + ar.getDBSNP_RS()); 
+                log.info("reannotate: " + reannotate); 
+                log.info("getANNOTATION_STATUS(): " + ar.getANNOTATION_STATUS()); 
+                log.info("getErrorMessage(): " + ar.getErrorMessage()); 
             }
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             header.addAll(ar.getHeaderWithAdditionalFields());
