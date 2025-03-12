@@ -156,20 +156,37 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         reader.setResource(new FileSystemResource(mutationFile));
         reader.setLineMapper(mapper);
         reader.setLinesToSkip(1);
-        reader.setSkippedLinesCallback(new LineCallbackHandler() {
-            @Override
-            public void handleLine(String line) {
-                tokenizer.setNames(line.split("\t"));
-            }
-        });
+        reader.setSkippedLinesCallback(line -> tokenizer.setNames(line.split("\t"));
         reader.open(new ExecutionContext());
         List<MutationRecord> recordsToAnnotate = new ArrayList<>();
         MutationRecord to_add;
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
+            if ("P-0013704-T01-IM5".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
+                log.info("FOUND P-0013704-T01-IM5");
+                if ("28143919".equals(to_add.getSTART_POSITION())) {
+                    log.info("Found start 28143919"); 
+                    log.info("dbsnprs is currently: " + to_add.getDBSNP_RS());
+                }
+            }
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                 !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
+            if ("P-0013704-T01-IM5".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
+                if ("28143919".equals(to_add.getSTART_POSITION())) {           
+                    log.info("Skipping record with P-0013704-T01-IM5 28143919 at least one of the following is true... this will not be annotated or written to output");
+                    log.info("cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()): " + cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()));
+                    log.info("!cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()): " + !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()));
+                    log.info("cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE())): " + cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE())));
+                }                                                              
+            }
                 continue;
+            } else {
+                if ("P-0013704-T01-IM5".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
+                    log.info("We are annotating P-0013704-T01-IM5");
+                    if ("28143919".equals(to_add.getSTART_POSITION())) {
+                        log.info("We are annotating and writing our record");
+                    }
+                }
             }
             cvrSampleListUtil.updateNonSignedoutSampleSnpCount(to_add.getTUMOR_SAMPLE_BARCODE(), 1);
             recordsToAnnotate.add(to_add);
@@ -189,6 +206,10 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE, Boolean.FALSE);
         mutationRecords.addAll(annotatedRecords);
         for (AnnotatedRecord ar : annotatedRecords) {
+            if ("P-0013704-T01-IM5".equals(ar.getTUMOR_SAMPLE_BARCODE())) {
+                log.info("Annotated P-0013704-T01-IM5 start: " + ar.getSTART_POSITION());
+                log.info("getDBSNP_RS(): " + ar.getDBSNP_RS()); 
+            }
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             header.addAll(ar.getHeaderWithAdditionalFields());
         }
