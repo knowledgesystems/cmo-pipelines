@@ -156,7 +156,7 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         reader.setResource(new FileSystemResource(mutationFile));
         reader.setLineMapper(mapper);
         reader.setLinesToSkip(1);
-        reader.setSkippedLinesCallback(line -> tokenizer.setNames(line.split("\t"));
+        reader.setSkippedLinesCallback(line -> tokenizer.setNames(line.split("\t")));
         reader.open(new ExecutionContext());
         List<MutationRecord> recordsToAnnotate = new ArrayList<>();
         MutationRecord to_add;
@@ -166,6 +166,17 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
                 if ("28143919".equals(to_add.getSTART_POSITION())) {
                     log.info("Found start 28143919"); 
                     log.info("dbsnprs is currently: " + to_add.getDBSNP_RS());
+                    log.info("getVARIANT_CLASSIFICATION(): " + to_add.getVARIANT_CLASSIFICATION());
+                    Map<String, String> addProps = to_add.getAdditionalProperties();
+                    log.info("LOOPING THROUGH ADDITIONAL PROPERTIES...WE SHOULD HAVE HGVSp_Short");
+                    for (Map.Entry<String, String> entry : addProps.entrySet()) {
+                        log.info("Field '" + entry.getKey() + "', value '" +  entry.getValue() + "'");
+                        if (entry.getValue() == null) {
+                            log.info("value is null");
+                        } else if (entry.getValue().equals("")) {
+                            log.info("value is empty string");
+                        }
+                    }
                 }
             }
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||

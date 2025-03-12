@@ -53,8 +53,7 @@ public class CVRMutationFieldSetMapper implements FieldSetMapper<MutationRecord>
 
         for (int i = 0; i < names.length; i++) {
             String field = names[i];
-            String value = (i < fs.getFieldCount()) ? fs.readRawString(i) : "";  // Default to empty string if out of bounds
-            if (value == null) continue;
+            String value = fs.readRawString(i);
             setFieldValue(record, field, value);
         }
         return record;
