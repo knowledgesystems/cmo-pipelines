@@ -166,7 +166,7 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
                 if ("28143919".equals(to_add.getSTART_POSITION())) {
                     log.info("Found start 28143919"); 
                     log.info("dbsnprs is currently: " + to_add.getDBSNP_RS());
-                    log.info("getVARIANT_CLASSIFICATION(): " + to_add.getVARIANT_CLASSIFICATION());
+                    log.info("getVARIANT_CLASSIFICATION(): '" + to_add.getVARIANT_CLASSIFICATION() + "'");
                     Map<String, String> addProps = to_add.getAdditionalProperties();
                     log.info("LOOPING THROUGH ADDITIONAL PROPERTIES...WE SHOULD HAVE HGVSp_Short");
                     for (Map.Entry<String, String> entry : addProps.entrySet()) {
@@ -221,7 +221,8 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
                 log.info("Annotated P-0013704-T01-IM5 start: " + ar.getSTART_POSITION());
                 log.info("getDBSNP_RS(): " + ar.getDBSNP_RS()); 
                 log.info("reannotate: " + reannotate); 
-                log.info("getANNOTATION_STATUS(): " + ar.getANNOTATION_STATUS()); 
+                log.info("getANNOTATION_STATUS(): " + ar.getANNOTATION_STATUS());
+                log.info("getVARIANT_CLASSIFICATION(): '" + ar.getVARIANT_CLASSIFICATION() + "'"); 
                 log.info("getErrorMessage(): " + ar.getErrorMessage()); 
             }
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
