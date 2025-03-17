@@ -182,9 +182,9 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                 !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
-            if ("P-0013704-T01-IM5".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
+            if ("P-0118393-T01-IM7".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
                 if ("28143919".equals(to_add.getSTART_POSITION())) {           
-                    log.info("Skipping record with P-0013704-T01-IM5 28143919 at least one of the following is true... this will not be annotated or written to output");
+                    log.info("Skipping record with P-0118393-T01-IM7 28143919 at least one of the following is true... this will not be annotated or written to output");
                     log.info("cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()): " + cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()));
                     log.info("!cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()): " + !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()));
                     log.info("cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE())): " + cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE())));
@@ -192,10 +192,10 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
             }
                 continue;
             } else {
-                if ("P-0013704-T01-IM5".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
-                    log.info("We are annotating P-0013704-T01-IM5");
+                if ("P-0118393-T01-IM7".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
+                    log.info("We are annotating P-0118393-T01-IM7");
                     if ("28143919".equals(to_add.getSTART_POSITION())) {
-                        log.info("We are annotating and writing our record");
+                        log.info("We are annotating the record that SHOULD be annotated and writing our record");
                     }
                 }
             }
@@ -209,6 +209,7 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
     }
 
     private void annotateRecordsWithPOST(List<MutationRecord> records, boolean reannotate) throws Exception {
+        log.info("******************* annotateRecordsWithPOST starting with " + records.size() + " records, postIntervalSize = " + postIntervalSize);
         int totalVariantsToAnnotateCount = records.size();
         int annotatedVariantsCount = 0;
         // annotate with GenomeNexusImpl annotator from genome nexus annotation pipeline
@@ -217,8 +218,12 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE, Boolean.FALSE);
         mutationRecords.addAll(annotatedRecords);
         for (AnnotatedRecord ar : annotatedRecords) {
-            if ("P-0013704-T01-IM5".equals(ar.getTUMOR_SAMPLE_BARCODE())) {
-                log.info("Annotated P-0013704-T01-IM5 start: " + ar.getSTART_POSITION());
+            //if ("P-0013704-T01-IM5".equals(ar.getTUMOR_SAMPLE_BARCODE())) {
+            if ("28143919".equals(ar.getSTART_POSITION())) {
+                log.info("Sample: " + ar.getTUMOR_SAMPLE_BARCODE());
+                log.info("start: " + ar.getSTART_POSITION());
+                log.info("getTUMOR_SEQ_ALLELE1: " + ar.getTUMOR_SEQ_ALLELE1());
+                log.info("getTUMOR_SEQ_ALLELE2: " + ar.getTUMOR_SEQ_ALLELE2());
                 log.info("getDBSNP_RS(): " + ar.getDBSNP_RS()); 
                 log.info("reannotate: " + reannotate); 
                 log.info("getANNOTATION_STATUS(): " + ar.getANNOTATION_STATUS());
