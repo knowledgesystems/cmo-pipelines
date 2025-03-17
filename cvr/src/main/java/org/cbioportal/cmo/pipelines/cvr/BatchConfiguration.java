@@ -43,8 +43,6 @@ import org.cbioportal.cmo.pipelines.cvr.genepanel.*;
 import org.cbioportal.cmo.pipelines.cvr.linkedimpactcase.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeClinicalRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSegRecord;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSvRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRGenePanelRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSegRecord;
@@ -340,7 +338,7 @@ public class BatchConfiguration {
     @Bean(name = "gmlSvStep")
     public Step gmlSvStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
         return new StepBuilder("gmlSvStep", jobRepository)
-                .<CVRSvRecord, CompositeSvRecord> chunk(chunkInterval, transactionManager)
+                .<CVRSvRecord, String> chunk(chunkInterval, transactionManager)
                 .reader(gmlSvDataReader())
                 .processor(svDataProcessor())
                 .writer(svDataWriter())
@@ -410,7 +408,7 @@ public class BatchConfiguration {
     @Bean(name = "svStep")
     public Step svStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
         return new StepBuilder("svStep", jobRepository)
-                .<CVRSvRecord, CompositeSvRecord> chunk(chunkInterval, transactionManager)
+                .<CVRSvRecord, String> chunk(chunkInterval, transactionManager)
                 .reader(svDataReader())
                 .processor(svDataProcessor())
                 .writer(svDataWriter())
@@ -420,7 +418,7 @@ public class BatchConfiguration {
     @Bean(name = "segStep")
     public Step segStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
         return new StepBuilder("segStep", jobRepository)
-                .<CVRSegRecord, CompositeSegRecord> chunk(chunkInterval, transactionManager)
+                .<CVRSegRecord, String> chunk(chunkInterval, transactionManager)
                 .reader(segDataReader())
                 .processor(segDataProcessor())
                 .writer(segDataWriter())
@@ -640,7 +638,7 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public ItemStreamWriter<CompositeSvRecord> svDataWriter() {
+    public ItemStreamWriter<String> svDataWriter() {
         return new CVRSvDataWriter();
     }
 
@@ -667,7 +665,7 @@ public class BatchConfiguration {
     // Writer for writing segment data
     @Bean
     @StepScope
-    public ItemStreamWriter<CompositeSegRecord> segDataWriter() {
+    public ItemStreamWriter<String> segDataWriter() {
         return new CVRSegDataWriter();
     }
 

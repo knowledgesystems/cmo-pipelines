@@ -78,13 +78,7 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
             seqDateRecord.add(cvrUtilities.convertWhitespace(getFieldValue(clinicalRecord, field).toString().trim()));
         }
         CompositeClinicalRecord compRecord = new CompositeClinicalRecord();
-        if (cvrSampleListUtil.getNewDmpSamples().contains(clinicalRecord.getSAMPLE_ID())) {
-            log.info("getNewDmpSamples().contains(" + clinicalRecord.getSAMPLE_ID() + ") so use that");
-            compRecord.setNewClinicalRecord(String.join("\t", record));
-        } else {
-            log.info("getNewDmpSamples() DOES NOT contains(" + clinicalRecord.getSAMPLE_ID() + ") set this (sample id is '" + clinicalRecord.getSAMPLE_ID() + "') as the old clinical record");
-            compRecord.setOldClinicalRecord(String.join("\t", record));
-        }
+        compRecord.setClinicalRecord(String.join("\t", record));
         compRecord.setSeqDateRecord(String.join("\t", seqDateRecord));
         return compRecord;
     }

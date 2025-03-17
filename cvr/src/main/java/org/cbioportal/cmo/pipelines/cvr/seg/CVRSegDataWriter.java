@@ -36,7 +36,6 @@ import java.io.*;
 import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSegRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSegRecord;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.*;
@@ -49,7 +48,7 @@ import org.springframework.core.io.FileSystemResource;
  * @author jake-rose
  */
 
-public class CVRSegDataWriter implements ItemStreamWriter<CompositeSegRecord> {
+public class CVRSegDataWriter implements ItemStreamWriter<String> {
 
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
@@ -87,15 +86,7 @@ public class CVRSegDataWriter implements ItemStreamWriter<CompositeSegRecord> {
     }
 
     @Override
-    public void write(Chunk<? extends CompositeSegRecord> items) throws Exception {
-        Chunk<String> writeList = new Chunk<>();
-        for (CompositeSegRecord item : items) {
-            if (item.getNewSegRecord() != null) {
-                writeList.add(item.getNewSegRecord());
-            } else {
-                writeList.add(item.getOldSegRecord());
-            }
-        }
-        flatFileItemWriter.write(writeList);
+    public void write(Chunk<? extends String> items) throws Exception {
+        flatFileItemWriter.write(items);
     }
 }

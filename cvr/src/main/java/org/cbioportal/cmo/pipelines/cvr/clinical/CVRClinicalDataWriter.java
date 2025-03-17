@@ -90,11 +90,7 @@ public class CVRClinicalDataWriter implements ItemStreamWriter<CompositeClinical
     public void write(Chunk<? extends CompositeClinicalRecord> items) throws Exception {
         Chunk<String> writeList = new Chunk<>();
         for (CompositeClinicalRecord item : items) {
-            if (item.getNewClinicalRecord() != null) {
-                writeList.add(item.getNewClinicalRecord());
-            } else {
-                writeList.add(item.getOldClinicalRecord());
-            }
+            writeList.add(item.getClinicalRecord());
         }
         flatFileItemWriter.write(writeList);
     }

@@ -35,7 +35,6 @@ package org.cbioportal.cmo.pipelines.cvr.sv;
 import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSvRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * @author heinsz
  */
-public class CVRSvDataProcessor implements ItemProcessor<CVRSvRecord, CompositeSvRecord> {
+public class CVRSvDataProcessor implements ItemProcessor<CVRSvRecord, String> {
 
     @Autowired
     private CVRUtilities cvrUtilities;
@@ -53,7 +52,7 @@ public class CVRSvDataProcessor implements ItemProcessor<CVRSvRecord, CompositeS
     public CvrSampleListUtil cvrSampleListUtil;
 
     @Override
-    public CompositeSvRecord process(CVRSvRecord i) throws Exception {
+    public String process(CVRSvRecord i) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : i.getFieldNames()) {
             String queryField = field;
@@ -62,13 +61,7 @@ public class CVRSvDataProcessor implements ItemProcessor<CVRSvRecord, CompositeS
             }
             record.add(cvrUtilities.convertWhitespace(getFieldValue(i, queryField).toString()));
         }
-        CompositeSvRecord compRecord = new CompositeSvRecord();
-        if (cvrSampleListUtil.getNewDmpSamples().contains(i.getSample_ID())) {
-            compRecord.setNewSvRecord(String.join("\t", record).trim());
-        } else {
-            compRecord.setOldSvRecord(String.join("\t", record).trim());
-        }
-        return compRecord;
+        return String.join("\t", record);
     }
 
     private String getFieldValue(CVRSvRecord record, String field) {
