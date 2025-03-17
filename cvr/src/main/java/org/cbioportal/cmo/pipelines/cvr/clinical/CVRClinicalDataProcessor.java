@@ -119,14 +119,6 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
             case "CVR_TMB_TT_COHORT_PERCENTILE": return record.getCVR_TMB_TT_COHORT_PERCENTILE();
             case "PATH_SLIDE_EXISTS": return record.getPATH_SLIDE_EXISTS();
             case "MSK_SLIDE_ID": return record.getMSK_SLIDE_ID();
-            default: return "";
-        }
-    }
-
-    private String getFieldValue(MskimpactSeqDate record, String field) {
-        switch (field) {
-            case "SAMPLE_ID": return record.getSAMPLE_ID();
-            case "PATIENT_ID": return record.getPATIENT_ID();
             case "SEQ_DATE": return record.getSEQ_DATE();
             default: return "";
         }
