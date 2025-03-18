@@ -50,71 +50,7 @@ public class CVRClinicalFieldSetMapper implements  FieldSetMapper<CVRClinicalRec
     @Override
     public CVRClinicalRecord mapFieldSet(FieldSet fs) throws BindException {
         CVRClinicalRecord record = new CVRClinicalRecord();
-        //List<String> fields = CVRClinicalRecord.getFieldNames();
         String[] fields = fs.getNames(); // get the names in the order they are in in the file so the field names match the values
-        String sampleId = fs.readString(0);
-        if ("P-0055905-T02-IM7".equals(sampleId)) {
-            log.info("READING THE CLINICAL FILE AND FOUND...");
-            log.info("Found: '" + sampleId + "'");
-            log.info("Number of fields: " + fs.getFieldCount());
-            log.info("Field at 0: '" + fields[0] + "'");
-            log.info("Value at 0: '" + fs.readString(0) + "'");
-            log.info("Field at 1: '" + fields[1] + "'");
-            log.info("Value at 1: '" + fs.readString(1) + "'");
-            log.info("Field at 2: '" + fields[2] + "'");
-            log.info("Value at 2: '" + fs.readString(2) + "'");
-            log.info("Field at 3: '" + fields[3] + "'");
-            log.info("Value at 3: '" + fs.readString(3) + "'");
-            log.info("Field at 4: '" + fields[4] + "'");
-            log.info("Value at 4: '" + fs.readString(4) + "'");
-            log.info("Field at 5: '" + fields[5] + "'");
-            log.info("Value at 5: '" + fs.readString(5) + "'");
-            log.info("Field at 6: '" + fields[6] + "'");
-            log.info("Value at 6: '" + fs.readString(6) + "'");
-            log.info("Field at 7: '" + fields[7] + "'");
-            log.info("Value at 7: '" + fs.readString(7) + "'");
-            log.info("Field at 8: '" + fields[8] + "'");
-            log.info("Value at 8: '" + fs.readString(8) + "'");
-            log.info("Field at 9: '" + fields[9] + "'");
-            log.info("Value at 9: '" + fs.readString(9) + "'");
-            log.info("Field at 10: '" + fields[10] + "'");
-            log.info("Value at 10: '" + fs.readString(10) + "'");
-            log.info("Field at 11: '" + fields[11] + "'");
-            log.info("Value at 11: '" + fs.readString(11) + "'");
-            log.info("Field at 21: '" + fields[21] + "'");
-            //log.info("Value at 21: '" + fs.readString(21) + "'");
-        }
-        /*if ("P-0055905-T02-IM7".equals(sampleId)) {
-            log.info("READING THE CLINICAL FILE AND FOUND...");
-            log.info("Found: '" + sampleId + "'");
-            log.info("Number of fields: " + fs.getFieldCount());
-            log.info("Field at 0: '" + fields.get(0) + "'");
-            log.info("Value at 0: '" + fs.readString(0) + "'");
-            log.info("Field at 1: '" + fields.get(1) + "'");
-            log.info("Value at 1: '" + fs.readString(1) + "'");
-            log.info("Field at 2: '" + fields.get(2) + "'");
-            log.info("Value at 2: '" + fs.readString(2) + "'");
-            log.info("Field at 3: '" + fields.get(3) + "'");
-            log.info("Value at 3: '" + fs.readString(3) + "'");
-            log.info("Field at 4: '" + fields.get(4) + "'");
-            log.info("Value at 4: '" + fs.readString(4) + "'");
-            log.info("Field at 5: '" + fields.get(5) + "'");
-            log.info("Value at 5: '" + fs.readString(5) + "'");
-            log.info("Field at 6: '" + fields.get(6) + "'");
-            log.info("Value at 6: '" + fs.readString(6) + "'");
-            log.info("Field at 7: '" + fields.get(7) + "'");
-            log.info("Value at 7: '" + fs.readString(7) + "'");
-            log.info("Field at 8: '" + fields.get(8) + "'");
-            log.info("Value at 8: '" + fs.readString(8) + "'");
-            log.info("Field at 9: '" + fields.get(9) + "'");
-            log.info("Value at 9: '" + fs.readString(9) + "'");
-            log.info("Field at 10: '" + fields.get(10) + "'");
-            log.info("Value at 10: '" + fs.readString(10) + "'");
-            log.info("Field at 11: '" + fields.get(11) + "'");
-            log.info("Value at 11: '" + fs.readString(11) + "'");
-            log.info("Field at 21: '" + fields.get(21) + "'");
-            //log.info("Value at 21: '" + fs.readString(21) + "'");
-        }*/
         for (int i = 0; i < fields.length; i++) {
             setFieldValue(record, fields[i], fs.readString(i));
         }
