@@ -73,7 +73,6 @@ public class GMLClinicalTasklet implements Tasklet {
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
 
-    //private final Deque<CVRClinicalRecord> clinicalRecords = new LinkedList<>();
     private Logger LOG = Logger.getLogger(GMLClinicalTasklet.class);
 
     @Override
@@ -108,7 +107,6 @@ public class GMLClinicalTasklet implements Tasklet {
             CVRClinicalRecord to_add;
             while ((to_add = reader.read()) != null) {
                 cvrSampleListUtil.updateGmlPatientSampleMap(to_add.getPATIENT_ID(), to_add.getSAMPLE_ID());
-                //clinicalRecords.add(to_add);
                 cvrSampleListUtil.addPortalSample(to_add.getSAMPLE_ID());
             }
             reader.close();
@@ -116,20 +114,5 @@ public class GMLClinicalTasklet implements Tasklet {
         // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
         // portalSamples list is only updated if threshold check for max num samples to remove passes
         cvrSampleListUtil.updateSampleLists(masterListDoesNotExcludeSamples);
-        //updateSamplesRemovedList();
     }
-
-    /**
-     * Updates cvrSampleListUtil list 'samples removed'.
-     * Removed samples are those which are no longer in the DMP master list but
-     * still exist in the portal dataset. We do not want to accidentally reintroduce
-     * any samples during the GML fetch that shouldn't be in the final dataset.
-     */
-    /*private void updateSamplesRemovedList() {
-        for (CVRClinicalRecord record : clinicalRecords) {
-            if (!cvrSampleListUtil.getPortalSamples().contains(record.getSAMPLE_ID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSAMPLE_ID());
-            }
-        }
-    }*/
 }
