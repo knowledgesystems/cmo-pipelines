@@ -62,16 +62,6 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
         List<String> record = new ArrayList<>();
         List<String> seqDateRecord = new ArrayList<>();
         for (String field : CVRClinicalRecord.getFieldNames()) {
-            if ("SAMPLE_ID".equals(field)) {
-                String value = getFieldValue(clinicalRecord, field).toString();
-                if ("P-0055905-T02-IM7".equals(value)) {
-                    String f = CVRClinicalRecord.getFieldNames().get(21);
-                    log.info("PROCESSING THE CLINICAL FILE AND FOUND...");                
-                    log.info("Found: '" + value + "'");                             
-                    log.info("Field at 21: '" + f + "'");                 
-                    log.info("Value for the field at 21: '" + getFieldValue(clinicalRecord, f) + "'");              
-                }
-            }
             record.add(cvrUtilities.convertWhitespace(getFieldValue(clinicalRecord, field).toString().trim()));
         }
         for (String field : MskimpactSeqDate.getFieldNames()) {

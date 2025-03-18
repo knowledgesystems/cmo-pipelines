@@ -124,7 +124,6 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
                 continue;
             }
             if (!cvrSampleListUtil.getPortalSamples().contains(record.getSAMPLE_ID())) {
-                //cvrSampleListUtil.addSampleRemoved(record.getSAMPLE_ID());
                 continue;
             }
             return record;
@@ -179,9 +178,6 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             CVRClinicalRecord to_add;
             while ((to_add = reader.read()) != null) {
                 if (to_add.getSAMPLE_ID() != null && !cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSAMPLE_ID())) {
-                    if ("P-0055905-T02-IM7".equals(to_add.getSAMPLE_ID())) {
-                        log.info("Adding record for '" + to_add.getSAMPLE_ID() + "'");
-                    }
                     clinicalRecords.add(to_add);
                     cvrSampleListUtil.addPortalSample(to_add.getSAMPLE_ID());
                     List<CVRClinicalRecord> records = patientToRecordMap.getOrDefault(to_add.getPATIENT_ID(), new ArrayList<CVRClinicalRecord>());
