@@ -37,14 +37,12 @@ import java.util.*;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;
-import org.apache.log4j.Logger;
 
 /**
  *
  * @author heinsz
  */
 public class CVRMutationFieldSetMapper implements FieldSetMapper<MutationRecord> {
-    private static final Logger log = Logger.getLogger(CVRMutationFieldSetMapper.class);
 
     @Override
     public MutationRecord mapFieldSet(FieldSet fs) throws BindException {

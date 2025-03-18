@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2022, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -79,7 +79,6 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
     @Autowired
     private Annotator annotator;
 
-    //private List<AnnotatedRecord> mutationRecords = new ArrayList<>();
     private final Deque<AnnotatedRecord> mutationRecords = new LinkedList<>();
     private Map<String, List<MutationRecord>> mutationMap = new HashMap<>();
 

@@ -161,43 +161,10 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         List<MutationRecord> recordsToAnnotate = new ArrayList<>();
         MutationRecord to_add;
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
-            if ("P-0013704-T01-IM5".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
-                log.info("FOUND P-0013704-T01-IM5");
-                if ("28143919".equals(to_add.getSTART_POSITION())) {
-                    log.info("Found start 28143919"); 
-                    log.info("dbsnprs is currently: " + to_add.getDBSNP_RS());
-                    log.info("getVARIANT_CLASSIFICATION(): '" + to_add.getVARIANT_CLASSIFICATION() + "'");
-                    Map<String, String> addProps = to_add.getAdditionalProperties();
-                    log.info("LOOPING THROUGH ADDITIONAL PROPERTIES...WE SHOULD HAVE HGVSp_Short");
-                    for (Map.Entry<String, String> entry : addProps.entrySet()) {
-                        log.info("Field '" + entry.getKey() + "', value '" +  entry.getValue() + "'");
-                        if (entry.getValue() == null) {
-                            log.info("value is null");
-                        } else if (entry.getValue().equals("")) {
-                            log.info("value is empty string");
-                        }
-                    }
-                }
-            }
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                 !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
-            if ("P-0118393-T01-IM7".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
-                if ("28143919".equals(to_add.getSTART_POSITION())) {           
-                    log.info("Skipping record with P-0118393-T01-IM7 28143919 at least one of the following is true... this will not be annotated or written to output");
-                    log.info("cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()): " + cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()));
-                    log.info("!cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()): " + !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()));
-                    log.info("cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE())): " + cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE())));
-                }                                                              
-            }
                 continue;
-            } else {
-                if ("P-0118393-T01-IM7".equals(to_add.getTUMOR_SAMPLE_BARCODE())) {
-                    log.info("We are annotating P-0118393-T01-IM7");
-                    if ("28143919".equals(to_add.getSTART_POSITION())) {
-                        log.info("We are annotating the record that SHOULD be annotated and writing our record");
-                    }
-                }
             }
             cvrSampleListUtil.updateNonSignedoutSampleSnpCount(to_add.getTUMOR_SAMPLE_BARCODE(), 1);
             recordsToAnnotate.add(to_add);
@@ -209,7 +176,6 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
     }
 
     private void annotateRecordsWithPOST(List<MutationRecord> records, boolean reannotate) throws Exception {
-        log.info("******************* annotateRecordsWithPOST starting with " + records.size() + " records, postIntervalSize = " + postIntervalSize);
         int totalVariantsToAnnotateCount = records.size();
         int annotatedVariantsCount = 0;
         // annotate with GenomeNexusImpl annotator from genome nexus annotation pipeline
@@ -218,18 +184,6 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE, Boolean.FALSE);
         mutationRecords.addAll(annotatedRecords);
         for (AnnotatedRecord ar : annotatedRecords) {
-            //if ("P-0013704-T01-IM5".equals(ar.getTUMOR_SAMPLE_BARCODE())) {
-            if ("28143919".equals(ar.getSTART_POSITION())) {
-                log.info("Sample: " + ar.getTUMOR_SAMPLE_BARCODE());
-                log.info("start: " + ar.getSTART_POSITION());
-                log.info("getTUMOR_SEQ_ALLELE1: " + ar.getTUMOR_SEQ_ALLELE1());
-                log.info("getTUMOR_SEQ_ALLELE2: " + ar.getTUMOR_SEQ_ALLELE2());
-                log.info("getDBSNP_RS(): " + ar.getDBSNP_RS()); 
-                log.info("reannotate: " + reannotate); 
-                log.info("getANNOTATION_STATUS(): " + ar.getANNOTATION_STATUS());
-                log.info("getVARIANT_CLASSIFICATION(): '" + ar.getVARIANT_CLASSIFICATION() + "'"); 
-                log.info("getErrorMessage(): " + ar.getErrorMessage()); 
-            }
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
             header.addAll(ar.getHeaderWithAdditionalFields());
         }
