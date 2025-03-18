@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -82,7 +82,6 @@ public class CVRCnaDataReader implements ItemStreamReader<String>{
         for (CVRMergedResult result : cvrData.getResults()) {
             String sampleId = result.getMetaData().getDmpSampleId();
             if (!cvrSampleListUtil.getPortalSamples().contains(sampleId)) {
-                //cvrSampleListUtil.addSampleRemoved(sampleId);
                 continue;
             }
             samples.add(sampleId);
@@ -179,7 +178,6 @@ public class CVRCnaDataReader implements ItemStreamReader<String>{
                 try {
                     for (int i = 1; i < header.size(); i++) {
                         if (!cvrSampleListUtil.getPortalSamples().contains(header.get(i))) {
-                            //cvrSampleListUtil.addSampleRemoved(header.get(i));
                             continue;
                         }
                         if (!cvrSampleListUtil.getNewDmpSamples().contains(header.get(i))) {
