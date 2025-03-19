@@ -33,15 +33,12 @@
 package org.cbioportal.cmo.pipelines.cvr.clinical;
 
 import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactSeqDate;
-import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactAge;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 import com.google.common.base.Strings;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import org.apache.log4j.Logger;
 import org.springframework.batch.item.*;

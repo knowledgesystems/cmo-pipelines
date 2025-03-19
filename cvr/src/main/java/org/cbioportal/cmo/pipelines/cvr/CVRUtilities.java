@@ -50,7 +50,8 @@ import org.cbioportal.models.*;
 public class CVRUtilities {
     private String METADATA_PREFIX = "#";
     private String DELIMITER = "\t";
-    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("^[\\s]+|[\\s]+$|[\\s]+");
+    private static final Pattern TAB_NEWLINE_AT_START_END_PATTERN = Pattern.compile("^[\\t|\\n|\\r]+|[\\t|\\n|\\r]+$");
+    private static final Pattern TAB_NEWLINE_ANYWHERE_PATTERN = Pattern.compile("[\\t|\\n|\\r]+");
 
     // pipeline filenames
     public static final String CVR_FILE = "cvr_data.json";
@@ -408,7 +409,7 @@ public class CVRUtilities {
     }
 
     public String convertWhitespace(String s) {
-        return WHITESPACE_PATTERN.matcher(s).replaceAll(" ").trim();
+        return TAB_NEWLINE_ANYWHERE_PATTERN.matcher(TAB_NEWLINE_AT_START_END_PATTERN.matcher(s).replaceAll("")).replaceAll(" ");
     }
 
     public String[] getFileHeader(File dataFile) throws IOException {
