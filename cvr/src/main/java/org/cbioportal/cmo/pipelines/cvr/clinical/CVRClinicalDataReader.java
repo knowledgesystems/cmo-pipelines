@@ -131,39 +131,6 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
         return null;
     }
 
-    private FlatFileItemReader<CVRClinicalRecord> createReader(File mskimpactClinicalFile) throws IOException {
-        // Read the first line (header) from the file
-        BufferedReader br = new BufferedReader(new FileReader(mskimpactClinicalFile));
-        String headerLine = br.readLine();
-        br.close();  // Close after reading the first line
-
-        if (headerLine == null || headerLine.isEmpty()) {
-            throw new IllegalStateException("The file is empty or has no header.");
-        }
-
-        // Extract column names from the header
-        String[] columnNames = headerLine.split("\t");
-
-        // Configure the tokenizer with dynamic column names
-        DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
-        tokenizer.setNames(columnNames);  // Dynamically set field names
-        tokenizer.setQuoteCharacter('\0'); // Use the null character to effectively disable quotes 
-                                           // The default quote character is a " which was causing issues in a record where there was a single unclosed "
-
-        // Create the reader
-        FlatFileItemReader<CVRClinicalRecord> reader = new FlatFileItemReader<>();
-        reader.setResource(new FileSystemResource(mskimpactClinicalFile));
-        reader.setLinesToSkip(1);  // Skip the header row after reading it
-
-        // Set up the line mapper
-        DefaultLineMapper<CVRClinicalRecord> lineMapper = new DefaultLineMapper<>();
-        lineMapper.setLineTokenizer(tokenizer);
-        lineMapper.setFieldSetMapper(new CVRClinicalFieldSetMapper());
-
-        reader.setLineMapper(lineMapper);
-        return reader;
-    }
-
     private void processClinicalFile(ExecutionContext ec) {
         File mskimpactClinicalFile = new File(stagingDirectory, clinicalFilename);
         if (!mskimpactClinicalFile.exists()) {
@@ -173,7 +140,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
         log.info("Loading clinical data from: " + mskimpactClinicalFile.getName());
         FlatFileItemReader<CVRClinicalRecord> reader = null;
         try {
-            reader = createReader(mskimpactClinicalFile);
+            reader = ClinicalFileReaderUtil.createReader(mskimpactClinicalFile);
             reader.open(ec);
             CVRClinicalRecord to_add;
             while ((to_add = reader.read()) != null) {

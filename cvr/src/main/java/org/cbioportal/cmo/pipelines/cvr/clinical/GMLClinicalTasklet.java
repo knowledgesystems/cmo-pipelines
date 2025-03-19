@@ -57,7 +57,7 @@ import org.springframework.core.io.FileSystemResource;
  * @author ochoaa
  */
 public class GMLClinicalTasklet implements Tasklet {
-    
+
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
 
@@ -94,22 +94,24 @@ public class GMLClinicalTasklet implements Tasklet {
         }
         else {
             LOG.info("Loading clinical data from: " + clinicalFile.getName());
-            DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
-            DefaultLineMapper<CVRClinicalRecord> mapper = new DefaultLineMapper<>();
-            mapper.setLineTokenizer(tokenizer);
-            mapper.setFieldSetMapper(new CVRClinicalFieldSetMapper());
-                        
-            FlatFileItemReader<CVRClinicalRecord> reader = new FlatFileItemReader<>();
-            reader.setResource(new FileSystemResource(clinicalFile));
-            reader.setLineMapper(mapper);
-            reader.setLinesToSkip(1);
-            reader.open(new ExecutionContext());
-            CVRClinicalRecord to_add;
-            while ((to_add = reader.read()) != null) {
-                cvrSampleListUtil.updateGmlPatientSampleMap(to_add.getPATIENT_ID(), to_add.getSAMPLE_ID());
-                cvrSampleListUtil.addPortalSample(to_add.getSAMPLE_ID());
+            FlatFileItemReader<CVRClinicalRecord> reader = null;
+            try {
+                reader = ClinicalFileReaderUtil.createReader(clinicalFile);
+                reader.open(new ExecutionContext());
+
+                CVRClinicalRecord to_add;
+                while ((to_add = reader.read()) != null) {
+                    cvrSampleListUtil.updateGmlPatientSampleMap(to_add.getPATIENT_ID(), to_add.getSAMPLE_ID());
+                    cvrSampleListUtil.addPortalSample(to_add.getSAMPLE_ID());
+                }
+            } catch (Exception e) {
+                LOG.error("Error reading data from clinical file: " + clinicalFile.getName());
+                throw new ItemStreamException(e);
+            } finally {
+                if (reader != null) {
+                    reader.close();
+                }
             }
-            reader.close();
         }
         // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
         // portalSamples list is only updated if threshold check for max num samples to remove passes
