@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2022, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -76,10 +76,9 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
     @Autowired
     private Annotator annotator;
 
-    private List<AnnotatedRecord> mutationRecords = new ArrayList<>();
+    private final Deque<AnnotatedRecord> mutationRecords = new LinkedList<>();
     private Map<String, List<MutationRecord>> mutationMap = new HashMap<>();
     private File mutationFile;
-    private Set<String> additionalPropertyKeys = new LinkedHashSet<>();
     private Set<String> header = new LinkedHashSet<>();
     private Set<String> germlineSamples = new HashSet<>();
     private AnnotationSummaryStatistics summaryStatistics;
@@ -172,6 +171,7 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
             // skip if record already seen or if current record is a germline sample and record is a GERMLINE variant
             if (cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE())) ||
+	            !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     (germlineSamples.contains(to_add.getTUMOR_SAMPLE_BARCODE()) && to_add.getMUTATION_STATUS().equals("GERMLINE"))) {
                 continue;
             }
@@ -190,10 +190,9 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         // records will be partitioned inside annotator client
         // records which do not get a response back will automatically be defauled to an AnnotatedRecord(record)
         List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE, Boolean.FALSE);
+        mutationRecords.addAll(annotatedRecords);
         for (AnnotatedRecord ar : annotatedRecords) {
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
-            mutationRecords.add(ar);
-            additionalPropertyKeys.addAll(ar.getAdditionalProperties().keySet());
             header.addAll(ar.getHeaderWithAdditionalFields());
         }
         return annotatedRecords;
@@ -217,18 +216,7 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
     @Override
     public AnnotatedRecord read() throws Exception {
         while (!mutationRecords.isEmpty()) {
-            AnnotatedRecord annotatedRecord = mutationRecords.remove(0);
-            if (!cvrSampleListUtil.getPortalSamples().contains(annotatedRecord.getTUMOR_SAMPLE_BARCODE())) {
-                cvrSampleListUtil.addSampleRemoved(annotatedRecord.getTUMOR_SAMPLE_BARCODE());
-                continue;
-            }
-            for (String additionalProperty : additionalPropertyKeys) {
-                Map<String, String> additionalProperties = annotatedRecord.getAdditionalProperties();
-                if (!additionalProperties.keySet().contains(additionalProperty)) {
-                    additionalProperties.put(additionalProperty, "");
-                }
-            }
-            return annotatedRecord;
+            return mutationRecords.pollFirst();
         }
         return null;
     }

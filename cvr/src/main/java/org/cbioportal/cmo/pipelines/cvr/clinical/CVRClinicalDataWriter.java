@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, 2023, 2024 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023, 2024, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -90,11 +90,7 @@ public class CVRClinicalDataWriter implements ItemStreamWriter<CompositeClinical
     public void write(Chunk<? extends CompositeClinicalRecord> items) throws Exception {
         Chunk<String> writeList = new Chunk<>();
         for (CompositeClinicalRecord item : items) {
-            if (item.getNewClinicalRecord() != null) {
-                writeList.add(item.getNewClinicalRecord());
-            } else {
-                writeList.add(item.getOldClinicalRecord());
-            }
+            writeList.add(item.getClinicalRecord());
         }
         flatFileItemWriter.write(writeList);
     }

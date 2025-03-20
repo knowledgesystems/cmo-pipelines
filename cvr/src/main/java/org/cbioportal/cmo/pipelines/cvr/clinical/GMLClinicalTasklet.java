@@ -45,19 +45,16 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
 
 /**
  *
  * @author ochoaa
  */
 public class GMLClinicalTasklet implements Tasklet {
-    
+
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
 
@@ -73,7 +70,6 @@ public class GMLClinicalTasklet implements Tasklet {
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CVRClinicalRecord> clinicalRecords = new ArrayList();
     private Logger LOG = Logger.getLogger(GMLClinicalTasklet.class);
 
     @Override
@@ -95,41 +91,27 @@ public class GMLClinicalTasklet implements Tasklet {
         }
         else {
             LOG.info("Loading clinical data from: " + clinicalFile.getName());
-            DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
-            DefaultLineMapper<CVRClinicalRecord> mapper = new DefaultLineMapper<>();
-            mapper.setLineTokenizer(tokenizer);
-            mapper.setFieldSetMapper(new CVRClinicalFieldSetMapper());
-                        
-            FlatFileItemReader<CVRClinicalRecord> reader = new FlatFileItemReader<>();
-            reader.setResource(new FileSystemResource(clinicalFile));
-            reader.setLineMapper(mapper);
-            reader.setLinesToSkip(1);
-            reader.open(new ExecutionContext());
-            CVRClinicalRecord to_add;
-            while ((to_add = reader.read()) != null) {
-                cvrSampleListUtil.updateGmlPatientSampleMap(to_add.getPATIENT_ID(), to_add.getSAMPLE_ID());
-                clinicalRecords.add(to_add);
-                cvrSampleListUtil.addPortalSample(to_add.getSAMPLE_ID());
+            FlatFileItemReader<CVRClinicalRecord> reader = null;
+            try {
+                reader = ClinicalFileReaderUtil.createReader(clinicalFile);
+                reader.open(new ExecutionContext());
+
+                CVRClinicalRecord to_add;
+                while ((to_add = reader.read()) != null) {
+                    cvrSampleListUtil.updateGmlPatientSampleMap(to_add.getPATIENT_ID(), to_add.getSAMPLE_ID());
+                    cvrSampleListUtil.addPortalSample(to_add.getSAMPLE_ID());
+                }
+            } catch (Exception e) {
+                LOG.error("Error reading data from clinical file: " + clinicalFile.getName());
+                throw new ItemStreamException(e);
+            } finally {
+                if (reader != null) {
+                    reader.close();
+                }
             }
-            reader.close();
         }
         // updates portalSamplesNotInDmpList and dmpSamplesNotInPortal sample lists
         // portalSamples list is only updated if threshold check for max num samples to remove passes
         cvrSampleListUtil.updateSampleLists(masterListDoesNotExcludeSamples);
-        updateSamplesRemovedList();
-    }
-
-    /**
-     * Updates cvrSampleListUtil list 'samples removed'.
-     * Removed samples are those which are no longer in the DMP master list but
-     * still exist in the portal dataset. We do not want to accidentally reintroduce
-     * any samples during the GML fetch that shouldn't be in the final dataset.
-     */
-    private void updateSamplesRemovedList() {
-        for (CVRClinicalRecord record : clinicalRecords) {
-            if (!cvrSampleListUtil.getPortalSamples().contains(record.getSAMPLE_ID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSAMPLE_ID());
-            }
-        }
     }
 }

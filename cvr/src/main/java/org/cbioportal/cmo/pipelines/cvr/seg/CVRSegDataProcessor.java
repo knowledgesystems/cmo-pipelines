@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2017, 2023, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -35,7 +35,6 @@ package org.cbioportal.cmo.pipelines.cvr.seg;
 import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSegRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSegRecord;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * @author jake-rose
  */
-public class CVRSegDataProcessor implements ItemProcessor<CVRSegRecord, CompositeSegRecord> {
+public class CVRSegDataProcessor implements ItemProcessor<CVRSegRecord, String> {
 
     @Autowired
     private CVRUtilities cvrUtilities;
@@ -53,17 +52,23 @@ public class CVRSegDataProcessor implements ItemProcessor<CVRSegRecord, Composit
     public CvrSampleListUtil cvrSampleListUtil;
 
     @Override
-    public CompositeSegRecord process(CVRSegRecord i) throws Exception {
+    public String process(CVRSegRecord i) throws Exception {
         List<String> record = new ArrayList<>();
         for (String field : i.getFieldNames()) {
-            record.add(cvrUtilities.convertWhitespace(i.getClass().getMethod("get" + field).invoke(i).toString()));
+            record.add(cvrUtilities.convertWhitespace(getFieldValue(i, field).toString()));
         }
-        CompositeSegRecord compRecord = new CompositeSegRecord();
-        if (cvrSampleListUtil.getNewDmpSamples().contains(i.getID())) {
-            compRecord.setNewSegRecord(String.join("\t", record).trim());
-        } else {
-            compRecord.setOldSegRecord(String.join("\t", record).trim());
+        return String.join("\t", record);
+    }
+
+    private String getFieldValue(CVRSegRecord record, String field) {
+        switch (field) {
+            case "chrom": return record.getchrom();
+            case "loc_start": return record.getloc_start();
+            case "loc_end": return record.getloc_end();
+            case "num_mark": return record.getnum_mark();
+            case "seg_mean": return record.getseg_mean();
+            case "ID": return record.getID();
+            default: return "";
         }
-        return compRecord;
     }
 }

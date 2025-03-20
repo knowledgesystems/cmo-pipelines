@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -37,30 +37,148 @@ import java.util.*;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;
-import org.apache.log4j.Logger;
 
 /**
  *
  * @author heinsz
  */
-public class CVRMutationFieldSetMapper implements  FieldSetMapper<MutationRecord> {
-    Logger log = Logger.getLogger(CVRMutationFieldSetMapper.class);
+public class CVRMutationFieldSetMapper implements FieldSetMapper<MutationRecord> {
+
     @Override
     public MutationRecord mapFieldSet(FieldSet fs) throws BindException {
         MutationRecord record = new MutationRecord();
         Set<String> names = new HashSet(Arrays.asList(fs.getNames()));
         names.addAll(record.getHeader());
+
         for (String field : names) {
-            try {
-                record.getClass().getMethod("set" + field.toUpperCase(), String.class).invoke(record, fs.readRawString(field));
-            } catch (Exception e) {
-                if (e.getClass().equals(NoSuchMethodException.class)) {
-                    record.addAdditionalProperty(field, fs.readRawString(field));
-                } else {
-                    log.error("Something went wrong reading field " + field);
-                }
-            }
-         }
+            String value = fs.readRawString(field);
+            setFieldValue(record, field, value);
+        }
         return record;
+    }
+
+    /**
+     * Sets the field value in the MutationRecord.
+     */
+    private void setFieldValue(MutationRecord record, String field, String value) {
+        switch (field.toUpperCase()) {
+            case "HUGO_SYMBOL":
+                record.setHUGO_SYMBOL(value);
+                break;
+            case "ENTREZ_GENE_ID":
+                record.setENTREZ_GENE_ID(value);
+                break;
+            case "CENTER":
+                record.setCENTER(value);
+                break;
+            case "NCBI_BUILD":
+                record.setNCBI_BUILD(value);
+                break;
+            case "CHROMOSOME":
+                record.setCHROMOSOME(value);
+                break;
+            case "START_POSITION":
+                record.setSTART_POSITION(value);
+                break;
+            case "END_POSITION":
+                record.setEND_POSITION(value);
+                break;
+            case "STRAND":
+                record.setSTRAND(value);
+                break;
+            case "VARIANT_CLASSIFICATION":
+                record.setVARIANT_CLASSIFICATION(value);
+                break;
+            case "VARIANT_TYPE":
+                record.setVARIANT_TYPE(value);
+                break;
+            case "REFERENCE_ALLELE":
+                record.setREFERENCE_ALLELE(value);
+                break;
+            case "TUMOR_SEQ_ALLELE1":
+                record.setTUMOR_SEQ_ALLELE1(value);
+                break;
+            case "TUMOR_SEQ_ALLELE2":
+                record.setTUMOR_SEQ_ALLELE2(value);
+                break;
+            case "DBSNP_RS":
+                record.setDBSNP_RS(value);
+                break;
+            case "DBSNP_VAL_STATUS":
+                record.setDBSNP_VAL_STATUS(value);
+                break;
+            case "TUMOR_SAMPLE_BARCODE":
+                record.setTUMOR_SAMPLE_BARCODE(value);
+                break;
+            case "MATCHED_NORM_SAMPLE_BARCODE":
+                record.setMATCHED_NORM_SAMPLE_BARCODE(value);
+                break;
+            case "MATCH_NORM_SEQ_ALLELE1":
+                record.setMATCH_NORM_SEQ_ALLELE1(value);
+                break;
+            case "MATCH_NORM_SEQ_ALLELE2":
+                record.setMATCH_NORM_SEQ_ALLELE2(value);
+                break;
+            case "TUMOR_VALIDATION_ALLELE1":
+                record.setTUMOR_VALIDATION_ALLELE1(value);
+                break;
+            case "TUMOR_VALIDATION_ALLELE2":
+                record.setTUMOR_VALIDATION_ALLELE2(value);
+                break;
+            case "MATCH_NORM_VALIDATION_ALLELE1":
+                record.setMATCH_NORM_VALIDATION_ALLELE1(value);
+                break;
+            case "MATCH_NORM_VALIDATION_ALLELE2":
+                record.setMATCH_NORM_VALIDATION_ALLELE2(value);
+                break;
+            case "VERIFICATION_STATUS":
+                record.setVERIFICATION_STATUS(value);
+                break;
+            case "VALIDATION_STATUS":
+                record.setVALIDATION_STATUS(value);
+                break;
+            case "MUTATION_STATUS":
+                record.setMUTATION_STATUS(value);
+                break;
+            case "SEQUENCING_PHASE":
+                record.setSEQUENCING_PHASE(value);
+                break;
+            case "SEQUENCE_SOURCE":
+                record.setSEQUENCE_SOURCE(value);
+                break;
+            case "VALIDATION_METHOD":
+                record.setVALIDATION_METHOD(value);
+                break;
+            case "SCORE":
+                record.setSCORE(value);
+                break;
+            case "BAM_FILE":
+                record.setBAM_FILE(value);
+                break;
+            case "SEQUENCER":
+                record.setSEQUENCER(value);
+                break;
+            case "TUMOR_SAMPLE_UUID":
+                record.setTUMOR_SAMPLE_UUID(value);
+                break;
+            case "MATCHED_NORM_SAMPLE_UUID":
+                record.setMATCHED_NORM_SAMPLE_UUID(value);
+                break;
+            case "T_REF_COUNT":
+                record.setT_REF_COUNT(value);
+                break;
+            case "T_ALT_COUNT":
+                record.setT_ALT_COUNT(value);
+                break;
+            case "N_REF_COUNT":
+                record.setN_REF_COUNT(value);
+                break;
+            case "N_ALT_COUNT":
+                record.setN_ALT_COUNT(value);
+                break;
+            default:
+                record.addAdditionalProperty(field, value);
+                break;
+        }
     }
 }

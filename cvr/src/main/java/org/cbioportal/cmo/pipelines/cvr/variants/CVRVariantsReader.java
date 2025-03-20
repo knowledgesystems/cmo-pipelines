@@ -50,7 +50,7 @@ public class CVRVariantsReader implements ItemStreamReader<CvrResponse> {
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CvrResponse> cvrVariants = new ArrayList<CvrResponse>();
+    private final Deque<CvrResponse> cvrVariants = new LinkedList<>();
     
     private Logger log = Logger.getLogger(CVRVariantsReader.class);
 
@@ -72,7 +72,7 @@ public class CVRVariantsReader implements ItemStreamReader<CvrResponse> {
     @Override
     public CvrResponse read() throws Exception {
         if (!cvrVariants.isEmpty()) {
-            return cvrVariants.remove(0);
+            return cvrVariants.pollFirst();
         }
         return null;
     }

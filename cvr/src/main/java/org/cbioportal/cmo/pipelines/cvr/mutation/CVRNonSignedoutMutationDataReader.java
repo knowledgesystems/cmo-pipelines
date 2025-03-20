@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2022, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -76,9 +76,8 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
     private Annotator annotator;
 
     private File mutationFile;
-    private List<AnnotatedRecord> mutationRecords = new ArrayList<>();
+    private final Deque<AnnotatedRecord> mutationRecords = new LinkedList<>();
     private Map<String, List<MutationRecord>> mutationMap = new HashMap<>();
-    private Set<String> additionalPropertyKeys = new LinkedHashSet<>();
     Set<String> header = new LinkedHashSet<>();
     private AnnotationSummaryStatistics summaryStatistics;
 
@@ -126,13 +125,16 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         for (CVRMergedResult result : cvrData.getResults()) {
             String sampleId = result.getMetaData().getDmpSampleId();
             int countNonSignedoutSampleSnps = result.getAllNonSignedoutCvrSnps().size();
-            String somaticStatus = result.getMetaData().getSomaticStatus() != null ? result.getMetaData().getSomaticStatus() : "N/A";
-            for (CVRSnp snp : result.getAllNonSignedoutCvrSnps()) {
-                MutationRecord to_add = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
-                recordsToAnnotate.add(to_add);
-                addRecordToMap(to_add);
-            }
             cvrSampleListUtil.updateNonSignedoutSampleSnpCount(sampleId, countNonSignedoutSampleSnps);
+            // only handle things in cvrSampleListUtil.getPortalSamples()
+            if (cvrSampleListUtil.getPortalSamples().contains(sampleId)) {
+                String somaticStatus = result.getMetaData().getSomaticStatus() != null ? result.getMetaData().getSomaticStatus() : "N/A";
+                for (CVRSnp snp : result.getAllNonSignedoutCvrSnps()) {
+                    MutationRecord to_add = cvrUtilities.buildCVRMutationRecord(snp, sampleId, somaticStatus);
+                    recordsToAnnotate.add(to_add);
+                    addRecordToMap(to_add);
+                }
+            }
         }
         log.info("Loaded " + String.valueOf(recordsToAnnotate.size()) + " records from JSON");
         try {
@@ -154,18 +156,13 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         reader.setResource(new FileSystemResource(mutationFile));
         reader.setLineMapper(mapper);
         reader.setLinesToSkip(1);
-        reader.setSkippedLinesCallback(new LineCallbackHandler() {
-            @Override
-            public void handleLine(String line) {
-                tokenizer.setNames(line.split("\t"));
-            }
-        });
+        reader.setSkippedLinesCallback(line -> tokenizer.setNames(line.split("\t")));
         reader.open(new ExecutionContext());
         List<MutationRecord> recordsToAnnotate = new ArrayList<>();
         MutationRecord to_add;
         while ((to_add = reader.read()) != null && to_add.getTUMOR_SAMPLE_BARCODE() != null) {
-            // skip if new sample or if mutation record for sample seen already
             if (cvrSampleListUtil.getNewDmpSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
+                !cvrSampleListUtil.getPortalSamples().contains(to_add.getTUMOR_SAMPLE_BARCODE()) ||
                     cvrUtilities.isDuplicateRecord(to_add, mutationMap.get(to_add.getTUMOR_SAMPLE_BARCODE()))) {
                 continue;
             }
@@ -185,10 +182,9 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
         // records will be partitioned inside annotator client
         // records which do not get a response back will automatically be defaulted to an AnnotatedRecord(record)
         List<AnnotatedRecord> annotatedRecords = annotator.getAnnotatedRecordsUsingPOST(summaryStatistics, records, "mskcc", true, postIntervalSize, reannotate, "StripEntireSharedPrefix", Boolean.TRUE, Boolean.FALSE, Boolean.FALSE);
+        mutationRecords.addAll(annotatedRecords);
         for (AnnotatedRecord ar : annotatedRecords) {
             logAnnotationProgress(++annotatedVariantsCount, totalVariantsToAnnotateCount, postIntervalSize);
-            mutationRecords.add(ar);
-            additionalPropertyKeys.addAll(ar.getAdditionalProperties().keySet());
             header.addAll(ar.getHeaderWithAdditionalFields());
         }
     }
@@ -211,32 +207,13 @@ public class CVRNonSignedoutMutationDataReader implements ItemStreamReader<Annot
     @Override
     public AnnotatedRecord read() throws Exception {
         while (!mutationRecords.isEmpty()) {
-            AnnotatedRecord annotatedRecord = mutationRecords.remove(0);
-            if (!cvrSampleListUtil.getPortalSamples().contains(annotatedRecord.getTUMOR_SAMPLE_BARCODE())) {
-                cvrSampleListUtil.addSampleRemoved(annotatedRecord.getTUMOR_SAMPLE_BARCODE());
-                continue;
-            }
-            for (String additionalProperty : additionalPropertyKeys) {
-                Map<String, String> additionalProperties = annotatedRecord.getAdditionalProperties();
-                if (!additionalProperties.keySet().contains(additionalProperty)) {
-                    additionalProperties.put(additionalProperty, "");
-                }
-            }
-            return annotatedRecord;
+            return mutationRecords.pollFirst();
         }
         return null;
     }
 
     private void addRecordToMap(MutationRecord record) {
         String sampleId = record.getTUMOR_SAMPLE_BARCODE();
-        List<MutationRecord> recordList = mutationMap.get(sampleId);
-        if (recordList == null) {
-            recordList = new ArrayList<MutationRecord>();
-            recordList.add(record);
-            mutationMap.put(sampleId, recordList);
-        } else {
-            recordList.add(record);
-        }
+        mutationMap.computeIfAbsent(sampleId, k -> new ArrayList<>()).add(record);
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2022, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -67,7 +67,7 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CVRSvRecord> svRecords = new ArrayList();
+    private final Deque<CVRSvRecord> svRecords = new LinkedList<>();
 
     Logger log = Logger.getLogger(CVRSvDataReader.class);
 
@@ -100,7 +100,9 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
             try {
                 CVRSvRecord to_add;
                 while ((to_add = reader.read()) != null) {
-                    if (!cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSample_ID()) && to_add.getSample_ID()!= null) {
+                    if (to_add.getSample_ID() != null
+                        && !cvrSampleListUtil.getNewDmpSamples().contains(to_add.getSample_ID())
+                        && cvrSampleListUtil.getPortalSamples().contains(to_add.getSample_ID())) {
                         to_add.setSite1_Hugo_Symbol(to_add.getSite1_Hugo_Symbol().trim());
                         to_add.setSite2_Hugo_Symbol(to_add.getSite2_Hugo_Symbol().trim());
                         svRecords.add(to_add);
@@ -133,12 +135,7 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
     @Override
     public CVRSvRecord read() throws Exception {
         while (!svRecords.isEmpty()) {
-            CVRSvRecord record = svRecords.remove(0);
-            if (!cvrSampleListUtil.getPortalSamples().contains(record.getSample_ID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSample_ID());
-                continue;
-            }
-            return record;
+            return svRecords.pollFirst();
         }
         return null;
     }

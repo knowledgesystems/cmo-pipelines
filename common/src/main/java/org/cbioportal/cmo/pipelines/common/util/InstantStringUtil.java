@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2023, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -80,7 +80,7 @@ import org.apache.log4j.Logger;
 
 public class InstantStringUtil {
 
-    private static Logger log = Logger.getLogger(HttpClientWithTimeoutAndRetry.class);
+    private static Logger log = Logger.getLogger(InstantStringUtil.class);
 
     private static Map<String, String> tzlabel2offset;
     static {

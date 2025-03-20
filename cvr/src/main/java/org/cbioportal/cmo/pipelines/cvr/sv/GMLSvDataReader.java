@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2022 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2018 - 2022, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -72,7 +72,7 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
     private String stagingDirectory;
 
     private Set<String> gmlSvSeen = new HashSet<>();
-    private List<CVRSvRecord> gmlSvRecords = new ArrayList<>();
+    private final Deque<CVRSvRecord> gmlSvRecords = new LinkedList<>();
 
     private Logger LOG = Logger.getLogger(GMLSvDataReader.class);
 
@@ -109,13 +109,15 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
             if (samples != null) {
                 for (GMLCnvIntragenicVariant cnv : result.getCnvIntragenicVariantsGml()) {
                     for (String sampleId : samples) {
-                        CVRSvRecord record = svUtilities.makeCvrSvRecordFromGmlCnvIntragenicVariant(cnv, sampleId);
-                        String sv = getGmlSvKey(record);
-                        // skip if already added sv event for sample
-                        if (!gmlSvSeen.add(sv)) {
-                            continue;
-                        }
-                        gmlSvRecords.add(record);
+			if (cvrSampleListUtil.getPortalSamples().contains(sampleId)) {
+                           CVRSvRecord record = svUtilities.makeCvrSvRecordFromGmlCnvIntragenicVariant(cnv, sampleId);
+                           String sv = getGmlSvKey(record);
+                            // skip if already added sv event for sample
+                            if (!gmlSvSeen.add(sv)) {
+                                continue;
+                            }
+                            gmlSvRecords.add(record);
+			}
                     }
                 }
             }
@@ -147,7 +149,9 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
                 String patientId = cvrSampleListUtil.getSamplePatientId(to_add.getSample_ID());
                 // check that matching patient id can be found from patient-sample mapping
                 // and whether patient is in new dmp germline patients (to prevent duplicates)
-                if (!Strings.isNullOrEmpty(patientId) && !cvrSampleListUtil.getNewDmpGmlPatients().contains(patientId)) {
+                if (!Strings.isNullOrEmpty(patientId)
+		        && !cvrSampleListUtil.getNewDmpGmlPatients().contains(patientId)
+			&& cvrSampleListUtil.getPortalSamples().contains(to_add.getSample_ID())) {
                     String sv = getGmlSvKey(to_add);
                     if (gmlSvSeen.add(sv)) {
                         gmlSvRecords.add(to_add);
@@ -176,12 +180,7 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
     @Override
     public CVRSvRecord read() throws Exception {
         while (!gmlSvRecords.isEmpty()) {
-            CVRSvRecord record = gmlSvRecords.remove(0);
-            if (!cvrSampleListUtil.getPortalSamples().contains(record.getSample_ID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSample_ID());
-                continue;
-            }
-            return record;
+            return gmlSvRecords.pollFirst();
         }
         return null;
     }

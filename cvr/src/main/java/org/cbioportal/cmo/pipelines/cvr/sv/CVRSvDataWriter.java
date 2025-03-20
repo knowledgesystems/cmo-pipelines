@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeSvRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
@@ -54,7 +53,7 @@ import org.springframework.core.io.FileSystemResource;
  *
  * @author heinsz
  */
-public class CVRSvDataWriter implements ItemStreamWriter<CompositeSvRecord> {
+public class CVRSvDataWriter implements ItemStreamWriter<String> {
 
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
@@ -90,15 +89,7 @@ public class CVRSvDataWriter implements ItemStreamWriter<CompositeSvRecord> {
     }
 
     @Override
-    public void write(Chunk<? extends CompositeSvRecord> items) throws Exception {
-        Chunk<String> writeList = new Chunk<>();
-        for (CompositeSvRecord item : items) {
-            if (item.getNewSvRecord() != null) {
-                writeList.add(item.getNewSvRecord());
-            } else {
-                writeList.add(item.getOldSvRecord());
-            }
-        }
-        flatFileItemWriter.write(writeList);
+    public void write(Chunk<? extends String> items) throws Exception {
+        flatFileItemWriter.write(items);
     }
 }

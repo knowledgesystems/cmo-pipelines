@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2022, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2022, 2023, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -66,7 +66,7 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
     @Autowired
     public CvrSampleListUtil cvrSampleListUtil;
 
-    private List<CVRGenePanelRecord> genePanelRecords = new ArrayList();
+    private Deque<CVRGenePanelRecord> genePanelRecords = new LinkedList<>();
     private Set<String> processedRecords = new HashSet();
     List<String> geneticProfiles;
 
@@ -168,10 +168,9 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
     @Override
     public CVRGenePanelRecord read() throws Exception {
         while (!genePanelRecords.isEmpty()) {
-            CVRGenePanelRecord record = genePanelRecords.remove(0);
+            CVRGenePanelRecord record = genePanelRecords.pollFirst();
             // if we've already seen this sample id or sample id is not in master list then skip it by just calling read again.
             if (!cvrSampleListUtil.getPortalSamples().contains(record.getSAMPLE_ID())) {
-                cvrSampleListUtil.addSampleRemoved(record.getSAMPLE_ID());
                 continue;
             }
             if (processedRecords.contains(record.getSAMPLE_ID())) {

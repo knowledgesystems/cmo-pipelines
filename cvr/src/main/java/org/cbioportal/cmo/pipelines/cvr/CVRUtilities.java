@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2023 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016, 2023, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.text.*;
 import java.util.*;
+import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
@@ -49,6 +50,8 @@ import org.cbioportal.models.*;
 public class CVRUtilities {
     private String METADATA_PREFIX = "#";
     private String DELIMITER = "\t";
+    private static final Pattern TAB_NEWLINE_AT_START_END_PATTERN = Pattern.compile("^[\\t|\\n|\\r]+|[\\t|\\n|\\r]+$");
+    private static final Pattern TAB_NEWLINE_ANYWHERE_PATTERN = Pattern.compile("[\\t|\\n|\\r]+");
 
     // pipeline filenames
     public static final String CVR_FILE = "cvr_data.json";
@@ -406,7 +409,7 @@ public class CVRUtilities {
     }
 
     public String convertWhitespace(String s) {
-        return s.replaceAll("^[\\t|\\n|\\r]+", "").replaceAll("[\\t|\\n|\\r]+$", "").replaceAll("[\\t|\\n|\\r]+", " ");
+        return TAB_NEWLINE_ANYWHERE_PATTERN.matcher(TAB_NEWLINE_AT_START_END_PATTERN.matcher(s).replaceAll("")).replaceAll(" ");
     }
 
     public String[] getFileHeader(File dataFile) throws IOException {

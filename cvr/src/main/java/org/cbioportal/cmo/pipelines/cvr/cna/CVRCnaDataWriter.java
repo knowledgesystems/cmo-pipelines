@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017, 2024 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017, 2024, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -34,7 +34,6 @@ package org.cbioportal.cmo.pipelines.cvr.cna;
 
 import java.io.File;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeCnaRecord;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
@@ -49,7 +48,7 @@ import org.springframework.core.io.FileSystemResource;
  *
  * @author heinsz
  */
-public class CVRCnaDataWriter implements ItemStreamWriter<CompositeCnaRecord> {
+public class CVRCnaDataWriter implements ItemStreamWriter<String> {
 
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
@@ -79,13 +78,7 @@ public class CVRCnaDataWriter implements ItemStreamWriter<CompositeCnaRecord> {
     }
 
     @Override
-    public void write(Chunk<? extends CompositeCnaRecord> records) throws Exception {
-        Chunk<String> items = new Chunk<>();
-        for (CompositeCnaRecord record : records) {
-            if (record.getAllCnaRecord() != null) {
-                items.add(record.getAllCnaRecord());
-            }
-        }
-        flatFileItemWriter.write(items);
+    public void write(Chunk<? extends String> records) throws Exception {
+        flatFileItemWriter.write(records);
     }
 }

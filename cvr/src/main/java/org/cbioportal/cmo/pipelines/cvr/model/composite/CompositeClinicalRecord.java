@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -33,38 +33,27 @@
 package org.cbioportal.cmo.pipelines.cvr.model.composite;
 
 public class CompositeClinicalRecord {
-    private String newClinicalRecord;
-    private String oldClinicalRecord;
+    private String clinicalRecord;
     private String seqDateRecord;
 
     public CompositeClinicalRecord() {
-        this.newClinicalRecord = "";
-        this.oldClinicalRecord = "";
+        this.clinicalRecord = "";
         this.seqDateRecord = "";
     }
 
-    public CompositeClinicalRecord(String newClinicalRecord, String oldClinicalRecord, String seqDateRecord) {
-        this.newClinicalRecord = newClinicalRecord;
-        this.oldClinicalRecord = oldClinicalRecord;
+    public CompositeClinicalRecord(String clinicalRecord, String seqDateRecord) {
+        this.clinicalRecord = clinicalRecord;
         this.seqDateRecord = seqDateRecord;
     }
 
-    public void setNewClinicalRecord(String newClinicalRecord) {
-        this.newClinicalRecord = newClinicalRecord;
+    public void setClinicalRecord(String clinicalRecord) {
+        this.clinicalRecord = clinicalRecord;
     }
 
-    public String getNewClinicalRecord() {
-        return newClinicalRecord.isEmpty() ? null : newClinicalRecord;
+    public String getClinicalRecord() {
+        return clinicalRecord.isEmpty() ? null : clinicalRecord;
     }
 
-    public void setOldClinicalRecord(String oldClinicalRecord) {
-        this.oldClinicalRecord = oldClinicalRecord;
-    }
-
-    public String getOldClinicalRecord() {
-        return oldClinicalRecord.isEmpty() ? null : oldClinicalRecord;
-    }
-    
     public void setSeqDateRecord(String seqDateRecord) {
         this.seqDateRecord = seqDateRecord;
     }
