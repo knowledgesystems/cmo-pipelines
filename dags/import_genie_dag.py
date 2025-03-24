@@ -55,7 +55,7 @@ with DAG(
         if importer.strip() not in ['genie']:
             raise TypeError('Required argument \'importer\' is incorrect or missing a value.')
         
-        ACCEPTED_DATA_REPOS = ["genie", "dmp"]
+        ACCEPTED_DATA_REPOS = ["genie"]
         root_data_directory_path = "/data/portal-cron/cbio-portal-data"
         for data_repo in data_repos.split(","):
             if data_repo.strip() not in ACCEPTED_DATA_REPOS:
