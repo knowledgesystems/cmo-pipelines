@@ -1,6 +1,6 @@
 """
-import_genie_dag.py
-
+rollback_genie_portal.py
+Transfer the production Genie deployment to the backup database.
 """
 from datetime import timedelta, datetime
 from airflow import DAG
@@ -44,9 +44,20 @@ with DAG(
     conn_id = "genie_importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
     db_properties_filepath="/data/portal-cron/pipelines-credentials/manage_genie_database_update_tools.properties.test"
-    
+
     """
-    Transfers Genie deployment to the backup database.
+    Set the import attempt status to "running".
+    """
+    set_import_running = SSHOperator(
+        task_id="set_import_running",
+        ssh_conn_id=conn_id,
+        trigger_rule=TriggerRule.ONE_FAILED,
+        command=f"{import_scripts_path}/set_update_process_state.sh {db_properties_filepath} running",
+        dag=dag,
+    )
+
+    """
+    Transfer Genie deployment to the backup database.
     """
     transfer_deployment = SSHOperator(
         task_id="transfer_deployment",
@@ -66,5 +77,5 @@ with DAG(
         dag=dag,
     )
 
-    transfer_deployment >> set_import_status
+    set_import_running >> transfer_deployment >> set_import_status
     list(dag.tasks) >> watcher()
