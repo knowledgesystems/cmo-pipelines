@@ -177,9 +177,8 @@ function checkForValidStaleCache {
 function refreshCddCache {
     # attempt to recache CDD
     ENDPOINT="refreshCache"
-    CDD_SERVER1="http://dashi.cbio.mskcc.org:8280/cdd/api"
-    CDD_SERVER2="http://dashi2.cbio.mskcc.org:8280/cdd/api"
-    CDD_SERVER_LIST=($CDD_SERVER1 $CDD_SERVER2)
+    CDD_SERVER1="https://cdd.cbioportal.mskcc.org/api"
+    CDD_SERVER_LIST=($CDD_SERVER1)
     refreshCache "CDD" $MAX_ATTEMPTS $ENDPOINT ${CDD_SERVER_LIST[@]}; return_value=$?
     if [ $return_value -gt 0 ] ; then
         # query cdd for known clinical attribute and check response - if still failed then alert pipelines team
@@ -195,9 +194,8 @@ function refreshCddCache {
 function refreshOncotreeCache {
     # attempt to recache ONCOTREE
     ENDPOINT="api/refreshCache"
-    ONCOTREE_SERVER1="http://dashi.cbio.mskcc.org:8280"
-    ONCOTREE_SERVER2="http://dashi2.cbio.mskcc.org:8280"
-    ONCOTREE_SERVER_LIST=($ONCOTREE_SERVER1 $ONCOTREE_SERVER2)
+    ONCOTREE_SERVER1="https://oncotree.info"
+    ONCOTREE_SERVER_LIST=($ONCOTREE_SERVER1)
     refreshCache "ONCOTREE" $MAX_ATTEMPTS $ENDPOINT ${ONCOTREE_SERVER_LIST[@]}; return_value=$?
     if [ $return_value -gt 0 ] ; then
         # query oncotree for known oncotree code and check response - if still failed then alert pipelines team
@@ -205,7 +203,7 @@ function refreshOncotreeCache {
         # generating oncotree code cache
         echo -e "\nRecache of ONCOTREE attempt failed!"
         echo -e "\nChecking for valid stale cache to fallback on for ONCOTREE"
-        KNOWN_WORKING_ENDPOINT="tumorTypes/search/code/TISSUE?exactMatch=true&levels=0,1"
+        KNOWN_WORKING_ENDPOINT="api/tumorTypes/search/code/TISSUE?exactMatch=true&levels=0,1"
         checkForValidStaleCache "ONCOTREE" $KNOWN_WORKING_ENDPOINT ${ONCOTREE_SERVER_LIST[@]}; return_value=$?
     fi
     return $return_value
