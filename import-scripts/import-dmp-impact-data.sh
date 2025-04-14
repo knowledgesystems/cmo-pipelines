@@ -14,6 +14,7 @@ SKIP_LYMPHOMA_IMPORT=0
 
 # localize global variables / jar names and functions
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
+source $PORTAL_HOME/scripts/s3_functions.sh
 source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 source $PORTAL_HOME/scripts/extract-properties-from-file-functions.sh
 
@@ -470,4 +471,14 @@ echo $(date)
 
 echo "Cleaning up any untracked files in $PORTAL_DATA_HOME/dmp..."
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $DMP_DATA_HOME
+
+# upload msk_solid_heme directory to s3 bucket msk-solid-heme
+upload_to_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "msk-solid-heme"
+if [ $? -gt 0 ]; then
+    message="Failed to upload msk_solid_heme to s3 bucket!"
+    echo $message
+    echo -e "$message" | mail -s "Failed to upload msk_solid_heme to s3" $PIPELINES_EMAIL_LIST
+    sendImportFailureMessageMskPipelineLogsSlack "$message"
+fi
+
 exit 0
