@@ -161,5 +161,5 @@ with DAG(
         dag=dag,
     )
 
-    [clone_database, fetch_data_local, fetch_data_remote] >> setup_import >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_repo
+    datarepos >> [clone_database, fetch_data_local, fetch_data_remote] >> setup_import >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_repo
     list(dag.tasks) >> watcher()
