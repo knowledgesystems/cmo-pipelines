@@ -28,7 +28,7 @@ def watcher():
     raise AirflowException("Failing task because one or more upstream tasks failed.")
 
 with DAG(
-    dag_id="import_public_dag.py",
+    dag_id="import_public_dag",
     default_args=args,
     description="Imports to Public cBioPortal MySQL and ClickHouse databases using blue/green deployment strategy",
     dagrun_timeout=timedelta(minutes=360),
@@ -43,13 +43,21 @@ with DAG(
 ) as dag:
 
     importer = "{{ params.importer }}"
-    datarepos = "{{ params.data_repos }}"
     # TODO add pipelines3 connection string
     pipelines3_conn_id = ""
     # TODO rename import node connection string
     import_node_conn_id = "genie_importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
     db_properties_filepath = f"/data/portal-cron/pipelines-credentials/manage_{importer}_database_update_tools.properties"
+
+    """
+    Parses and validates DAG arguments
+    """
+    @task
+    def parse_args(data_repos: list):
+        return ' '.join(data_repos)
+
+    datarepos = parse_args("{{ params.data_repos }}")
 
     """
     Determines which database is "production" vs "not production"
@@ -66,20 +74,22 @@ with DAG(
     """
     Fetch data updates on import node
     """
+    # TODO pass repos
     fetch_data_local = SSHOperator(
         task_id="fetch_data_local",
         ssh_conn_id=import_node_conn_id,
-        command=f"echo {import_scripts_path} {db_properties_filepath}",
+        command=f"echo {import_scripts_path} {db_properties_filepath} {datarepos}",
         dag=dag,
     )
 
     """
     Fetch data updates within MSK network
     """
+    # TODO pass repos
     fetch_data_remote = SSHOperator(
         task_id="fetch_data_remote",
         ssh_conn_id=pipelines3_conn_id,
-        command=f"echo {import_scripts_path} {db_properties_filepath}",
+        command=f"echo {import_scripts_path} {db_properties_filepath} {datarepos}",
         dag=dag,
     )
 
