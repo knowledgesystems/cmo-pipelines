@@ -42,35 +42,14 @@ with DAG(
     }
 ) as dag:
 
+    importer = "{{ params.importer }}"
+    datarepos = "{{ params.data_repos }}"
     # TODO add pipelines3 connection string
     pipelines3_conn_id = ""
     # TODO rename import node connection string
     import_node_conn_id = "genie_importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
-    db_properties_filepath = "/data/portal-cron/pipelines-credentials/manage_public_database_update_tools.properties"
-    
-    """
-    Parses and validates DAG arguments
-    """
-        
-    datarepos = "{{ task_instance.xcom_pull(task_ids='parse_args') }}"
-
-    # add sshoperator to pass arguments to server - server will then begin pulling data updates
-    # public-airflow-update-repos
-    # can remove fetch-data from setup_import and 
-    # deliver-data task can run in parallel with clone_database
-
-    # in parallel
-        # clone db
-        # fetch data locally - knowledgesystems-importer - remove from existing setup_import step
-        # fetch data from remote source - might be new ec2 node, if not will be pipelines3 with separate clone (msk imports and data fetching)
-            # set up an ssh connection to this node
-
-    # after these 3 - dag can continue
-
-
-    # triage, genie, public
-    # msk
+    db_properties_filepath = f"/data/portal-cron/pipelines-credentials/manage_{importer}_database_update_tools.properties"
 
     """
     Determines which database is "production" vs "not production"
@@ -80,7 +59,7 @@ with DAG(
     clone_database = SSHOperator(
         task_id="clone_database",
         ssh_conn_id=import_node_conn_id,
-        command=f"echo {import_scripts_path} {db_properties_filepath}",
+        command=f"{import_scripts_path}/public-airflow-clone-db.sh {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     )
 
@@ -113,7 +92,7 @@ with DAG(
     setup_import = SSHOperator(
         task_id="setup_import",
         ssh_conn_id=import_node_conn_id,
-        command=f"{import_scripts_path}/import-airflow-setup.sh {{{{ params.importer }}}} {import_scripts_path} {db_properties_filepath}",
+        command=f"{import_scripts_path}/public-airflow-setup.sh {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     )
 
@@ -124,7 +103,7 @@ with DAG(
     import_sql = SSHOperator(
         task_id="import_sql",
         ssh_conn_id=import_node_conn_id,
-        command=f"{import_scripts_path}/public-airflow-import-sql.sh {{{{ params.importer }}}} {import_scripts_path} {db_properties_filepath}",
+        command=f"{import_scripts_path}/public-airflow-import-sql.sh {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     )
 
