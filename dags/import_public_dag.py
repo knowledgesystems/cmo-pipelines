@@ -43,8 +43,7 @@ with DAG(
 ) as dag:
 
     importer = "{{ params.importer }}"
-    # TODO add pipelines3 connection string
-    pipelines3_conn_id = ""
+    pipelines3_conn_id = "pipelines3_ssh"
     # TODO rename import node connection string
     import_node_conn_id = "genie_importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
@@ -74,7 +73,7 @@ with DAG(
     """
     Fetch data updates on import node
     """
-    # TODO pass repos
+    # TODO update once fetch script finalized
     fetch_data_local = SSHOperator(
         task_id="fetch_data_local",
         ssh_conn_id=import_node_conn_id,
@@ -85,7 +84,7 @@ with DAG(
     """
     Fetch data updates within MSK network
     """
-    # TODO pass repos
+    # TODO update once fetch script finalized
     fetch_data_remote = SSHOperator(
         task_id="fetch_data_remote",
         ssh_conn_id=pipelines3_conn_id,
@@ -98,7 +97,6 @@ with DAG(
     Fetches latest commit from repository
     Refreshes CDD/Oncotree caches
     """
-    # will check if repos are updated
     setup_import = SSHOperator(
         task_id="setup_import",
         ssh_conn_id=import_node_conn_id,

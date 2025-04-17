@@ -50,14 +50,6 @@ if [ $? -gt 0 ]; then
     exit 1
 fi
 
-# Fetch updates in datahub repository
-echo "Fetching updates from datahub repository"
-$JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source datahub --run-date latest
-if [ $? -gt 0 ]; then
-    echo "Error: DATAHUB fetch failed!" >&2
-    exit 1
-fi
-
 # Refresh CDD/Oncotree cache to pull latest metadata
 echo "Refreshing CDD/ONCOTREE caches"
 bash $PORTAL_SCRIPTS_DIRECTORY/refresh-cdd-oncotree-cache.sh
