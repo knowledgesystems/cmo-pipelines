@@ -48,7 +48,9 @@ with DAG(
     # TODO rename import node connection string
     import_node_conn_id = "genie_importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
-    db_properties_filepath = f"/data/portal-cron/pipelines-credentials/manage_{importer}_database_update_tools.properties"
+    creds_dir = "/data/portal-cron/pipelines-credentials"
+    db_properties_filepath = f"{creds_dir}/manage_{importer}_database_update_tools.properties"
+    data_source_properties_filepath = f"{creds_dir}/importer-data-source-manager-config.yaml"
 
     """
     Parses and validates DAG arguments
@@ -74,28 +76,25 @@ with DAG(
     """
     Fetch data updates on import node
     """
-    # TODO update once fetch script finalized
     fetch_data_local = SSHOperator(
         task_id="fetch_data_local",
         ssh_conn_id=import_node_conn_id,
-        command=f"echo {import_scripts_path} {db_properties_filepath} {datarepos}",
+        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} pull {importer} {datarepos}",
         dag=dag,
     )
 
     """
     Fetch data updates within MSK network
     """
-    # TODO update once fetch script finalized
     fetch_data_remote = SSHOperator(
         task_id="fetch_data_remote",
         ssh_conn_id=pipelines3_conn_id,
-        command=f"echo {import_scripts_path} {db_properties_filepath} {datarepos}",
+        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} pull {importer} {datarepos}",
         dag=dag,
     )
 
     """
     Does a db check for specified importer/pipeline
-    Fetches latest commit from repository
     Refreshes CDD/Oncotree caches
     """
     setup_import = SSHOperator(
