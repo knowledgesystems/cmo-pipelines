@@ -46,7 +46,7 @@ with DAG(
     importer = "{{ params.importer }}"
     pipelines3_conn_id = "pipelines3_ssh"
     # TODO rename import node connection string
-    import_node_conn_id = "genie_importer_ssh"
+    import_node_conn_id = "importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
     creds_dir = "/data/portal-cron/pipelines-credentials"
     db_properties_filepath = f"{creds_dir}/manage_{importer}_database_update_tools.properties"
