@@ -1,6 +1,6 @@
 """
-rollback_genie_portal.py
-Transfer the production Genie deployment to the backup database.
+rollback_public_portal.py
+Transfer the production Public deployment to the backup database.
 """
 from datetime import timedelta, datetime
 from airflow import DAG
@@ -28,22 +28,22 @@ def watcher():
     raise AirflowException("Failing task because one or more upstream tasks failed.")
 
 with DAG(
-    dag_id="rollback_genie_portal",
+    dag_id="rollback_public_portal",
     default_args=args,
     description="",
     dagrun_timeout=timedelta(minutes=360),
     max_active_runs=1,
     start_date=datetime(2024, 12, 3),
     schedule_interval=None,
-    tags=["genie"],
+    tags=["public"],
     params={
-        "confirm": Param(type="string", enum=["yes"], title="You are running a DAG that will roll back the current GENIE production deployment.", description="Please confirm that you understand by typing 'yes' in the text box."),
+        "confirm": Param(type="string", enum=["yes"], title="You are running a DAG that will roll back the current Public production deployment.", description="Please confirm that you understand by typing 'yes' in the text box."),
     }
 ) as dag:
 
     conn_id = "importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
-    db_properties_filepath="/data/portal-cron/pipelines-credentials/manage_genie_database_update_tools.properties"
+    db_properties_filepath="/data/portal-cron/pipelines-credentials/manage_public_database_update_tools.properties"
 
     """
     Set the import attempt status to "running".
@@ -57,12 +57,12 @@ with DAG(
     )
 
     """
-    Transfer Genie deployment to the backup database.
+    Transfer Public deployment to the backup database.
     """
     transfer_deployment = SSHOperator(
         task_id="transfer_deployment",
         ssh_conn_id=conn_id,
-        command=f"{import_scripts_path}/genie-airflow-transfer-deployment.sh {import_scripts_path} {db_properties_filepath}",
+        command=f"{import_scripts_path}/public-airflow-transfer-deployment.sh {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     )
 
