@@ -116,7 +116,7 @@ public class CVRClinicalRecord {
             CVRExtraction cvrExtration = metaData.getExtraction();
             this.dnaElutionBufferVolume = !Strings.isNullOrEmpty(cvrExtration.getDnaElutionBufferVolume()) ? cvrExtration.getDnaElutionBufferVolume() : "NA";
             this.plasmaUsedVolume = !Strings.isNullOrEmpty(cvrExtration.getPlasmaUsedVolume()) ? cvrExtration.getPlasmaUsedVolume() : "NA";
-            if (!Strings.isNullOrEmpty(cvrExtration.getDnaConcentration())) {
+            if (!Strings.isNullOrEmpty(cvrExtration.getDnaConcentration()) && !"NA".equalsIgnoreCase(cvrExtration.getDnaConcentration())) {
                 double dnaConcentrationDouble = Double.parseDouble(cvrExtration.getDnaConcentration());
                 this.dnaConcentration = DNA_CONCENTRATION_FORMAT.format(dnaConcentrationDouble);
             } else {

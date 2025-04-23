@@ -69,6 +69,9 @@ public class CVRExtraction {
     *
     */
     public CVRExtraction() {
+        this.dnaElutionBufferVolume = "NA";
+        this.plasmaUsedVolume = "NA";
+        this.dnaConcentration = "NA";
     }
 
     /**

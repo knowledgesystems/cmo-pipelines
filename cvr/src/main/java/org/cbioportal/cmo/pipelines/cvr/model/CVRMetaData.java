@@ -44,9 +44,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.base.Strings;
 import java.util.*;
 import jakarta.annotation.Generated;
+
+import org.cbioportal.cmo.pipelines.cvr.CVRExtractionDeserializer;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Generated("org.jsonschema2pojo")
@@ -164,6 +167,7 @@ public class CVRMetaData {
     private String consentPartC;
     @JsonProperty("slide-viewer-id")
     private String wholeSlideViewerId;
+    @JsonDeserialize(using = CVRExtractionDeserializer.class)
     @JsonProperty("extraction")
     private CVRExtraction extraction;
     @JsonIgnore
