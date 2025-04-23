@@ -153,6 +153,7 @@ with DAG(
     cleanup_data_local = SSHOperator(
         task_id="cleanup_data_local",
         ssh_conn_id=import_node_conn_id,
+        trigger_rule=TriggerRule.ALL_DONE,
         command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} cleanup {importer} {data_repos}",
         dag=dag,
     )
@@ -163,6 +164,7 @@ with DAG(
     cleanup_data_remote = SSHOperator(
         task_id="cleanup_data_remote",
         ssh_conn_id=pipelines3_conn_id,
+        trigger_rule=TriggerRule.ALL_DONE,
         command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} cleanup {importer} {data_repos}",
         dag=dag,
     )
