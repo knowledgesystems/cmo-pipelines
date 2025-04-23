@@ -45,7 +45,6 @@ with DAG(
 
     importer = "{{ params.importer }}"
     pipelines3_conn_id = "pipelines3_ssh"
-    # TODO rename import node connection string
     import_node_conn_id = "importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
     creds_dir = "/data/portal-cron/pipelines-credentials"
@@ -56,10 +55,10 @@ with DAG(
     Parses and validates DAG arguments
     """
     @task
-    def parse_args(data_repos: list):
+    def get_data_repos(data_repos: list):
         return ' '.join(data_repos)
 
-    datarepos = parse_args("{{ params.data_repos }}")
+    data_repos = get_data_repos("{{ params.data_repos }}")
 
     """
     Determines which database is "production" vs "not production"
@@ -79,7 +78,7 @@ with DAG(
     fetch_data_local = SSHOperator(
         task_id="fetch_data_local",
         ssh_conn_id=import_node_conn_id,
-        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} pull {importer} {datarepos}",
+        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} pull {importer} {data_repos}",
         dag=dag,
     )
 
@@ -89,7 +88,7 @@ with DAG(
     fetch_data_remote = SSHOperator(
         task_id="fetch_data_remote",
         ssh_conn_id=pipelines3_conn_id,
-        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} pull {importer} {datarepos}",
+        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} pull {importer} {data_repos}",
         dag=dag,
     )
 
@@ -149,15 +148,24 @@ with DAG(
     )
 
     """
-    Removes untracked files/LFS objects from repos.
+    Clean up data repos on import node
     """
-    cleanup_repo = SSHOperator(
-        task_id="cleanup_repo",
+    cleanup_data_local = SSHOperator(
+        task_id="cleanup_data_local",
         ssh_conn_id=import_node_conn_id,
-        trigger_rule=TriggerRule.ALL_DONE,
-        command=f"{import_scripts_path}/datasource-repo-cleanup.sh {datarepos}",
+        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} cleanup {importer} {data_repos}",
         dag=dag,
     )
 
-    datarepos >> [clone_database, fetch_data_local, fetch_data_remote] >> setup_import >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_repo
+    """
+    Clean up data repos within MSK network
+    """
+    cleanup_data_remote = SSHOperator(
+        task_id="cleanup_data_remote",
+        ssh_conn_id=pipelines3_conn_id,
+        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} cleanup {importer} {data_repos}",
+        dag=dag,
+    )
+
+    data_repos >> [clone_database, fetch_data_local, fetch_data_remote] >> setup_import >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> [cleanup_data_local, cleanup_data_remote] 
     list(dag.tasks) >> watcher()
