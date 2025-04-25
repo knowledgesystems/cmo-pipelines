@@ -39,7 +39,7 @@ with DAG(
     render_template_as_native_obj=True,
     params={
         "importer": Param("public", type="string", enum=["public"], title="Import Pipeline", description="Determines which importer to use."),
-        "data_repos": Param(["datahub"], type="array", description="Comma-separated list of data repositories to pull updates from/cleanup.", title="Data Repositories", examples=["datahub", "msk-impact", "private"],)
+        "data_repos": Param(["datahub"], type="array", description="Comma-separated list of data repositories to pull updates from/cleanup.", title="Data Repositories", examples=["datahub", "impact", "private"],)
     }
 ) as dag:
 
