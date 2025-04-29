@@ -77,7 +77,7 @@ function upload_to_s3() {
 
 function trigger_cdm_dags() {
     TMP_LOG_FILE=$(mktemp -q)
-    AIRFLOW_ADMIN_CREDENTIALS_FILE="${PORTAL_HOME}/pipelines-credentials/airflow-admin.credentials"
+    AIRFLOW_ADMIN_CREDENTIALS_FILE="${PORTAL_HOME}/pipelines-credentials/airflow-admin.credentials.base64"
     AIRFLOW_CREDS=$(cat $AIRFLOW_ADMIN_CREDENTIALS_FILE)
     DATA='{"conf": {"sample_filepath": "'"$CLINICAL_SAMPLE_S3_FILEPATH"'", "cohort_name": "'"$COHORT"'"}}'
     AIRFLOW_URL="https://airflow.cbioportal.aws.mskcc.org"
