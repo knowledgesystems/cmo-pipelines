@@ -31,7 +31,6 @@ with DAG(
     dag_id="import_public_dag",
     default_args=args,
     description="Imports to Public cBioPortal MySQL and ClickHouse databases using blue/green deployment strategy",
-    dagrun_timeout=timedelta(minutes=360),
     max_active_runs=1,
     start_date=datetime(2024, 12, 3),
     schedule_interval=None,
@@ -105,7 +104,7 @@ with DAG(
 
     """
     Imports cancer types
-    Imports studies from ? column in portal-configuration spreadsheet
+    Imports studies from public-portal column portal-configuration spreadsheet
     """
     import_sql = SSHOperator(
         task_id="import_sql",
