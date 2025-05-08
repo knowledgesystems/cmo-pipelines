@@ -31,7 +31,6 @@ with DAG(
     dag_id="rollback_public_portal",
     default_args=args,
     description="",
-    dagrun_timeout=timedelta(minutes=360),
     max_active_runs=1,
     start_date=datetime(2024, 12, 3),
     schedule_interval=None,

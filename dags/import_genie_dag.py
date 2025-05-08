@@ -31,7 +31,6 @@ with DAG(
     dag_id="import_genie_dag",
     default_args=args,
     description="Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy",
-    dagrun_timeout=timedelta(minutes=360),
     max_active_runs=1,
     start_date=datetime(2024, 12, 3),
     schedule_interval=None,
