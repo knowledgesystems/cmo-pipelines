@@ -13,7 +13,6 @@ from airflow.utils.trigger_rule import TriggerRule
 args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "email": ["chennac@mskcc.org"],
     "email_on_failure": True,
     "email_on_retry": False,
     "retries": 0,
