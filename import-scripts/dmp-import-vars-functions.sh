@@ -42,6 +42,8 @@ FILTER_EMPTY_COLUMNS_KEEP_COLUMN_LIST="PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE,PARTA_
 source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 # import needed function waitWhileWithinTimePeriod()
 source "$PORTAL_HOME/scripts/date-and-time-handling-functions.sh"
+# import needed for s3 functionality (e.g. uploadToS3OrSendFailureMessage)
+source $PORTAL_HOME/scripts/s3_functions.sh
 
 # Function for alerting slack channel of any failures
 function sendPreImportFailureMessageMskPipelineLogsSlack() {
@@ -342,5 +344,20 @@ function consumeSamplesAfterArcherImport {
         echo "Consuming archer samples from cvr"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_ARCHER_CONSUME_TRIGGER
+    fi
+}
+
+function uploadToS3OrSendFailureMessage() {
+    DIR_TO_UPLOAD="$1"
+    DIR_NAME_IN_S3="$2"
+    BUCKET_NAME="$3"
+
+    # upload DIR_TO_UPLOAD directory to s3 bucket BUCKET_NAME
+    upload_to_s3 "$DIR_TO_UPLOAD" "$DIR_NAME_IN_S3" "$BUCKET_NAME"
+    if [ $? -gt 0 ]; then
+        message="Failed to upload $DIR_NAME_IN_S3 to s3 bucket!"
+        echo $message
+        echo -e "$message" | mail -s "Failed to upload $DIR_NAME_IN_S3 to s3" $PIPELINES_EMAIL_LIST
+        sendImportFailureMessageMskPipelineLogsSlack "$message"
     fi
 }
