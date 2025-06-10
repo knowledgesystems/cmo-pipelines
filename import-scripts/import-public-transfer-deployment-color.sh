@@ -17,18 +17,18 @@
 # - scale down the prior production deployment fully, scale up the new production deployment fully. Allow time for pod readiness.
 # - construct and check in to github repo the altered kubernetes configuration files
 
-unset PUBLIC_BLUE_DEPLOYMENT_LIST
-unset PUBLIC_GREEN_DEPLOYMENT_LIST
-declare -a PUBLIC_BLUE_DEPLOYMENT_LIST
-declare -a PUBLIC_GREEN_DEPLOYMENT_LIST
-PUBLIC_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-blue')
-PUBLIC_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-blue')
-PUBLIC_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-master-blue')
-PUBLIC_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-blue')
-PUBLIC_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-green')
-PUBLIC_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-green')
-PUBLIC_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-master-green')
-PUBLIC_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-green')
+unset BLUE_DEPLOYMENT_LIST
+unset GREEN_DEPLOYMENT_LIST
+declare -a BLUE_DEPLOYMENT_LIST
+declare -a GREEN_DEPLOYMENT_LIST
+BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-blue')
+BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-blue')
+BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-master-blue')
+BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-blue')
+GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-green')
+GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-green')
+GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-master-green')
+GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-green')
 declare -A DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP=()
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-blue']='1'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-green']='1'
@@ -39,18 +39,17 @@ DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-master-green']='1'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-clickhouse-only-db-blue']='1'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-clickhouse-only-db-green']='1'
 declare -A DEPLOYMENT_TO_YAML_FILEPATH_MAP=()
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-blue']='public-eks/cbioportal-prod/cbioportal_backend_public_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-green']='public-eks/cbioportal-prod/cbioportal_backend_public_green.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-beta-blue']='public-eks/cbioportal-prod/cbioportal_backend_public_beta_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-beta-green']='public-eks/cbioportal-prod/cbioportal_backend_public_beta_green.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-master-blue']='public-eks/cbioportal-prod/cbioportal_backend_master_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-master-green']='public-eks/cbioportal-prod/cbioportal_backend_master_green.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-clickhouse-only-db-blue']='public-eks/cbioportal-prod/cbioportal_backend_clickhouse_only_db_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-clickhouse-only-db-green']='public-eks/cbioportal-prod/cbioportal_backend_clickhouse_only_db_green.yaml'
-PUBLIC_INGRESS='cbioportal-ingress'
-PUBLIC_INGRESS_YAML_FILEPATH='argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/cbio-ingress.yml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-beta-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_beta_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-master-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_master_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-clickhouse-only-db-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_clickhouse_only_db_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_green.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-beta-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_beta_green.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-master-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_master_green.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-clickhouse-only-db-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_clickhouse_only_db_green.yaml'
+INGRESS_YAML_FILEPATH='argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/cbio-ingress.yml'
 REPLICA_READY_CHECK_PAUSE_SECONDS=20
-REPLICA_READY_CHECK_MAX_CHECKCOUNT=8
+REPLICA_READY_CHECK_MAX_CHECKCOUNT=15
 tmp="/data/portal-cron/tmp/import-cron-public"
 KS_K8S_DEPL_REPO_DIRPATH="/data/portal-cron/git-repos/only_for_use_by_public_import_script/knowledgesystems-k8s-deployment"
 
@@ -152,8 +151,8 @@ function yaml_file_is_current_with_production() {
 
 function git_repo_clone_matches_cluster_config() {
     pos=0
-    while [ $pos -lt ${#PUBLIC_BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${PUBLIC_BLUE_DEPLOYMENT_LIST[$pos]}
+    while [ $pos -lt ${#BLUE_DEPLOYMENT_LIST[@]} ] ; do
+        deployment=${BLUE_DEPLOYMENT_LIST[$pos]}
         yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         if ! yaml_file_is_current_with_production "$yaml_filepath" ; then
             echo "current master branch of kubernetes yaml repo does not match the production environment"
@@ -163,8 +162,8 @@ function git_repo_clone_matches_cluster_config() {
         pos=$(($pos+1))
     done
     pos=0
-    while [ $pos -lt ${#PUBLIC_GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${PUBLIC_GREEN_DEPLOYMENT_LIST[$pos]}
+    while [ $pos -lt ${#GREEN_DEPLOYMENT_LIST[@]} ] ; do
+        deployment=${GREEN_DEPLOYMENT_LIST[$pos]}
         yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         if ! yaml_file_is_current_with_production "$yaml_filepath" ; then
             echo "current master branch of kubernetes yaml repo does not match the production environment"
@@ -173,9 +172,9 @@ function git_repo_clone_matches_cluster_config() {
         fi
         pos=$(($pos+1))
     done
-    if ! yaml_file_is_current_with_production "$PUBLIC_INGRESS_YAML_FILEPATH" ; then
+    if ! yaml_file_is_current_with_production "$INGRESS_YAML_FILEPATH" ; then
         echo "current master branch of kubernetes yaml repo does not match the production environment"
-        echo "mismatch exists in file $KS_K8S_DEPL_REPO_DIRPATH/$PUBLIC_INGRESS_YAML_FILEPATH"
+        echo "mismatch exists in file $KS_K8S_DEPL_REPO_DIRPATH/$INGRESS_YAML_FILEPATH"
         return 1
     fi
     return 0
@@ -191,10 +190,10 @@ function all_replicas_ready() {
     DEPLOYMENT_COLOR=$1
     DEPLOYMENT_CHECK_OUTPUT_FILEPATH="$tmp/all_replicas_ready_output.txt"
     if [ $DEPLOYMENT_COLOR == 'blue' ] ; then
-        kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG get deployments ${PUBLIC_BLUE_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
+        kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG get deployments ${BLUE_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
     else
         if [ $DEPLOYMENT_COLOR == 'green' ] ; then
-            kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG get deployments ${PUBLIC_GREEN_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
+            kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG get deployments ${GREEN_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
         else
             echo "Error : invalid argument '$DEPLOYMENT_COLOR' passed to all_replicas_ready()" >&2
             exit 1
@@ -261,8 +260,8 @@ function scale_deployment_to_N_replicas() {
     NUM_REPLICAS=$2 # "none", "almost_none", "almost_full, or "full"
     if [ $DEPLOYMENT_COLOR == 'blue' ] ; then
         local pos=0
-        while [ "$pos" -lt "${#PUBLIC_BLUE_DEPLOYMENT_LIST[@]}" ] ; do
-            deployment="${PUBLIC_BLUE_DEPLOYMENT_LIST[$pos]}"
+        while [ "$pos" -lt "${#BLUE_DEPLOYMENT_LIST[@]}" ] ; do
+            deployment="${BLUE_DEPLOYMENT_LIST[$pos]}"
             replica_count_string_to_integer "$deployment" "$NUM_REPLICAS"
             replica_count=$?
             kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
@@ -271,8 +270,8 @@ function scale_deployment_to_N_replicas() {
     else
         if [ $DEPLOYMENT_COLOR == 'green' ] ; then
             local pos=0
-            while [ "$pos" -lt "${#PUBLIC_GREEN_DEPLOYMENT_LIST[@]}" ] ; do
-                deployment="${PUBLIC_GREEN_DEPLOYMENT_LIST[$pos]}"
+            while [ "$pos" -lt "${#GREEN_DEPLOYMENT_LIST[@]}" ] ; do
+                deployment="${GREEN_DEPLOYMENT_LIST[$pos]}"
                 replica_count_string_to_integer "$deployment" "$NUM_REPLICAS"
                 replica_count=$?
                 kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
@@ -379,19 +378,28 @@ function output_replaced_replicas_line() {
 function switchover_ingress_rules_to_destination_database_deployment() {
     DESTINATION_COLOR=$1
     # rewrite yaml files
-    public_data_cbioportal_org_service_name="cbioportal-backend-public-blue"
+    public_cbioportal_org_service_name="cbioportal-backend-public-blue"
+    public_beta_cbioportal_org_service_name="cbioportal-backend-public-beta-blue"
+    master_cbioportal_org_service_name="cbioportal-backend-master-blue"
+    clickhouse_only_db_cbioportal_org_service_name="cbioportal-backend-clickhouse-only-db-blue"
     if [ "$DESTINATION_COLOR" == "green" ] ; then
-        public_data_cbioportal_org_service_name="cbioportal-backend-public-green"
+        public_cbioportal_org_service_name="cbioportal-backend-public-green"
+        public_beta_cbioportal_org_service_name="cbioportal-backend-public-beta-green"
+        master_cbioportal_org_service_name="cbioportal-backend-master-green"
+        clickhouse_only_db_cbioportal_org_service_name="cbioportal-backend-clickhouse-only-db-green"
     else
         if ! [ "$DESTINATION_COLOR" == "blue" ] ; then
             echo "Warning : switchover_ingress_rules_to_destination_database_deployment called with unrecognized color argument : $DESTINATION_COLOR. 'blue' will be used instead."
         fi
     fi
-    yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${PUBLIC_INGRESS_YAML_FILEPATH}"
+    yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${INGRESS_YAML_FILEPATH}"
     updated_yaml_filepath="$yaml_filepath.updated"
     rm -f "$updated_yaml_filepath"
     inside_spec="no"
-    inside_host_public_data_cbioportal_org="no"
+    inside_host_public_cbioportal_org="no"
+    inside_host_public_beta_cbioportal_org="no"
+    inside_host_master_cbioportal_org="no"
+    inside_host_clickhouse_only_db_cbioportal_org="no"
     inside_service="no"
     while IFS='' read -r line ; do
         if yaml_line_is_comment "$line" ; then
@@ -401,7 +409,10 @@ function switchover_ingress_rules_to_destination_database_deployment() {
         if yaml_line_is_top_level_section "$line" ; then
             if [ "${line:0:5}" == 'spec:' ] ; then
                 inside_spec="yes"
-                inside_host_public_data_cbioportal_org="no"
+                inside_host_public_cbioportal_org="no"
+                inside_host_public_beta_cbioportal_org="no"
+                inside_host_master_cbioportal_org="no"
+                inside_host_clickhouse_only_db_cbioportal_org="no"
                 inside_service="no"
             else
                 inside_spec="no"
@@ -410,25 +421,53 @@ function switchover_ingress_rules_to_destination_database_deployment() {
             continue
         fi
         if yaml_line_is_host_line "$line" ; then
+            inside_host_public_cbioportal_org="no"
+            inside_host_public_beta_cbioportal_org="no"
+            inside_host_master_cbioportal_org="no"
+            inside_host_clickhouse_only_db_cbioportal_org="no"
             if yaml_host_line_references_host "$line" "public-data.cbioportal.org" ; then
-                inside_host_public_data_cbioportal_org="yes"
+                inside_host_public_cbioportal_org="yes"
                 inside_service="no"
             else
-                inside_host_public_data_cbioportal_org="no"
+                if yaml_host_line_references_host "$line" "beta.cbioportal.org" ; then
+                    inside_host_public_beta_cbioportal_org="yes"
+                    inside_service="no"
+                else
+                    if yaml_host_line_references_host "$line" "master.cbioportal.org" ; then
+                        inside_host_master_cbioportal_org="yes"
+                        inside_service="no"
+                    else
+                        if yaml_host_line_references_host "$line" "clickhouse-only-db.cbioportal.org" ; then
+                            inside_host_clickhouse_only_db_cbioportal_org="yes"
+                        fi
+                    fi
+                fi
             fi
             echo "$line"
             continue
         fi
         if [ "$inside_spec" == "yes" ] ; then
-            if [ "$inside_host_public_data_cbioportal_org" == "yes" ] ; then
+            if [ "$inside_host_public_cbioportal_org" == "yes" ] || [ "$inside_host_public_beta_cbioportal_org" == "yes" ] || [ "$inside_host_master_cbioportal_org" == "yes" ] || [ "$inside_host_clickhouse_only_db_cbioportal_org" == "yes" ] ; then
                 if yaml_line_is_service_line "$line" ; then
                     inside_service="yes"
                     echo "$line"
                     continue
                 fi
                 if [ "$inside_service" == "yes" ] && yaml_line_is_name_line "$line" ; then
-                    if [ "$inside_host_public_data_cbioportal_org" == "yes" ] ; then
-                        output_replaced_name_line "$line" "$public_data_cbioportal_org_service_name"
+                    if [ "$inside_host_public_cbioportal_org" == "yes" ] ; then
+                        output_replaced_name_line "$line" "$public_cbioportal_org_service_name"
+                        continue
+                    fi
+                    if [ "$inside_host_public_beta_cbioportal_org" == "yes" ] ; then
+                        output_replaced_name_line "$line" "$public_beta_cbioportal_org_service_name"
+                        continue
+                    fi
+                    if [ "$inside_host_master_cbioportal_org" == "yes" ] ; then
+                        output_replaced_name_line "$line" "$master_cbioportal_org_service_name"
+                        continue
+                    fi
+                    if [ "$inside_host_clickhouse_only_db_cbioportal_org" == "yes" ] ; then
+                        output_replaced_name_line "$line" "$clickhouse_only_db_cbioportal_org_service_name"
                         continue
                     fi
                 fi
@@ -485,8 +524,8 @@ function adjust_replica_counts_in_deployment_yaml_files() {
         green_replica_count="full"
     fi
     pos=0
-    while [ $pos -lt ${#PUBLIC_BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment="${PUBLIC_BLUE_DEPLOYMENT_LIST[$pos]}"
+    while [ $pos -lt ${#BLUE_DEPLOYMENT_LIST[@]} ] ; do
+        deployment="${BLUE_DEPLOYMENT_LIST[$pos]}"
         yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         replica_count_string_to_integer "$deployment" "$blue_replica_count"
         replicas_int=$?
@@ -494,8 +533,8 @@ function adjust_replica_counts_in_deployment_yaml_files() {
         pos=$(($pos+1))
     done
     pos=0
-    while [ $pos -lt ${#PUBLIC_GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment="${PUBLIC_GREEN_DEPLOYMENT_LIST[$pos]}"
+    while [ $pos -lt ${#GREEN_DEPLOYMENT_LIST[@]} ] ; do
+        deployment="${GREEN_DEPLOYMENT_LIST[$pos]}"
         yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         replica_count_string_to_integer "$deployment" "$green_replica_count"
         replicas_int=$?
@@ -507,8 +546,8 @@ function adjust_replica_counts_in_deployment_yaml_files() {
 function check_in_changes_to_kubernetes_into_github() {
     echo "checking in configuration changes to github"
     pos=0
-    while [ $pos -lt ${#PUBLIC_BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${PUBLIC_BLUE_DEPLOYMENT_LIST[$pos]}
+    while [ $pos -lt ${#BLUE_DEPLOYMENT_LIST[@]} ] ; do
+        deployment=${BLUE_DEPLOYMENT_LIST[$pos]}
         yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$yaml_filepath" >/dev/null 2>&1 ; then
             echo "warning : failure when adding file $yaml_filepath to changeset" >&2
@@ -516,15 +555,15 @@ function check_in_changes_to_kubernetes_into_github() {
         pos=$(($pos+1))
     done
     pos=0
-    while [ $pos -lt ${#PUBLIC_GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${PUBLIC_GREEN_DEPLOYMENT_LIST[$pos]}
+    while [ $pos -lt ${#GREEN_DEPLOYMENT_LIST[@]} ] ; do
+        deployment=${GREEN_DEPLOYMENT_LIST[$pos]}
         yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$yaml_filepath" >/dev/null 2>&1 ; then
             echo "warning : failure when adding file $yaml_filepath to changeset" >&2
         fi
         pos=$(($pos+1))
     done
-    yaml_filepath="$PUBLIC_INGRESS_YAML_FILEPATH"
+    yaml_filepath="$INGRESS_YAML_FILEPATH"
     if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$yaml_filepath" >/dev/null 2>&1 ; then
         echo "warning : failure when adding file $yaml_filepath to changeset" >&2
     fi
@@ -543,11 +582,6 @@ GIT_PUSH_FILEPATH="/home/cbioportal_importer/rob/push_output.txt"
 function main() {
     MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$1
     DESTINATION_COLOR=$2
-
-##############################
-    /data/portal-cron/scripts/set_update_process_state.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" complete
-    exit 0
-##############################
 
     # phase : initialize environment and validate arguments and current state
     validate_arguments $@
