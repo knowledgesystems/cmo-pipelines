@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# import-genie-data-transfer-deployment-color.sh
+# import-public-transfer-deployment-color.sh
 #
-# switch the (updated) standby genie web app deployments to become the new production genie web app deployments
+# switch the (updated) standby public web app deployments to become the new production public web app deployments
 # and move the prior prodution deployment into a standby state
 #
 # the main required argument is the color ('green' or 'blue') which should become the new production deployment
@@ -10,40 +10,52 @@
 # - validate arguments
 # - scale down the replicas on the production deployment slightly, scale up the standy deployment. Allow time for pod readiness.
 # - scale down the replicas on the production deployment almost fully, scale up the standy deployment. Allow time for pod readiness.
-# - syncronize the genie user tables from the current production database to the current standby database
+# - syncronize the public user tables from the current production database to the current standby database
 # - clear the persistence caches for the current standby database
 # - switch the ingress rules to route website traffic to the incoming (standby until now) deployment
 # - mark the update process as complete in the management database table (implicitly changes user signup to the new production db)
 # - scale down the prior production deployment fully, scale up the new production deployment fully. Allow time for pod readiness.
 # - construct and check in to github repo the altered kubernetes configuration files
 
-unset GENIE_BLUE_DEPLOYMENT_LIST
-unset GENIE_GREEN_DEPLOYMENT_LIST
-declare -a GENIE_BLUE_DEPLOYMENT_LIST
-declare -a GENIE_GREEN_DEPLOYMENT_LIST
-GENIE_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-genie-public-blue')
-GENIE_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-genie-private-blue')
-GENIE_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-genie-public-green')
-GENIE_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-genie-private-green')
+unset PUBLIC_BLUE_DEPLOYMENT_LIST
+unset PUBLIC_GREEN_DEPLOYMENT_LIST
+declare -a PUBLIC_BLUE_DEPLOYMENT_LIST
+declare -a PUBLIC_GREEN_DEPLOYMENT_LIST
+PUBLIC_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-blue')
+PUBLIC_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-blue')
+PUBLIC_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-master-blue')
+PUBLIC_BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-blue')
+PUBLIC_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-green')
+PUBLIC_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-green')
+PUBLIC_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-master-green')
+PUBLIC_GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-green')
 declare -A DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP=()
-DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-genie-public-blue']='3'
-DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-genie-private-blue']='3'
-DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-genie-public-green']='3'
-DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-genie-private-green']='3'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-blue']='1'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-green']='1'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-beta-blue']='1'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-beta-green']='1'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-master-blue']='1'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-master-green']='1'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-clickhouse-only-db-blue']='1'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-clickhouse-only-db-green']='1'
 declare -A DEPLOYMENT_TO_YAML_FILEPATH_MAP=()
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-public-blue']='public-eks/cbioportal-prod/cbioportal_backend_genie_public_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-private-blue']='public-eks/cbioportal-prod/cbioportal_backend_genie_private_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-public-green']='public-eks/cbioportal-prod/cbioportal_backend_genie_public_green.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-private-green']='public-eks/cbioportal-prod/cbioportal_backend_genie_private_green.yaml'
-GENIE_INGRESS='genie-ingress'
-GENIE_INGRESS_YAML_FILEPATH='public-eks/cbioportal-prod/shared-services/ingress/genie-ingress.yml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-blue']='public-eks/cbioportal-prod/cbioportal_backend_public_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-green']='public-eks/cbioportal-prod/cbioportal_backend_public_green.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-beta-blue']='public-eks/cbioportal-prod/cbioportal_backend_public_beta_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-beta-green']='public-eks/cbioportal-prod/cbioportal_backend_public_beta_green.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-master-blue']='public-eks/cbioportal-prod/cbioportal_backend_master_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-master-green']='public-eks/cbioportal-prod/cbioportal_backend_master_green.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-clickhouse-only-db-blue']='public-eks/cbioportal-prod/cbioportal_backend_clickhouse_only_db_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-clickhouse-only-db-green']='public-eks/cbioportal-prod/cbioportal_backend_clickhouse_only_db_green.yaml'
+PUBLIC_INGRESS='cbioportal-ingress'
+PUBLIC_INGRESS_YAML_FILEPATH='argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/cbio-ingress.yml'
 REPLICA_READY_CHECK_PAUSE_SECONDS=20
 REPLICA_READY_CHECK_MAX_CHECKCOUNT=8
-tmp="/data/portal-cron/tmp/import-cron-genie"
-KS_K8S_DEPL_REPO_DIRPATH="/data/portal-cron/git-repos/only_for_use_by_genie_import_script/knowledgesystems-k8s-deployment"
+tmp="/data/portal-cron/tmp/import-cron-public"
+KS_K8S_DEPL_REPO_DIRPATH="/data/portal-cron/git-repos/only_for_use_by_public_import_script/knowledgesystems-k8s-deployment"
 
 function usage() {
-    echo "usage: import-genie-data-transfer-deployment-color.sh cluster-management-file destination-color"
+    echo "usage: import-public-transfer-deployment-color.sh cluster-management-file destination-color"
     echo "       where destination-color is one of {'green', 'blue'}"
     exit 1
 }
@@ -121,18 +133,18 @@ function check_that_git_repo_clone_is_current() {
 function yaml_file_is_current_with_production() {
     yaml_filepath=$1
     full_yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/$yaml_filepath"
-    kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath" > /dev/null 2>&1
+    kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath" > /dev/null 2>&1
     diff_status=$?
     if [ $diff_status -eq 1 ] ; then
         # mismatch
         echo "when checking for currency of yaml specificiations in file '$full_yaml_filepath', these differences were found:"
-        kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
+        kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
         return 1
     fi
     if [ $diff_status -gt 1 ] ; then
         # error
         echo "an error occurred when checking the currency of yaml specificiations in file '$full_yaml_filepath'. output:"
-        kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
+        kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
         return 1
     fi
     return 0
@@ -140,8 +152,8 @@ function yaml_file_is_current_with_production() {
 
 function git_repo_clone_matches_cluster_config() {
     pos=0
-    while [ $pos -lt ${#GENIE_BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${GENIE_BLUE_DEPLOYMENT_LIST[$pos]}
+    while [ $pos -lt ${#PUBLIC_BLUE_DEPLOYMENT_LIST[@]} ] ; do
+        deployment=${PUBLIC_BLUE_DEPLOYMENT_LIST[$pos]}
         yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         if ! yaml_file_is_current_with_production "$yaml_filepath" ; then
             echo "current master branch of kubernetes yaml repo does not match the production environment"
@@ -151,8 +163,8 @@ function git_repo_clone_matches_cluster_config() {
         pos=$(($pos+1))
     done
     pos=0
-    while [ $pos -lt ${#GENIE_GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${GENIE_GREEN_DEPLOYMENT_LIST[$pos]}
+    while [ $pos -lt ${#PUBLIC_GREEN_DEPLOYMENT_LIST[@]} ] ; do
+        deployment=${PUBLIC_GREEN_DEPLOYMENT_LIST[$pos]}
         yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         if ! yaml_file_is_current_with_production "$yaml_filepath" ; then
             echo "current master branch of kubernetes yaml repo does not match the production environment"
@@ -161,9 +173,9 @@ function git_repo_clone_matches_cluster_config() {
         fi
         pos=$(($pos+1))
     done
-    if ! yaml_file_is_current_with_production "$GENIE_INGRESS_YAML_FILEPATH" ; then
+    if ! yaml_file_is_current_with_production "$PUBLIC_INGRESS_YAML_FILEPATH" ; then
         echo "current master branch of kubernetes yaml repo does not match the production environment"
-        echo "mismatch exists in file $KS_K8S_DEPL_REPO_DIRPATH/$GENIE_INGRESS_YAML_FILEPATH"
+        echo "mismatch exists in file $KS_K8S_DEPL_REPO_DIRPATH/$PUBLIC_INGRESS_YAML_FILEPATH"
         return 1
     fi
     return 0
@@ -179,10 +191,10 @@ function all_replicas_ready() {
     DEPLOYMENT_COLOR=$1
     DEPLOYMENT_CHECK_OUTPUT_FILEPATH="$tmp/all_replicas_ready_output.txt"
     if [ $DEPLOYMENT_COLOR == 'blue' ] ; then
-        kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG get deployments ${GENIE_BLUE_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
+        kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG get deployments ${PUBLIC_BLUE_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
     else
         if [ $DEPLOYMENT_COLOR == 'green' ] ; then
-            kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG get deployments ${GENIE_GREEN_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
+            kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG get deployments ${PUBLIC_GREEN_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
         else
             echo "Error : invalid argument '$DEPLOYMENT_COLOR' passed to all_replicas_ready()" >&2
             exit 1
@@ -249,21 +261,21 @@ function scale_deployment_to_N_replicas() {
     NUM_REPLICAS=$2 # "none", "almost_none", "almost_full, or "full"
     if [ $DEPLOYMENT_COLOR == 'blue' ] ; then
         local pos=0
-        while [ "$pos" -lt "${#GENIE_BLUE_DEPLOYMENT_LIST[@]}" ] ; do
-            deployment="${GENIE_BLUE_DEPLOYMENT_LIST[$pos]}"
+        while [ "$pos" -lt "${#PUBLIC_BLUE_DEPLOYMENT_LIST[@]}" ] ; do
+            deployment="${PUBLIC_BLUE_DEPLOYMENT_LIST[$pos]}"
             replica_count_string_to_integer "$deployment" "$NUM_REPLICAS"
             replica_count=$?
-            kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
+            kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
             pos=$(($pos+1))
         done
     else
         if [ $DEPLOYMENT_COLOR == 'green' ] ; then
             local pos=0
-            while [ "$pos" -lt "${#GENIE_GREEN_DEPLOYMENT_LIST[@]}" ] ; do
-                deployment="${GENIE_GREEN_DEPLOYMENT_LIST[$pos]}"
+            while [ "$pos" -lt "${#PUBLIC_GREEN_DEPLOYMENT_LIST[@]}" ] ; do
+                deployment="${PUBLIC_GREEN_DEPLOYMENT_LIST[$pos]}"
                 replica_count_string_to_integer "$deployment" "$NUM_REPLICAS"
                 replica_count=$?
-                kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
+                kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
                 pos=$(($pos+1))
             done
         else
@@ -367,22 +379,19 @@ function output_replaced_replicas_line() {
 function switchover_ingress_rules_to_destination_database_deployment() {
     DESTINATION_COLOR=$1
     # rewrite yaml files
-    genie_public_cbioportal_org_service_name="cbioportal-backend-genie-public-blue"
-    genie_private_cbioportal_org_service_name="cbioportal-backend-genie-private-blue"
+    public_data_cbioportal_org_service_name="cbioportal-backend-public-blue"
     if [ "$DESTINATION_COLOR" == "green" ] ; then
-        genie_public_cbioportal_org_service_name="cbioportal-backend-genie-public-green"
-        genie_private_cbioportal_org_service_name="cbioportal-backend-genie-private-green"
+        public_data_cbioportal_org_service_name="cbioportal-backend-public-green"
     else
         if ! [ "$DESTINATION_COLOR" == "blue" ] ; then
             echo "Warning : switchover_ingress_rules_to_destination_database_deployment called with unrecognized color argument : $DESTINATION_COLOR. 'blue' will be used instead."
         fi
     fi
-    yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${GENIE_INGRESS_YAML_FILEPATH}"
+    yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${PUBLIC_INGRESS_YAML_FILEPATH}"
     updated_yaml_filepath="$yaml_filepath.updated"
     rm -f "$updated_yaml_filepath"
     inside_spec="no"
-    inside_host_genie_public_cbioportal_org="no"
-    inside_host_genie_private_cbioportal_org="no"
+    inside_host_public_data_cbioportal_org="no"
     inside_service="no"
     while IFS='' read -r line ; do
         if yaml_line_is_comment "$line" ; then
@@ -392,8 +401,7 @@ function switchover_ingress_rules_to_destination_database_deployment() {
         if yaml_line_is_top_level_section "$line" ; then
             if [ "${line:0:5}" == 'spec:' ] ; then
                 inside_spec="yes"
-                inside_host_genie_public_cbioportal_org="no"
-                inside_host_genie_private_cbioportal_org="no"
+                inside_host_public_data_cbioportal_org="no"
                 inside_service="no"
             else
                 inside_spec="no"
@@ -402,35 +410,25 @@ function switchover_ingress_rules_to_destination_database_deployment() {
             continue
         fi
         if yaml_line_is_host_line "$line" ; then
-            if yaml_host_line_references_host "$line" "genie.cbioportal.org" ; then
-                inside_host_genie_public_cbioportal_org="yes"
+            if yaml_host_line_references_host "$line" "public-data.cbioportal.org" ; then
+                inside_host_public_data_cbioportal_org="yes"
                 inside_service="no"
             else
-                inside_host_genie_public_cbioportal_org="no"
-                if yaml_host_line_references_host "$line" "genie-private.cbioportal.org" ; then
-                    inside_host_genie_private_cbioportal_org="yes"
-                    inside_service="no"
-                else
-                    inside_host_genie_private_cbioportal_org="no"
-                fi
+                inside_host_public_data_cbioportal_org="no"
             fi
             echo "$line"
             continue
         fi
         if [ "$inside_spec" == "yes" ] ; then
-            if [ "$inside_host_genie_public_cbioportal_org" == "yes" ] || [ "$inside_host_genie_private_cbioportal_org" == "yes" ] ; then
+            if [ "$inside_host_public_data_cbioportal_org" == "yes" ] ; then
                 if yaml_line_is_service_line "$line" ; then
                     inside_service="yes"
                     echo "$line"
                     continue
                 fi
                 if [ "$inside_service" == "yes" ] && yaml_line_is_name_line "$line" ; then
-                    if [ "$inside_host_genie_public_cbioportal_org" == "yes" ] ; then
-                        output_replaced_name_line "$line" "$genie_public_cbioportal_org_service_name"
-                        continue
-                    fi
-                    if [ "$inside_host_genie_private_cbioportal_org" == "yes" ] ; then
-                        output_replaced_name_line "$line" "$genie_private_cbioportal_org_service_name"
+                    if [ "$inside_host_public_data_cbioportal_org" == "yes" ] ; then
+                        output_replaced_name_line "$line" "$public_data_cbioportal_org_service_name"
                         continue
                     fi
                 fi
@@ -442,7 +440,7 @@ function switchover_ingress_rules_to_destination_database_deployment() {
     done < "$yaml_filepath" > "$updated_yaml_filepath"
     echo "switching traffic over to the updated database deployment"
     mv "$updated_yaml_filepath" "$yaml_filepath"
-    kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG apply -f "$yaml_filepath"
+    kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG apply -f "$yaml_filepath"
 }
 
 function adjust_replica_count_in_deployment_yaml_file() {
@@ -487,8 +485,8 @@ function adjust_replica_counts_in_deployment_yaml_files() {
         green_replica_count="full"
     fi
     pos=0
-    while [ $pos -lt ${#GENIE_BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment="${GENIE_BLUE_DEPLOYMENT_LIST[$pos]}"
+    while [ $pos -lt ${#PUBLIC_BLUE_DEPLOYMENT_LIST[@]} ] ; do
+        deployment="${PUBLIC_BLUE_DEPLOYMENT_LIST[$pos]}"
         yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         replica_count_string_to_integer "$deployment" "$blue_replica_count"
         replicas_int=$?
@@ -496,8 +494,8 @@ function adjust_replica_counts_in_deployment_yaml_files() {
         pos=$(($pos+1))
     done
     pos=0
-    while [ $pos -lt ${#GENIE_GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment="${GENIE_GREEN_DEPLOYMENT_LIST[$pos]}"
+    while [ $pos -lt ${#PUBLIC_GREEN_DEPLOYMENT_LIST[@]} ] ; do
+        deployment="${PUBLIC_GREEN_DEPLOYMENT_LIST[$pos]}"
         yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         replica_count_string_to_integer "$deployment" "$green_replica_count"
         replicas_int=$?
@@ -509,8 +507,8 @@ function adjust_replica_counts_in_deployment_yaml_files() {
 function check_in_changes_to_kubernetes_into_github() {
     echo "checking in configuration changes to github"
     pos=0
-    while [ $pos -lt ${#GENIE_BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${GENIE_BLUE_DEPLOYMENT_LIST[$pos]}
+    while [ $pos -lt ${#PUBLIC_BLUE_DEPLOYMENT_LIST[@]} ] ; do
+        deployment=${PUBLIC_BLUE_DEPLOYMENT_LIST[$pos]}
         yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$yaml_filepath" >/dev/null 2>&1 ; then
             echo "warning : failure when adding file $yaml_filepath to changeset" >&2
@@ -518,24 +516,25 @@ function check_in_changes_to_kubernetes_into_github() {
         pos=$(($pos+1))
     done
     pos=0
-    while [ $pos -lt ${#GENIE_GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${GENIE_GREEN_DEPLOYMENT_LIST[$pos]}
+    while [ $pos -lt ${#PUBLIC_GREEN_DEPLOYMENT_LIST[@]} ] ; do
+        deployment=${PUBLIC_GREEN_DEPLOYMENT_LIST[$pos]}
         yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
         if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$yaml_filepath" >/dev/null 2>&1 ; then
             echo "warning : failure when adding file $yaml_filepath to changeset" >&2
         fi
         pos=$(($pos+1))
     done
-    yaml_filepath="$GENIE_INGRESS_YAML_FILEPATH"
+    yaml_filepath="$PUBLIC_INGRESS_YAML_FILEPATH"
     if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$yaml_filepath" >/dev/null 2>&1 ; then
         echo "warning : failure when adding file $yaml_filepath to changeset" >&2
     fi
     date_string=$(date +%Y-%m-%d)
-    commit_message_string="genie import $date_string"
+    commit_message_string="public import $date_string"
     if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH commit -m "$commit_message_string" public-eks >/dev/null 2>&1 ; then
         echo "warning : failure when committing changes to git repository clone" >&2
     fi
-    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH push 2>&1 ; then
+GIT_PUSH_FILEPATH="/home/cbioportal_importer/rob/push_output.txt"
+    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH push >$GIT_PUSH_FILEPATH 2>&1 ; then
         echo "warning : failure when pushing changes to git repository" >&2
     fi
     return 0
@@ -544,6 +543,11 @@ function check_in_changes_to_kubernetes_into_github() {
 function main() {
     MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$1
     DESTINATION_COLOR=$2
+
+##############################
+    /data/portal-cron/scripts/set_update_process_state.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" complete
+    exit 0
+##############################
 
     # phase : initialize environment and validate arguments and current state
     validate_arguments $@
@@ -554,7 +558,7 @@ function main() {
     fi
     source /data/portal-cron/scripts/automation-environment.sh
     source /data/portal-cron/scripts/clear-persistence-cache-shell-functions.sh
-    echo "starting import-genie-data-transfer-deployment-color.sh"
+    echo "starting import-public-transfer-deployment-color.sh"
     check_current_color_is $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $SOURCE_COLOR
     check_that_git_repo_clone_is_current
     /data/portal-cron/scripts/authenticate_service_account.sh public
@@ -570,21 +574,19 @@ function main() {
     scale_deployment_to_N_replicas $DESTINATION_COLOR "almost_full"
 
     # phase : put the destination color deployments into production and mark process state as completed
-    echo "synchronizing user tables"
-    /data/portal-cron/scripts/synchronize_user_tables_between_databases.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" $SOURCE_COLOR $DESTINATION_COLOR
     if [ "$DESTINATION_COLOR" == "blue" ] ; then
-        clearPersistenceCachesForGenieBluePortals
+        clearPersistenceCachesForPublicBluePortals
     else 
-        clearPersistenceCachesForGenieGreenPortals
+        clearPersistenceCachesForPublicGreenPortals
     fi
     # TODO program a smart wait for cache clearing to complete
     sleep 3
     switchover_ingress_rules_to_destination_database_deployment $DESTINATION_COLOR
     /data/portal-cron/scripts/set_update_process_state.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" complete
     if [ "$SOURCE_COLOR" == "blue" ] ; then
-        clearPersistenceCachesForGenieBluePortals
+        clearPersistenceCachesForPublicBluePortals
     else 
-        clearPersistenceCachesForGenieGreenPortals
+        clearPersistenceCachesForPublicGreenPortals
     fi
 
     # phase : scale the destination color deployments fully up an the source fully down. Commit cluster changes to the configuration repo.
