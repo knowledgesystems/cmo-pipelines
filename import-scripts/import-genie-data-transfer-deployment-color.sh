@@ -31,12 +31,12 @@ DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-genie-private-blue']='3
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-genie-public-green']='3'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-genie-private-green']='3'
 declare -A DEPLOYMENT_TO_YAML_FILEPATH_MAP=()
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-public-blue']='public-eks/cbioportal-prod/cbioportal_backend_genie_public_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-private-blue']='public-eks/cbioportal-prod/cbioportal_backend_genie_private_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-public-green']='public-eks/cbioportal-prod/cbioportal_backend_genie_public_green.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-private-green']='public-eks/cbioportal-prod/cbioportal_backend_genie_private_green.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-public-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_genie_public_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-private-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_genie_private_blue.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-public-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_genie_public_green.yaml'
+DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-private-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_genie_private_green.yaml'
 GENIE_INGRESS='genie-ingress'
-GENIE_INGRESS_YAML_FILEPATH='public-eks/cbioportal-prod/shared-services/ingress/genie-ingress.yml'
+GENIE_INGRESS_YAML_FILEPATH='argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/genie-ingress.yml'
 REPLICA_READY_CHECK_PAUSE_SECONDS=20
 REPLICA_READY_CHECK_MAX_CHECKCOUNT=15
 tmp="/data/portal-cron/tmp/import-cron-genie"
@@ -121,18 +121,18 @@ function check_that_git_repo_clone_is_current() {
 function yaml_file_is_current_with_production() {
     yaml_filepath=$1
     full_yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/$yaml_filepath"
-    kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath" > /dev/null 2>&1
+    kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath" > /dev/null 2>&1
     diff_status=$?
     if [ $diff_status -eq 1 ] ; then
         # mismatch
         echo "when checking for currency of yaml specificiations in file '$full_yaml_filepath', these differences were found:"
-        kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
+        kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
         return 1
     fi
     if [ $diff_status -gt 1 ] ; then
         # error
         echo "an error occurred when checking the currency of yaml specificiations in file '$full_yaml_filepath'. output:"
-        kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
+        kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
         return 1
     fi
     return 0
@@ -179,10 +179,10 @@ function all_replicas_ready() {
     DEPLOYMENT_COLOR=$1
     DEPLOYMENT_CHECK_OUTPUT_FILEPATH="$tmp/all_replicas_ready_output.txt"
     if [ $DEPLOYMENT_COLOR == 'blue' ] ; then
-        kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG get deployments ${GENIE_BLUE_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
+        kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG get deployments ${GENIE_BLUE_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
     else
         if [ $DEPLOYMENT_COLOR == 'green' ] ; then
-            kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG get deployments ${GENIE_GREEN_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
+            kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG get deployments ${GENIE_GREEN_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
         else
             echo "Error : invalid argument '$DEPLOYMENT_COLOR' passed to all_replicas_ready()" >&2
             exit 1
@@ -253,7 +253,7 @@ function scale_deployment_to_N_replicas() {
             deployment="${GENIE_BLUE_DEPLOYMENT_LIST[$pos]}"
             replica_count_string_to_integer "$deployment" "$NUM_REPLICAS"
             replica_count=$?
-            kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
+            kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
             pos=$(($pos+1))
         done
     else
@@ -263,7 +263,7 @@ function scale_deployment_to_N_replicas() {
                 deployment="${GENIE_GREEN_DEPLOYMENT_LIST[$pos]}"
                 replica_count_string_to_integer "$deployment" "$NUM_REPLICAS"
                 replica_count=$?
-                kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
+                kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG scale deployment --replicas $replica_count "$deployment"
                 pos=$(($pos+1))
             done
         else
@@ -441,7 +441,7 @@ function switchover_ingress_rules_to_destination_database_deployment() {
     done < "$yaml_filepath" > "$updated_yaml_filepath"
     echo "switching traffic over to the updated database deployment"
     mv "$updated_yaml_filepath" "$yaml_filepath"
-    kubectl --kubeconfig $PUBLIC_CLUSTER_KUBECONFIG apply -f "$yaml_filepath"
+    kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG apply -f "$yaml_filepath"
 }
 
 function adjust_replica_count_in_deployment_yaml_file() {
@@ -531,10 +531,13 @@ function check_in_changes_to_kubernetes_into_github() {
     fi
     date_string=$(date +%Y-%m-%d)
     commit_message_string="genie import $date_string"
-    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH commit -m "$commit_message_string" public-eks >/dev/null 2>&1 ; then
+    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH commit -m "$commit_message_string" >/dev/null 2>&1 ; then
         echo "warning : failure when committing changes to git repository clone" >&2
     fi
-    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH push 2>&1 ; then
+    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH pull --rebase >/dev/null 2>&1 ; then
+        echo "warning : failure when preparing to push changes (during git pull --rebase)" >&2
+    fi
+    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH push >/dev/null 2>&1 ; then
         echo "warning : failure when pushing changes to git repository" >&2
     fi
     return 0
