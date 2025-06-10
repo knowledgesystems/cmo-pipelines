@@ -25,8 +25,8 @@ for db in ${DBS[@]}; do
   $(set -o pipefail && mysqldump --login-path=mysql_localhost --quick $db | gzip > $SQLDUMP_FULLPATH)
   if [ $? -eq 0 ]; then
     echo "Successfully dumped: '${SQLDUMP_FILENAME}'"
-    . /data/portal-cron/git-repos/portal-configuration/eks-cluster/pipelines/authenticate_service_account.sh eks
-    aws s3 cp ${SQLDUMP_FULLPATH} s3://cbioportal-backups/${SQLDUMP_FILENAME} --profile saml
+    /data/portal-cron/git-repos/portal-configuration/eks-cluster/pipelines/authenticate_service_account.sh eks
+    aws s3 cp ${SQLDUMP_FULLPATH} s3://cbioportal-backups/${SQLDUMP_FILENAME} --profile automation_eks
     if [ $? -ne 0 ]; then
     echo "ERROR: failed to cp '${SQLDUMP_FILENAME}' to S3"
         DUMP_FAILURE=1

@@ -64,6 +64,16 @@ function clearPersistenceCachesForPublicPortals() {
     clearPersistenceCachesForPortals "$all_public_portals"
 }
 
+function clearPersistenceCachesForPublicBluePortals() {
+    all_public_portals="public-blue public-beta-blue master-blue cbioportal-only-db-blue"
+    clearPersistenceCachesForPortals "$all_public_portals"
+}
+
+function clearPersistenceCachesForPublicGreenPortals() {
+    all_public_portals="public-green public-beta-green master-green cbioportal-only-db-green"
+    clearPersistenceCachesForPortals "$all_public_portals"
+}
+
 function clearPersistenceCachesForGenieBluePortals() {
     all_genie_portals="genie-public-blue genie-private-blue"
     clearPersistenceCachesForPortals "$all_genie_portals"

@@ -29,7 +29,7 @@ if [ "$destination_database_color" == "unset" ] ; then
 fi
 
 # Switch over to the newly updated database, mark the process as complete if the switchover succeeded
-TRANSFER_DEPLOYMENT_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/import-public-data-transfer-deployment-color.sh"
+TRANSFER_DEPLOYMENT_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/import-public-transfer-deployment-color.sh"
 if ! $TRANSFER_DEPLOYMENT_COLOR_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
     COLOR_SWITCH_FAIL=1
     echo "Error during deployment transfer to $destination_database_color!" >&2
