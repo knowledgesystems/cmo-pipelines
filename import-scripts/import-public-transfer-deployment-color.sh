@@ -30,8 +30,8 @@ GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-green')
 GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-master-green')
 GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-green')
 declare -A DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP=()
-DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-blue']='1'
-DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-green']='1'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-blue']='4'
+DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-green']='4'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-beta-blue']='1'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-beta-green']='1'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-master-blue']='1'
@@ -200,7 +200,7 @@ function all_replicas_ready() {
         fi
     fi
     headers_read=0
-    while IFS= read -r line; do
+    while IFS='' read -r line || [ -n "$line" ] ; do # -n "$line" will allow processing of lines which reach EOF before encountering newline
         if [ $headers_read -eq 0 ] ; then
             headers_read=1
         else
@@ -364,15 +364,97 @@ function yaml_line_is_replicas_line() {
 }
 
 function output_replaced_name_line() {
-    line=$1
-    service_name=$2
+    line="$1"
+    service_name="$2"
     echo "${line%%:*}: ${service_name}"
 }
 
 function output_replaced_replicas_line() {
-    line=$1
-    replica_count=$2
+    line="$1"
+    replica_count="$2"
     echo "${line%%:*}: ${replica_count}"
+}
+
+function expected_file_change_count_verified() {
+    local original_yaml_filepath="$1"
+    local updated_yaml_filepath="$2"
+    local expected_changed_line_count="$3"
+    local original_yaml_linecount=0
+    local updated_yaml_linecount=0
+    local observed_changed_line_count=0
+    local original_yaml_read=0
+    local updated_yaml_read=0
+    local original_yaml_at_eof=0
+    local updated_yaml_at_eof=0
+    local original_line=""
+    local updated_line=""
+    local read_and_unread_empty_comparison_count=0
+    while [ $original_yaml_at_eof -eq 0 ] || [ $updated_yaml_at_eof -eq 0 ] ; do
+        original_yaml_read=0
+        updated_yaml_read=0
+        original_line=""
+        updated_line=""
+        if [ $original_yaml_at_eof -eq 0 ] ; then
+            original_yaml_read=1
+            if ! IFS='' read -r -u $original_yaml_fd original_line ; then
+                original_yaml_at_eof=1
+                if [ -n "$original_line" ] ; then
+                    original_yaml_linecount=$(($original_yaml_linecount+1))
+                fi
+            else
+                original_yaml_linecount=$(($original_yaml_linecount+1))
+            fi
+        fi
+        if [ $updated_yaml_at_eof -eq 0 ] ; then
+            updated_yaml_read=1
+            if ! IFS='' read -r -u $updated_yaml_fd updated_line ; then
+                updated_yaml_at_eof=1
+                if [ -n "$updated_line" ] ; then
+                    updated_yaml_linecount=$(($updated_yaml_linecount+1))
+                fi
+            else
+                updated_yaml_linecount=$(($updated_yaml_linecount+1))
+            fi
+        fi
+        if ! [ "$original_line" == "$updated_line" ] ; then
+            observed_changed_line_count=$(($observed_changed_line_count+1))
+        else
+            # the single final comparison between an unread (and empty) line from a file which ended without a terminal newline
+            # and the read (and empty) line from a file which ended with a terminal newline is not counted as a difference
+            if [ "$original_yaml_read" -ne "$updated_yaml_read" ] ; then
+                # they must both be empty string in order to have matched
+                read_and_unread_empty_comparison_count=$(($read_and_unread_empty_comparison_count+1))
+                # ignore the first such case
+                if [ "$read_and_unread_empty_comparison_count" -gt 1 ] ; then
+                    # apparently one or more blank lines were added to the end of one of the files
+                    observed_changed_line_count=$(($observed_changed_line_count+1))
+                fi
+            fi
+        fi
+    done {original_yaml_fd}<"$original_yaml_filepath" {updated_yaml_fd}<"$updated_yaml_filepath"
+    echo "when comparing files, $observed_changed_line_count different lines were observed"
+    if [ "$observed_changed_line_count" -ne "$expected_changed_line_count" ] ; then
+        echo "Error : expected to make $expected_changed_line_count line changes in $yaml_filepath, but $observed_changed_line_count changes were observed" >&2
+        return 1
+    fi
+    return 0
+}
+
+function output_yaml_line_indent_length() {
+    line="$1"
+    line_prefix=${line%%[^ ]*}
+    echo ${#line_prefix}
+}
+
+function indent_change_has_exited_block() {
+    line="$1"
+    block_indent="$2"
+    line_indent=$(output_yaml_line_indent_length "$line")
+    if [ "$line_indent" -le "$block_indent" ] ; then
+        return 0 # exited from the block
+    else
+        return 1 # still within block
+    fi
 }
 
 function switchover_ingress_rules_to_destination_database_deployment() {
@@ -401,21 +483,21 @@ function switchover_ingress_rules_to_destination_database_deployment() {
     inside_host_master_cbioportal_org="no"
     inside_host_clickhouse_only_db_cbioportal_org="no"
     inside_service="no"
-    while IFS='' read -r line ; do
+    service_indent=0
+    while IFS='' read -r line || [ -n "$line" ] ; do # -n "$line" will allow processing of lines which reach EOF before encountering newline
         if yaml_line_is_comment "$line" ; then
             echo "$line"
             continue
         fi
         if yaml_line_is_top_level_section "$line" ; then
+            inside_spec="no"
+            inside_host_public_cbioportal_org="no"
+            inside_host_public_beta_cbioportal_org="no"
+            inside_host_master_cbioportal_org="no"
+            inside_host_clickhouse_only_db_cbioportal_org="no"
+            inside_service="no"
             if [ "${line:0:5}" == 'spec:' ] ; then
                 inside_spec="yes"
-                inside_host_public_cbioportal_org="no"
-                inside_host_public_beta_cbioportal_org="no"
-                inside_host_master_cbioportal_org="no"
-                inside_host_clickhouse_only_db_cbioportal_org="no"
-                inside_service="no"
-            else
-                inside_spec="no"
             fi
             echo "$line"
             continue
@@ -425,17 +507,15 @@ function switchover_ingress_rules_to_destination_database_deployment() {
             inside_host_public_beta_cbioportal_org="no"
             inside_host_master_cbioportal_org="no"
             inside_host_clickhouse_only_db_cbioportal_org="no"
-            if yaml_host_line_references_host "$line" "public-data.cbioportal.org" ; then
+            inside_service="no"
+            if yaml_host_line_references_host "$line" "www.cbioportal.org" ; then
                 inside_host_public_cbioportal_org="yes"
-                inside_service="no"
             else
                 if yaml_host_line_references_host "$line" "beta.cbioportal.org" ; then
                     inside_host_public_beta_cbioportal_org="yes"
-                    inside_service="no"
                 else
                     if yaml_host_line_references_host "$line" "master.cbioportal.org" ; then
                         inside_host_master_cbioportal_org="yes"
-                        inside_service="no"
                     else
                         if yaml_host_line_references_host "$line" "clickhouse-only-db.cbioportal.org" ; then
                             inside_host_clickhouse_only_db_cbioportal_org="yes"
@@ -446,10 +526,14 @@ function switchover_ingress_rules_to_destination_database_deployment() {
             echo "$line"
             continue
         fi
+        if [ "$inside_service" == "yes" ] && indent_change_has_exited_block "$line" $service_indent ; then
+            inside_service="no"
+        fi
         if [ "$inside_spec" == "yes" ] ; then
             if [ "$inside_host_public_cbioportal_org" == "yes" ] || [ "$inside_host_public_beta_cbioportal_org" == "yes" ] || [ "$inside_host_master_cbioportal_org" == "yes" ] || [ "$inside_host_clickhouse_only_db_cbioportal_org" == "yes" ] ; then
                 if yaml_line_is_service_line "$line" ; then
                     inside_service="yes"
+                    service_indent=$(output_yaml_line_indent_length "$line")
                     echo "$line"
                     continue
                 fi
@@ -477,6 +561,10 @@ function switchover_ingress_rules_to_destination_database_deployment() {
         fi
         echo "$line"
     done < "$yaml_filepath" > "$updated_yaml_filepath"
+    expected_changed_line_count=${#BLUE_DEPLOYMENT_LIST[@]}
+    if ! expected_file_change_count_verified "$yaml_filepath" "$updated_yaml_filepath" "$expected_changed_line_count" ; then
+        exit 1
+    fi
     echo "switching traffic over to the updated database deployment"
     mv "$updated_yaml_filepath" "$yaml_filepath"
     kubectl --kubeconfig $PUBLICARGOCD_CLUSTER_KUBECONFIG apply -f "$yaml_filepath"
@@ -488,7 +576,7 @@ function adjust_replica_count_in_deployment_yaml_file() {
     updated_yaml_filepath="$yaml_filepath.updated"
     rm -f "$updated_yaml_filepath"
     inside_spec="no"
-    while IFS='' read -r line ; do
+    while IFS='' read -r line || [ -n "$line" ] ; do # -n "$line" will allow processing of lines which reach EOF before encountering newline
         if yaml_line_is_comment "$line" ; then
             echo "$line"
             continue
@@ -510,7 +598,14 @@ function adjust_replica_count_in_deployment_yaml_file() {
         fi
         echo "$line"
     done < "$yaml_filepath" > "$updated_yaml_filepath"
-    mv "$updated_yaml_filepath" "$yaml_filepath"
+    expected_changed_line_count=1
+    if ! expected_file_change_count_verified "$yaml_filepath" "$updated_yaml_filepath" "$expected_changed_line_count" ; then
+        echo "Warning : backend deployment has been scaled in the kubernetes cluster, but corresponding changes have not successfully been made to $yaml_filepath."
+        echo "          The repository is now out of sync and must be manually corrected, and the cause of the failure to update must be addressed in code."
+        rm "$updated_yaml_filepath"
+    else
+        mv "$updated_yaml_filepath" "$yaml_filepath"
+    fi
 }
 
 function adjust_replica_counts_in_deployment_yaml_files() {
@@ -569,11 +664,13 @@ function check_in_changes_to_kubernetes_into_github() {
     fi
     date_string=$(date +%Y-%m-%d)
     commit_message_string="public import $date_string"
-    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH commit -m "$commit_message_string" public-eks >/dev/null 2>&1 ; then
+    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH commit -m "$commit_message_string" >/dev/null 2>&1 ; then
         echo "warning : failure when committing changes to git repository clone" >&2
     fi
-GIT_PUSH_FILEPATH="/home/cbioportal_importer/rob/push_output.txt"
-    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH push >$GIT_PUSH_FILEPATH 2>&1 ; then
+    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH pull --rebase >/dev/null 2>&1 ; then
+        echo "warning : failure when preparing to push changes (during git pull --rebase)" >&2
+    fi
+    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH push >/dev/null 2>&1 ; then
         echo "warning : failure when pushing changes to git repository" >&2
     fi
     return 0
