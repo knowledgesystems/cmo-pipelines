@@ -38,7 +38,7 @@ DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-genie-private-green']='publi
 GENIE_INGRESS='genie-ingress'
 GENIE_INGRESS_YAML_FILEPATH='public-eks/cbioportal-prod/shared-services/ingress/genie-ingress.yml'
 REPLICA_READY_CHECK_PAUSE_SECONDS=20
-REPLICA_READY_CHECK_MAX_CHECKCOUNT=8
+REPLICA_READY_CHECK_MAX_CHECKCOUNT=15
 tmp="/data/portal-cron/tmp/import-cron-genie"
 KS_K8S_DEPL_REPO_DIRPATH="/data/portal-cron/git-repos/only_for_use_by_genie_import_script/knowledgesystems-k8s-deployment"
 
@@ -402,16 +402,15 @@ function switchover_ingress_rules_to_destination_database_deployment() {
             continue
         fi
         if yaml_line_is_host_line "$line" ; then
+            inside_host_genie_public_cbioportal_org="no"
+            inside_host_genie_private_cbioportal_org="no"
             if yaml_host_line_references_host "$line" "genie.cbioportal.org" ; then
                 inside_host_genie_public_cbioportal_org="yes"
                 inside_service="no"
             else
-                inside_host_genie_public_cbioportal_org="no"
                 if yaml_host_line_references_host "$line" "genie-private.cbioportal.org" ; then
                     inside_host_genie_private_cbioportal_org="yes"
                     inside_service="no"
-                else
-                    inside_host_genie_private_cbioportal_org="no"
                 fi
             fi
             echo "$line"

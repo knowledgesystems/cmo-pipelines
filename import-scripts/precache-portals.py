@@ -9,11 +9,17 @@ import subprocess
 import sys
 import time
 
-DEPLOYMENTS = ["cbioportal-backend-genie-public",
+sys.stderr.write("this script is out of date. the genie deployments have changed names and split into green/blue pairs. there are also multiple clusters in production. Also, the authentication script now requires specifying which cluster/profile is desired to authenticate to and calls to kubectl should include the --kubeconfig command line argument so that operations occur in the desired cluster. in order to use this script, this code would need to be updated to work in the new envoronment.")
+sys.exit(1)
+
+
+DEPLOYMENTS = ["cbioportal-backend-genie-archive",
+                "cbioportal-backend-genie-public",
                 "cbioportal-backend-genie-private",
                 "cbioportal-backend-master"]
 
-DEPLOYMENT_TO_URL_MAP = {"cbioportal-backend-genie-public":"genie",
+DEPLOYMENT_TO_URL_MAP = {"cbioportal-backend-genie-archive":"genie-archive", 
+                         "cbioportal-backend-genie-public":"genie",
                          "cbioportal-backend-genie-private":"genie-private"
                         }
 
@@ -28,7 +34,7 @@ MAX_NUMBER_OF_ATTEMPTS = 18
 
 def authenticate_service_account():
     try:
-        subprocess.check_output(["/data/portal-cron/scripts/authenticate_service_account.sh public"])
+        subprocess.check_output(["/data/portal-cron/scripts/authenticate_service_account.sh"])
     except:
         print "Attempt to authenticate to k8s cluster failed with non-zero exit status, exiting..."
         sys.exit(1)

@@ -2,8 +2,8 @@
 
 unset cluster_account_id_to_credentials_filename
 declare -A cluster_account_id_to_credentials_filename
-DEFAULT_CONFIG_DIRPATH="/data/portal-cron/pipelines-credentials/authenticate_service_account.conf"
-config_filepath="$DEFAULT_CONFIG_DIRPATH"
+DEFAULT_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/authenticate_service_account.conf"
+config_filepath="$DEFAULT_CONFIG_FILEPATH"
 config_filepath_dir="$(dirname $config_filepath)"
 
 function usage() {
@@ -14,7 +14,7 @@ function usage() {
         local account_number="$(output_property_from_credentials_filepath $account_credentials_filepath eks.account.number)"
         echo "    - $cluster_account_id (account $account_number)"
     done
-    echo "    config_filepath defaults to '$DEFAULT_CONFIG_DIRPATH'"
+    echo "    config_filepath defaults to '$DEFAULT_CONFIG_FILEPATH'"
 }
 
 function load_automation_environment() {
