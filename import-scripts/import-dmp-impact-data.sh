@@ -480,17 +480,9 @@ else
     $PORTAL_HOME/scripts/transpose_cna_py3.py "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
 fi
 
-uploadToS3OrSendFailureMessage "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
+uploadToS3OrSendFailureMessage "$DMP_DATA_HOME" "" "mskimpact-databricks"
 
 # now remove the tansposed data cna file we just created
 rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
-
-uploadToS3OrSendFailureMessage "$MSK_ARCHER_DATA_HOME" "mskarcher" "mskimpact-databricks"
-uploadToS3OrSendFailureMessage "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
-uploadToS3OrSendFailureMessage "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks"
-uploadToS3OrSendFailureMessage "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
-uploadToS3OrSendFailureMessage "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
-uploadToS3OrSendFailureMessage "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
-uploadToS3OrSendFailureMessage "$MSK_RAINDANCE_DATA_HOME" "mskraindance" "mskimpact-databricks"
 
 exit 0

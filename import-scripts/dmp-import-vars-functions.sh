@@ -355,9 +355,9 @@ function uploadToS3OrSendFailureMessage() {
     # upload DIR_TO_UPLOAD directory to s3 bucket BUCKET_NAME
     upload_to_s3 "$DIR_TO_UPLOAD" "$DIR_NAME_IN_S3" "$BUCKET_NAME"
     if [ $? -gt 0 ]; then
-        message="Failed to upload $DIR_NAME_IN_S3 to s3 bucket!"
+        message="Failed to upload $DIR_TO_UPLOAD to s3 bucket!"
         echo $message
-        echo -e "$message" | mail -s "Failed to upload $DIR_NAME_IN_S3 to s3" $PIPELINES_EMAIL_LIST
+        echo -e "$message" | mail -s "Failed to upload $DIR_TO_UPLOAD to s3" $PIPELINES_EMAIL_LIST
         sendImportFailureMessageMskPipelineLogsSlack "$message"
     fi
 }

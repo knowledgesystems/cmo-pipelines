@@ -66,7 +66,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         rm -rf "$MSK_DMP_TMPDIR"/*
     fi
 
-    if [ -z $JAVA_BINARY ] || [ -z $PORTAL_HOME ] || [ -z $MSK_IMPACT_DATA_HOME ] ; then
+    if [ -z $JAVA_BINARY ] || [ -z $GIT_BINARY ] || [ -z $PORTAL_HOME ] || [ -z $MSK_IMPACT_DATA_HOME ] ; then
         message="Could not run fetch-dmp-data-for-import.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
         echo $message
         echo -e "$message" |  mail -s "fetch-dmp-data-for-import failed to run." $PIPELINES_EMAIL_LIST
