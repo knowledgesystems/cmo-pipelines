@@ -112,7 +112,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     # fetch clinical data from data repository
     echo "fetching updates from dmp repository..."
-    #TODO make sure we sync entire dmp directory or we will delete our local data!!!
     download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     if [ $? -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch failure: DMP repository update"
@@ -608,7 +607,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     remove_raw_clinical_timeline_data_files $MSK_ACCESS_DATA_HOME
 
     # commit raw file cleanup - study staging directories should only contain files for portal import
-    # TODO or do full dmp dir?
     upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
     upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
     upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
@@ -897,9 +895,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_KINGS_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "KINGSCOUNTY subset"
         echo "KINGSCOUNTY subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$MSK_KINGS_DATA_HOME" "msk_kingscounty" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing KINGSCOUNTY data"
         upload_to_s3 "$MSK_KINGS_DATA_HOME" "msk_kingscounty" "mskimpact-databricks" 
@@ -927,9 +923,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_LEHIGH_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "LEHIGHVALLEY subset"
         echo "LEHIGHVALLEY subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$MSK_LEHIGH_DATA_HOME" "msk_lehighvalley" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing LEHIGHVALLEY data"
         upload_to_s3 "$MSK_LEHIGH_DATA_HOME" "msk_lehighvalley" "mskimpact-databricks" 
@@ -957,9 +951,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_QUEENS_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "QUEENSCANCERCENTER subset"
         echo "QUEENSCANCERCENTER subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$MSK_QUEENS_DATA_HOME" "msk_queenscancercenter" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing QUEENSCANCERCENTER data"
         upload_to_s3 "$MSK_QUEENS_DATA_HOME" "msk_queenscancercenter" "mskimpact-databricks" 
@@ -987,9 +979,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_MCI_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "MIAMICANCERINSTITUTE subset"
         echo "MIAMICANCERINSTITUTE subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$MSK_MCI_DATA_HOME" "msk_miamicancerinstitute" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing MIAMICANCERINSTITUTE data"
         upload_to_s3 "$MSK_MCI_DATA_HOME" "msk_miamicancerinstitute" "mskimpact-databricks" 
@@ -1017,9 +1007,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_HARTFORD_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "HARTFORDHEALTHCARE subset"
         echo "HARTFORDHEALTHCARE subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$MSK_HARTFORD_DATA_HOME" "msk_hartfordhealthcare" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing HARTFORDHEALTHCARE data"
         upload_to_s3 "$MSK_HARTFORD_DATA_HOME" "msk_hartfordhealthcare" "mskimpact-databricks" 
@@ -1047,9 +1035,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_RALPHLAUREN_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "RALPHLAUREN subset"
         echo "RALPHLAUREN subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$MSK_RALPHLAUREN_DATA_HOME" "msk_ralphlauren" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing RALPHLAUREN data"
         upload_to_s3 "$MSK_RALPHLAUREN_DATA_HOME" "msk_ralphlauren" "mskimpact-databricks" 
@@ -1077,9 +1063,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_RIKENGENESISJAPAN_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "RIKENGENESISJAPAN subset"
         echo "RIKENGENESISJAPAN subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$MSK_RIKENGENESISJAPAN_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing RIKENGENESISJAPAN data"
         upload_to_s3 "$MSK_RIKENGENESISJAPAN_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks" 
@@ -1110,9 +1094,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $SCLC_MSKIMPACT_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "SCLCMSKIMPACT subset"
         echo "SCLCMSKIMPACT subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$MSK_SCLC_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing SCLCMSKIMPACT data"
         upload_to_s3 "$MSK_SCLC_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks" 
@@ -1216,9 +1198,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT merge"
         echo "Lymphoma super cohort subset and/or updates failed! Reverting data to last commit."
-        #TODO should download be kings county only?  to match above?
         download_from_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks" 
-        #TODO download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
     else
         echo "Committing Lymphoma super cohort data"
         upload_to_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks" 
