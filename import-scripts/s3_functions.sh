@@ -49,6 +49,9 @@ function upload_to_s3() {
             --exclude "*.log" \
             --exclude "*.jfr" \
             --exclude "repository.sqlite" \
+            --exclude ".git/*" \
+            --exclude ".gitattributes" \
+            --exclude ".gitignore" \
             --profile saml
     else
         echo "`date`: '$PATH_TO_UPLOAD' is neither a file nor a directory, exiting..."
