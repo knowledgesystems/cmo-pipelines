@@ -106,7 +106,15 @@ function download_from_s3() {
     if [ -d "$PATH_TO_OVERWRITE_ABS" ]; then
         # Downloading a directory
         S3_SOURCE="s3://$BUCKET_NAME/$PATH_IN_S3_CLEAN"
-        aws s3 sync "$S3_SOURCE" "$PATH_TO_OVERWRITE_ABS" --delete --profile saml
+        aws s3 sync "$S3_SOURCE" "$PATH_TO_OVERWRITE_ABS" \
+            --delete \
+            --exclude "*.log" \
+            --exclude "*.jfr" \
+            --exclude "repository.sqlite" \
+            --exclude ".git/*" \
+            --exclude ".gitattributes" \
+            --exclude ".gitignore" \
+            --profile saml
 
     elif [ -f "$PATH_TO_OVERWRITE_ABS" ]; then
         # Downloading a single file

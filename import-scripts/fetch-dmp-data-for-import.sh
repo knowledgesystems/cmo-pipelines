@@ -1094,10 +1094,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $SCLC_MSKIMPACT_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "SCLCMSKIMPACT subset"
         echo "SCLCMSKIMPACT subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_SCLC_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks" 
+        download_from_s3 "$MSK_SCLC_DATA_HOME" "sclc_mskimpact_2017" "mskimpact-databricks"
     else
         echo "Committing SCLCMSKIMPACT data"
-        upload_to_s3 "$MSK_SCLC_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_SCLC_DATA_HOME" "sclc_mskimpact_2017" "mskimpact-databricks"
     fi
 
     #--------------------------------------------------------------
