@@ -44,7 +44,7 @@ function upload_to_s3() {
             --exclude "*" --include "$FILE_NAME" --profile saml
 
     elif [ -d "$PATH_TO_UPLOAD" ]; then
-        aws s3 sync "$PATH_TO_UPLOAD/" "s3://$BUCKET_NAME/$PATH_IN_S3_CLEAN/" \
+        aws s3 sync "$PATH_TO_UPLOAD" "s3://$BUCKET_NAME/$PATH_IN_S3_CLEAN" \
             --delete \
             --exclude "*.log" \
             --exclude "*.jfr" \
