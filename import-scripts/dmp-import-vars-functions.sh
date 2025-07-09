@@ -269,19 +269,17 @@ function import_access_ddp_to_redcap {
 # Function for removing raw clinical and timeline files from study directory
 function remove_raw_clinical_timeline_data_files {
     STUDY_DIRECTORY=$1
-    # use rm -f and $HG_BINARY rm -f to ensure that both tracked and untracked
-    # raw clinical and timeline files are removed from the repository
 
     # remove raw clinical files except patient and sample cbio format clinical files
     for f in $STUDY_DIRECTORY/data_clinical*; do
         if [[ $f != *"data_clinical_patient.txt"* && $f != *"data_clinical_sample.txt"* ]] ; then
-            $GIT_BINARY rm -f $f
+            rm -f $f
         fi
     done
     # remove raw timeline files except cbio format timeline file
     for f in $STUDY_DIRECTORY/data_timeline*; do
         if [[ $f != *"data_timeline.txt"* ]] ; then
-            $GIT_BINARY rm -f $f
+            rm -f $f
         fi
     done
 }
