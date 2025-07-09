@@ -83,7 +83,7 @@ public class GMLVariantsReader implements ItemStreamReader<GMLVariant> {
                 dmpRetrieveVariantsInitialResponseTimeout,
                 dmpRetrieveVariantsMaximumResponseTimeout,
                 InstantStringUtil.createInstant(dropDeadInstantString),
-                true); // on a server error response, keep trying. If we cannot get the variants list, the overall fetch fails.
+                false); // on a server error response, do not keep trying. If we cannot get the variants list, the overall fetch fails.
         ResponseEntity<GMLVariant> responseEntity = client.exchange(dmpUrl, HttpMethod.GET, requestEntity, null, GMLVariant.class);
         if (responseEntity == null) {
             String message = "";
