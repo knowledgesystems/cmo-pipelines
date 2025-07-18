@@ -319,19 +319,19 @@ function consumeSamplesAfterSolidHemeImport {
     drop_dead_instant_string=$(date --date="+3hours" -Iseconds) # 3 hours from now
     if [ -f $MSK_IMPACT_CONSUME_TRIGGER ] ; then
         echo "Consuming mskimpact tumor samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         echo "Consuming mskimpact germline samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_DATA_HOME/cvr_gml_data.json -z $drop_dead_instant_string
         rm -f $MSK_IMPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_HEMEPACT_CONSUME_TRIGGER ] ; then
         echo "Consuming mskimpact_heme samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_HEMEPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_ACCESS_CONSUME_TRIGGER ] ; then
         echo "Consuming mskaccess samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_ACCESS_CONSUME_TRIGGER
     fi
 }
@@ -341,7 +341,7 @@ function consumeSamplesAfterArcherImport {
     drop_dead_instant_string=$(date --date="+3hour" -Iseconds) # 3 hour from now
     if [ -f $MSK_ARCHER_CONSUME_TRIGGER ] ; then
         echo "Consuming archer samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
         rm -f $MSK_ARCHER_CONSUME_TRIGGER
     fi
 }
