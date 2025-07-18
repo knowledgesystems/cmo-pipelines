@@ -30,7 +30,7 @@ def get_connection_personal_access_token(server_hostname, http_path, access_toke
         staging_allowed_local_path=staging_allowed_local_path
     )
 
-def execute_query(server_hostname, http_path, access_token, input_file, output_file, mode):
+def execute_query(server_hostname, http_path, access_token, input_file, output_file, mode, query):
     # For writing local files to volumes and downloading files from volumes,
     # you must set the staging_allows_local_path argument to the path to the
     # local folder that contains the files to be written or downloaded.
@@ -50,7 +50,20 @@ def execute_query(server_hostname, http_path, access_token, input_file, output_f
         staging_allowed_local_path=staging_allowed_local_path,
     ) as connection:
         with connection.cursor() as cursor:
-            if mode == "put":
+            if query:
+                cursor.execute(query)
+                result = cursor.fetchall()
+                header = True
+                with open(output_file, 'w') as f:
+                    for row in result:
+                        row_dict = row.asDict()
+                        if header:
+                            print("\t".join([column_name for column_name in row_dict.keys()]), file=f)
+                            header = False
+                        print("\t".join([row_value if row_value is not None else "" for row_value in row_dict.values()]), file=f)
+
+            # Volume operations
+            elif mode == "put":
                 # Write a local file to the specified path in a volume.
                 # Specify OVERWRITE to overwrite any existing file in that path.
                 cursor.execute(f"PUT '{input_file}' INTO '{output_file}' OVERWRITE")
@@ -93,8 +106,8 @@ def main():
         "--input-file",
         dest="input_file",
         action="store",
-        required=True,
-        help="paths to files to combine",
+        required=False,
+        help="Input file",
     )
     parser.add_argument(
         "-o",
@@ -102,7 +115,7 @@ def main():
         dest="output_file",
         action="store",
         required=False,
-        help="output path for combined file",
+        help="Output file",
     )
     parser.add_argument(
         "-m",
@@ -111,8 +124,16 @@ def main():
         action="store",
         choices=["get", "put", "remove"],
         type=str.lower,
-        required=True,
+        required=False,
         help="",
+    )
+    parser.add_argument(
+        "-q",
+        "--query",
+        dest="query",
+        action="store",
+        required=False,
+        help="SQL query to execute",
     )
 
     args = parser.parse_args()
@@ -122,18 +143,26 @@ def main():
     input_file = args.input_file
     output_file = args.output_file
     mode = args.mode
+    query = args.query
+
+    # Check that correct combination of arguments were provided
+    if (mode == "get" or mode == "put" or mode == "remove") and not input_file:
+        parser.error(f"--input_file must be specified when --mode is 'get', 'put', or 'remove'")
 
     # Check that correct combination of arguments were provided
     if (mode == "get" or mode == "put") and not output_file:
         parser.error(f"--output_file must be specified when --mode is 'get' or 'put'")
 
-    # Check that the input files exist
+    # Check that the input file exists
     if mode == "put":
         if not os.path.exists(input_file):
             parser.error(f"No such file: {input_file}")
 
+    if query and not output_file:
+        parser.error(f"--output_file must be specified when --query is provided")
+
     # Execute the given DataBricks query
-    execute_query(server_hostname, http_path, access_token, input_file, output_file, mode)
+    execute_query(server_hostname, http_path, access_token, input_file, output_file, mode, query)
 
 
 if __name__ == "__main__":
