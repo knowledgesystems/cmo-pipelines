@@ -467,7 +467,7 @@ if ! remove_duplicate_maf_variants ; then
     report_error "Failed to remove duplicate variants from MAF files"
 fi
 
-# Filter germline events from mutation file and structural variant file
+# Filter germline events from mutation file
 if ! filter_germline_events_from_maf ; then
     report_error "Failed to filter MAF germline events"
 fi
@@ -496,7 +496,7 @@ fi
 
 # Because we have already merged Archer samples, remove linked Archer events
 if ! remove_duplicate_archer_events_from_sv ; then
-    report_error "Failed to demove duplicate Archer events from SV file"
+    report_error "Failed to remove duplicate Archer events from SV file"
 fi
 
 printTimeStampedDataProcessingStepMessage "Finalize and validate study contents of Sophia MSK-IMPACT"
