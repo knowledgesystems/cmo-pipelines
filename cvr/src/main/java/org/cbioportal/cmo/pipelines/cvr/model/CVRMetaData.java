@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017, 2024 Memorial Sloan Kettering Cancer Center.
+ * Copyright (c) 2016 - 2017, 2024, 2025 Memorial Sloan Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -44,9 +44,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.base.Strings;
 import java.util.*;
 import jakarta.annotation.Generated;
+
+import org.cbioportal.cmo.pipelines.cvr.CVRExtractionDeserializer;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Generated("org.jsonschema2pojo")
@@ -87,7 +90,8 @@ import jakarta.annotation.Generated;
     "tumor_type_name",
     "consent-parta",
     "consent-partc",
-    "slide-viewer-id"
+    "slide-viewer-id",
+    "extraction"
 })
 public class CVRMetaData {
 
@@ -163,6 +167,9 @@ public class CVRMetaData {
     private String consentPartC;
     @JsonProperty("slide-viewer-id")
     private String wholeSlideViewerId;
+    @JsonDeserialize(using = CVRExtractionDeserializer.class)
+    @JsonProperty("extraction")
+    private CVRExtraction extraction;
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
@@ -211,6 +218,7 @@ public class CVRMetaData {
      * @param consentPartA
      * @param consentPartC
      * @param wholeSlideViewerId
+     * @param extraction
      */
     public CVRMetaData(Integer alys2sampleId, Integer cbxPatientId, Integer cbxSampleId, Integer ct, String dateTumorSequencing, String linkedMskimpactCase,
             Integer dmpAlysTaskId, String dmpAlysTaskName, String dmpPatientId, String dmpSampleId, Integer dmpSampleSoId, Integer gender,
@@ -218,7 +226,7 @@ public class CVRMetaData {
             String msiComment, String msiScore, String msiType, String outsideInstitute, String primarySite, Integer retrieveStatus,
             Integer sampleCoverage, String soComments, String soStatusName, String somaticStatus,Double tmbCohortPercentile,
             Double tmbScore, Double tmbTtPercentile, String tumorPurity, String tumorTypeCode, String tumorTypeName,
-            String consentPartA, String consentPartC, String wholeSlideViewerId) {
+            String consentPartA, String consentPartC, String wholeSlideViewerId, CVRExtraction extraction) {
         this.alys2sampleId = alys2sampleId;
         this.cbxPatientId = cbxPatientId;
         this.cbxSampleId = cbxSampleId;
@@ -255,6 +263,7 @@ public class CVRMetaData {
         this.consentPartA = consentPartA;
         this.consentPartC = consentPartC;
         this.wholeSlideViewerId = wholeSlideViewerId;
+        this.extraction = extraction;
     }
 
     @JsonProperty("somatic_status")
@@ -971,6 +980,26 @@ public class CVRMetaData {
     @JsonProperty("slide-viewer-id")
     public void setWholeSlideViewerId(String wholeSlideViewerId) {
         this.wholeSlideViewerId = wholeSlideViewerId;
+    }
+
+    /**
+     *
+     * @return
+     * The extraction
+     */
+    @JsonProperty("extraction")
+    public CVRExtraction getExtraction() {
+        return extraction;
+    }
+
+    /**
+     *
+     * @param extraction
+     * The extraction
+     */
+    @JsonProperty("extraction")
+    public void setExtraction(CVRExtraction extraction) {
+        this.extraction = extraction;
     }
 
     @JsonAnyGetter

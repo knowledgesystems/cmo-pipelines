@@ -146,6 +146,15 @@ public class CVRClinicalFieldSetMapper implements  FieldSetMapper<CVRClinicalRec
             case "MSK_SLIDE_ID":
                 record.setMSK_SLIDE_ID(value);
                 break;
+            case "DNA_ELUTION_BUFFER_VOLUME":
+                record.setDNA_ELUTION_BUFFER_VOLUME(value);
+                break;
+            case "PLASMA_USED_VOLUME":
+                record.setPLASMA_USED_VOLUME(value);
+                break;
+            case "DNA_CONCENTRATION":
+                record.setDNA_CONCENTRATION(value);
+                break;
             default:
                 log.info("No set method exists for '" + field + "'");
                 break;

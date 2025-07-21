@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2023 Memorial Sloan-Kettering Cancer Center.
+ * Copyright (c) 2016 - 2023, 2025 Memorial Sloan-Kettering Cancer Center.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
@@ -33,7 +33,9 @@
 package org.cbioportal.cmo.pipelines.cvr.model.staging;
 
 import com.google.common.base.Strings;
+import java.text.DecimalFormat;
 import java.util.*;
+import org.cbioportal.cmo.pipelines.cvr.model.CVRExtraction;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRMetaData;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLMetaData;
 
@@ -72,9 +74,13 @@ public class CVRClinicalRecord {
     private String cvrTmbTtPercentile;
     private String pathSlideExists;
     private String mskSlideID;
+    private String dnaElutionBufferVolume;
+    private String plasmaUsedVolume;
+    private String dnaConcentration;
 
     private final String DEFAULT_SAMPLE_CLASS = "Tumor";
     private final String MSKACCESS_SAMPLE_CLASS = "cfDNA";
+    private final static DecimalFormat DNA_CONCENTRATION_FORMAT = new DecimalFormat("#.###");
 
     public CVRClinicalRecord(CVRMetaData metaData, String wholeSlideViewerBaseURL, String studyId) {
         this.sampleId = metaData.getDmpSampleId();
@@ -106,6 +112,21 @@ public class CVRClinicalRecord {
         this.cvrTmbTtPercentile = (metaData.getTmbTtPercentile()!= null) ? String.valueOf(metaData.getTmbTtPercentile()) : "NA";
         this.pathSlideExists = (wholeSlideViewerIdIsValid(metaData.getWholeSlideViewerId())) ? "YES" : "NO";
         this.mskSlideID = (wholeSlideViewerIdIsValid(metaData.getWholeSlideViewerId())) ? metaData.getWholeSlideViewerId() : "NA";
+        if (metaData.getExtraction() != null) {
+            CVRExtraction cvrExtration = metaData.getExtraction();
+            this.dnaElutionBufferVolume = !Strings.isNullOrEmpty(cvrExtration.getDnaElutionBufferVolume()) ? cvrExtration.getDnaElutionBufferVolume() : "NA";
+            this.plasmaUsedVolume = !Strings.isNullOrEmpty(cvrExtration.getPlasmaUsedVolume()) ? cvrExtration.getPlasmaUsedVolume() : "NA";
+            if (!Strings.isNullOrEmpty(cvrExtration.getDnaConcentration()) && !"NA".equalsIgnoreCase(cvrExtration.getDnaConcentration())) {
+                double dnaConcentrationDouble = Double.parseDouble(cvrExtration.getDnaConcentration());
+                this.dnaConcentration = DNA_CONCENTRATION_FORMAT.format(dnaConcentrationDouble);
+            } else {
+                this.dnaConcentration = "NA";
+            }
+        } else {
+            this.dnaElutionBufferVolume = "NA";
+            this.plasmaUsedVolume = "NA";
+            this.dnaConcentration = "NA";
+        }
     }
 
     public CVRClinicalRecord(GMLMetaData metaData) {
@@ -371,6 +392,30 @@ public class CVRClinicalRecord {
         this.mskSlideID = mskSlideID;
     }
 
+    public String getDNA_ELUTION_BUFFER_VOLUME() {
+        return !Strings.isNullOrEmpty(this.dnaElutionBufferVolume) ? this.dnaElutionBufferVolume : "NA";
+    }
+
+    public void setDNA_ELUTION_BUFFER_VOLUME(String dnaElutionBufferVolume) {
+        this.dnaElutionBufferVolume = dnaElutionBufferVolume;
+    }
+
+    public String getPLASMA_USED_VOLUME() {
+        return !Strings.isNullOrEmpty(this.plasmaUsedVolume) ? this.plasmaUsedVolume : "NA";
+    }
+
+    public void setPLASMA_USED_VOLUME(String plasmaUsedVolume) {
+        this.plasmaUsedVolume = plasmaUsedVolume;
+    }
+
+    public String getDNA_CONCENTRATION() {
+        return !Strings.isNullOrEmpty(this.dnaConcentration) ? this.dnaConcentration : "NA";
+    }
+
+    public void setDNA_CONCENTRATION(String dnaConcentration) {
+        this.dnaConcentration = dnaConcentration;
+    }
+
     public String resolveSampleType(Integer isMetastasis) {
         if (isMetastasis != null) {
             switch(isMetastasis) {
@@ -423,6 +468,9 @@ public class CVRClinicalRecord {
         fieldNames.add("PATH_SLIDE_EXISTS");
         fieldNames.add("MSK_SLIDE_ID");
         fieldNames.add("CYCLE_THRESHOLD");
+        fieldNames.add("DNA_ELUTION_BUFFER_VOLUME");
+        fieldNames.add("PLASMA_USED_VOLUME");
+        fieldNames.add("DNA_CONCENTRATION");
         return fieldNames;
     }
 
