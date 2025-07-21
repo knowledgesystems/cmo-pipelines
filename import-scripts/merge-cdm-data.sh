@@ -11,11 +11,13 @@ if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] ; then
 fi
 
 source $PORTAL_HOME/scripts/automation-environment.sh
+source $PORTAL_HOME/scripts/s3_functions.sh
 
 COHORT=$1
 CDM_DATA_DIR=""
 PROD_DATA_DIR=""
 COHORT_NAME_FOR_COMMIT_MSG=""
+S3_DATA_DIR=""
 
 function check_args() {
     if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
@@ -35,15 +37,19 @@ function set_cohort_filepaths() {
     if [ "$COHORT" == "mskimpact" ] ; then
         PROD_DATA_DIR="$MSK_IMPACT_DATA_HOME"
         COHORT_NAME_FOR_COMMIT_MSG="MSKIMPACT"
+        S3_DATA_DIR="mskimpact"
     elif [ "$COHORT" == "mskimpact_heme" ] ; then
         PROD_DATA_DIR="$MSK_HEMEPACT_DATA_HOME"
         COHORT_NAME_FOR_COMMIT_MSG="HEMEPACT"
+        S3_DATA_DIR="mskimpact_heme"
     elif [ "$COHORT" == "mskarcher" ] ; then
         PROD_DATA_DIR="$MSK_ARCHER_UNFILTERED_DATA_HOME"
         COHORT_NAME_FOR_COMMIT_MSG="ARCHER"
+        S3_DATA_DIR="mskarcher_unfiltered"
     elif [ "$COHORT" == "mskaccess" ] ; then
         PROD_DATA_DIR="$MSK_ACCESS_DATA_HOME"
         COHORT_NAME_FOR_COMMIT_MSG="ACCESS"
+        S3_DATA_DIR="mskaccess"
     fi
 
     # Check that required directories exist
@@ -79,7 +85,7 @@ function merge_cdm_data_and_commit() {
         else
             cp -a $TMP_PROCESSING_DIRECTORY/data_clinical*.txt $PROD_DATA_DIR
             cp -a $CDM_DATA_DIR/data_timeline*.txt $PROD_DATA_DIR
-            cd $PROD_DATA_DIR ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest $COHORT_NAME_FOR_COMMIT_MSG dataset: CDM Annotation"
+            upload_to_s3 "$PROD_DATA_DIR" "$S3_DATA_DIR" "mskimpact-databricks" 
         fi
     fi
     rm -rf $TMP_PROCESSING_DIRECTORY

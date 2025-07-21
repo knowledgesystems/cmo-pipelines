@@ -242,7 +242,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     else
         sendImportSuccessMessageMskPipelineLogsSlack "KINGSCOUNTY"
     fi
-    
+
     # TEMP STUDY IMPORT: LEHIGHVALLEY
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_LEHIGH_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_lehighvalley"
@@ -264,7 +264,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     else
         sendImportSuccessMessageMskPipelineLogsSlack "LEHIGHVALLEY"
     fi
-    
+
     # TEMP STUDY IMPORT: QUEENSCANCERCENTER
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_QUEENS_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_queenscancercenter"
@@ -286,7 +286,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     else
         sendImportSuccessMessageMskPipelineLogsSlack "QUEENSCANCERCENTER"
     fi
-    
+
     # TEMP STUDY IMPORT: MIAMICANCERINSTITUTE
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_MCI_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_miamicancerinstitute"
@@ -308,7 +308,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     else
         sendImportSuccessMessageMskPipelineLogsSlack "MIAMICANCERINSTITUTE"
     fi
-    
+
     # TEMP STUDY IMPORT: HARTFORDHEALTHCARE
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_HARTFORD_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_hartfordhealthcare"
@@ -330,7 +330,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     else
         sendImportSuccessMessageMskPipelineLogsSlack "HARTFORDHEALTHCARE"
     fi
-    
+
     # TEMP STUDY IMPORT: RALPHLAUREN
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RALPHLAUREN_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_ralphlauren"
@@ -470,4 +470,19 @@ echo $(date)
 
 echo "Cleaning up any untracked files in $PORTAL_DATA_HOME/dmp..."
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $DMP_DATA_HOME
+
+# Copy data_CNA.txt file in msk_solid_heme and then transpose it
+# Copy this to S3, then remove the file
+cp "$MSK_SOLID_HEME_DATA_HOME/data_CNA.txt" "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
+if [ $? -ne 0 ] ; then
+    echo "warning : could not copy msk_solid_heme data_CNA.txt to data_CNA_transposed.txt"
+else
+    $PORTAL_HOME/scripts/transpose_cna_py3.py "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
+fi
+
+uploadToS3OrSendFailureMessage "$DMP_DATA_HOME" "" "mskimpact-databricks"
+
+# now remove the tansposed data cna file we just created
+rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
+
 exit 0
