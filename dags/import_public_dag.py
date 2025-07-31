@@ -59,6 +59,16 @@ with DAG(
     data_repos = get_data_repos("{{ params.data_repos }}")
 
     """
+    Verifies the update process management database state and fails import early if incorrect
+    """
+    verify_management_state = SSHOperator(
+        task_id="verify_management_state",
+        ssh_conn_id=import_node_conn_id,
+        command=f"{import_scripts_path}/public-airflow-verify-management.sh {import_scripts_path} {db_properties_filepath}",
+        dag=dag,
+    )
+
+    """
     Determines which database is "production" vs "not production"
     Drops tables in the non-production MySQL database
     Clones the production MySQL database into the non-production database
@@ -167,5 +177,5 @@ with DAG(
         dag=dag,
     )
 
-    data_repos >> [clone_database, fetch_data_local, fetch_data_remote] >> setup_import >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> [cleanup_data_local, cleanup_data_remote] 
+    data_repos >> verify_management_state >> [clone_database, fetch_data_local, fetch_data_remote] >> setup_import >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> [cleanup_data_local, cleanup_data_remote] 
     list(dag.tasks) >> watcher()
