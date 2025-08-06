@@ -209,12 +209,11 @@ function add_seq_date_to_sample_file() {
     KEY_COLUMNS="SAMPLE_ID PATIENT_ID"
 
     # Download seq_date.txt file from DataBricks
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/databricks_query_py3.py \
+    $PYTHON3_BINARY databricks_query_py3.py \
         --server-hostname $DATABRICKS_SERVER_HOSTNAME \
         --http-path $DATABRICKS_HTTP_PATH \
         --access-token $DATABRICKS_TOKEN \
-        --mode get \
-        --input-file $DATABRICKS_SEQ_DATE_FILEPATH \
+        --query "SELECT DMP_SAMPLE_ID AS SAMPLE_ID, DMP_PATIENT_ID AS PATIENT_ID, SEQUENCING_DATE AS SEQ_DATE FROM cdsi_eng_phi.msk_impact_dates.sequencing_date" \
         --output-file $SEQ_DATE_FILEPATH
     if [ $? -gt 0 ] ; then
         echo "Failed to query DataBricks for SEQ_DATE file"
@@ -467,7 +466,7 @@ if ! remove_duplicate_maf_variants ; then
     report_error "Failed to remove duplicate variants from MAF files"
 fi
 
-# Filter germline events from mutation file and structural variant file
+# Filter germline events from mutation file
 if ! filter_germline_events_from_maf ; then
     report_error "Failed to filter MAF germline events"
 fi
@@ -496,7 +495,7 @@ fi
 
 # Because we have already merged Archer samples, remove linked Archer events
 if ! remove_duplicate_archer_events_from_sv ; then
-    report_error "Failed to demove duplicate Archer events from SV file"
+    report_error "Failed to remove duplicate Archer events from SV file"
 fi
 
 printTimeStampedDataProcessingStepMessage "Finalize and validate study contents of Sophia MSK-IMPACT"
