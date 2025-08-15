@@ -201,7 +201,6 @@ function add_seq_date_to_sample_file() {
     DATABRICKS_SERVER_HOSTNAME=`grep server_hostname $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
     DATABRICKS_HTTP_PATH=`grep http_path $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
     DATABRICKS_TOKEN=`grep access_token $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
-    DATABRICKS_SEQ_DATE_FILEPATH="/Volumes/cdsi_prod/cdm_impact_pipeline_prod/cdm-data/cbioportal/seq_date.txt"
     SEQ_DATE_FILEPATH="$CDSI_DATA_HOME/seq_date.txt"
 
     SAMPLE_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
@@ -209,7 +208,7 @@ function add_seq_date_to_sample_file() {
     KEY_COLUMNS="SAMPLE_ID PATIENT_ID"
 
     # Download seq_date.txt file from DataBricks
-    $PYTHON3_BINARY databricks_query_py3.py \
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/databricks_query_py3.py \
         --server-hostname $DATABRICKS_SERVER_HOSTNAME \
         --http-path $DATABRICKS_HTTP_PATH \
         --access-token $DATABRICKS_TOKEN \

@@ -3,8 +3,7 @@
 """ databricks_query_py3.py
 This script can:
 - execute SQL commands 
-- write local files to DataBricks Unity Catalog volumes, download files from volumes,
-and delete files from volumes. 
+- write local files to DataBricks Unity Catalog volumes, download files from volumes, and delete files from volumes.
 To authenticate, you must specify DataBricks server hostname, HTTP path, and personal access token.
 
 Usage:
