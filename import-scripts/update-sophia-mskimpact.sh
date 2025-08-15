@@ -213,8 +213,9 @@ function add_seq_date_to_sample_file() {
         --server-hostname $DATABRICKS_SERVER_HOSTNAME \
         --http-path $DATABRICKS_HTTP_PATH \
         --access-token $DATABRICKS_TOKEN \
-        --query "SELECT DMP_SAMPLE_ID AS SAMPLE_ID, DMP_PATIENT_ID AS PATIENT_ID, SEQUENCING_DATE AS SEQ_DATE FROM cdsi_eng_phi.msk_impact_dates.sequencing_date" \
-        --output-file $SEQ_DATE_FILEPATH
+        query \
+        --sql-query "SELECT DMP_SAMPLE_ID AS SAMPLE_ID, DMP_PATIENT_ID AS PATIENT_ID, SEQUENCING_DATE AS SEQ_DATE FROM cdsi_eng_phi.msk_impact_dates.sequencing_date" \
+        --output-path $SEQ_DATE_FILEPATH
     if [ $? -gt 0 ] ; then
         echo "Failed to query DataBricks for SEQ_DATE file"
         return 1
