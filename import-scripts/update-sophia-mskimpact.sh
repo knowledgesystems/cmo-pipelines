@@ -201,7 +201,6 @@ function add_seq_date_to_sample_file() {
     DATABRICKS_SERVER_HOSTNAME=`grep server_hostname $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
     DATABRICKS_HTTP_PATH=`grep http_path $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
     DATABRICKS_TOKEN=`grep access_token $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
-    DATABRICKS_SEQ_DATE_FILEPATH="/Volumes/cdsi_prod/cdm_impact_pipeline_prod/cdm-data/cbioportal/seq_date.txt"
     SEQ_DATE_FILEPATH="$CDSI_DATA_HOME/seq_date.txt"
 
     SAMPLE_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
@@ -213,9 +212,9 @@ function add_seq_date_to_sample_file() {
         --server-hostname $DATABRICKS_SERVER_HOSTNAME \
         --http-path $DATABRICKS_HTTP_PATH \
         --access-token $DATABRICKS_TOKEN \
-        --mode get \
-        --input-file $DATABRICKS_SEQ_DATE_FILEPATH \
-        --output-file $SEQ_DATE_FILEPATH
+        query \
+        --sql-query "SELECT DMP_SAMPLE_ID AS SAMPLE_ID, DMP_PATIENT_ID AS PATIENT_ID, SEQUENCING_DATE AS SEQ_DATE FROM cdsi_eng_phi.msk_impact_dates.sequencing_date" \
+        --output-path $SEQ_DATE_FILEPATH
     if [ $? -gt 0 ] ; then
         echo "Failed to query DataBricks for SEQ_DATE file"
         return 1
@@ -467,7 +466,7 @@ if ! remove_duplicate_maf_variants ; then
     report_error "Failed to remove duplicate variants from MAF files"
 fi
 
-# Filter germline events from mutation file and structural variant file
+# Filter germline events from mutation file
 if ! filter_germline_events_from_maf ; then
     report_error "Failed to filter MAF germline events"
 fi
@@ -496,7 +495,7 @@ fi
 
 # Because we have already merged Archer samples, remove linked Archer events
 if ! remove_duplicate_archer_events_from_sv ; then
-    report_error "Failed to demove duplicate Archer events from SV file"
+    report_error "Failed to remove duplicate Archer events from SV file"
 fi
 
 printTimeStampedDataProcessingStepMessage "Finalize and validate study contents of Sophia MSK-IMPACT"
