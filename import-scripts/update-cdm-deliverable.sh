@@ -18,6 +18,7 @@ CLINICAL_SAMPLE_FILEPATH=""
 CLINICAL_SAMPLE_FILENAME="data_clinical_sample.txt"
 CLINICAL_SAMPLE_S3_FILEPATH="sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
 CDM_DELIVERABLE="$CDSI_DATA_HOME/sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
+declare -a S3_BUCKETS=("cdm-deliverable" "cdm-deliverable-dev")
 
 function check_args() {
     if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
@@ -64,15 +65,15 @@ function filter_sample_file() {
 }
 
 function upload_to_s3() {
-    BUCKET_NAME="cdm-deliverable"
-
-    # Authenticate and upload into S3 bucket
-    $PORTAL_HOME/scripts/authenticate_service_account.sh eks
-    aws s3 cp $CDM_DELIVERABLE s3://$BUCKET_NAME/$CLINICAL_SAMPLE_S3_FILEPATH --profile saml
-    if [ $? -ne 0 ] ; then
-        echo "`date`: Failed to upload CDM deliverable to S3, exiting..."
-        exit 1
-    fi
+    for BUCKET_NAME in ${S3_BUCKETS[@]}; do
+        # Authenticate and upload into S3 bucket
+        $PORTAL_HOME/scripts/authenticate_service_account.sh eks
+        aws s3 cp $CDM_DELIVERABLE s3://$BUCKET_NAME/$CLINICAL_SAMPLE_S3_FILEPATH --profile saml
+        if [ $? -ne 0 ] ; then
+            echo "`date`: Failed to upload CDM deliverable to S3, exiting..."
+            exit 1
+        fi
+    done
 }
 
 function trigger_cdm_dags() {
