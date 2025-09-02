@@ -52,6 +52,7 @@ function upload_to_s3() {
             --exclude ".git/*" \
             --exclude ".gitattributes" \
             --exclude ".gitignore" \
+            --exclude "*parquet*" \
             --profile saml
     else
         echo "`date`: '$PATH_TO_UPLOAD' is neither a file nor a directory, exiting..."
@@ -114,6 +115,7 @@ function download_from_s3() {
             --exclude ".git/*" \
             --exclude ".gitattributes" \
             --exclude ".gitignore" \
+            --exclude "*parquet*" \
             --profile saml
 
     elif [ -f "$PATH_TO_OVERWRITE_ABS" ]; then
