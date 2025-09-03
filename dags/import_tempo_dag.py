@@ -40,7 +40,6 @@ with DAG(
     }
 ) as dag:
 
-    importer = "{{ params.importer }}"
     pipelines5_conn_id = "pipelines5_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
     creds_dir = "/data/portal-cron/pipelines-credentials"
@@ -51,7 +50,7 @@ with DAG(
     import_tempo_data = SSHOperator(
         task_id="import_tempo_data",
         ssh_conn_id=pipelines5_conn_id,
-        command=f"{import_scripts_path}/import-tempo-data.sh",
+        command=f"{import_scripts_path}/import-tempo-data.sh {{ params.importer }}",
         dag=dag,
     )
 
