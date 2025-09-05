@@ -1,4 +1,4 @@
-#!/bin/bash
+e!/bin/bash
 
 # 0. acquire the exclusive file lock
 # 1. reset cmo-access git repository to match the upstream main branch (using similar lagic to
@@ -31,7 +31,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     CANCER_STUDY_IDENTIFIER="mixed_msk_cfdna_research_access"
     IMPORT_SYMLINK_FILEPATH="/data/portal-cron/cbio-portal-data/cmo-access/mixed_msk_cfdna_research_access"
     now=$(date "+%Y-%m-%d-%H-%M-%S")
-    IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-cmo-importer.jar"
+    DATA_SOURCE_MANAGER_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/data_source_repo_clone_manager.sh"
+    DATA_SOURCE_MANAGER_CONFIG_FILEPATH="$PORTAL_HOME/pipelines-credentials/importer-data-source-manager-config.yaml"
+    IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-cmo-blue-importer.jar"
     ENABLE_DEBUGGING=0
     JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CMO_ACCESS_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     cmo_access_notification_file=$(mktemp $CMO_ACCESS_TMPDIR/cmo-access-portal-update-notification.$now.XXXXXX)
@@ -39,7 +41,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     cmo_access_dmp_pids_filepath=$CMO_ACCESS_TMPDIR/cmo_access_patient_list.txt
     cmo_access_seq_date_filepath=$CMO_ACCESS_TMPDIR/cmo_access_seq_date.txt
     cmo_access_ddp_output_dirpath=$CMO_ACCESS_TMPDIR/ddp_output
-
     # -----------------------------------------------------------------------------------------------------------
     # START CMO-ACCESS DATA FETCHING
     echo $(date)
@@ -62,49 +63,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     fi
 
     function fetch_git_repo_data_updates() {
-        GIT_REPO_HOME="$1"
-        GIT_BRANCH_NAME="$2"
-        echo "fetching updates from cmo_access repository..."
-        old_dir=$(pwd)
-        if ! cd "$GIT_REPO_HOME" ; then
-            echo "fetch_git_repo_data_updates() : error - could not change to directory $GIT_REPO_HOME"
-            return 1
-        fi
-        # drop local changes to files
-        if ! git checkout . ; then
-            echo "fetch_git_repo_data_updates() : error - could not checkout default branch at $GIT_REPO_HOME"
-            return 1
-        fi
-        # clean local files and directories which are not part of the repository
-        if ! git clean -fd ; then
-            echo "fetch_git_repo_data_updates() : error - could not git clean at $GIT_REPO_HOME"
-            return 1
-        fi
-        # lose any unpushed local commits
-        if ! git reset --hard "origin/$GIT_BRANCH_NAME" ; then
-            echo "fetch_git_repo_data_updates() : error - could not git reset --hard origin/$GIT_BRANCH_NAME at $GIT_REPO_HOME"
-            return 1
-        fi
-        # pull updates from repo
-        git_pull_stdout_filepath=$(mktemp "$CMO_ACCESS_TMPDIR/git_pull.stdout_XXXXXX")
-        if ! git pull origin "$GIT_BRANCH_NAME" > "$git_pull_stdout_filepath" ; then
-            echo "fetch_git_repo_data_updates() : error - could not git pull origin $GIT_BRANCH_NAME at $GIT_REPO_HOME"
-            return 1
-        fi
-        # always run git-lfs pull origin <branch> to ensure git-lfs managed file contents show actual data, not pointer file reference info
-        if ! git-lfs pull origin "$GIT_BRANCH_NAME" ; then
-            echo "fetch_git_repo_data_updates() : error - could not git-lfs pull origin $GIT_BRANCH_NAME at $GIT_REPO_HOME"
-            return 1
-        fi
-        # updates might have been fetched already but still want to notify if updates were pulled or not
-        if grep "Already up to date." "$git_pull_stdout_filepath" ; then
-            echo "fetch_git_repo_data_updates() : we have the latest dataset at $GIT_REPO_HOME"
-        else
-            echo "fetch_git_repo_data_updates() : we pulled updates from git at $GIT_REPO_HOME"
-        fi
-        rm "$git_pull_stdout_filepath"
-        cd "$old_dir"
-        return 0
+        $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull msk cmo-access
     }
 
     function fetch_ddp_demographics_and_timeline() {
@@ -180,7 +139,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     # -----------------------------------------------------------------------------------------------------------
     # DATA FETCHES
     printTimeStampedDataProcessingStepMessage "CMO-ACCESS data processing"
-    if ! fetch_git_repo_data_updates "$CMO_ACCESS_DATA_HOME" main ; then
+    if ! fetch_git_repo_data_updates ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "Git Failure: CMO-ACCESS repository update"
         exit 1
     fi
@@ -220,15 +179,16 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     fi
     rm -f "$IMPORT_SYMLINK_FILEPATH"
     num_studies_updated=`cat $CMO_ACCESS_TMPDIR/num_studies_updated.txt`
-    # clear persistence cache
-    if [[ $num_studies_updated -gt 0 ]]; then
-        echo "'$num_studies_updated' studies have been updated, clearing persistence cache for cmo-access portal..."
-        if ! clearPersistenceCachesForMskPortals ; then
-            sendClearCacheFailureMessage cmo-access fetch-ddp-and-import-cmo-access-data.sh
-        fi
-    else
-        echo "No studies have been updated, not clearing persistence cache for cmo-access portal..."
-    fi
+#### ROB : 2025_08_17 - persistence cache reset will now happen at the color transition instead
+####    # clear persistence cache
+####    if [[ $num_studies_updated -gt 0 ]]; then
+####        echo "'$num_studies_updated' studies have been updated, clearing persistence cache for cmo-access portal..."
+####        if ! clearPersistenceCachesForMskPortals ; then
+####            sendClearCacheFailureMessage cmo-access fetch-ddp-and-import-cmo-access-data.sh
+####        fi
+####    else
+####        echo "No studies have been updated, not clearing persistence cache for cmo-access portal..."
+####    fi
 
     # import ran and either failed or succeeded
     echo "sending notification email.."
@@ -256,7 +216,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     echo $(date)
 
     echo "Cleaning up any untracked files in $PORTAL_DATA_HOME/cmo-access..."
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $CMO_ACCESS_DATA_HOME
+    $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup msk cmo-access
     exit 0
 
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH

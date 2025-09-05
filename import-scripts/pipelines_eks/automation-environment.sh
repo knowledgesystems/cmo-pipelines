@@ -95,7 +95,16 @@ export START_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-impor
 export KILL_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-kill-request
 export HGNC_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-in-progress
 export HGNC_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-killing
+export START_HGNC_1938_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-start-request
+export KILL_HGNC_1938_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-kill-request
+export HGNC_1938_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-in-progress
+export HGNC_1938_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-1938-import-killing
 export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-eks-config
+#export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-kubeconfig
+#export PUBLICARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/publicargocd-cluster-kubeconfig
+export EKS_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eks-cluster-kubeconfig
+#export EKSARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eksargocd-cluster-kubeconfig
+export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
 
 #######################
 # SSL args (for AWS + redcap)

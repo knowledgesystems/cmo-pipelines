@@ -48,6 +48,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
         java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27183"
     fi
     JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$JAVA_IMPORTER_ARGS"
     triage_notification_file=$(mktemp $tmp/triage-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
     DATA_SOURCES_TO_BE_FETCHED="bic-mskcc-legacy cmo-argos private impact impact-MERGED knowledge-systems-curated-studies datahub datahub_shahlab msk-mind-datahub pipelines-testing"
@@ -125,7 +126,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
     fi
 
     echo "Cleaning up any untracked files from MSK-TRIAGE import..."
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/impact $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind $PORTAL_DATA_HOME/pipelines-testing
+    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/impact $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind $PORTAL_DATA_HOME/pipelines-testing
+    #bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/impact $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind $PORTAL_DATA_HOME/pipelines-testing
 
     # import is done - remove status file showing "in_progress"
     rm -f "$TRIAGE_IMPORT_IN_PROGRESS_FILENAME"

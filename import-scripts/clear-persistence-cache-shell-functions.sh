@@ -31,15 +31,22 @@ function clearPersistenceCachesForPortals() {
 }
 
 # Cache clearing is organized by database. All portals based on the same (updated) cBioPortal mysql database are cleared
-function clearPersistenceCachesForMskPortals() {
-    all_msk_portals="msk msk-beta"
+function clearPersistenceCachesForMskBluePortals() {
+    send_slack_message="$1"
+    all_msk_portals="msk-blue msk-beta-blue private-blue sclc-blue"
     clearPersistenceCachesForPortals "$all_msk_portals"
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK portal persistence cache was cleared :recycle:"
+    if [ "$send_slack_message" == "send-slack" ] ; then
+        send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK portal persistence cache was cleared :recycle:"
+    fi
 }
 
-function clearPersistenceCachesForExternalPortals() {
-    all_external_portals="private sclc"
-    clearPersistenceCachesForPortals "$all_external_portals"
+function clearPersistenceCachesForMskGreenPortals() {
+    send_slack_message="$1"
+    all_msk_portals="msk-green msk-beta-green private-green sclc-green"
+    clearPersistenceCachesForPortals "$all_msk_portals"
+    if [ "$send_slack_message" == "send-slack" ] ; then
+        send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK portal persistence cache was cleared :recycle:"
+    fi
 }
 
 function clearPersistenceCachesForTriagePortals() {
