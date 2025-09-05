@@ -26,8 +26,6 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
 
     echo $(date)
 
-    # set data source env variables
-    source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
     source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 
     tmp=$PORTAL_HOME/tmp/import-cron-cmo-triage
@@ -41,6 +39,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
         rm -rf "$tmp"/*
     fi
     now=$(date "+%Y-%m-%d-%H-%M-%S")
+    DATA_SOURCE_MANAGER_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/data_source_repo_clone_manager.sh"
+    DATA_SOURCE_MANAGER_CONFIG_FILEPATH="$PORTAL_HOME/pipelines-credentials/importer-data-source-manager-config.yaml"
     IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/triage-cmo-importer.jar"
     java_debug_args=""
     ENABLE_DEBUGGING=0
@@ -51,9 +51,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
     JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$JAVA_IMPORTER_ARGS"
     triage_notification_file=$(mktemp $tmp/triage-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
-    DATA_SOURCES_TO_BE_FETCHED="bic-mskcc-legacy cmo-argos private impact impact-MERGED knowledge-systems-curated-studies datahub datahub_shahlab msk-mind-datahub pipelines-testing"
-    unset failed_data_source_fetches
-    declare -a failed_data_source_fetches
+    DATA_SOURCES_TO_BE_FETCHED="bic-mskcc-legacy cmo-argos private impact knowledge-systems-curated-studies datahub datahub_shahlab msk-mind-datahub pipelines-testing"
 
     # import is beginning - create status file showing "in_progress", and remove trigger
     rm -f "$START_TRIAGE_IMPORT_TRIGGER_FILENAME"
@@ -71,8 +69,10 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
         fi
     fi
 
-    # fetch updates to data source repos
-    fetch_updates_in_data_sources $DATA_SOURCES_TO_BE_FETCHED
+    DATA_SOURCE_REPO_FETCH_FAIL=0
+    if ! $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull $DATA_SOURCES_TO_BE_FETCHED ; then
+        DATA_SOURCE_REPO_FETCH_FAIL=1
+    fi
 
     # import data that requires QC into triage portal
     echo "importing cancer type updates into triage portal database..."
@@ -89,7 +89,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
     fi
 
     # if the database version is correct and ALL fetches succeed, then import
-    if [[ $DB_VERSION_FAIL -eq 0 && ${#failed_data_source_fetches[*]} -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
+    if [[ $DB_VERSION_FAIL -eq 0 && $DATA_SOURCE_REPO_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data into triage portal database..."
         IMPORT_FAIL=0
         $JAVA_BINARY -Xmx32G $JAVA_IMPORTER_ARGS --update-study-data --portal triage-portal --use-never-import --update-worksheet --notification-file "$triage_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
@@ -126,8 +126,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-triage.lock"
     fi
 
     echo "Cleaning up any untracked files from MSK-TRIAGE import..."
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/impact $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind $PORTAL_DATA_HOME/pipelines-testing
-    #bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/impact $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind $PORTAL_DATA_HOME/pipelines-testing
+    $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup $DATA_SOURCES_TO_BE_FETCHED
 
     # import is done - remove status file showing "in_progress"
     rm -f "$TRIAGE_IMPORT_IN_PROGRESS_FILENAME"
