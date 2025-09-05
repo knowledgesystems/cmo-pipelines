@@ -17,6 +17,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         exit 1
     fi
     # set data source env variables
+    source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
     source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
     source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 
@@ -31,13 +32,11 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         rm -rf "$tmp"/*
     fi
     now=$(date "+%Y-%m-%d-%H-%M-%S")
-    IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-cmo-importer.jar"
     java_debug_args=""
     ENABLE_DEBUGGING=0
     if [ $ENABLE_DEBUGGING != "0" ] ; then
         java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27184"
     fi
-    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     msk_automation_notification_file=$(mktemp $tmp/msk-automation-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
     CANCERSTUDIESLOGFILENAME="$PORTAL_HOME/logs/update-studies-dashi-gdac.log"
@@ -46,6 +45,24 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     GMAIL_PASSWORD=`grep gmail_password $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
     unset failed_data_source_fetches
     declare -a failed_data_source_fetches
+
+    # Get the current production database color
+    GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
+    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_database_update_tools.properties"
+    current_production_database_color=$($GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+    destination_database_color="unset"
+    if [ ${current_production_database_color:0:4} == "blue" ] ; then
+        destination_database_color="green"
+    fi
+    if [ ${current_production_database_color:0:5} == "green" ] ; then
+        destination_database_color="blue"
+    fi
+    if [ "$destination_database_color" == "unset" ] ; then
+        echo "Error during determination of the destination database color" >&2
+        exit 1
+    fi
+    CMO_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-cmo-$destination_database_color-importer.jar"
+    CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
     CDD_ONCOTREE_RECACHE_FAIL=0
     if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
@@ -59,13 +76,14 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         fi
     fi
 
-    # fetch updates to data source repos
-    fetch_updates_in_data_sources $DATA_SOURCES_TO_BE_FETCHED
+#### ROB : 2025_08_18 - this is failing .. change this to use the data source management script
+####    # fetch updates to data source repos
+####    fetch_updates_in_data_sources $DATA_SOURCES_TO_BE_FETCHED
 
     DB_VERSION_FAIL=0
     # check database version before importing anything
     echo "Checking if database version is compatible"
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --check-db-version
+    $JAVA_BINARY $CMO_JAVA_IMPORTER_ARGS --check-db-version
     if [ $? -gt 0 ]; then
         echo "Database version expected by portal does not match version in database!"
         DB_VERSION_FAIL=1
@@ -74,10 +92,10 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     if [[ $DB_VERSION_FAIL -eq 0 && ${#failed_data_source_fetches[*]} -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         # import vetted studies into MSK portal
         echo "importing cancer type updates into msk portal database..."
-        $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+        $JAVA_BINARY -Xmx16g $CMO_JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
         echo "importing study data into msk portal database..."
         IMPORT_FAIL=0
-        $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal msk-automation-portal --update-worksheet --notification-file "$msk_automation_notification_file" --use-never-import --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
+        $JAVA_BINARY -Xmx64g $CMO_JAVA_IMPORTER_ARGS --update-study-data --portal msk-automation-portal --update-worksheet --notification-file "$msk_automation_notification_file" --use-never-import --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -gt 0 ]; then
             echo "MSK CMO import failed!"
             IMPORT_FAIL=1
@@ -88,15 +106,16 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
 
         num_studies_updated=`cat $tmp/num_studies_updated.txt`
 
-        # clear persistence cache
-        if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
-            echo "'$num_studies_updated' studies have been updated, clearing persistence cache of msk portal..."
-            if ! clearPersistenceCachesForMskPortals ; then
-                sendClearCacheFailureMessage msk import-cmo-data-msk.sh
-            fi
-        else
-            echo "No studies have been updated, not clearing persistence cache of msk portal..."
-        fi
+#### ROB : 2025_08_17 - persistence cache reset will now happen at the color transition instead
+####        # clear persistence cache
+####        if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
+####            echo "'$num_studies_updated' studies have been updated, clearing persistence cache of msk portal..."
+####            if ! clearPersistenceCachesForMskPortals ; then
+####                sendClearCacheFailureMessage msk import-cmo-data-msk.sh
+####            fi
+####        else
+####            echo "No studies have been updated, not clearing persistence cache of msk portal..."
+####        fi
     fi
 
     EMAIL_BODY="The GDAC database version is incompatible. Imports will be skipped until database is updated."
@@ -109,17 +128,18 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     echo "Cleaning up any untracked files from MSK-CMO import..."
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub_shahlab $PORTAL_DATA_HOME/msk-mind
 
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
+    $JAVA_BINARY $CMO_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
 
     echo "### Starting import" >> "$CANCERSTUDIESLOGFILENAME"
 
     date >> "$CANCERSTUDIESLOGFILENAME"
     $PYTHON_BINARY $PORTAL_HOME/scripts/updateCancerStudies.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD >> "$CANCERSTUDIESLOGFILENAME" 2>&1
-    if ! clearPersistenceCachesForMskPortals ; then
-        sendClearCacheFailureMessage msk import-cmo-data-msk.sh
-    fi
-    if ! clearPersistenceCachesForExternalPortals ; then
-        sendClearCacheFailureMessage external import-cmo-data-msk.sh
-    fi
+#### ROB : 2025_08_17 - persistence cache reset will now happen at the color transition instead
+####    if ! clearPersistenceCachesForMskPortals ; then
+####        sendClearCacheFailureMessage msk import-cmo-data-msk.sh
+####    fi
+####    if ! clearPersistenceCachesForExternalPortals ; then
+####        sendClearCacheFailureMessage external import-cmo-data-msk.sh
+####    fi
 
 ) {flock_fd}>$FLOCK_FILEPATH

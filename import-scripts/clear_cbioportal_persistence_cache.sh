@@ -21,10 +21,14 @@ portal_to_cluster_map["genie-private-green"]="$CLUSTER_ID_KS"
 portal_to_cluster_map["crdc"]="$CLUSTER_ID_KS"
 portal_to_cluster_map["triage"]="$CLUSTER_ID_DIGITS"
 portal_to_cluster_map["hgnc"]="$CLUSTER_ID_DIGITS"
-portal_to_cluster_map["msk"]="$CLUSTER_ID_DIGITS"
-portal_to_cluster_map["msk-beta"]="$CLUSTER_ID_DIGITS"
-portal_to_cluster_map["private"]="$CLUSTER_ID_DIGITS"
-portal_to_cluster_map["sclc"]="$CLUSTER_ID_DIGITS"
+portal_to_cluster_map["msk-beta-blue"]="$CLUSTER_ID_DIGITS"
+portal_to_cluster_map["msk-beta-green"]="$CLUSTER_ID_DIGITS"
+portal_to_cluster_map["msk-blue"]="$CLUSTER_ID_DIGITS"
+portal_to_cluster_map["msk-green"]="$CLUSTER_ID_DIGITS"
+portal_to_cluster_map["private-blue"]="$CLUSTER_ID_DIGITS"
+portal_to_cluster_map["private-green"]="$CLUSTER_ID_DIGITS"
+portal_to_cluster_map["sclc-blue"]="$CLUSTER_ID_DIGITS"
+portal_to_cluster_map["sclc-green"]="$CLUSTER_ID_DIGITS"
 
 unset portal_to_deployment_map
 declare -A portal_to_deployment_map
@@ -36,10 +40,14 @@ portal_to_deployment_map["genie-private-green"]="cbioportal-backend-genie-privat
 portal_to_deployment_map["crdc"]="cbioportal-backend-nci"
 portal_to_deployment_map["triage"]="eks-triage"
 portal_to_deployment_map["hgnc"]="eks-hgnc"
-portal_to_deployment_map["msk"]="eks-msk"
-portal_to_deployment_map["msk-beta"]="eks-msk-beta"
-portal_to_deployment_map["private"]="eks-private"
-portal_to_deployment_map["sclc"]="eks-sclc"
+portal_to_deployment_map["msk-beta-blue"]="eks-msk-beta-blue"
+portal_to_deployment_map["msk-beta-green"]="eks-msk-beta-green"
+portal_to_deployment_map["msk-blue"]="eks-msk-blue"
+portal_to_deployment_map["msk-green"]="eks-msk-green"
+portal_to_deployment_map["private-blue"]="eks-private-blue"
+portal_to_deployment_map["private-green"]="eks-private-green"
+portal_to_deployment_map["sclc-blue"]="eks-sclc-blue"
+portal_to_deployment_map["sclc-green"]="eks-sclc-green"
 
 # TODO : the cache service basename and cache database number could be extracted from the kubernetes deployment and config map
 
@@ -53,10 +61,14 @@ portal_to_cache_service_basename["genie-private-green"]="cbioportal-genie-persis
 portal_to_cache_service_basename["crdc"]="cbioportal-genie-persistence-redis"
 portal_to_cache_service_basename["triage"]="triage-cbioportal-persistence-redis"
 portal_to_cache_service_basename["hgnc"]=""
-portal_to_cache_service_basename["msk"]="eks-msk-cbioportal-persistence-redis"
-portal_to_cache_service_basename["msk-beta"]="eks-msk-cbioportal-persistence-redis"
-portal_to_cache_service_basename["private"]="cbioportal-persistence-redis"
-portal_to_cache_service_basename["sclc"]="cbioportal-persistence-redis"
+portal_to_cache_service_basename["msk-beta-blue"]="eks-msk-cbioportal-persistence-redis"
+portal_to_cache_service_basename["msk-beta-green"]="eks-msk-cbioportal-persistence-redis"
+portal_to_cache_service_basename["msk-blue"]="eks-msk-cbioportal-persistence-redis"
+portal_to_cache_service_basename["msk-green"]="eks-msk-cbioportal-persistence-redis"
+portal_to_cache_service_basename["private-blue"]="eks-msk-cbioportal-persistence-redis"
+portal_to_cache_service_basename["private-green"]="eks-msk-cbioportal-persistence-redis"
+portal_to_cache_service_basename["sclc-blue"]="eks-msk-cbioportal-persistence-redis"
+portal_to_cache_service_basename["sclc-green"]="eks-msk-cbioportal-persistence-redis"
 
 unset portal_to_cache_database_number
 declare -A portal_to_cache_database_number
@@ -68,10 +80,14 @@ portal_to_cache_database_number["genie-private-green"]="4"
 portal_to_cache_database_number["crdc"]="7"
 portal_to_cache_database_number["triage"]="1"
 portal_to_cache_database_number["hgnc"]="unassigned"
-portal_to_cache_database_number["msk"]=1
-portal_to_cache_database_number["msk-beta"]=1
-portal_to_cache_database_number["private"]=1
-portal_to_cache_database_number["sclc"]=2
+portal_to_cache_database_number["msk-beta-blue"]=6
+portal_to_cache_database_number["msk-beta-green"]=7
+portal_to_cache_database_number["msk-blue"]=8
+portal_to_cache_database_number["msk-green"]=9
+portal_to_cache_database_number["private-blue"]=2
+portal_to_cache_database_number["private-green"]=3
+portal_to_cache_database_number["sclc-blue"]=4
+portal_to_cache_database_number["sclc-green"]=5
 
 function print_portal_id_values() {
     echo "valid portal ids:"
