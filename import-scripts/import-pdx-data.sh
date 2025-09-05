@@ -134,7 +134,7 @@ if [[ -d "$CRDB_PDX_TMPDIR" && "$CRDB_PDX_TMPDIR" != "/" ]] ; then
 fi
 
 IMPORTER_JAR_LABEL=CMO
-IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
+IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-blue-importer.jar
 IMPORTER_DEBUG_PORT=27182
 CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
 importer_notification_file=$(mktemp $CRDB_PDX_TMPDIR/importer-update-notification.$now.XXXXXX)
@@ -294,18 +294,19 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
             IMPORT_SUCCESS=1
         fi
         num_studies_updated=`cat $CRDB_PDX_TMPDIR/num_studies_updated.txt`
-        # clear persistence cache (note : this script is constructing studies for the msk portal, including mskimpact sample data - that is why the msk portal cache is cleared)
-        if [[ $IMPORT_SUCCESS -ne 0 && $num_studies_updated -gt 0 ]]; then
-            echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portal ..."
-            if ! clearPersistenceCachesForMskPortals ; then
-                sendClearCacheFailureMessage msk import-pdx-data.sh
-            else
-                CLEAR_PERSISTENCE_CACHE_SUCCESS=1
-            fi
-        else
-            echo "No studies have been updated, not clearing persistence cache for msk portal..."
-            CLEAR_PERSISTENCE_CACHE_SUCCESS=1
-        fi
+#### ROB : 2025_08_17 - persistence cache reset will now happen at the color transition instead
+####        # clear persistence cache (note : this script is constructing studies for the msk portal, including mskimpact sample data - that is why the msk portal cache is cleared)
+####        if [[ $IMPORT_SUCCESS -ne 0 && $num_studies_updated -gt 0 ]]; then
+####            echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portal ..."
+####            if ! clearPersistenceCachesForMskPortals ; then
+####                sendClearCacheFailureMessage msk import-pdx-data.sh
+####            else
+####                CLEAR_PERSISTENCE_CACHE_SUCCESS=1
+####            fi
+####        else
+####            echo "No studies have been updated, not clearing persistence cache for msk portal..."
+####            CLEAR_PERSISTENCE_CACHE_SUCCESS=1
+####        fi
     fi
 fi
 

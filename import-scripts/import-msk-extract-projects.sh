@@ -26,6 +26,26 @@ fi
 
 source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 
+# Get the current production database color
+GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_database_update_tools.properties"
+current_production_database_color=$($GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+destination_database_color="unset"
+if [ ${current_production_database_color:0:4} == "blue" ] ; then
+    destination_database_color="green"
+fi
+if [ ${current_production_database_color:0:5} == "green" ] ; then
+    destination_database_color="blue"
+fi
+if [ "$destination_database_color" == "unset" ] ; then
+    echo "Error during determination of the destination database color" >&2
+    exit 1
+fi
+
+MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-dmp-$destination_database_color-importer.jar"
+MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+# ROB : TODO : refactor the next line so that repo fetching and cleaning is independent of the importer jar (which requires the embedded database name to exist in order to function)
+JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$MSK_JAVA_IMPORTER_ARGS"
 IMPORT_FAIL=0
 ONCOTREE_VERSION_TO_USE="oncotree_candidate_release"
 extract_projects_notification_file=$(mktemp $tmp/import-msk-extract-projects-notification.$now.XXXXXX)
@@ -33,7 +53,7 @@ extract_projects_notification_file=$(mktemp $tmp/import-msk-extract-projects-not
 fetch_updates_in_data_sources "extract-projects"
 
 # import data into msk portal
-$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal extract-projects-to-msk-portal --notification-file $extract_projects_notification_file --oncotree-version $ONCOTREE_VERSION_TO_USE --transcript-overrides-source mskcc --disable-redcap-export
+$JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal extract-projects-to-msk-portal --notification-file $extract_projects_notification_file --oncotree-version $ONCOTREE_VERSION_TO_USE --transcript-overrides-source mskcc --disable-redcap-export
 if [ $? -gt 0 ]; then
     echo "MSK Extract projects import failed!"
     IMPORT_FAIL=1
@@ -49,15 +69,16 @@ else
     num_studies_updated=0
 fi
 
-# clear persistence cache
-if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
-    echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portals..."
-    if ! clearPersistenceCachesForMskPortals ; then
-        sendClearCacheFailureMessage msk import-msk-extract-projects.sh
-    fi
-else
-    echo "No studies have been updated, not clearing persistence cache for msk portals..."
-fi
+#### ROB : 2025_08_17 - persistence cache reset will now happen at the color transition instead
+##### clear persistence cache
+####if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
+####    echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portals..."
+####    if ! clearPersistenceCachesForMskPortals ; then
+####        sendClearCacheFailureMessage msk import-msk-extract-projects.sh
+####    fi
+####else
+####    echo "No studies have been updated, not clearing persistence cache for msk portals..."
+####fi
 
 # clean up extract-projects repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/extract-projects
