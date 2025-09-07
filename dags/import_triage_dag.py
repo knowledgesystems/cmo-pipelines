@@ -47,7 +47,9 @@ with DAG(
     import_triage_data = SSHOperator(
         task_id="import_triage_data",
         ssh_conn_id=pipelines3_conn_id,
-        command=f"{import_scripts_path}/import-cmo-data-triage.sh",
+        # IMPORTANT -- do not end with .sh, otherwise the command will be treated as a path to a Jinja template which we do not want
+        # added a space at the end to prevent Airflow from this behavior
+        command=f"{import_scripts_path}/import-cmo-data-triage.sh ",
         dag=dag,
     )
 
