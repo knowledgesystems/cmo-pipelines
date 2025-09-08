@@ -89,6 +89,12 @@ function merge_solid_heme_and_archer() {
         echo "Failed to copy metadata files to MSK_SOLID_HEME and MSKARCHER merged dataset"
         return 1
     fi
+
+    sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to merge CDM timeline files"
+        return 1
+    fi
 }
 
 function subset_consented_cohort_patients() {
