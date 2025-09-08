@@ -49,7 +49,7 @@ with DAG(
         ssh_conn_id=pipelines3_conn_id,
         # IMPORTANT -- do not end with .sh, otherwise the command will be treated as a path to a Jinja template which we do not want
         # added a space at the end to prevent Airflow from this behavior
-        command=f"{import_scripts_path}/import-cmo-data-triage.sh ",
+        command=f"{import_scripts_path}/import-cmo-data-triage-modded.sh ",
         dag=dag,
     )
 
