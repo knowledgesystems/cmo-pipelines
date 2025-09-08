@@ -124,6 +124,13 @@ function subset_consented_cohort_patients() {
         echo "Failed to subset on list of consented patients"
         return 1
     fi
+
+    # Add CDM timeline files
+    sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "sophia_mskimpact" $SOPHIA_MSK_IMPACT_DATA_HOME $SOPHIA_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to generate CDM timeline files"
+        return 1
+    fi
 }
 
 function generate_cohort() {
@@ -168,18 +175,6 @@ function filter_clinical_cols() {
         echo "Failed to filter clinical sample attributes"
         return 1
     fi
-}
-
-function rename_cdm_clinical_attribute_columns() {
-    # Rename clinical patient attributes coming from CDM:
-    # CURRENT_AGE_DEID -> AGE_CURRENT
-    # GENDER -> SEX
-
-    PATIENT_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
-    PATIENT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.renamed"
-
-    sed -e '1s/CURRENT_AGE_DEID/AGE_CURRENT/' -e '1s/GENDER/SEX/' $PATIENT_INPUT_FILEPATH > $PATIENT_OUTPUT_FILEPATH &&
-    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH"
 }
 
 function standardize_clinical_data() {
@@ -354,6 +349,28 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[data_mutations_non_signedout.txt]+=1
     filenames_to_deliver[data_sv.txt]+=1
     filenames_to_deliver[sophia_mskimpact_data_cna_hg19.seg]+=1
+    filenames_to_deliver[data_timeline_bmi.txt]+=1
+    filenames_to_deliver[data_timeline_ca_125_labs.txt]+=1
+    filenames_to_deliver[data_timeline_ca_15-3_labs.txt]+=1
+    filenames_to_deliver[data_timeline_ca_19-9_labs.txt]+=1
+    filenames_to_deliver[data_timeline_cancer_presence.txt]+=1
+    filenames_to_deliver[data_timeline_cea_labs.txt]+=1
+    filenames_to_deliver[data_timeline_diagnosis.txt]+=1
+    filenames_to_deliver[data_timeline_ecog_kps.txt]+=1
+    filenames_to_deliver[data_timeline_follow_up.txt]+=1
+    filenames_to_deliver[data_timeline_gleason.txt]+=1
+    filenames_to_deliver[data_timeline_mmr.txt]+=1
+    filenames_to_deliver[data_timeline_pdl1.txt]+=1
+    filenames_to_deliver[data_timeline_prior_meds.txt]+=1
+    filenames_to_deliver[data_timeline_progression.txt]+=1
+    filenames_to_deliver[data_timeline_psa_labs.txt]+=1
+    filenames_to_deliver[data_timeline_radiation.txt]+=1
+    filenames_to_deliver[data_timeline_specimen_surgery.txt]+=1
+    filenames_to_deliver[data_timeline_specimen.txt]+=1
+    filenames_to_deliver[data_timeline_surgery.txt]+=1
+    filenames_to_deliver[data_timeline_treatment.txt]+=1
+    filenames_to_deliver[data_timeline_tsh_labs.txt]+=1
+    filenames_to_deliver[data_timeline_tumor_sites.txt]+=1
     filenames_to_deliver[DMP_IDs.txt]+=1
 
     # Remove any files/directories that are not specified above
@@ -420,11 +437,6 @@ printTimeStampedDataProcessingStepMessage "Post-process clinical files for Sophi
 # Filter clinical attribute columns from clinical files
 if ! filter_clinical_cols ; then
     report_error "Failed to filter non-delivered clinical attribute columns for Sophia MSK-IMPACT"
-fi
-
-# Rename columns coming from CDM
-if ! rename_cdm_clinical_attribute_columns ; then
-    report_error "Failed to rename CDM clinical attribute columns"
 fi
 
 # Standardize blank clinical data values to NA
