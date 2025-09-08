@@ -77,7 +77,7 @@ function merge_solid_heme_and_archer() {
 
     # Add clinical attribute headers
     INPUT_FILENAMES="$SOPHIA_TMPDIR/data_clinical_sample.txt $SOPHIA_TMPDIR/data_clinical_patient.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
+    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact -i $PORTAL_HOME/scripts/cdm_metadata.json
     if [ $? -gt 0 ] ; then
         echo "Failed to add clinical attribute metadata headers to MSK_SOLID_HEME and MSKARCHER merged dataset"
         return 1
