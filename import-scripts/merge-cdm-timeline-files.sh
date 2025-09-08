@@ -45,6 +45,11 @@ function set_cohort_filepaths() {
         OUTPUT_DIR=$LYMPHOMA_SUPER_COHORT_DATA_HOME
         MERGE_DIRS=("$MSK_IMPACT_DATA_HOME" "$MSK_HEMEPACT_DATA_HOME" "$FMI_BATLEVI_DATA_HOME")
     fi
+    elif [ "$COHORT" == "sophia_mskimpact" ] ; then
+        COHORT="SOPHIA_MSKIMPACT"
+        OUTPUT_DIR=$2
+        MERGE_DIRS=("$MSK_IMPACT_DATA_HOME" "$MSK_ARCHER_UNFILTERED_DATA_HOME")
+    fi
 
     # This gets the base filename for each of the timeline files
     FILE_LIST=($(cd ${MERGE_DIRS[0]} && ls data_timeline_*.txt))
