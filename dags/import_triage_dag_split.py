@@ -43,7 +43,6 @@ with DAG(
 
     importer = "{{ params.importer }}"
     pipelines3_conn_id = "pipelines3_ssh"
-    import_node_conn_id = "importer_ssh"
     import_scripts_path = "/data/portal-cron/scripts"
     creds_dir = "/data/portal-cron/pipelines-credentials"
     db_properties_filepath = f"{creds_dir}/manage_{importer}_database_update_tools.properties"
@@ -80,15 +79,15 @@ with DAG(
     #     dag=dag,
     # )
 
-    """
-    Fetch data updates on import node
-    """
-    fetch_data_local = SSHOperator(
-        task_id="fetch_data_local",
-        ssh_conn_id=import_node_conn_id,
-        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} pull {importer} {data_repos}",
-        dag=dag,
-    )
+    # """
+    # Fetch data updates on import node
+    # """
+    # fetch_data_local = SSHOperator(
+    #     task_id="fetch_data_local",
+    #     ssh_conn_id=import_node_conn_id,
+    #     command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} pull {importer} {data_repos}",
+    #     dag=dag,
+    # )
 
     """
     Fetch data updates within MSK network
@@ -106,7 +105,7 @@ with DAG(
     """
     setup_import = SSHOperator(
         task_id="setup_import",
-        ssh_conn_id=import_node_conn_id,
+        ssh_conn_id=pipelines3_conn_id,
         command=f"{import_scripts_path}/public-airflow-setup.sh {importer} {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     )
@@ -117,7 +116,7 @@ with DAG(
     """
     import_sql = SSHOperator(
         task_id="import_sql",
-        ssh_conn_id=import_node_conn_id,
+        ssh_conn_id=pipelines3_conn_id,
         command=f"{import_scripts_path}/public-airflow-import-sql.sh {importer} {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     )
@@ -149,22 +148,22 @@ with DAG(
     """
     set_import_status = SSHOperator(
         task_id="set_import_status",
-        ssh_conn_id=import_node_conn_id,
+        ssh_conn_id=pipelines3_conn_id,
         trigger_rule=TriggerRule.ONE_FAILED,
         command=f"{import_scripts_path}/set_update_process_state.sh {db_properties_filepath} abandoned",
         dag=dag,
     )
 
-    """
-    Clean up data repos on import node
-    """
-    cleanup_data_local = SSHOperator(
-        task_id="cleanup_data_local",
-        ssh_conn_id=import_node_conn_id,
-        trigger_rule=TriggerRule.ALL_DONE,
-        command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} cleanup {importer} {data_repos}",
-        dag=dag,
-    )
+    # """
+    # Clean up data repos on import node
+    # """
+    # cleanup_data_local = SSHOperator(
+    #     task_id="cleanup_data_local",
+    #     ssh_conn_id=import_node_conn_id,
+    #     trigger_rule=TriggerRule.ALL_DONE,
+    #     command=f"{import_scripts_path}/data_source_repo_clone_manager.sh {data_source_properties_filepath} cleanup {importer} {data_repos}",
+    #     dag=dag,
+    # )
 
     """
     Clean up data repos within MSK network
@@ -177,5 +176,5 @@ with DAG(
         dag=dag,
     )
 
-    data_repos >> [fetch_data_local, fetch_data_remote] >> setup_import >> import_sql >> set_import_status >> [cleanup_data_local, cleanup_data_remote] 
+    data_repos >> fetch_data_remote >> setup_import >> import_sql >> set_import_status >> cleanup_data_remote 
     list(dag.tasks) >> watcher()
