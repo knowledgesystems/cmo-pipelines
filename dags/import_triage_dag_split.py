@@ -27,7 +27,7 @@ def watcher():
     raise AirflowException("Failing task because one or more upstream tasks failed.")
 
 with DAG(
-    dag_id="import_triage_dag",
+    dag_id="import_triage_dag_split",
     default_args=args,
     description="Imports to Triage cBioPortal MySQL database",
     max_active_runs=1,
