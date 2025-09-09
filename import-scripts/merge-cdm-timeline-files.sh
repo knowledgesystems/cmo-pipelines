@@ -13,13 +13,13 @@ fi
 source $PORTAL_HOME/scripts/automation-environment.sh
 
 COHORT=$1
-OUTPUT_DIR=""
+OUTPUT_DIR=${2:-}
 MERGE_DIRS=()
 FILE_LIST=()
 COHORT_NAME_FOR_COMMIT_MSG=""
 
 function check_args() {
-    if [[ -z $COHORT ]] || [[ "$COHORT" != "mixedpact" && "$COHORT" != "mskimpact" && "$COHORT" != "lymphoma_super_cohort_fmi_msk" ]]; then
+    if [[ -z $COHORT ]] || [[ "$COHORT" != "mixedpact" && "$COHORT" != "mskimpact" && "$COHORT" != "lymphoma_super_cohort_fmi_msk" && "$COHORT" != "sophia_mskimpact" ]]; then
         usage
         exit 1
     fi
@@ -27,7 +27,7 @@ function check_args() {
 
 function usage {
     echo "merge-cdm-timeline-files.sh \$COHORT_ID"
-    echo -e "\t\$COHORT_ID                      one of: ['mixedpact', 'mskimpact', 'lymphoma_super_cohort_fmi_msk']"
+    echo -e "\t\$COHORT_ID                      one of: ['mixedpact', 'mskimpact', 'lymphoma_super_cohort_fmi_msk', 'sophia_mskimpact']"
 }
 
 function set_cohort_filepaths() {
@@ -44,7 +44,6 @@ function set_cohort_filepaths() {
         COHORT="LYMPHOMA_SUPER_COHORT"
         OUTPUT_DIR=$LYMPHOMA_SUPER_COHORT_DATA_HOME
         MERGE_DIRS=("$MSK_IMPACT_DATA_HOME" "$MSK_HEMEPACT_DATA_HOME" "$FMI_BATLEVI_DATA_HOME")
-    fi
     elif [ "$COHORT" == "sophia_mskimpact" ] ; then
         COHORT="SOPHIA_MSKIMPACT"
         OUTPUT_DIR=$2
