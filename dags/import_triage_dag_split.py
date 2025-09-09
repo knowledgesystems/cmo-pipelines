@@ -106,7 +106,7 @@ with DAG(
     setup_import = SSHOperator(
         task_id="setup_import",
         ssh_conn_id=pipelines3_conn_id,
-        command=f"{import_scripts_path}/public-airflow-setup.sh {importer} {import_scripts_path} {db_properties_filepath}",
+        command=f"{import_scripts_path}/triage-airflow-setup.sh {importer} {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     )
 
@@ -117,7 +117,7 @@ with DAG(
     import_sql = SSHOperator(
         task_id="import_sql",
         ssh_conn_id=pipelines3_conn_id,
-        command=f"{import_scripts_path}/public-airflow-import-sql.sh {importer} {import_scripts_path} {db_properties_filepath}",
+        command=f"{import_scripts_path}/triage-airflow-import-sql.sh {importer} {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     )
 
