@@ -143,16 +143,16 @@ with DAG(
     #     dag=dag,
     # )
 
-    """
-    If any upstream tasks failed, mark the import attempt as abandoned.
-    """
-    set_import_status = SSHOperator(
-        task_id="set_import_status",
-        ssh_conn_id=pipelines3_conn_id,
-        trigger_rule=TriggerRule.ONE_FAILED,
-        command=f"{import_scripts_path}/set_update_process_state.sh {db_properties_filepath} abandoned",
-        dag=dag,
-    )
+    # """
+    # If any upstream tasks failed, mark the import attempt as abandoned.
+    # """
+    # set_import_status = SSHOperator(
+    #     task_id="set_import_status",
+    #     ssh_conn_id=pipelines3_conn_id,
+    #     trigger_rule=TriggerRule.ONE_FAILED,
+    #     command=f"{import_scripts_path}/set_update_process_state.sh {db_properties_filepath} abandoned",
+    #     dag=dag,
+    # )
 
     # """
     # Clean up data repos on import node
@@ -176,5 +176,5 @@ with DAG(
         dag=dag,
     )
 
-    data_repos >> fetch_data_remote >> setup_import >> import_sql >> set_import_status >> cleanup_data_remote 
+    data_repos >> fetch_data_remote >> setup_import >> import_sql >> cleanup_data_remote 
     list(dag.tasks) >> watcher()
