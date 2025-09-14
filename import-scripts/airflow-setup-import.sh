@@ -6,7 +6,7 @@
 # - Data fetch from provided sources
 # - Refreshing CDD/Oncotree caches
 
-IMPORTER=$1 # takes "triage"
+IMPORTER=$1
 PORTAL_SCRIPTS_DIRECTORY=$2
 MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
@@ -20,8 +20,9 @@ fi
 echo $AUTOMATION_ENV_SCRIPT_FILEPATH
 source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
-tmp=$PORTAL_HOME/tmp/import-cron-triage-data
-IMPORTER_JAR_FILENAME="/data/portal-cron/lib/triage-cmo-importer.jar"
+tmp=$PORTAL_HOME/tmp/import-cron-${IMPORTER}-data
+IMPORTER_JAR_PREFIX=${IMPORTER//triage/triage-cmo}
+IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_JAR_PREFIX}-importer.jar"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
 echo "Importing with $IMPORTER_JAR_FILENAME"
@@ -38,6 +39,6 @@ fi
 echo "Refreshing CDD/ONCOTREE caches"
 bash $PORTAL_SCRIPTS_DIRECTORY/refresh-cdd-oncotree-cache.sh
 if [ $? -gt 0 ]; then
-    echo "Error: Failed to refresh CDD and/or ONCOTREE cache during triage-data import!" >&2
+    echo "Error: Failed to refresh CDD and/or ONCOTREE cache during ${IMPORTER}-data import!" >&2
     exit 1
 fi
