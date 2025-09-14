@@ -46,7 +46,7 @@ with DAG(
     creds_dir = "/data/portal-cron/pipelines-credentials"
     db_properties_filepath = f"{creds_dir}/manage_{importer}_database_update_tools.properties"
     data_source_properties_filepath = f"{creds_dir}/importer-data-source-manager-config.yaml"
-
+    
     """
     Gets data repos as a single string
     """
