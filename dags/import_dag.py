@@ -9,6 +9,7 @@ from airflow.exceptions import AirflowException
 from airflow.models.param import Param
 from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import ShortCircuitOperator
 from airflow.utils.trigger_rule import TriggerRule
 
 args = {
@@ -92,14 +93,13 @@ with DAG(
 
     data_nodes = get_data_nodes("{{ params.importer }}")
     
-    # TODO actually add this script
     """
     Verifies the update process management database state and fails import early if incorrect
-    (ClickHouse flow)
+    Only runs for the Public (ClickHouse) importer path.
     """
     verify_management_state = SSHOperator.partial(
         task_id="verify_management_state",
-        command=f"{import_scripts_path}/airflow-verify-management.sh {importer} {import_scripts_path} {db_properties_filepath}",
+        command=f"{import_scripts_path}/public-airflow-verify-management.sh {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     ).expand(ssh_conn_id=target_node)
 
@@ -191,27 +191,47 @@ with DAG(
     # Branch: choose MySQL-only or ClickHouse flow based on importer
     @task.branch
     def branch_on_importer(importer: str) -> str:
-        return "mysql_flow" if importer == "triage" else "clickhouse_flow"
+        return "mysql_gate" if importer == "triage" else "clickhouse_gate"
 
     branch = branch_on_importer(importer)
-    mysql_flow = EmptyOperator(task_id="mysql_flow")
-    clickhouse_flow = EmptyOperator(task_id="clickhouse_flow")
-    branch >> [mysql_flow, clickhouse_flow]
+    mysql_gate = EmptyOperator(task_id="mysql_gate")
+    clickhouse_gate = EmptyOperator(task_id="clickhouse_gate")
+    branch >> [mysql_gate, clickhouse_gate]
 
     # Join node to converge pre-import steps; tolerate skipped branch
     join = EmptyOperator(task_id="join_pre_import",
                          trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS)
 
+    # Create short-circuit gates to split public vs non-public ClickHouse flows
+    only_public = ShortCircuitOperator(
+        task_id="only_public",
+        python_callable=lambda imp: imp == 'public',
+        op_args=[importer],
+        dag=dag,
+    )
+    non_public_clickhouse = ShortCircuitOperator(
+        task_id="non_public_clickhouse",
+        python_callable=lambda imp: imp != 'public',
+        op_args=[importer],
+        dag=dag,
+    )
+
+    # Allow shared tasks to proceed when one of the short-circuit branches is skipped
+    fetch_data.trigger_rule = TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
+    clone_database.trigger_rule = TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
+
     # Wire DAG dependencies
-    mysql_flow >> parse_args >> fetch_data >> join
-    clickhouse_flow >> parse_args >> verify_management_state >> [fetch_data, clone_database] >> join
+    mysql_gate >> parse_args >> fetch_data >> join
+    clickhouse_gate >> parse_args >> [only_public, non_public_clickhouse]
+    only_public >> verify_management_state >> [fetch_data, clone_database] >> join
+    non_public_clickhouse >> [fetch_data, clone_database] >> join
     join >> setup_import
 
     # Allow import_sql to proceed when the non-selected branch is skipped
     import_sql.trigger_rule = TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
     setup_import >> import_sql
 
-    mysql_flow >> import_sql >> cleanup_data
-    clickhouse_flow >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_data
+    mysql_gate >> import_sql >> cleanup_data
+    clickhouse_gate >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_data
 
     list(dag.tasks) >> watcher()
