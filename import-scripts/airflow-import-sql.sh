@@ -5,58 +5,80 @@
 # - Import of cancer types
 # - Import from relevant column in spreadsheet
 
-IMPORTER=$1
-PORTAL_SCRIPTS_DIRECTORY=$2
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
-if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
+IMPORTER="$1"
+PORTAL_SCRIPTS_DIRECTORY="$2"
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$3"
+if [ -z "$PORTAL_SCRIPTS_DIRECTORY" ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
-AUTOMATION_ENV_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh"
-if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
-    echo "`date`: Unable to locate $AUTOMATION_ENV_SCRIPT_FILEPATH, exiting..."
+AUTOMATION_ENV_SCRIPT_FILEPATH="${PORTAL_SCRIPTS_DIRECTORY}/automation-environment.sh"
+if [ ! -f "$AUTOMATION_ENV_SCRIPT_FILEPATH" ] ; then
+    echo "$(date): Unable to locate $AUTOMATION_ENV_SCRIPT_FILEPATH, exiting..."
     exit 1
 fi
-source $AUTOMATION_ENV_SCRIPT_FILEPATH
+source "$AUTOMATION_ENV_SCRIPT_FILEPATH"
+
+function is_mysql_import() {
+    [[ "$IMPORTER" = "triage" ]]
+}
 
 # Set needed paths/filenames for import
-if [[ $IMPORTER == "genie" ]] ; then
+case "$IMPORTER" in
+  genie)
     TMP_DIR_NAME="import-cron-genie"
     IMPORTER_NAME="genie-aws-importer"
     LOG_FILE_NAME="genie-aws-importer.log"
     PORTAL_NAME="genie-portal"
-elif [[ $IMPORTER == "public" ]] ; then
+    ;;
+  public)
     TMP_DIR_NAME="import-cron-public-data"
     IMPORTER_NAME="public-importer"
     LOG_FILE_NAME="public-data-importer.log"
     PORTAL_NAME="public-data-portal"
+    ;;
+  triage)
+    TMP_DIR_NAME="import-cron-triage"
+    IMPORTER_NAME="triage-cmo-importer"
+    LOG_FILE_NAME="triage-cmo-importer.log"
+    PORTAL_NAME="triage-portal"
+    ;;
+  *)
+    echo "Unsupported importer: $IMPORTER" >&2
+    exit 1
+    ;;
+esac
+
+if ! is_mysql_import; then
+    # Get the current production database color
+    GET_DB_IN_PROD_SCRIPT_FILEPATH="${PORTAL_SCRIPTS_DIRECTORY}/get_database_currently_in_production.sh"
+    current_production_database_color=$(sh "$GET_DB_IN_PROD_SCRIPT_FILEPATH" "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH")
+    destination_database_color="unset"
+    if [ ${current_production_database_color:0:4} == "blue" ] ; then
+        destination_database_color="green"
+    fi
+    if [ ${current_production_database_color:0:5} == "green" ] ; then
+        destination_database_color="blue"
+    fi
+    if [ "$destination_database_color" == "unset" ] ; then
+        echo "Error during determination of the destination database color" >&2
+        exit 1
+    fi
+
+    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-${destination_database_color}.jar"
 else
-    exit 1
+    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}.jar"
 fi
 
-# Get the current production database color
-GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
-current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
-destination_database_color="unset"
-if [ ${current_production_database_color:0:4} == "blue" ] ; then
-    destination_database_color="green"
-fi
-if [ ${current_production_database_color:0:5} == "green" ] ; then
-    destination_database_color="blue"
-fi
-if [ "$destination_database_color" == "unset" ] ; then
-    echo "Error during determination of the destination database color" >&2
-    exit 1
-fi
-
-tmp=$PORTAL_HOME/tmp/$TMP_DIR_NAME
-IMPORTER_JAR_FILENAME="/data/portal-cron/lib/$IMPORTER_NAME-$destination_database_color.jar"
+tmp="${PORTAL_HOME}/tmp/${TMP_DIR_NAME}"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 ONCOTREE_VERSION="oncotree_latest_stable"
 
 # Direct importer logs to stdout
-tail -f $PORTAL_HOME/logs/$LOG_FILE_NAME &
+tail -f "${PORTAL_HOME}/logs/${LOG_FILE_NAME}" &
 
-echo "Destination DB color: $destination_database_color"
+if ! is_mysql_import; then
+    echo "Destination DB color: $destination_database_color"
+fi
 echo "Importing with $IMPORTER_JAR_FILENAME"
 echo "Importing cancer type updates into mysql database $destination_database_color"
 $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
