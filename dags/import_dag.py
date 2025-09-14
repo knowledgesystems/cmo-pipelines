@@ -197,34 +197,25 @@ with DAG(
     mysql_gate = EmptyOperator(task_id="mysql_gate")
     clickhouse_gate = EmptyOperator(task_id="clickhouse_gate")
     branch >> [mysql_gate, clickhouse_gate]
+    
+    @task.branch
+    def branch_on_public(importer: str) -> str:
+        return "public_gate" if importer == "public" else "non_public_gate"
+
+    branch = branch_on_public(importer)
+    public_gate = EmptyOperator(task_id="public_gate")
+    non_public_gate = EmptyOperator(task_id="non_public_gate")
+    branch >> [public_gate, non_public_gate]
 
     # Join node to converge pre-import steps; tolerate skipped branch
     join = EmptyOperator(task_id="join_pre_import",
                          trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS)
 
-    # Create short-circuit gates to split public vs non-public ClickHouse flows
-    only_public = ShortCircuitOperator(
-        task_id="only_public",
-        python_callable=lambda imp: imp == 'public',
-        op_args=[importer],
-        dag=dag,
-    )
-    non_public_clickhouse = ShortCircuitOperator(
-        task_id="non_public_clickhouse",
-        python_callable=lambda imp: imp != 'public',
-        op_args=[importer],
-        dag=dag,
-    )
-
-    # Allow shared tasks to proceed when one of the short-circuit branches is skipped
-    fetch_data.trigger_rule = TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
-    clone_database.trigger_rule = TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
-
     # Wire DAG dependencies
     mysql_gate >> parse_args >> fetch_data >> join
-    clickhouse_gate >> parse_args >> [only_public, non_public_clickhouse]
-    only_public >> verify_management_state >> [fetch_data, clone_database] >> join
-    non_public_clickhouse >> [fetch_data, clone_database] >> join
+    public_gate >> parse_args >> verify_management_state >> [fetch_data, clone_database] >> join
+    [clickhouse_gate, non_public_gate] >> parse_args >> [fetch_data, clone_database] >> join
+    
     join >> setup_import
 
     # Allow import_sql to proceed when the non-selected branch is skipped
