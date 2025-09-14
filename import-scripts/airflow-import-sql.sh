@@ -1,14 +1,13 @@
 #!/bin/bash
 
-# Script for running PUBLIC import
+# Script for running arbitrary import
 # Consists of the following:
 # - Import of cancer types
-# - Import from triage-portal column in spreadsheet
+# - Import from relevant column in spreadsheet
 
 IMPORTER=$1
-PORTAL_COLUMN=$2
-PORTAL_SCRIPTS_DIRECTORY=$3
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$4
+PORTAL_SCRIPTS_DIRECTORY=$2
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
@@ -19,27 +18,57 @@ if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
 fi
 source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
-tmp=$PORTAL_HOME/tmp/import-cron-${IMPORTER}-data
-IMPORTER_JAR_PREFIX=${IMPORTER//triage/triage-cmo}
-IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_JAR_PREFIX}-importer.jar"
+# Set needed paths/filenames for import
+if [[ $IMPORTER == "genie" ]] ; then
+    TMP_DIR_NAME="import-cron-genie"
+    IMPORTER_NAME="genie-aws-importer"
+    LOG_FILE_NAME="genie-aws-importer.log"
+    PORTAL_NAME="genie-portal"
+elif [[ $IMPORTER == "public" ]] ; then
+    TMP_DIR_NAME="import-cron-public-data"
+    IMPORTER_NAME="public-importer"
+    LOG_FILE_NAME="public-data-importer.log"
+    PORTAL_NAME="public-data-portal"
+else
+    exit 1
+fi
+
+# Get the current production database color
+GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
+current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+destination_database_color="unset"
+if [ ${current_production_database_color:0:4} == "blue" ] ; then
+    destination_database_color="green"
+fi
+if [ ${current_production_database_color:0:5} == "green" ] ; then
+    destination_database_color="blue"
+fi
+if [ "$destination_database_color" == "unset" ] ; then
+    echo "Error during determination of the destination database color" >&2
+    exit 1
+fi
+
+tmp=$PORTAL_HOME/tmp/$TMP_DIR_NAME
+IMPORTER_JAR_FILENAME="/data/portal-cron/lib/$IMPORTER_NAME-$destination_database_color.jar"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 ONCOTREE_VERSION="oncotree_latest_stable"
 
 # Direct importer logs to stdout
-tail -f $PORTAL_HOME/logs/${IMPORTER_JAR_PREFIX}-data-importer.log &
+tail -f $PORTAL_HOME/logs/$LOG_FILE_NAME &
 
+echo "Destination DB color: $destination_database_color"
 echo "Importing with $IMPORTER_JAR_FILENAME"
-echo "Importing cancer type updates into mysql database"
+echo "Importing cancer type updates into mysql database $destination_database_color"
 $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
 if [ $? -gt 0 ]; then
     echo "Error: Cancer type import failed!" >&2
     exit 1
 fi
 
-echo "Importing ${IMPORTER} study data into mysql database"
-$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_COLUMN --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export
+echo "Importing $IMPORTER study data into mysql database $destination_database_color"
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export
 if [ $? -gt 0 ]; then
-    echo "Error: ${IMPORTER}-data import failed!" >&2
+    echo "Error: $IMPORTER import failed!" >&2
     exit 1
 fi
 
