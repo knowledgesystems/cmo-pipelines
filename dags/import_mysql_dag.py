@@ -63,10 +63,8 @@ with DAG(
     """
     @task
     def get_target_node(importer: str) -> list[str]:
-        if importer in ('triage', 'msk'):
+        if importer in ('triage',):
             return ['pipelines3_ssh']
-        elif importer in ('public', 'genie'):
-            return ['importer_ssh']
         raise ValueError(importer)
 
     target_node = get_target_node("{{ params.importer }}")
@@ -76,17 +74,8 @@ with DAG(
     """
     @task
     def get_data_nodes(importer: str) -> list[str]:
-        if importer in ('triage', 'msk'):
+        if importer in ('triage',):
             return ['pipelines3_ssh']
-        elif importer == 'genie':
-            # genie only needs repos that are publicly accessible from the import node
-            return ['importer_ssh']
-        elif importer == 'public':
-            # The public importer runs on the import node, which is outside the MSK network
-            # and thus can't access github.mskcc.org.
-            # To resolve this problem, we fetch updates on both the import node / pipelines3,
-            # and pipelines3 will rsync those private repos to the import node.
-            return ['importer_ssh', 'pipelines3_ssh']
         raise ValueError(importer)
 
     data_nodes = get_data_nodes("{{ params.importer }}")
