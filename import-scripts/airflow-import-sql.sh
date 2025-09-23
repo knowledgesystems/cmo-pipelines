@@ -26,22 +26,27 @@ function is_mysql_import() {
 case "$IMPORTER" in
   genie)
     TMP_DIR_NAME="import-cron-genie"
-    IMPORTER_NAME="genie-aws-importer"
+    IMPORTER_NAME="genie-aws"
     LOG_FILE_NAME="genie-aws-importer.log"
     PORTAL_NAME="genie-portal"
     ;;
   public)
     TMP_DIR_NAME="import-cron-public-data"
-    IMPORTER_NAME="public-importer"
+    IMPORTER_NAME="public"
     LOG_FILE_NAME="public-data-importer.log"
     PORTAL_NAME="public-data-portal"
     ;;
   triage)
     TMP_DIR_NAME="import-cron-triage"
-    IMPORTER_NAME="triage-cmo-importer"
+    IMPORTER_NAME="triage-cmo"
     LOG_FILE_NAME="triage-cmo-importer.log"
     PORTAL_NAME="triage-portal"
     ;;
+  msk)
+    TMP_DIR_NAME="import-cron-msk"
+    IMPORTER_NAME="msk-cmo"
+    LOG_FILE_NAME="msk-cmo-importer.log"
+    PORTAL_NAME="msk-portal"
   *)
     echo "Unsupported importer: $IMPORTER" >&2
     exit 1
@@ -64,9 +69,15 @@ if ! is_mysql_import; then
         exit 1
     fi
 
-    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-${destination_database_color}.jar"
+    if [ "$IMPORTER" != "msk" ]; then
+        # eg. genie-aws-importer-blue.jar
+        IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer-${destination_database_color}.jar"
+    else
+        # msk importer follows different naming convention (why??), eg. msk-cmo-blue-importer.jar
+        IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-${destination_database_color}-importer.jar"
+    fi
 else
-    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}.jar"
+    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer.jar"
 fi
 
 tmp="${PORTAL_HOME}/tmp/${TMP_DIR_NAME}"

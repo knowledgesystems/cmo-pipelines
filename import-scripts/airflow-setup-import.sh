@@ -29,29 +29,36 @@ is_mysql_import() {
 case "$IMPORTER" in
   genie)
     TMP_DIR_NAME="import-cron-genie"
-    IMPORTER_NAME="genie-aws-importer"
+    IMPORTER_NAME="genie-aws"
     LOG_FILE_NAME="genie-aws-importer.log"
+    PORTAL_NAME="genie-portal"
     ;;
   public)
     TMP_DIR_NAME="import-cron-public-data"
-    IMPORTER_NAME="public-importer"
+    IMPORTER_NAME="public"
     LOG_FILE_NAME="public-data-importer.log"
+    PORTAL_NAME="public-data-portal"
     ;;
   triage)
     TMP_DIR_NAME="import-cron-triage"
-    IMPORTER_NAME="triage-cmo-importer"
+    IMPORTER_NAME="triage-cmo"
     LOG_FILE_NAME="triage-cmo-importer.log"
+    PORTAL_NAME="triage-portal"
     ;;
-# TODO add msk
+  msk)
+    TMP_DIR_NAME="import-cron-msk"
+    IMPORTER_NAME="msk-cmo"
+    LOG_FILE_NAME="msk-cmo-importer.log"
+    PORTAL_NAME="msk-portal"
   *)
     echo "Unsupported importer: $IMPORTER" >&2
     exit 1
     ;;
 esac
 
-# Determine JAR filename; use destination color when not a MySQL-only import
 if ! is_mysql_import; then
-    GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
+    # Get the current production database color
+    GET_DB_IN_PROD_SCRIPT_FILEPATH="${PORTAL_SCRIPTS_DIRECTORY}/get_database_currently_in_production.sh"
     current_production_database_color=$(sh "$GET_DB_IN_PROD_SCRIPT_FILEPATH" "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH")
     destination_database_color="unset"
     if [ ${current_production_database_color:0:4} == "blue" ] ; then
@@ -64,9 +71,16 @@ if ! is_mysql_import; then
         echo "Error during determination of the destination database color" >&2
         exit 1
     fi
-    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-${destination_database_color}.jar"
+
+    if [ "$IMPORTER" != "msk" ]; then
+        # eg. genie-aws-importer-blue.jar
+        IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer-${destination_database_color}.jar"
+    else
+        # msk importer follows different naming convention (why??), eg. msk-cmo-blue-importer.jar
+        IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-${destination_database_color}-importer.jar"
+    fi
 else
-    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}.jar"
+    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer.jar"
 fi
 
 tmp="$PORTAL_HOME/tmp/$TMP_DIR_NAME"
