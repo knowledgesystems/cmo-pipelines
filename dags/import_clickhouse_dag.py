@@ -32,6 +32,7 @@ with DAG(
     dag_id="import_clickhouse_dag",
     default_args=args,
     description="Imports to cBioPortal Clickhouse database using blue/green deployment strategy",
+    # TODO: we should be able to import to multiple portals concurrently?
     max_active_runs=1,
     start_date=datetime(2024, 12, 3),
     schedule_interval=None,
@@ -69,6 +70,7 @@ with DAG(
             return ['pipelines3_ssh']
         elif importer in ('public', 'genie'):
             return ['importer_ssh']
+        # (add support for future importers here)
         raise ValueError(importer)
 
     target_node = get_target_node("{{ params.importer }}")
@@ -89,6 +91,7 @@ with DAG(
             # To resolve this problem, we fetch updates on both the import node / pipelines3,
             # and pipelines3 will rsync those private repos to the import node.
             return ['importer_ssh', 'pipelines3_ssh']
+        # (add support for future importers here)
         raise ValueError(importer)
 
     data_nodes = get_data_nodes("{{ params.importer }}")
@@ -99,7 +102,7 @@ with DAG(
     """
     verify_management_state = SSHOperator.partial(
         task_id="verify_management_state",
-        command=f"{import_scripts_path}/public-airflow-verify-management.sh {import_scripts_path} {db_properties_filepath}",
+        command=f"{import_scripts_path}/airflow-verify-management.sh {importer} {import_scripts_path} {db_properties_filepath}",
         dag=dag,
     ).expand(ssh_conn_id=target_node)
 
@@ -184,33 +187,7 @@ with DAG(
         dag=dag,
     ).expand(ssh_conn_id=data_nodes)
 
-    # Aggregate argument tasks behind a single node
-    parse_args = EmptyOperator(task_id="parse_args")
-    [data_repos, target_node, data_nodes] >> parse_args
-
-    @task.branch
-    def branch_on_public(importer: str) -> str:
-        return "public_gate" if importer == "public" else "non_public_gate"
-
-    branch = branch_on_public(importer)
-    public_gate = EmptyOperator(task_id="public_gate")
-    non_public_gate = EmptyOperator(task_id="non_public_gate")
-    branch >> [public_gate, non_public_gate]
-
-    # Join node to converge pre-import steps; tolerate skipped branch
-    join = EmptyOperator(task_id="join_pre_import",
-                         trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS)
-
     # Wire DAG dependencies
-    public_gate >> parse_args >> verify_management_state >> [fetch_data, clone_database] >> join
-    non_public_gate >> parse_args >> [fetch_data, clone_database] >> join
-    
-    join >> setup_import
-
-    # Allow import_sql to proceed when the non-selected branch is skipped
-    import_sql.trigger_rule = TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
-    setup_import >> import_sql
-
-    import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_data
+    [data_repos, target_node, data_nodes] >> verify_management_state >> [fetch_data, clone_database] >> setup_import >> import_sql >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_data
 
     list(dag.tasks) >> watcher()

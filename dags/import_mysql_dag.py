@@ -65,6 +65,7 @@ with DAG(
     def get_target_node(importer: str) -> list[str]:
         if importer in ('triage',):
             return ['pipelines3_ssh']
+        # (add support for future importers here)
         raise ValueError(importer)
 
     target_node = get_target_node("{{ params.importer }}")
@@ -76,6 +77,7 @@ with DAG(
     def get_data_nodes(importer: str) -> list[str]:
         if importer in ('triage',):
             return ['pipelines3_ssh']
+        # (add support for future importers here)
         raise ValueError(importer)
 
     data_nodes = get_data_nodes("{{ params.importer }}")
