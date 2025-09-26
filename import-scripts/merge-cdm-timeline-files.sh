@@ -46,7 +46,6 @@ function set_cohort_filepaths() {
         MERGE_DIRS=("$MSK_IMPACT_DATA_HOME" "$MSK_HEMEPACT_DATA_HOME" "$FMI_BATLEVI_DATA_HOME")
     elif [ "$COHORT" == "sophia_mskimpact" ] ; then
         COHORT="SOPHIA_MSKIMPACT"
-        OUTPUT_DIR=$2
         MERGE_DIRS=("$MSK_IMPACT_DATA_HOME" "$MSK_ARCHER_UNFILTERED_DATA_HOME")
     fi
 
