@@ -233,7 +233,7 @@ function add_seq_date_to_sample_file() {
 function add_metadata_headers() {
     # Calling merge.py strips out metadata headers from our clinical files - add them back in
     INPUT_FILENAMES="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt $SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
+    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact -i $PORTAL_HOME/scripts/cdm_metadata.json
 }
 
 function standardize_cna_data() {
