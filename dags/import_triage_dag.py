@@ -3,7 +3,10 @@ import_triage_dag.py
 Imports Triage study to MySQL database.
 """
 from airflow.models.param import Param
+import os
+import sys
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dags.import_base import ImporterConfig, build_import_dag
 
 def _wire(tasks: dict[str, object]) -> None:

@@ -2,6 +2,10 @@
 import_msk_dag.py
 Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy.
 """
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dags.import_base import ImporterConfig, build_import_dag
 
 

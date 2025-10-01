@@ -2,8 +2,11 @@
 import_genie_dag.py
 Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy.
 """
+import os
+import sys
 from airflow.models.param import Param
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dags.import_base import ImporterConfig, build_import_dag
 
 
