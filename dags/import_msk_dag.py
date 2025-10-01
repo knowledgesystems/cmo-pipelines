@@ -12,7 +12,7 @@ from dags.import_base import ImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> [tasks["fetch_data"], tasks["clone_database"]]
+    tasks["verify_management_state"] >> tasks["data_repos"] >> [tasks["fetch_data"], tasks["clone_database"]]
     [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_abandoned"] >> tasks["cleanup_data"]
 
@@ -24,7 +24,7 @@ _MSK_CONFIG = ImporterConfig(
     target_nodes=("pipelines3_ssh",),
     data_nodes=("pipelines3_ssh",),
     task_names=(
-        # "verify_management_state",
+        "verify_management_state",
         "clone_database",
         "fetch_data",
         "setup_import",
