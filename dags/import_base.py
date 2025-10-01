@@ -30,7 +30,7 @@ _DEFAULT_DATA_REPOS_PARAM = Param(
     examples=["datahub", "impact", "private"],
 )
 
-CommandBuilder = Callable[["CommandArgs"], str]
+
 WireDependencies = Callable[[dict[str, object]], None]
 
 
@@ -47,32 +47,19 @@ class ImporterConfig:
     data_repos_param: Param | None = None
 
 
-@dataclass(frozen=True)
-class CommandArgs:
-    importer: str
-    scripts_path: str
-    db_properties_filepath: str
-    data_source_properties_filepath: str
-    data_repos: object  # XComArg string at runtime
-
-
-@dataclass(frozen=True)
-class CommandSet:
-    verify_management: CommandBuilder
-    clone_database: CommandBuilder
-    fetch_data: CommandBuilder
-    setup_import: CommandBuilder
-    import_sql: CommandBuilder
-    import_clickhouse: CommandBuilder
-    transfer_deployment: CommandBuilder
-    set_import_status: CommandBuilder
-    cleanup_data: CommandBuilder
-
-
 def _script(scripts_path: str, script_name: str, *args: object) -> str:
     parts = [f"{scripts_path}/{script_name}"]
     parts.extend(str(arg) for arg in args)
     return " ".join(parts)
+
+
+def _importer_script(
+    scripts_path: str,
+    script_name: str,
+    importer: str,
+    db_properties_filepath: str,
+) -> str:
+    return _script(scripts_path, script_name, importer, scripts_path, db_properties_filepath)
 
 
 def _transform_data_repos(importer: str, values: Sequence[str]) -> str:
@@ -88,62 +75,6 @@ def _transform_data_repos(importer: str, values: Sequence[str]) -> str:
         return " ".join(paths)
 
     return " ".join(values)
-
-
-def _command_set() -> CommandSet:
-    def _importer_script(script_name: str) -> CommandBuilder:
-        def _inner(args: CommandArgs) -> str:
-            return _script(
-                args.scripts_path,
-                script_name,
-                args.importer,
-                args.scripts_path,
-                args.db_properties_filepath,
-            )
-
-        return _inner
-
-    def _script_with_paths(script_name: str) -> CommandBuilder:
-        def _inner(args: CommandArgs) -> str:
-            return _script(
-                args.scripts_path,
-                script_name,
-                args.scripts_path,
-                args.db_properties_filepath,
-            )
-
-        return _inner
-
-    return CommandSet(
-        verify_management=_importer_script("airflow-verify-management.sh"),
-        clone_database=_importer_script("airflow-clone-db.sh"),
-        fetch_data=lambda args: _script(
-            args.scripts_path,
-            "data_source_repo_clone_manager.sh",
-            args.data_source_properties_filepath,
-            "pull",
-            args.importer,
-            args.data_repos,
-        ),
-        setup_import=_importer_script("airflow-setup-import.sh"),
-        import_sql=_importer_script("airflow-import-sql.sh"),
-        import_clickhouse=_importer_script("airflow-import-clickhouse.sh"),
-        transfer_deployment=_script_with_paths("airflow-transfer-deployment.sh"),
-        set_import_status=lambda args: _script(
-            args.scripts_path,
-            "set_update_process_state.sh",
-            args.db_properties_filepath,
-            "abandoned",
-        ),
-        cleanup_data=lambda args: _script(
-            args.scripts_path,
-            "data_source_repo_clone_manager.sh",
-            args.data_source_properties_filepath,
-            "cleanup",
-            args.importer,
-            args.data_repos,
-        ),
-    )
 
 
 def build_import_dag(config: ImporterConfig) -> DAG:
@@ -174,65 +105,92 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         data_repos = get_data_repos("{{ params.data_repos }}")
 
-        args = CommandArgs(
-            importer=importer,
-            scripts_path=scripts_path,
-            db_properties_filepath=db_properties_filepath,
-            data_source_properties_filepath=data_source_properties_filepath,
-            data_repos=data_repos,
-        )
-        commands = _command_set()
-
-        target_nodes = list(config.target_nodes)
-        data_nodes = list(config.data_nodes)
-
-        available_factories: dict[str, Callable[[], object]] = {
-            "verify_management_state": lambda: SSHOperator.partial(
-                task_id="verify_management_state",
-                command=commands.verify_management(args),
-            ).expand(ssh_conn_id=target_nodes),
-            "clone_database": lambda: SSHOperator.partial(
-                task_id="clone_database",
-                command=commands.clone_database(args),
-            ).expand(ssh_conn_id=target_nodes),
-            "fetch_data": lambda: SSHOperator.partial(
-                task_id="fetch_data",
-                command=commands.fetch_data(args),
-            ).expand(ssh_conn_id=data_nodes),
-            "setup_import": lambda: SSHOperator.partial(
-                task_id="setup_import",
-                command=commands.setup_import(args),
-            ).expand(ssh_conn_id=target_nodes),
-            "import_sql": lambda: SSHOperator.partial(
-                task_id="import_sql",
-                command=commands.import_sql(args),
-            ).expand(ssh_conn_id=target_nodes),
-            "import_clickhouse": lambda: SSHOperator.partial(
-                task_id="import_clickhouse",
-                command=commands.import_clickhouse(args),
-            ).expand(ssh_conn_id=target_nodes),
-            "transfer_deployment": lambda: SSHOperator.partial(
-                task_id="transfer_deployment",
-                command=commands.transfer_deployment(args),
-            ).expand(ssh_conn_id=target_nodes),
-            "set_import_status": lambda: SSHOperator.partial(
-                task_id="set_import_status",
-                trigger_rule=TriggerRule.ONE_FAILED,
-                command=commands.set_import_status(args),
-            ).expand(ssh_conn_id=target_nodes),
-            "cleanup_data": lambda: SSHOperator.partial(
-                task_id="cleanup_data",
-                trigger_rule=TriggerRule.ALL_DONE,
-                command=commands.cleanup_data(args),
-            ).expand(ssh_conn_id=data_nodes),
+        command_map = {
+            "verify_management_state": _importer_script(
+                scripts_path,
+                "airflow-verify-management.sh",
+                importer,
+                db_properties_filepath,
+            ),
+            "clone_database": _importer_script(
+                scripts_path,
+                "airflow-clone-db.sh",
+                importer,
+                db_properties_filepath,
+            ),
+            "fetch_data": _script(
+                scripts_path,
+                "data_source_repo_clone_manager.sh",
+                data_source_properties_filepath,
+                "pull",
+                importer,
+                data_repos,
+            ),
+            "setup_import": _importer_script(
+                scripts_path,
+                "airflow-setup-import.sh",
+                importer,
+                db_properties_filepath,
+            ),
+            "import_sql": _importer_script(
+                scripts_path,
+                "airflow-import-sql.sh",
+                importer,
+                db_properties_filepath,
+            ),
+            "import_clickhouse": _importer_script(
+                scripts_path,
+                "airflow-import-clickhouse.sh",
+                importer,
+                db_properties_filepath,
+            ),
+            "transfer_deployment": _script(
+                scripts_path,
+                "airflow-transfer-deployment.sh",
+                scripts_path,
+                db_properties_filepath,
+            ),
+            "set_import_status": _script(
+                scripts_path,
+                "set_update_process_state.sh",
+                db_properties_filepath,
+                "abandoned",
+            ),
+            "cleanup_data": _script(
+                scripts_path,
+                "data_source_repo_clone_manager.sh",
+                data_source_properties_filepath,
+                "cleanup",
+                importer,
+                data_repos,
+            ),
         }
+
+        def _build_task(name: str) -> object:
+            if name not in command_map:
+                raise ValueError(f"Unsupported task '{name}' for importer '{importer}'.")
+
+            params: dict[str, object] = {
+                "task_id": name,
+                "command": command_map[name],
+            }
+
+            if name == "set_import_status":
+                params["trigger_rule"] = TriggerRule.ONE_FAILED
+            elif name == "cleanup_data":
+                params["trigger_rule"] = TriggerRule.ALL_DONE
+
+            ssh_targets: Sequence[str]
+            if name in ("fetch_data", "cleanup_data"):
+                ssh_targets = config.data_nodes
+            else:
+                ssh_targets = config.target_nodes
+
+            return SSHOperator.partial(**params).expand(ssh_conn_id=list(ssh_targets))
 
         tasks: dict[str, object] = {"data_repos": data_repos}
         for name in config.task_names:
-            factory = available_factories.get(name)
-            if factory is None:
-                raise ValueError(f"Unsupported task '{name}' for importer '{config.importer}'.")
-            tasks[name] = factory()
+            tasks[name] = _build_task(name)
 
         config.wire_dependencies(tasks)
 
@@ -245,4 +203,4 @@ def build_import_dag(config: ImporterConfig) -> DAG:
     return dag
 
 
-__all__ = ["ImporterConfig", "build_import_dag", "_script"]
+__all__ = ["ImporterConfig", "build_import_dag", "_script", "_importer_script"]

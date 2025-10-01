@@ -19,8 +19,8 @@ _TRIAGE_CONFIG = ImporterConfig(
     description="Imports Triage study to MySQL database",
     importer="triage",
     tags=["triage"],
-    target_nodes=("importer_ssh",),
-    data_nodes=("importer_ssh",),
+    target_nodes=("pipelines3_ssh",),
+    data_nodes=("pipelines3_ssh",),
     task_names=(
         "fetch_data",
         "setup_import",
