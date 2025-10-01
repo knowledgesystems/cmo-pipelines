@@ -16,7 +16,7 @@ def _wire(tasks: dict[str, object]) -> None:
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["cleanup_data"]
 
 _TRIAGE_CONFIG = ImporterConfig(
-    dag_id="import_triage_dag",
+    dag_id="import_triage_dag_dev",
     description="Imports Triage study to MySQL database",
     importer="triage",
     tags=["triage"],

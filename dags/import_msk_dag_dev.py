@@ -17,7 +17,7 @@ def _wire(tasks: dict[str, object]) -> None:
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_abandoned"] >> tasks["cleanup_data"]
 
 _MSK_CONFIG = ImporterConfig(
-    dag_id="import_msk_dag",
+    dag_id="import_msk_dag_dev",
     description="Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy",
     importer="msk",
     tags=["msk"],
