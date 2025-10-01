@@ -5,6 +5,8 @@ Imports MSK study to MySQL and ClickHouse databases using blue/green deployment 
 import os
 import sys
 
+from airflow.models.param import Param
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dags.import_base import ImporterConfig, build_import_dag
 
@@ -32,6 +34,16 @@ _MSK_CONFIG = ImporterConfig(
         "set_import_abandoned",
         "cleanup_data",
     ),
+    db_properties_filename="manage_msk_database_update_tools.properties",
+    params={
+        "data_repos": Param(
+            ["datahub"],
+            type="array",
+            description="Comma-separated list of data repositories to pull updates from/cleanup.",
+            title="Data Repositories",
+            examples=["datahub", "impact", "private"],
+        ),
+    },
     wire_dependencies=_wire,
 )
 

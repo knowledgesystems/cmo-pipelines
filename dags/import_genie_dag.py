@@ -33,14 +33,17 @@ _GENIE_CONFIG = ImporterConfig(
         "set_import_abandoned",
         "cleanup_data",
     ),
+    db_properties_filename="manage_genie_database_update_tools.properties",
+    params={
+        "data_repos": Param(
+            ["genie"],
+            type="array",
+            title="Data Repositories",
+            description="List of GENIE data repositories to clean up after import.",
+            examples=["genie"],
+        ),
+    },
     wire_dependencies=_wire,
-    data_repos_param=Param(
-        ["genie"],
-        type="array",
-        title="Data Repositories",
-        description="List of GENIE data repositories to clean up after import.",
-        examples=["genie"],
-    ),
 )
 
 globals()[_GENIE_CONFIG.dag_id] = build_import_dag(_GENIE_CONFIG)

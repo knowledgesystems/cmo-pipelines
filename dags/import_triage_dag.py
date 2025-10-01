@@ -2,9 +2,10 @@
 import_triage_dag.py
 Imports Triage study to MySQL database.
 """
-from airflow.models.param import Param
 import os
 import sys
+
+from airflow.models.param import Param
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dags.import_base import ImporterConfig, build_import_dag
@@ -27,6 +28,16 @@ _TRIAGE_CONFIG = ImporterConfig(
         "import_sql",
         "cleanup_data",
     ),
+    db_properties_filename="manage_triage_database_update_tools.properties",
+    params={
+        "data_repos": Param(
+            ["datahub"],
+            type="array",
+            description="Comma-separated list of data repositories to pull updates from/cleanup.",
+            title="Data Repositories",
+            examples=["datahub", "impact", "private"],
+        ),
+    },
     wire_dependencies=_wire,
 )
 

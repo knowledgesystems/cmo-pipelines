@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Sequence
+from typing import Callable, Mapping, Optional, Sequence
 
 from airflow import DAG
 from airflow.decorators import task
@@ -22,15 +22,6 @@ _DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=5),
 }
 
-_DEFAULT_DATA_REPOS_PARAM = Param(
-    ["datahub"],
-    type="array",
-    description="Comma-separated list of data repositories to pull updates from/cleanup.",
-    title="Data Repositories",
-    examples=["datahub", "impact", "private"],
-)
-
-
 WireDependencies = Callable[[dict[str, object]], None]
 
 
@@ -43,8 +34,12 @@ class ImporterConfig:
     target_nodes: Sequence[str]
     data_nodes: Sequence[str]
     task_names: Sequence[str]
+    scripts_path: str = "/data/portal-cron/scripts"
+    creds_path: str = "/data/portal-cron/pipelines-credentials"
+    db_properties_filename: str
+    data_source_properties_filename: str = "importer-data-source-manager-config.yaml"
     wire_dependencies: WireDependencies
-    data_repos_param: Param | None = None
+    params: Mapping[str, Param]
 
 
 def _script(scripts_path: str, script_name: str, *args: object) -> str:
@@ -78,7 +73,7 @@ def _transform_data_repos(importer: str, values: Sequence[str]) -> str:
 
 
 def build_import_dag(config: ImporterConfig) -> DAG:
-    params = {"data_repos": config.data_repos_param or _DEFAULT_DATA_REPOS_PARAM}
+    params = dict(config.params) if config.params else {}
 
     dag = DAG(
         dag_id=config.dag_id,
@@ -94,16 +89,16 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
     with dag:
         importer = config.importer
-        scripts_path = "/data/portal-cron/scripts"
-        creds_dir = "/data/portal-cron/pipelines-credentials"
-        db_properties_filepath = f"{creds_dir}/manage_{importer}_database_update_tools.properties"
-        data_source_properties_filepath = f"{creds_dir}/importer-data-source-manager-config.yaml"
+        scripts_path = config.scripts_path
+        creds_dir = config.creds_dir
+        db_properties_filepath = f"{creds_dir}/{config.db_properties_filename}"
+        data_source_properties_filepath = f"{creds_dir}/{config.data_source_properties_filename}"
 
         @task
-        def get_data_repos(data_repos: list[str]) -> str:
-            return _transform_data_repos(importer, data_repos)
+        def get_data_repos(repos: list[str]) -> str:
+            return _transform_data_repos(importer, repos)
 
-        data_repos = get_data_repos("{{ params.data_repos }}")
+        data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
         command_map = {
             "verify_management_state": _importer_script(
@@ -149,6 +144,12 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 "airflow-transfer-deployment.sh",
                 scripts_path,
                 db_properties_filepath,
+            ),
+            "set_import_running": _script(
+                scripts_path,
+                "set_update_process_state.sh",
+                db_properties_filepath,
+                "running",
             ),
             "set_import_abandoned": _script(
                 scripts_path,
