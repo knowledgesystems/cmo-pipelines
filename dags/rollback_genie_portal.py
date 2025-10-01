@@ -7,7 +7,6 @@ from dags.import_base import ImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> tasks["set_import_running"]
     tasks["set_import_running"] >> tasks["transfer_deployment"] >> tasks["set_import_abandoned"]
 
 _ROLLBACK_GENIE_CONFIG = ImporterConfig(
@@ -18,6 +17,7 @@ _ROLLBACK_GENIE_CONFIG = ImporterConfig(
     target_nodes=("importer_ssh",),
     data_nodes=("importer_ssh",),
     task_names=(
+        # "verify_management_state",
         "set_import_running",
         "transfer_deployment",
         "set_import_abandoned",
