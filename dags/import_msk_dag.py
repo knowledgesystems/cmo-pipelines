@@ -1,6 +1,6 @@
 """
-import_public_dag.py
-Imports to Public cBioPortal MySQL and ClickHouse databases using blue/green deployment strategy.
+import_msk_dag.py
+Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy.
 """
 from dags.import_base import ClickhouseImporterConfig, build_clickhouse_import_dag
 
@@ -11,15 +11,15 @@ def _wire(tasks: dict[str, object]) -> None:
     [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_status"] >> tasks["cleanup_data"]
 
-_PUBLIC_CONFIG = ClickhouseImporterConfig(
-    dag_id="import_public_dag",
-    description="Imports to Public cBioPortal MySQL and ClickHouse databases using blue/green deployment strategy",
-    importer="public",
-    tags=["public"],
-    target_nodes=("importer_ssh",),
-    data_nodes=("importer_ssh", "pipelines3_ssh"),
+_MSK_CONFIG = ClickhouseImporterConfig(
+    dag_id="import_msk_dag",
+    description="Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy",
+    importer="msk",
+    tags=["msk"],
+    target_nodes=("pipelines3_ssh",),
+    data_nodes=("pipelines3_ssh",),
     task_names=(
-        "verify_management_state",
+        # "verify_management_state",
         "clone_database",
         "fetch_data",
         "setup_import",
@@ -32,4 +32,4 @@ _PUBLIC_CONFIG = ClickhouseImporterConfig(
     wire_dependencies=_wire,
 )
 
-globals()[_PUBLIC_CONFIG.dag_id] = build_clickhouse_import_dag(_PUBLIC_CONFIG)
+globals()[_MSK_CONFIG.dag_id] = build_clickhouse_import_dag(_MSK_CONFIG)
