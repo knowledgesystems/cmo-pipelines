@@ -67,13 +67,13 @@ with DAG(
     """
     If any upstream tasks failed, mark the import attempt as abandoned.
     """
-    set_import_status = SSHOperator(
-        task_id="set_import_status",
+    set_import_abandoned = SSHOperator(
+        task_id="set_import_abandoned",
         ssh_conn_id=conn_id,
         trigger_rule=TriggerRule.ONE_FAILED,
         command=f"{import_scripts_path}/set_update_process_state.sh {db_properties_filepath} abandoned",
         dag=dag,
     )
 
-    set_import_running >> transfer_deployment >> set_import_status
+    set_import_running >> transfer_deployment >> set_import_abandoned
     list(dag.tasks) >> watcher()

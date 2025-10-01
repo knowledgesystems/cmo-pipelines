@@ -13,7 +13,7 @@ def _wire(tasks: dict[str, object]) -> None:
     tasks["data_repos"] >> tasks["verify_management_state"]
     tasks["verify_management_state"] >> [tasks["fetch_data"], tasks["clone_database"]]
     [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_status"] >> tasks["cleanup_data"]
+    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_abandoned"] >> tasks["cleanup_data"]
 
 _PUBLIC_CONFIG = ImporterConfig(
     dag_id="import_public_dag",
@@ -30,7 +30,7 @@ _PUBLIC_CONFIG = ImporterConfig(
         "import_sql",
         "import_clickhouse",
         "transfer_deployment",
-        "set_import_status",
+        "set_import_abandoned",
         "cleanup_data",
     ),
     wire_dependencies=_wire,

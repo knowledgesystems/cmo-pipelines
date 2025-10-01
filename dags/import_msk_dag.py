@@ -12,7 +12,7 @@ from dags.import_base import ImporterConfig, build_import_dag
 def _wire(tasks: dict[str, object]) -> None:
     tasks["data_repos"] >> [tasks["fetch_data"], tasks["clone_database"]]
     [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_status"] >> tasks["cleanup_data"]
+    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_abandoned"] >> tasks["cleanup_data"]
 
 _MSK_CONFIG = ImporterConfig(
     dag_id="import_msk_dag",
@@ -29,7 +29,7 @@ _MSK_CONFIG = ImporterConfig(
         "import_sql",
         "import_clickhouse",
         "transfer_deployment",
-        "set_import_status",
+        "set_import_abandoned",
         "cleanup_data",
     ),
     wire_dependencies=_wire,

@@ -150,7 +150,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 scripts_path,
                 db_properties_filepath,
             ),
-            "set_import_status": _script(
+            "set_import_abandoned": _script(
                 scripts_path,
                 "set_update_process_state.sh",
                 db_properties_filepath,
@@ -175,7 +175,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 "command": command_map[name],
             }
 
-            if name == "set_import_status":
+            if name == "set_import_abandoned":
                 params["trigger_rule"] = TriggerRule.ONE_FAILED
             elif name == "cleanup_data":
                 params["trigger_rule"] = TriggerRule.ALL_DONE
