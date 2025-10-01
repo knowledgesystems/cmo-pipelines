@@ -35,7 +35,7 @@ WireDependencies = Callable[[dict[str, object]], None]
 
 
 @dataclass(frozen=True)
-class ClickhouseImporterConfig:
+class ImporterConfig:
     dag_id: str
     description: str
     importer: str
@@ -146,7 +146,7 @@ def _command_set() -> CommandSet:
     )
 
 
-def build_clickhouse_import_dag(config: ClickhouseImporterConfig) -> DAG:
+def build_import_dag(config: ImporterConfig) -> DAG:
     params = {"data_repos": config.data_repos_param or _DEFAULT_DATA_REPOS_PARAM}
 
     dag = DAG(
@@ -245,4 +245,4 @@ def build_clickhouse_import_dag(config: ClickhouseImporterConfig) -> DAG:
     return dag
 
 
-__all__ = ["ClickhouseImporterConfig", "build_clickhouse_import_dag", "_script"]
+__all__ = ["ImporterConfig", "build_import_dag", "_script"]

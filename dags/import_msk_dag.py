@@ -2,7 +2,7 @@
 import_msk_dag.py
 Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy.
 """
-from dags.import_base import ClickhouseImporterConfig, build_clickhouse_import_dag
+from dags.import_base import ImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
@@ -11,7 +11,7 @@ def _wire(tasks: dict[str, object]) -> None:
     [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_status"] >> tasks["cleanup_data"]
 
-_MSK_CONFIG = ClickhouseImporterConfig(
+_MSK_CONFIG = ImporterConfig(
     dag_id="import_msk_dag",
     description="Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy",
     importer="msk",
@@ -32,4 +32,4 @@ _MSK_CONFIG = ClickhouseImporterConfig(
     wire_dependencies=_wire,
 )
 
-globals()[_MSK_CONFIG.dag_id] = build_clickhouse_import_dag(_MSK_CONFIG)
+globals()[_MSK_CONFIG.dag_id] = build_import_dag(_MSK_CONFIG)
