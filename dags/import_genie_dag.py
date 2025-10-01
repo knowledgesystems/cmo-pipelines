@@ -11,8 +11,7 @@ from dags.import_base import ImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> tasks["verify_management_state"]
-    tasks["verify_management_state"] >> [tasks["fetch_data"], tasks["clone_database"]]
+    tasks["data_repos"] >> [tasks["fetch_data"], tasks["clone_database"]]
     [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_status"] >> tasks["cleanup_data"]
 
