@@ -596,7 +596,6 @@ function main() {
     check_that_git_repo_clone_matches_cluster_config
 
     # phase : scale the deployments to get ready to switch traffic
-    FULL_MINUS_1=$(($FULL_REPLICA_COUNT-1))
     echo "starting up initial minimal deployment of $DESTINATION_COLOR"
     scale_deployment_to_N_replicas $SOURCE_COLOR "almost_full"
     scale_deployment_to_N_replicas $DESTINATION_COLOR "almost_none"
