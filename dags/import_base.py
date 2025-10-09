@@ -25,7 +25,7 @@ _DEFAULT_ARGS = {
 WireDependencies = Callable[[dict[str, object]], None]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class ImporterConfig:
     dag_id: str
     description: str
@@ -34,27 +34,19 @@ class ImporterConfig:
     target_nodes: Sequence[str]
     data_nodes: Sequence[str]
     task_names: Sequence[str]
-    scripts_path: str = "/data/portal-cron/scripts"
-    creds_path: str = "/data/portal-cron/pipelines-credentials"
+    scripts_dir: str = "/data/portal-cron/scripts"
+    creds_dir: str = "/data/portal-cron/pipelines-credentials"
     db_properties_filename: str
+    bluegreen_config_filename: str
     data_source_properties_filename: str = "importer-data-source-manager-config.yaml"
-    wire_dependencies: WireDependencies
     params: Mapping[str, Param]
+    wire_dependencies: WireDependencies
 
 
-def _script(scripts_path: str, script_name: str, *args: object) -> str:
-    parts = [f"{scripts_path}/{script_name}"]
+def _script(scripts_dir: str, script_name: str, *args: object) -> str:
+    parts = [f"{scripts_dir}/{script_name}"]
     parts.extend(str(arg) for arg in args)
     return " ".join(parts)
-
-
-def _importer_script(
-    scripts_path: str,
-    script_name: str,
-    importer: str,
-    db_properties_filepath: str,
-) -> str:
-    return _script(scripts_path, script_name, importer, scripts_path, db_properties_filepath)
 
 
 def _transform_data_repos(importer: str, values: Sequence[str]) -> str:
@@ -89,9 +81,10 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
     with dag:
         importer = config.importer
-        scripts_path = config.scripts_path
+        scripts_dir = config.scripts_dir
         creds_dir = config.creds_dir
         db_properties_filepath = f"{creds_dir}/{config.db_properties_filename}"
+        bluegreen_config_filepath = f"{creds_dir}/{config.bluegreen_config_filename}"
         data_source_properties_filepath = f"{creds_dir}/{config.data_source_properties_filename}"
 
         @task
@@ -101,64 +94,64 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
         command_map = {
-            "verify_management_state": _importer_script(
-                scripts_path,
+            "verify_management_state": _script(
+                scripts_dir,
                 "airflow-verify-management.sh",
                 importer,
                 db_properties_filepath,
             ),
-            "clone_database": _importer_script(
-                scripts_path,
+            "clone_database": _script(
+                scripts_dir,
                 "airflow-clone-db.sh",
                 importer,
                 db_properties_filepath,
             ),
             "fetch_data": _script(
-                scripts_path,
+                scripts_dir,
                 "data_source_repo_clone_manager.sh",
                 data_source_properties_filepath,
                 "pull",
                 importer,
                 data_repos,
             ),
-            "setup_import": _importer_script(
-                scripts_path,
+            "setup_import": _script(
+                scripts_dir,
                 "airflow-setup-import.sh",
                 importer,
                 db_properties_filepath,
             ),
-            "import_sql": _importer_script(
-                scripts_path,
+            "import_sql": _script(
+                scripts_dir,
                 "airflow-import-sql.sh",
                 importer,
                 db_properties_filepath,
             ),
-            "import_clickhouse": _importer_script(
-                scripts_path,
+            "import_clickhouse": _script(
+                scripts_dir,
                 "airflow-import-clickhouse.sh",
                 importer,
                 db_properties_filepath,
             ),
             "transfer_deployment": _script(
-                scripts_path,
+                scripts_dir,
                 "airflow-transfer-deployment.sh",
-                scripts_path,
-                db_properties_filepath,
+                scripts_dir,
+                bluegreen_config_filepath,
             ),
             "set_import_running": _script(
-                scripts_path,
+                scripts_dir,
                 "set_update_process_state.sh",
                 db_properties_filepath,
                 "running",
             ),
             "set_import_abandoned": _script(
-                scripts_path,
+                scripts_dir,
                 "set_update_process_state.sh",
                 db_properties_filepath,
                 "abandoned",
             ),
             "cleanup_data": _script(
-                scripts_path,
+                scripts_dir,
                 "data_source_repo_clone_manager.sh",
                 data_source_properties_filepath,
                 "cleanup",
@@ -204,4 +197,4 @@ def build_import_dag(config: ImporterConfig) -> DAG:
     return dag
 
 
-__all__ = ["ImporterConfig", "build_import_dag", "_script", "_importer_script"]
+__all__ = ["ImporterConfig", "build_import_dag", "_script"]

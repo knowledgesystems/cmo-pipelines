@@ -36,6 +36,7 @@ _PUBLIC_CONFIG = ImporterConfig(
         "cleanup_data",
     ),
     db_properties_filename="manage_public_database_update_tools.properties",
+    bluegreen_config_filename="public-bluegreen-config.yaml",
     params={
         "data_repos": Param(
             ["datahub"],

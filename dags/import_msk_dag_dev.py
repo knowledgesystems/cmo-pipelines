@@ -35,6 +35,7 @@ _MSK_CONFIG = ImporterConfig(
         "cleanup_data",
     ),
     db_properties_filename="manage_msk_database_update_tools.properties",
+    bluegreen_config_filename="msk-bluegreen-config.yaml",
     params={
         "data_repos": Param(
             ["datahub"],

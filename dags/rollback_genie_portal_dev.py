@@ -2,7 +2,12 @@
 rollback_genie_portal.py
 Transfer the production Genie deployment to the backup database.
 """
+import os
+import sys
+
 from airflow.models.param import Param
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dags.import_base import ImporterConfig, build_import_dag
 
 
