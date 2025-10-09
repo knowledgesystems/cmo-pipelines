@@ -37,34 +37,48 @@ function read_scalar() {
 
 function read_array() {
     local key="$1"
-    local -n target_ref=$2
+    local target_name="$2"
     local type
     type=$("$YQ_BINARY" -r "$key | type" "$BLUEGREEN_CONFIG_FILEPATH")
     if [ "$type" != "!!seq" ] ; then
         echo "Error : expected array at '$key' in $BLUEGREEN_CONFIG_FILEPATH" >&2
         exit 1
     fi
-    mapfile -t target_ref < <("$YQ_BINARY" -r "$key[]" "$BLUEGREEN_CONFIG_FILEPATH")
-    if [ "${#target_ref[@]}" -eq 0 ] ; then
+    local -a temp_array=()
+    mapfile -t temp_array < <("$YQ_BINARY" -r "$key[]" "$BLUEGREEN_CONFIG_FILEPATH")
+    if [ "${#temp_array[@]}" -eq 0 ] ; then
         echo "Error : array at '$key' in $BLUEGREEN_CONFIG_FILEPATH must contain at least one value" >&2
         exit 1
     fi
+    eval "$target_name=()"
+    local idx
+    for idx in "${!temp_array[@]}"; do
+        local escaped_value
+        escaped_value=$(printf '%q' "${temp_array[$idx]}")
+        eval "$target_name[$idx]=$escaped_value"
+    done
 }
 
 function read_map() {
     local key="$1"
-    local -n target_ref=$2
+    local target_name="$2"
     local type
     type=$("$YQ_BINARY" -r "$key | type" "$BLUEGREEN_CONFIG_FILEPATH")
     if [ "$type" != "!!map" ] ; then
         echo "Error : expected map at '$key' in $BLUEGREEN_CONFIG_FILEPATH" >&2
         exit 1
     fi
-    target_ref=()
+    eval "$target_name=()"
+    local has_entries=0
     while IFS=$'\t' read -r entry_key entry_value ; do
-        target_ref["$entry_key"]="$entry_value"
+        local escaped_key
+        local escaped_value
+        escaped_key=$(printf '%q' "$entry_key")
+        escaped_value=$(printf '%q' "$entry_value")
+        eval "$target_name[$escaped_key]=$escaped_value"
+        has_entries=1
     done < <("$YQ_BINARY" -r "$key | to_entries[] | \"\(.key)\t\(.value)\"" "$BLUEGREEN_CONFIG_FILEPATH")
-    if [ "${#target_ref[@]}" -eq 0 ] ; then
+    if [ "$has_entries" -eq 0 ] ; then
         echo "Error : map at '$key' in $BLUEGREEN_CONFIG_FILEPATH must contain at least one entry" >&2
         exit 1
     fi
@@ -80,7 +94,7 @@ function load_bluegreen_config() {
     SERVICE_ACCOUNT=$(read_scalar '.service_account')
     CLUSTER_KUBECONFIG=$(read_scalar '.cluster_cfg')
     MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$(read_scalar '.manage_database_tool_properties_filepath')
-    tmp=$(read_scalar '.tmp')
+    TEMP_DIR_PATH=$(read_scalar '.temp_dir_path')
     CACHE_WARMING_POD_LIST_FILEPATH=$(read_scalar '.cache_warming_pod_list_filepath')
     CACHE_WARMING_POD_SUBLIST_FILEPATH=$(read_scalar '.cache_warming_pod_sublist_filepath')
     KS_K8S_DEPL_REPO_DIRPATH=$(read_scalar '.ks_k8s_depl_repo_dirpath')
@@ -126,7 +140,7 @@ function check_current_color_is() {
     MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$1
     SOURCE_COLOR=$2
     GET_DATABASE_CURRENTLY_IN_PRODUCTION_SCRIPT="/data/portal-cron/scripts/get_database_currently_in_production.sh"
-    CURRENT_DATABASE_OUTPUT_FILEPATH="$tmp/get_current_database_output_before_switch.txt"
+    CURRENT_DATABASE_OUTPUT_FILEPATH="$TEMP_DIR_PATH/get_current_database_output_before_switch.txt"
     rm -f $CURRENT_DATABASE_OUTPUT_FILEPATH
     if ! $GET_DATABASE_CURRENTLY_IN_PRODUCTION_SCRIPT $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH > $CURRENT_DATABASE_OUTPUT_FILEPATH; then
         echo "Error during determination of the destination database color" >&2
@@ -237,7 +251,7 @@ function check_that_git_repo_clone_matches_cluster_config() {
 
 function all_replicas_ready() {
     DEPLOYMENT_COLOR=$1
-    DEPLOYMENT_CHECK_OUTPUT_FILEPATH="$tmp/all_replicas_ready_output.txt"
+    DEPLOYMENT_CHECK_OUTPUT_FILEPATH="$TEMP_DIR_PATH/all_replicas_ready_output.txt"
     if [ $DEPLOYMENT_COLOR == 'blue' ] ; then
         kubectl --kubeconfig $CLUSTER_KUBECONFIG get deployments ${BLUE_DEPLOYMENT_LIST[@]} > $DEPLOYMENT_CHECK_OUTPUT_FILEPATH
     else
@@ -435,14 +449,19 @@ function switchover_ingress_rules_to_destination_database_deployment() {
         host_map_name="HOST_TO_SERVICE_MAP_BLUE"
     fi
 
-    local -n host_map_ref="$host_map_name"
-    if [ "${#host_map_ref[@]}" -eq 0 ] ; then
+    local host_map_keys=()
+    eval "host_map_keys=(\"\${!${host_map_name}[@]}\")"
+    if [ "${#host_map_keys[@]}" -eq 0 ] ; then
         echo "Error : host-to-service map for color '$DESTINATION_COLOR' is empty in configuration" >&2
         exit 1
     fi
 
-    for host in "${!host_map_ref[@]}"; do
-        local service="${host_map_ref[$host]}"
+    local host
+    for host in "${host_map_keys[@]}"; do
+        local escaped_host
+        escaped_host=$(printf '%q' "$host")
+        local service
+        eval "service=\${${host_map_name}[$escaped_host]}"
         if ! "$YQ_BINARY" --inplace "(.spec.rules[] | select(.host == \"$host\") | .http.paths[].backend.service.name) = \"$service\"" "$ingress_yaml_filepath" ; then
             echo "Error : failed to update service mapping for host '$host' in $ingress_yaml_filepath" >&2
             exit 1

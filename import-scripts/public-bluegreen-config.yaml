@@ -40,7 +40,7 @@ host_to_service_map:
 ingress_yaml_filepath: argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/cbio-ingress.yml
 replica_ready_check_pause_seconds: 20
 replica_ready_check_max_checkcount: 15
-tmp: /data/portal-cron/tmp/import-cron-public
+temp_dir_path: /data/portal-cron/tmp/import-cron-public
 ks_k8s_depl_repo_dirpath: /data/portal-cron/git-repos/only_for_use_by_public_import_script/knowledgesystems-k8s-deployment
 warm_caches: false
 synchronize_user_tables: false
