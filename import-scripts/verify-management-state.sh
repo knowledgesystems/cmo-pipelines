@@ -12,6 +12,7 @@
 
 declare -a BLUE_SERVICE_LIST=()
 declare -a GREEN_SERVICE_LIST=()
+YQ_BINARY=${YQ_BINARY:-yq}
 
 function read_scalar() {
     local key="$1"
@@ -27,14 +28,16 @@ function read_scalar() {
 function read_array() {
     local dest_var="$1"
     local path="$2"
-    local file=$BLUEGREEN_CONFIG_FILEPATH
+    local array_path="${path}[]"
+    local file="$BLUEGREEN_CONFIG_FILEPATH"
     local type=$("$YQ_BINARY" -r "$path | type" "$file")
     if [ "$type" != "!!seq" ] ; then
         echo "Error : expected array at '$path' in $file" >&2
         exit 1
     fi
-    printf -v "$dest_var" '()'
-    readarray -t "$dest_var" < <("$YQ_BINARY" -r "$path" "$file")
+    unset "$dest_var"
+    declare -g -a "$dest_var"
+    readarray -t "$dest_var" < <("$YQ_BINARY" -r "$array_path" "$file")
 }
 
 function load_bluegreen_config() {

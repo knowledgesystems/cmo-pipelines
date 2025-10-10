@@ -38,28 +38,29 @@ function read_scalar() {
 function read_array() {
     local dest_var="$1"
     local path="$2"
-    local file=$BLUEGREEN_CONFIG_FILEPATH
+    local array_path="${path}[]"
+    local file="$BLUEGREEN_CONFIG_FILEPATH"
     local type=$("$YQ_BINARY" -r "$path | type" "$file")
     if [ "$type" != "!!seq" ] ; then
         echo "Error : expected array at '$path' in $file" >&2
         exit 1
     fi
-    printf -v "$dest_var" '()'
-    readarray -t "$dest_var" < <("$YQ_BINARY" -r "$path" "$file")
+    unset "$dest_var"
+    declare -g -a "$dest_var"
+    readarray -t "$dest_var" < <("$YQ_BINARY" -r "$array_path" "$file")
 }
 
 function read_map() {
     local dest_var="$1"
     local path="$2"
     local file="$BLUEGREEN_CONFIG_FILEPATH"
-    local type
-    type=$("$YQ_BINARY" -r "$path | type" "$file")
+    local type=$("$YQ_BINARY" -r "$path | type" "$file")
     if [ "$type" != "!!map" ] ; then
         echo "Error : expected map at '$path' in $file" >&2
         exit 1
     fi
+    unset "$dest_var"
     declare -gA "$dest_var"
-    printf -v "$dest_var" '()'
     local has_entries=0
     while IFS=$'\t' read -r entry_key entry_value ; do
         printf -v "$dest_var[$entry_key]" '%s' "$entry_value"
