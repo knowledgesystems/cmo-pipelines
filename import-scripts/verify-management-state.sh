@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# import-public-verify-management-state.sh
+# verify-management-state.sh
 #
 # compare the current ingress situation in the cluster against the active color reported by the management
 # database. exit with error if there are any discrepancies.
@@ -12,12 +12,6 @@
 
 declare -a BLUE_SERVICE_LIST=()
 declare -a GREEN_SERVICE_LIST=()
-BLUEGREEN_CONFIG_FILEPATH=""
-SERVICE_ACCOUNT=""
-CLUSTER_KUBECONFIG=""
-INGRESS_NAME=""
-TEMP_DIR_PATH="/data/portal-cron/tmp/import-cron-public"
-YQ_BINARY=${YQ_BINARY:-yq}
 
 function read_scalar() {
     local key="$1"
@@ -73,7 +67,7 @@ function load_bluegreen_config() {
 }
 
 function usage() {
-    echo "usage: import-public-verify-management-state.sh bluegreen-config-file cluster-management-file"
+    echo "usage: verify-management-state.sh bluegreen-config-file cluster-management-file"
     exit 1
 }
 
@@ -146,11 +140,11 @@ function output_production_color_from_kubernetes_cluster() {
         echo "green"
     fi
     if [ "$found_blue_services" == "true" ] && [ "$found_green_services" == "true" ] ; then
-        echo "error : a mixture of blue and green services are used in the ingress rules for the public portal cluster" >&2
+        echo "error : a mixture of blue and green services are used in the ingress rules for the portal cluster" >&2
         exit 1
     fi
     if ! [ "$found_green_services" == "true" ] && ! [ "$found_blue_services" == "true" ] ; then
-        echo "error : neither blue nor green services are used in the ingress rules for the public portal cluster" >&2
+        echo "error : neither blue nor green services are used in the ingress rules for the portal cluster" >&2
         exit 1
     fi
     rm "$ingress_output_filepath"
@@ -176,7 +170,7 @@ function main() {
     validate_arguments $@
     source /data/portal-cron/scripts/automation-environment.sh
     load_bluegreen_config
-    echo "starting import-public-verify-management-state.sh"
+    echo "starting verify-management-state.sh"
     actual_production_color=$(output_production_color_from_kubernetes_cluster)
     management_database_color=$(output_production_color_from_management_database $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
     compare_state_and_report "$actual_production_color" "$management_database_color"
