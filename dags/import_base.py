@@ -49,21 +49,6 @@ def _script(scripts_dir: str, script_name: str, *args: object) -> str:
     return " ".join(parts)
 
 
-def _transform_data_repos(importer: str, values: Sequence[str]) -> str:
-    if importer == "genie":
-        root = "/data/portal-cron/cbio-portal-data"
-        allowed = {"genie"}
-        paths: list[str] = []
-        for value in values:
-            name = value.strip()
-            if name not in allowed:
-                raise ValueError(f"Unsupported GENIE data repo '{name}'.")
-            paths.append(f"{root}/{name}")
-        return " ".join(paths)
-
-    return " ".join(values)
-
-
 def build_import_dag(config: ImporterConfig) -> DAG:
     params = dict(config.params) if config.params else {}
 
@@ -89,7 +74,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         @task
         def get_data_repos(repos: list[str]) -> str:
-            return _transform_data_repos(importer, repos)
+            return " ".join(repos)
 
         data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
