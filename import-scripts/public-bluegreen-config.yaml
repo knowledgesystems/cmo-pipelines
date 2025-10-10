@@ -37,6 +37,7 @@ host_to_service_map:
     www.cbioportal.org: cbioportal-backend-public-green
     beta.cbioportal.org: cbioportal-backend-public-beta-green
     master.cbioportal.org: cbioportal-backend-master-green
+ingress_name: cbioportal-ingress
 ingress_yaml_filepath: argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/cbio-ingress.yml
 replica_ready_check_pause_seconds: 20
 replica_ready_check_max_checkcount: 15

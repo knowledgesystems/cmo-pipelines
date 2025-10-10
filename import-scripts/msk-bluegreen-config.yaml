@@ -56,6 +56,7 @@ host_to_service_map:
     private.cbioportal.aws.mskcc.org: eks-private-green
     sclc.cbioportal.mskcc.org: eks-sclc-green
     sclc.cbioportal.aws.mskcc.org: eks-sclc-green
+ingress_name: eks-msk-ingress
 ingress_yaml_filepath: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
 replica_ready_check_pause_seconds: 20
 replica_ready_check_max_checkcount: 15

@@ -23,8 +23,8 @@ host_to_service_map:
   green:
     genie.cbioportal.org: cbioportal-backend-genie-public-green
     genie-private.cbioportal.org: cbioportal-backend-genie-private-green
-genie_ingress: genie-ingress
-genie_ingress_yaml_filepath: argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/genie-ingress.yml
+ingress_name: genie-ingress
+ingress_yaml_filepath: argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/genie-ingress.yml
 replica_ready_check_pause_seconds: 20
 replica_ready_check_max_checkcount: 15
 temp_dir_path: /data/portal-cron/tmp/import-cron-genie
