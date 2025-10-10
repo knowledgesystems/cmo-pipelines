@@ -25,27 +25,16 @@ function read_scalar() {
 }
 
 function read_array() {
-    local key="$1"
-    local target_name="$2"
-    local type
-    type=$("$YQ_BINARY" -r "$key | type" "$BLUEGREEN_CONFIG_FILEPATH")
+    local dest_var="$1"
+    local path="$2"
+    local file=$BLUEGREEN_CONFIG_FILEPATH
+    local type=$("$YQ_BINARY" -r "$path | type" "$file")
     if [ "$type" != "!!seq" ] ; then
-        echo "Error : expected array at '$key' in $BLUEGREEN_CONFIG_FILEPATH" >&2
+        echo "Error : expected array at '$path' in $file" >&2
         exit 1
     fi
-    local -a temp_array=()
-    mapfile -t temp_array < <("$YQ_BINARY" -r "$key[]" "$BLUEGREEN_CONFIG_FILEPATH")
-    if [ "${#temp_array[@]}" -eq 0 ] ; then
-        echo "Error : array at '$key' in $BLUEGREEN_CONFIG_FILEPATH must contain at least one value" >&2
-        exit 1
-    fi
-    eval "$target_name=()"
-    local idx
-    for idx in "${!temp_array[@]}"; do
-        local escaped_value
-        escaped_value=$(printf '%q' "${temp_array[$idx]}")
-        eval "$target_name[$idx]=$escaped_value"
-    done
+    printf -v "$dest_var" '()'
+    readarray -t "$dest_var" < <("$YQ_BINARY" -r "$path" "$file")
 }
 
 function load_bluegreen_config() {
@@ -61,8 +50,8 @@ function load_bluegreen_config() {
     CLUSTER_KUBECONFIG=$(read_scalar '.cluster_cfg')
     TEMP_DIR_PATH=$(read_scalar '.temp_dir_path')
     INGRESS_NAME=$(read_scalar '.ingress_name')
-    read_array '.blue_deployment_list' BLUE_SERVICE_LIST
-    read_array '.green_deployment_list' GREEN_SERVICE_LIST
+    read_array BLUE_SERVICE_LIST '.blue_deployment_list'
+    read_array GREEN_SERVICE_LIST '.green_deployment_list'
     mkdir -p "$TEMP_DIR_PATH"
 }
 

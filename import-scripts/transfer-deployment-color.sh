@@ -36,50 +36,37 @@ function read_scalar() {
 }
 
 function read_array() {
-    local key="$1"
-    local target_name="$2"
-    local type
-    type=$("$YQ_BINARY" -r "$key | type" "$BLUEGREEN_CONFIG_FILEPATH")
+    local dest_var="$1"
+    local path="$2"
+    local file=$BLUEGREEN_CONFIG_FILEPATH
+    local type=$("$YQ_BINARY" -r "$path | type" "$file")
     if [ "$type" != "!!seq" ] ; then
-        echo "Error : expected array at '$key' in $BLUEGREEN_CONFIG_FILEPATH" >&2
+        echo "Error : expected array at '$path' in $file" >&2
         exit 1
     fi
-    local -a temp_array=()
-    mapfile -t temp_array < <("$YQ_BINARY" -r "$key[]" "$BLUEGREEN_CONFIG_FILEPATH")
-    if [ "${#temp_array[@]}" -eq 0 ] ; then
-        echo "Error : array at '$key' in $BLUEGREEN_CONFIG_FILEPATH must contain at least one value" >&2
-        exit 1
-    fi
-    eval "$target_name=()"
-    local idx
-    for idx in "${!temp_array[@]}"; do
-        local escaped_value
-        escaped_value=$(printf '%q' "${temp_array[$idx]}")
-        eval "$target_name[$idx]=$escaped_value"
-    done
+    printf -v "$dest_var" '()'
+    readarray -t "$dest_var" < <("$YQ_BINARY" -r "$path" "$file")
 }
 
 function read_map() {
-    local key="$1"
-    local target_name="$2"
+    local dest_var="$1"
+    local path="$2"
+    local file="$BLUEGREEN_CONFIG_FILEPATH"
     local type
-    type=$("$YQ_BINARY" -r "$key | type" "$BLUEGREEN_CONFIG_FILEPATH")
+    type=$("$YQ_BINARY" -r "$path | type" "$file")
     if [ "$type" != "!!map" ] ; then
-        echo "Error : expected map at '$key' in $BLUEGREEN_CONFIG_FILEPATH" >&2
+        echo "Error : expected map at '$path' in $file" >&2
         exit 1
     fi
-    eval "$target_name=()"
+    declare -gA "$dest_var"
+    printf -v "$dest_var" '()'
     local has_entries=0
     while IFS=$'\t' read -r entry_key entry_value ; do
-        local escaped_key
-        local escaped_value
-        escaped_key=$(printf '%q' "$entry_key")
-        escaped_value=$(printf '%q' "$entry_value")
-        eval "$target_name[$escaped_key]=$escaped_value"
+        printf -v "$dest_var[$entry_key]" '%s' "$entry_value"
         has_entries=1
-    done < <("$YQ_BINARY" -r "$key | to_entries[] | \"\(.key)\t\(.value)\"" "$BLUEGREEN_CONFIG_FILEPATH")
+    done < <("$YQ_BINARY" -r "$path | to_entries[] | @tsv" "$file")
     if [ "$has_entries" -eq 0 ] ; then
-        echo "Error : map at '$key' in $BLUEGREEN_CONFIG_FILEPATH must contain at least one entry" >&2
+        echo "Error : map at '$path' in $file must contain at least one entry" >&2
         exit 1
     fi
 }
@@ -106,13 +93,13 @@ function load_bluegreen_config() {
     CLEAR_PERSISTENCE_CACHES_BLUE_FUNCTION=$(read_scalar '.clear_persistence_caches_blue_function')
     CLEAR_PERSISTENCE_CACHES_GREEN_FUNCTION=$(read_scalar '.clear_persistence_caches_green_function')
 
-    read_array '.blue_deployment_list' BLUE_DEPLOYMENT_LIST
-    read_array '.green_deployment_list' GREEN_DEPLOYMENT_LIST
-    read_map '.deployment_to_full_replica_count_map' DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP
-    read_map '.deployment_to_cache_warming_policy' DEPLOYMENT_TO_CACHE_WARMING_POLICY
-    read_map '.deployment_to_yaml_filepath_map' DEPLOYMENT_TO_YAML_FILEPATH_MAP
-    read_map '.host_to_service_map.blue' HOST_TO_SERVICE_MAP_BLUE
-    read_map '.host_to_service_map.green' HOST_TO_SERVICE_MAP_GREEN
+    read_array BLUE_DEPLOYMENT_LIST '.blue_deployment_list'
+    read_array GREEN_DEPLOYMENT_LIST '.green_deployment_list'
+    read_map DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP '.deployment_to_full_replica_count_map'
+    read_map DEPLOYMENT_TO_CACHE_WARMING_POLICY '.deployment_to_cache_warming_policy'
+    read_map DEPLOYMENT_TO_YAML_FILEPATH_MAP '.deployment_to_yaml_filepath_map'
+    read_map HOST_TO_SERVICE_MAP_BLUE '.host_to_service_map.blue'
+    read_map HOST_TO_SERVICE_MAP_GREEN '.host_to_service_map.green'
 }
 
 function usage() {
