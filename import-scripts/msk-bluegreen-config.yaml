@@ -68,4 +68,3 @@ warm_caches: true
 synchronize_user_tables: false
 clear_persistence_caches_blue_function: clearPersistenceCachesForMskBluePortals
 clear_persistence_caches_green_function: clearPersistenceCachesForMskGreenPortals
-manage_database_tool_properties_filepath: /data/portal-cron/tmp/import-cron-dmp-msk/cluster-management.properties

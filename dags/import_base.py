@@ -98,6 +98,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 scripts_dir,
                 "airflow-verify-management.sh",
                 importer,
+                bluegreen_config_filepath,
                 db_properties_filepath,
             ),
             "clone_database": _script(
@@ -137,6 +138,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 "airflow-transfer-deployment.sh",
                 scripts_dir,
                 bluegreen_config_filepath,
+                db_properties_filepath,
             ),
             "set_import_running": _script(
                 scripts_dir,

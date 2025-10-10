@@ -93,7 +93,6 @@ function load_bluegreen_config() {
 
     SERVICE_ACCOUNT=$(read_scalar '.service_account')
     CLUSTER_KUBECONFIG=$(read_scalar '.cluster_cfg')
-    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$(read_scalar '.manage_database_tool_properties_filepath')
     TEMP_DIR_PATH=$(read_scalar '.temp_dir_path')
     CACHE_WARMING_POD_LIST_FILEPATH=$(read_scalar '.cache_warming_pod_list_filepath')
     CACHE_WARMING_POD_SUBLIST_FILEPATH=$(read_scalar '.cache_warming_pod_sublist_filepath')
@@ -576,7 +575,8 @@ function check_in_changes_to_kubernetes_into_github() {
 
 function main() {
     BLUEGREEN_CONFIG_FILEPATH=$1
-    DESTINATION_COLOR=$2
+    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$2
+    DESTINATION_COLOR=$3
 
     # phase : initialize environment and validate arguments and current state
     validate_arguments $@
