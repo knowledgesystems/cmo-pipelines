@@ -4,6 +4,7 @@
 
 PORTAL_SCRIPTS_DIRECTORY=$1
 MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$2
+
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
@@ -15,8 +16,9 @@ fi
 source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
 # Verify the state in the update process management databases and fail if it is incorrect
-VERIFY_MANAGEMENT_STATE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/import-public-verify-management-state.sh"
-if ! $VERIFY_MANAGEMENT_STATE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH ; then
+VERIFY_MANAGEMENT_STATE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/verify-management-state.sh"
+PUBLIC_BLUEGREEN_CONFIG_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/public-bluegreen-config.yaml"
+if ! $VERIFY_MANAGEMENT_STATE_SCRIPT_FILEPATH "$PUBLIC_BLUEGREEN_CONFIG_FILEPATH" $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH ; then
     echo "Error: update process management database state is incorrect. This must be remedied before imports can proceed." >&2
     exit 1
 fi

@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Script for transferring the Genie deployment to the newly updated database
+# Script for transferring deployment to the newly updated database
 
 PORTAL_SCRIPTS_DIRECTORY=$1
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$2
+BLUEGREEN_CONFIG_FILEPATH=$2
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
@@ -29,8 +30,8 @@ if [ "$destination_database_color" == "unset" ] ; then
 fi
 
 # Switch over to the newly updated database, mark the process as complete if the switchover succeeded
-TRANSFER_DEPLOYMENT_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/import-genie-data-transfer-deployment-color.sh"
-if ! $TRANSFER_DEPLOYMENT_COLOR_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
+TRANSFER_DEPLOYMENT_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/transfer-deployment-color.sh"
+if ! $TRANSFER_DEPLOYMENT_COLOR_SCRIPT_FILEPATH $BLUEGREEN_CONFIG_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
     COLOR_SWITCH_FAIL=1
     echo "Error during deployment transfer to $destination_database_color!" >&2
     exit 1
