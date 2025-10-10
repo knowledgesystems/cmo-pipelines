@@ -97,7 +97,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             "verify_management_state": _script(
                 scripts_dir,
                 "airflow-verify-management.sh",
-                importer,
                 bluegreen_config_filepath,
                 db_properties_filepath,
             ),

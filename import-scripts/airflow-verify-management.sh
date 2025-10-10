@@ -2,14 +2,8 @@
 
 # Task for verifying that the update process management database is in sync with the actual cluster
 
-IMPORTER=$1
-PORTAL_SCRIPTS_DIRECTORY=$2
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
-
-if [ "$IMPORTER" != "public" ]; then
-    # TODO implement this script for non-public importers
-    exit 0
-fi
+PORTAL_SCRIPTS_DIRECTORY=$1
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$2
 
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
