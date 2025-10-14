@@ -17,18 +17,21 @@
 # - scale down the prior production deployment fully, scale up the new production deployment fully. Allow time for pod readiness.
 # - construct and check in to github repo the altered kubernetes configuration files
 
+BETA_DEPLOYMENT_IS_ACTIVE="no"
 unset BLUE_DEPLOYMENT_LIST
 unset GREEN_DEPLOYMENT_LIST
 declare -a BLUE_DEPLOYMENT_LIST
 declare -a GREEN_DEPLOYMENT_LIST
 BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-blue')
-BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-blue')
 BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-master-blue')
-BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-blue')
+if ["$BETA_DEPLOYMENT_IS_ACTIVE" == "yes"] ; then
+    BLUE_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-blue')
+fi
 GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-green')
-GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-green')
 GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-master-green')
-GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-clickhouse-only-db-green')
+if ["$BETA_DEPLOYMENT_IS_ACTIVE" == "yes"] ; then
+    GREEN_DEPLOYMENT_LIST+=('cbioportal-backend-public-beta-green')
+fi
 declare -A DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP=()
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-blue']='4'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-green']='4'
@@ -36,17 +39,13 @@ DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-beta-blue']='1'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-public-beta-green']='1'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-master-blue']='1'
 DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-master-green']='1'
-DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-clickhouse-only-db-blue']='1'
-DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP['cbioportal-backend-clickhouse-only-db-green']='1'
 declare -A DEPLOYMENT_TO_YAML_FILEPATH_MAP=()
 DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_blue.yaml'
 DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-beta-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_beta_blue.yaml'
 DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-master-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_master_blue.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-clickhouse-only-db-blue']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_clickhouse_only_db_blue.yaml'
 DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_green.yaml'
 DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-public-beta-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_beta_green.yaml'
 DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-master-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_master_green.yaml'
-DEPLOYMENT_TO_YAML_FILEPATH_MAP['cbioportal-backend-clickhouse-only-db-green']='argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_clickhouse_only_db_green.yaml'
 INGRESS_YAML_FILEPATH='argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/cbio-ingress.yml'
 REPLICA_READY_CHECK_PAUSE_SECONDS=20
 REPLICA_READY_CHECK_MAX_CHECKCOUNT=15
@@ -291,7 +290,7 @@ function scale_deployment_to_N_replicas() {
         fi
         check_count=$(($check_count+1))
     done
-    echo "Error : scaling for '$DEPLOYMENT_COLOR' deployments failed to reach the ready state after $REPLICA_READY_CHECK_MAX_CHECKCOUNT iterations with a period of $REPLICA_READY_CHECK_PAUSE_SECONDS seconds. Exiting"
+    echo "Error : scaling for '$DEPLOYMENT_COLOR' deployments failed to reach the ready state after $REPLICA_READY_CHECK_MAX_CHECKCOUNT iterations with a period of $REPLICA_READY_CHECK_PAUSE_SECONDS seconds. Exiting" >&2
     exit 1
 }
 
@@ -463,12 +462,10 @@ function switchover_ingress_rules_to_destination_database_deployment() {
     public_cbioportal_org_service_name="cbioportal-backend-public-blue"
     public_beta_cbioportal_org_service_name="cbioportal-backend-public-beta-blue"
     master_cbioportal_org_service_name="cbioportal-backend-master-blue"
-    clickhouse_only_db_cbioportal_org_service_name="cbioportal-backend-clickhouse-only-db-blue"
     if [ "$DESTINATION_COLOR" == "green" ] ; then
         public_cbioportal_org_service_name="cbioportal-backend-public-green"
         public_beta_cbioportal_org_service_name="cbioportal-backend-public-beta-green"
         master_cbioportal_org_service_name="cbioportal-backend-master-green"
-        clickhouse_only_db_cbioportal_org_service_name="cbioportal-backend-clickhouse-only-db-green"
     else
         if ! [ "$DESTINATION_COLOR" == "blue" ] ; then
             echo "Warning : switchover_ingress_rules_to_destination_database_deployment called with unrecognized color argument : $DESTINATION_COLOR. 'blue' will be used instead."
@@ -481,7 +478,6 @@ function switchover_ingress_rules_to_destination_database_deployment() {
     inside_host_public_cbioportal_org="no"
     inside_host_public_beta_cbioportal_org="no"
     inside_host_master_cbioportal_org="no"
-    inside_host_clickhouse_only_db_cbioportal_org="no"
     inside_service="no"
     service_indent=0
     while IFS='' read -r line || [ -n "$line" ] ; do # -n "$line" will allow processing of lines which reach EOF before encountering newline
@@ -494,7 +490,6 @@ function switchover_ingress_rules_to_destination_database_deployment() {
             inside_host_public_cbioportal_org="no"
             inside_host_public_beta_cbioportal_org="no"
             inside_host_master_cbioportal_org="no"
-            inside_host_clickhouse_only_db_cbioportal_org="no"
             inside_service="no"
             if [ "${line:0:5}" == 'spec:' ] ; then
                 inside_spec="yes"
@@ -506,7 +501,6 @@ function switchover_ingress_rules_to_destination_database_deployment() {
             inside_host_public_cbioportal_org="no"
             inside_host_public_beta_cbioportal_org="no"
             inside_host_master_cbioportal_org="no"
-            inside_host_clickhouse_only_db_cbioportal_org="no"
             inside_service="no"
             if yaml_host_line_references_host "$line" "www.cbioportal.org" ; then
                 inside_host_public_cbioportal_org="yes"
@@ -516,10 +510,6 @@ function switchover_ingress_rules_to_destination_database_deployment() {
                 else
                     if yaml_host_line_references_host "$line" "master.cbioportal.org" ; then
                         inside_host_master_cbioportal_org="yes"
-                    else
-                        if yaml_host_line_references_host "$line" "clickhouse-only-db.cbioportal.org" ; then
-                            inside_host_clickhouse_only_db_cbioportal_org="yes"
-                        fi
                     fi
                 fi
             fi
@@ -530,7 +520,7 @@ function switchover_ingress_rules_to_destination_database_deployment() {
             inside_service="no"
         fi
         if [ "$inside_spec" == "yes" ] ; then
-            if [ "$inside_host_public_cbioportal_org" == "yes" ] || [ "$inside_host_public_beta_cbioportal_org" == "yes" ] || [ "$inside_host_master_cbioportal_org" == "yes" ] || [ "$inside_host_clickhouse_only_db_cbioportal_org" == "yes" ] ; then
+            if [ "$inside_host_public_cbioportal_org" == "yes" ] || [ "$inside_host_public_beta_cbioportal_org" == "yes" ] || [ "$inside_host_master_cbioportal_org" == "yes" ] ; then
                 if yaml_line_is_service_line "$line" ; then
                     inside_service="yes"
                     service_indent=$(output_yaml_line_indent_length "$line")
@@ -543,15 +533,13 @@ function switchover_ingress_rules_to_destination_database_deployment() {
                         continue
                     fi
                     if [ "$inside_host_public_beta_cbioportal_org" == "yes" ] ; then
-                        output_replaced_name_line "$line" "$public_beta_cbioportal_org_service_name"
-                        continue
+                        if ["$BETA_DEPLOYMENT_IS_ACTIVE" == "yes"] ; then
+                            output_replaced_name_line "$line" "$public_beta_cbioportal_org_service_name"
+                            continue
+                        fi
                     fi
                     if [ "$inside_host_master_cbioportal_org" == "yes" ] ; then
                         output_replaced_name_line "$line" "$master_cbioportal_org_service_name"
-                        continue
-                    fi
-                    if [ "$inside_host_clickhouse_only_db_cbioportal_org" == "yes" ] ; then
-                        output_replaced_name_line "$line" "$clickhouse_only_db_cbioportal_org_service_name"
                         continue
                     fi
                 fi
