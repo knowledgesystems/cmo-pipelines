@@ -71,7 +71,7 @@ if [[ -d "$derived_table_sql_script_dirpath" && "$derived_table_sql_script_dirpa
 fi
 
 # Attempt to download the derived table SQL files from github
-if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH "$derived_table_sql_script_dirpath" ; then
+if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name master "$derived_table_sql_script_dirpath" ; then
     echo "Error during download of derived table construction .sql files from github" >&2
     exit 1
 fi

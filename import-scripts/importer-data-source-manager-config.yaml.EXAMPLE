@@ -1,0 +1,151 @@
+---
+# configuration for the import source data repository management script
+# this file is in a yaml-like format, but is parsed in a restrited way.
+# minor alterations are possible, such as adding comments and within-object
+# property reordering. However the basic indents must be maintained, the
+# three sections must appear in the indicated order, and the "new item"
+# lines which contain only an indented hyphen must appear just as they
+# are formatted in the provided template. Scalar lists (i.e. the 
+# all_recognized_source_repositories items) must be itemized in this exact
+# format (6 space indent, hypen, whitespace, identifier). All whitespace
+# must be spaces (not tabs). Comments and empty lines are ignored.
+# Comments must be whole line (not as a suffix to a line with content)
+#
+# host definitions (these must come first)
+hosts:
+  -
+    host_id: pipelines3
+    host_can_connect_to_msk_network: yes
+    host_self_reported_hostname: pipelines3.cbioportal.aws.mskcc.org
+    host_ssh_dns_hostname: pipelines3.cbioportal.aws.mskcc.org
+    host_incoming_ssh_username: none
+    host_ssh_private_key_local_filepath: none
+  -
+    host_id: knowledgesystems-importer
+    host_can_connect_to_msk_network: no
+    host_self_reported_hostname: knowledgesystems-importer.cbioportal.aws.mskcc.org
+    host_ssh_dns_hostname: knowledgesystems-importer.cbioportal.org
+    host_incoming_ssh_username: ssh_username_redacted
+    host_ssh_private_key_local_filepath: /path/to/private/keyfile/redacted
+# repository defintions (these must come second)
+repositories:
+  -
+    repository_id: knowledge-systems-curated-studies
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data
+      knowledgesystems-importer: /data/portal-cron/cbio-portal-data
+    repository_local_path_for_remote_rsync: /data2/portal-cron/repos-only-for-use-with-ks-importer-sync/cbio-portal-data
+    repository_clone_limited_scope_subdirectory: studies
+  -
+    repository_id: datahub
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/datahub
+      knowledgesystems-importer: /data/portal-cron/cbio-portal-data/datahub
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: private
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/private
+      knowledgesystems-importer: /data/portal-cron/cbio-portal-data/private
+    repository_local_path_for_remote_rsync: /data2/portal-cron/repos-only-for-use-with-ks-importer-sync/private
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: impact
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/impact
+      knowledgesystems-importer: /data/portal-cron/cbio-portal-data/impact
+    repository_local_path_for_remote_rsync: /data2/portal-cron/repos-only-for-use-with-ks-importer-sync/impact
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: genie
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/genie
+      knowledgesystems-importer: /data/portal-cron/cbio-portal-data/genie
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: cmo-access
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/cmo-access
+      knowledgesystems-importer: none
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: bic-mskcc-legacy
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/bic-mskcc-legacy
+      knowledgesystems-importer: none
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: cmo-argos
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/cmo-argos
+      knowledgesystems-importer: none
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: datahub_shahlab
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/datahub_shahlab
+      knowledgesystems-importer: none
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: msk-mind-datahub
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/msk-mind
+      knowledgesystems-importer: none
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: pipelines-testing
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/pipelines-testing
+      knowledgesystems-importer: none
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+  -
+    repository_id: extract-projects
+    repository_clone_dirpath_per_host_map:
+      pipelines3: /data/portal-cron/cbio-portal-data/extract-projects
+      knowledgesystems-importer: none
+    repository_local_path_for_remote_rsync: none
+    repository_clone_limited_scope_subdirectory: none
+# database destination definitions (these must come third)
+database_destinations:
+  -
+    database_destination_id: public
+    configured_importer_host: knowledgesystems-importer
+    all_recognized_source_repositories:
+      - knowledge-systems-curated-studies
+      - datahub 
+      - private
+      - impact
+  -
+    database_destination_id: genie
+    configured_importer_host: knowledgesystems-importer
+    all_recognized_source_repositories:
+      - genie
+  -
+    database_destination_id: msk
+    configured_importer_host: pipelines3
+    all_recognized_source_repositories:
+      - cmo-access
+      - bic-mskcc-legacy
+      - cmo-argos
+      - private
+      - impact
+      - datahub_shahlab
+      - msk-mind-datahub
+      - knowledge-systems-curated-studies
+      - datahub
+      - pipelines-testing
+      - extract-projects
+  -
+    database_destination_id: triage
+    configured_importer_host: pipelines3
+    all_recognized_source_repositories:
+      - datahub
+# end of file

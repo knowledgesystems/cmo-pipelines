@@ -60,7 +60,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
     DREMIO_CREDENTIALS_FILE="$PORTAL_HOME/pipelines-credentials/eks-account.credentials"
     DREMIO_USERNAME=""
     DREMIO_PASSWORD=""
-    IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-cmo-importer.jar"
+    IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-cmo-blue-importer.jar"
     ENABLE_DEBUGGING=0
     JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CMO_ACCESS_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     ONCOTREE_VERSION_TO_USE="oncotree_candidate_release"

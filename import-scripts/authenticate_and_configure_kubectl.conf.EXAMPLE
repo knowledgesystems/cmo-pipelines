@@ -1,0 +1,8 @@
+# format is three string values separated by <TAB>
+# first value is cluster_id, second is cluster_account_id, third is the cluster's kube/config file
+# Any line starting with # or empty after discarding leading whitespace is ignored
+#
+publicprod	public	public-cluster-kubeconfig
+publicargocd	public	publicargocd-cluster-kubeconfig
+eksprod	eks	eks-cluster-kubeconfig
+eksargocd	eks	eksargocd-cluster-kubeconfig

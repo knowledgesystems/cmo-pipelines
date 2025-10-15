@@ -16,4 +16,4 @@ There are these Java components and applications:
 There is this compiled linux executable:
 - src : "import-tool", a program which writes appropriate improt trigger files for users who control the running of the import pipelines with import-tool scripts.
 
-There are numerous scripts for fetch / import / montior / notification / configuration in the "import-scripts" subdirectory. Also included are current schedule crontab entries.
+There are numerous scripts for fetch / import / montior / notification / configuration in the "import-scripts" subdirectory. See [README](import-scripts/README.md) for some script descriptions. Also included are current schedule crontab entries.
