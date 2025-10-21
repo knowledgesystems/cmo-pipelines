@@ -1,0 +1,79 @@
+service_account: eks
+cluster_cfg: /data/portal-cron/pipelines-credentials/eks-cluster-kubeconfig
+blue_deployment_list:
+  - eks-msk-blue
+  - eks-msk-beta-blue
+  - eks-private-blue
+  - eks-sclc-blue
+green_deployment_list:
+  - eks-msk-green
+  - eks-msk-beta-green
+  - eks-private-green
+  - eks-sclc-green
+deployment_to_full_replica_count_map:
+  eks-msk-blue: 2
+  eks-msk-green: 2
+  #eks-msk-beta-blue: 2
+  #eks-msk-beta-green: 2
+  eks-msk-beta-blue: 0
+  eks-msk-beta-green: 0
+  eks-private-blue: 1
+  eks-private-green: 1
+  eks-sclc-blue: 1
+  eks-sclc-green: 1
+deployment_to_cache_warming_policy:
+  eks-msk-blue: studylist
+  eks-msk-green: studylist
+  eks-msk-beta-blue: studylist
+  eks-msk-beta-green: studylist
+  eks-private-blue: initial
+  eks-private-green: initial
+  eks-sclc-blue: initial
+  eks-sclc-green: initial
+deployment_to_yaml_filepath_map:
+  eks-msk-blue: digits-eks/eks-prod/cbioportal-eks-msk-blue-deployment-service.yaml
+  eks-msk-beta-blue: digits-eks/eks-prod/cbioportal-eks-msk-beta-blue-deployment-service.yaml
+  eks-private-blue: digits-eks/eks-prod/cbioportal-eks-private-blue-deployment-service.yaml
+  eks-sclc-blue: digits-eks/eks-prod/cbioportal-eks-sclc-blue-deployment-service.yaml
+  eks-msk-green: digits-eks/eks-prod/cbioportal-eks-msk-green-deployment-service.yaml
+  eks-msk-beta-green: digits-eks/eks-prod/cbioportal-eks-msk-beta-green-deployment-service.yaml
+  eks-private-green: digits-eks/eks-prod/cbioportal-eks-private-green-deployment-service.yaml
+  eks-sclc-green: digits-eks/eks-prod/cbioportal-eks-sclc-green-deployment-service.yaml
+host_to_service_map:
+  blue:
+    cbioportal.mskcc.org: eks-msk-blue
+    cbioportal.aws.mskcc.org: eks-msk-blue
+    #beta.cbioportal.mskcc.org: eks-msk-beta-blue
+    #beta.cbioportal.aws.mskcc.org: eks-msk-beta-blue
+    beta.cbioportal.mskcc.org: eks-msk-beta-offline
+    beta.cbioportal.aws.mskcc.org: eks-msk-beta-offline
+    private.cbioportal.mskcc.org: eks-private-blue
+    private.cbioportal.aws.mskcc.org: eks-private-blue
+    sclc.cbioportal.mskcc.org: eks-sclc-blue
+    sclc.cbioportal.aws.mskcc.org: eks-sclc-blue
+  green:
+    cbioportal.mskcc.org: eks-msk-green
+    cbioportal.aws.mskcc.org: eks-msk-green
+    #beta.cbioportal.mskcc.org: eks-msk-beta-green
+    #beta.cbioportal.aws.mskcc.org: eks-msk-beta-green
+    beta.cbioportal.mskcc.org: eks-msk-beta-offline
+    beta.cbioportal.aws.mskcc.org: eks-msk-beta-offline
+    private.cbioportal.mskcc.org: eks-private-green
+    private.cbioportal.aws.mskcc.org: eks-private-green
+    sclc.cbioportal.mskcc.org: eks-sclc-green
+    sclc.cbioportal.aws.mskcc.org: eks-sclc-green
+ingress_name: msk-eks-prod-ingress
+ingress_yaml_filepath: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+replica_ready_check_pause_seconds: 20
+replica_ready_check_max_checkcount: 30
+temp_dir_path: /data/portal-cron/tmp/import-cron-dmp-msk
+cache_warming_pod_list_filepath: /data/portal-cron/tmp/import-cron-dmp-msk/warm_persistence_cache_podlist.out
+cache_warming_pod_sublist_filepath: /data/portal-cron/tmp/import-cron-dmp-msk/warm_persistence_cache_podsublist.out
+ks_k8s_depl_repo_dirpath: /data/portal-cron/git-repos/only_for_use_by_msk_import_script/knowledgesystems-k8s-deployment
+warm_caches: true
+synchronize_user_tables: false
+clear_persistence_caches_blue_function: clearPersistenceCachesForMskBluePortals
+clear_persistence_caches_green_function: clearPersistenceCachesForMskGreenPortals
+git_commit_msg: "msk import"
+cache_warming_username: "<REDACTED>"
+cache_warming_password: "<REDACTED>"
