@@ -29,6 +29,7 @@ _TRIAGE_CONFIG = ImporterConfig(
         "cleanup_data",
     ),
     db_properties_filename="manage_triage_database_update_tools.properties",
+    color_swap_config_filename=None, # Not used for MySQL
     params={
         "data_repos": Param(
             ["datahub"],

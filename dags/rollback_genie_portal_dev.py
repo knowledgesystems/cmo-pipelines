@@ -28,6 +28,7 @@ _ROLLBACK_GENIE_CONFIG = ImporterConfig(
         "set_import_abandoned",
     ),
     db_properties_filename="manage_genie_database_update_tools.properties",
+    color_swap_config_filename="genie-db-color-swap-config.yaml",
     params={
         "confirm": Param(
             type="string",
