@@ -1,9 +1,10 @@
 """
-import_genie_dag.py
-Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy.
+import_msk_dag.py
+Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy.
 """
 import os
 import sys
+
 from airflow.models.param import Param
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -15,13 +16,13 @@ def _wire(tasks: dict[str, object]) -> None:
     [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_abandoned"] >> tasks["cleanup_data"]
 
-_GENIE_CONFIG = ImporterConfig(
-    dag_id="import_genie_dag",
-    description="Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy",
-    importer="genie",
-    tags=["genie"],
-    target_nodes=("importer_ssh",),
-    data_nodes=("importer_ssh",),
+_MSK_CONFIG = ImporterConfig(
+    dag_id="import_msk_dag",
+    description="Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy",
+    importer="msk",
+    tags=["msk"],
+    target_nodes=("pipelines3_ssh",),
+    data_nodes=("pipelines3_ssh",),
     task_names=(
         "verify_management_state",
         "clone_database",
@@ -33,18 +34,18 @@ _GENIE_CONFIG = ImporterConfig(
         "set_import_abandoned",
         "cleanup_data",
     ),
-    db_properties_filename="manage_genie_database_update_tools.properties",
-    color_swap_config_filename="genie-db-color-swap-config.yaml",
+    db_properties_filename="manage_msk_database_update_tools.properties",
+    color_swap_config_filename="msk-db-color-swap-config.yaml",
     params={
         "data_repos": Param(
-            ["genie"],
+            ["datahub"],
             type="array",
+            description="Comma-separated list of data repositories to pull updates from/cleanup.",
             title="Data Repositories",
-            description="List of GENIE data repositories to clean up after import.",
-            examples=["genie"],
+            examples=["datahub", "impact", "private"],
         ),
     },
     wire_dependencies=_wire,
 )
 
-globals()[_GENIE_CONFIG.dag_id] = build_import_dag(_GENIE_CONFIG)
+globals()[_MSK_CONFIG.dag_id] = build_import_dag(_MSK_CONFIG)

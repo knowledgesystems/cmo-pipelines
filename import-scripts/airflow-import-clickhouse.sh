@@ -6,8 +6,9 @@
 # - Copy MySQL tables to ClickHouse
 # - Create derived ClickHouse tables
 
-PORTAL_SCRIPTS_DIRECTORY=$1
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$2
+PORTAL_DATABASE=$1
+PORTAL_SCRIPTS_DIRECTORY=$2
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
@@ -18,7 +19,7 @@ if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
 fi
 source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
-tmp=$PORTAL_HOME/tmp/import-cron-genie
+tmp=$PORTAL_HOME/tmp/import-cron-$PORTAL_DATABASE
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
 DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
 COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/copy_mysql_database_tables_to_clickhouse.sh"
@@ -71,7 +72,8 @@ if [[ -d "$derived_table_sql_script_dirpath" && "$derived_table_sql_script_dirpa
 fi
 
 # Attempt to download the derived table SQL files from github
-if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH "$derived_table_sql_script_dirpath" ; then
+# TODO: we need to modify this code eventually so that the derived table SQL script can be pulled from a dev branch
+if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name master "$derived_table_sql_script_dirpath" ; then
     echo "Error during download of derived table construction .sql files from github" >&2
     exit 1
 fi

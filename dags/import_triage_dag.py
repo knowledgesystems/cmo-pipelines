@@ -1,57 +1,63 @@
 """
 import_triage_dag.py
-Imports triage dataset using the import-cmo-data-triage.sh script
+Imports Triage study to MySQL database.
 """
-from datetime import timedelta, datetime
-from airflow import DAG
-from airflow.decorators import task
-from airflow.exceptions import AirflowException
+import os
+import sys
+
 from airflow.models.param import Param
-from airflow.providers.ssh.operators.ssh import SSHOperator
-from airflow.utils.trigger_rule import TriggerRule
 
-args = {
-    "owner": "airflow",
-    "depends_on_past": False,
-    "email_on_failure": True,
-    "email_on_retry": False,
-    "retries": 0,
-    "retry_delay": timedelta(minutes=5),
-}
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dags.import_base import ImporterConfig, build_import_dag
 
-"""
-If any upstream tasks failed, this task will propagate the "Failed" status to the Dag Run.
-"""
-@task(trigger_rule=TriggerRule.ONE_FAILED, retries=0)
-def watcher():
-    raise AirflowException("Failing task because one or more upstream tasks failed.")
+def _wire(tasks: dict[str, object]) -> None:
+    tasks["data_repos"] >> tasks["fetch_data"]
+    tasks["fetch_data"] >> tasks["setup_import"]
+    tasks["setup_import"] >> tasks["import_sql"] >> tasks["cleanup_data"]
 
-with DAG(
+_TRIAGE_CONFIG = ImporterConfig(
     dag_id="import_triage_dag",
-    default_args=args,
-    description="Imports studies into triage",
-    max_active_runs=1,
-    start_date=datetime(2025, 9, 5),
-    schedule_interval=None,
+    description="Imports Triage study to MySQL database",
+    importer="triage",
     tags=["triage"],
-    render_template_as_native_obj=True,
+    target_nodes=("pipelines3_ssh",),
+    data_nodes=("pipelines3_ssh",),
+    task_names=(
+        "fetch_data",
+        "setup_import",
+        "import_sql",
+        "cleanup_data",
+    ),
+    db_properties_filename="manage_triage_database_update_tools.properties",
+    color_swap_config_filename=None, # Not used for MySQL
     params={
-        "importer": Param("triage", type="string", enum=["triage"], title="Import Pipeline", description="Determines which importer to use."),
-    }
-) as dag:
+        "data_repos": Param(
+            [
+                "datahub",
+                "cmo-argos",
+                "private",
+                "impact"
+            ],
+            type="array",
+            description="Comma-separated list of data repositories to pull updates from/cleanup.",
+            title="Data Repositories",
+            examples=[
+                "datahub",
+                "bic-mskcc-legacy",
+                "cmo-argos",
+                "private",
+                "impact",
+                "knowledge-systems-curated-studies",
+                "datahub_shahlab",
+                "msk-mind-datahub",
+                "pipelines-testing",
+                "genie",
+                "extract-projects",
+                "cmo-access"
+            ],
+        ),
+    },
+    wire_dependencies=_wire,
+)
 
-    pipelines3_conn_id = "pipelines3_ssh"
-    import_scripts_path = "/data/portal-cron/scripts"
-    creds_dir = "/data/portal-cron/pipelines-credentials"
-
-    import_triage_data = SSHOperator(
-        task_id="import_triage_data",
-        ssh_conn_id=pipelines3_conn_id,
-        # IMPORTANT -- do not end with .sh, otherwise the command will be treated as a path to a Jinja template which we do not want
-        # added a space at the end to prevent Airflow from this behavior
-        command=f"{import_scripts_path}/import-cmo-data-triage.sh ",
-        dag=dag,
-    )
-
-    import_triage_data
-    list(dag.tasks) >> watcher()
+globals()[_TRIAGE_CONFIG.dag_id] = build_import_dag(_TRIAGE_CONFIG)
