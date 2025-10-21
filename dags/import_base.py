@@ -89,6 +89,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 scripts_dir,
                 "airflow-clone-db.sh",
                 importer,
+                scripts_dir,
                 db_properties_filepath,
             ),
             "fetch_data": _script(
@@ -103,18 +104,21 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 scripts_dir,
                 "airflow-setup-import.sh",
                 importer,
+                scripts_dir,
                 db_properties_filepath,
             ),
             "import_sql": _script(
                 scripts_dir,
                 "airflow-import-sql.sh",
                 importer,
+                scripts_dir,
                 db_properties_filepath,
             ),
             "import_clickhouse": _script(
                 scripts_dir,
                 "airflow-import-clickhouse.sh",
                 importer,
+                scripts_dir,
                 db_properties_filepath,
             ),
             "transfer_deployment": _script(
