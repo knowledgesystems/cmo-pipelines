@@ -1,0 +1,36 @@
+service_account: public
+cluster_cfg: /data/portal-cron/pipelines-credentials/publicargocd-cluster-kubeconfig
+blue_deployment_list:
+  - cbioportal-backend-genie-public-blue
+  - cbioportal-backend-genie-private-blue
+green_deployment_list:
+  - cbioportal-backend-genie-public-green
+  - cbioportal-backend-genie-private-green
+deployment_to_full_replica_count_map:
+  cbioportal-backend-genie-public-blue: 3
+  cbioportal-backend-genie-private-blue: 3
+  cbioportal-backend-genie-public-green: 3
+  cbioportal-backend-genie-private-green: 3
+deployment_to_yaml_filepath_map:
+  cbioportal-backend-genie-public-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_genie_public_blue.yaml
+  cbioportal-backend-genie-private-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_genie_private_blue.yaml
+  cbioportal-backend-genie-public-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_genie_public_green.yaml
+  cbioportal-backend-genie-private-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_genie_private_green.yaml
+host_to_service_map:
+  blue:
+    genie.cbioportal.org: cbioportal-backend-genie-public-blue
+    genie-private.cbioportal.org: cbioportal-backend-genie-private-blue
+  green:
+    genie.cbioportal.org: cbioportal-backend-genie-public-green
+    genie-private.cbioportal.org: cbioportal-backend-genie-private-green
+ingress_name: genie-ingress
+ingress_yaml_filepath: argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/genie-ingress.yml
+replica_ready_check_pause_seconds: 20
+replica_ready_check_max_checkcount: 30
+temp_dir_path: /data/portal-cron/tmp/import-cron-genie
+ks_k8s_depl_repo_dirpath: /data/portal-cron/git-repos/only_for_use_by_genie_import_script/knowledgesystems-k8s-deployment
+warm_caches: false
+synchronize_user_tables: true
+clear_persistence_caches_blue_function: clearPersistenceCachesForGenieBluePortals
+clear_persistence_caches_green_function: clearPersistenceCachesForGenieGreenPortals
+git_commit_msg: "genie import"
