@@ -47,6 +47,7 @@ case "$IMPORTER" in
     IMPORTER_NAME="msk-cmo"
     LOG_FILE_NAME="msk-cmo-importer.log"
     PORTAL_NAME="msk-portal"
+    ;;
   *)
     echo "Unsupported importer: $IMPORTER" >&2
     exit 1
