@@ -86,7 +86,10 @@ JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdi
 ONCOTREE_VERSION="oncotree_latest_stable"
 
 # Direct importer logs to stdout
-tail -f "${PORTAL_HOME}/logs/${LOG_FILE_NAME}" &
+# Make sure to kill the tail process on exit so we don't hang the script
+tail -f "$PORTAL_HOME/logs/$LOG_FILE_NAME" &
+TAIL_PID=$!
+trap 'kill "$TAIL_PID" 2>/dev/null; wait "$TAIL_PID" 2>/dev/null' EXIT INT TERM
 
 if ! is_mysql_import; then
     echo "Destination DB color: $destination_database_color"
