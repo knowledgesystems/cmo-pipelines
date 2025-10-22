@@ -101,6 +101,8 @@ function load_color_swap_config() {
     if [ "$WARM_CACHES" == "true" ]; then
         CACHE_WARMING_POD_LIST_FILEPATH=$(read_scalar '.cache_warming_pod_list_filepath')
         CACHE_WARMING_POD_SUBLIST_FILEPATH=$(read_scalar '.cache_warming_pod_sublist_filepath')
+        CACHE_WARMING_USERNAME=$(read_scalar '.cache_warming_username')
+        CACHE_WARMING_PASSWORD=$(read_scalar '.cache_warming_password')
         read_map DEPLOYMENT_TO_CACHE_WARMING_POLICY '.deployment_to_cache_warming_policy'
     fi
 }
@@ -376,8 +378,13 @@ function cache_warming_stage_should_happen() {
 }
 
 function run_cache_warming_study_query() {
-    # ...
-    echo "pass"
+    podname="$1"
+    should_wait_for_response="$2"
+    if [ "$should_wait_for_response" == "wait_for_response" ] ; then
+        kubectl exec "$podname" -- /bin/bash -c 'session_header=$(curl "http://localhost:8888/j_spring_security_check?j_username='"$CACHE_WARMING_USERNAME"'&j_password='"$CACHE_WARMING_PASSWORD"'" -I 2>/dev/null | grep "Set-Cookie") ; COOKIE_RE="Set-Cookie: ([[:graph:]]+);.*" ; [[ $session_header =~ $COOKIE_RE ]] ; header_value="Cookie: ${BASH_REMATCH[1]}" ; cacheoutfile="/tmp/cachewarmer.txt" ; cache_is_warm="no" ; attempts_remaining=4 ; while true ; do rm -f $cacheoutfile ; curl --fail --max-time 10 --connect-timeout 3 --header "$header_value" "http://localhost:8888/api/studies" > $cacheoutfile 2>/dev/null ; if grep -q mskimpact $cacheoutfile ; then cache_is_warm="yes" ; break ; fi ; if [ $attempts_remaining -eq 0 ] ; then break ; fi ; attempts_remaining=$(($attempts_remaining-1)) ; sleep 60 ; done ; curl --header "$header_value" "https://cbioportal.mskcc.org/j_spring_security_logout/" 2>/dev/null ; if [ $cache_is_warm == "yes" ] ; then echo "cache is warm" ; exit 0 ; fi ; echo "cache is cold" ; exit 1'
+    else
+        kubectl exec "$podname" -- /bin/bash -c 'session_header=$(curl "http://localhost:8888/j_spring_security_check?j_username='"$CACHE_WARMING_USERNAME"'&j_password='"$CACHE_WARMING_PASSWORD"'" -I 2>/dev/null | grep "Set-Cookie") ; COOKIE_RE="Set-Cookie: ([[:graph:]]+);.*" ; [[ $session_header =~ $COOKIE_RE ]] ; header_value="Cookie: ${BASH_REMATCH[1]}" ; curl --fail --max-time 3 --connect-timeout 3 --header "$header_value" "http://localhost:8888/api/studies" > /dev/null 2>/dev/null ; sleep 1 ; curl --header "$header_value" "https://cbioportal.mskcc.org/j_spring_security_logout/" 2>/dev/null ; exit 0'
+    fi
 }
 
 function attempt_to_warm_caches_of_incoming_deployments() {
