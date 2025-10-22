@@ -148,6 +148,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     ONCOKB_MAF_FILE_ZIPPED="${ONCOKB_MAF_FILE}.gz"
     ONCOKB_PREVIOUS_MAF_FILE="$ONCOKB_OUT_DIR/data_mutations_extended.oncokb.previous.txt"
     ONCOKB_SOMATIC_MAF_FILE="$ONCOKB_OUT_DIR/data_mutations_extended_somatic.oncokb.txt"
+    ONCOKB_MAF_QUERY_TYPE="Genomic_Change"
 
     SOURCE_SV_FILE="$MSK_SOLID_HEME_DATA_HOME/data_sv.txt"
     STAGING_SV_FILE="$STAGING_DIR/data_sv.txt"
@@ -246,7 +247,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
             fi
         fi
 
-        $PYTHON3_BINARY $MAF_ANNOTATOR_SCRIPT -b $ONCOKB_TOKEN -i $STAGING_MAF_FILE -o $ONCOKB_MAF_FILE -c $STAGING_SAMPLE_FILE -a $PREVIOUS_ANNOTATED_MAF_ARGS
+        $PYTHON3_BINARY $MAF_ANNOTATOR_SCRIPT -b $ONCOKB_TOKEN -i $STAGING_MAF_FILE -o $ONCOKB_MAF_FILE -c $STAGING_SAMPLE_FILE -a $PREVIOUS_ANNOTATED_MAF_ARGS -q $ONCOKB_MAF_QUERY_TYPE
         if [ $? -ne 0 ] ; then
             echo "Failed to annotate MAF, exiting..."
             ONCOKB_ANNOTATION_SUCCESS=0
