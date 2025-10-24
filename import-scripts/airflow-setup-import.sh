@@ -37,7 +37,7 @@ case "$IMPORTER" in
     TMP_DIR_NAME="import-cron-public-data"
     IMPORTER_NAME="public"
     LOG_FILE_NAME="public-data-importer.log"
-    PORTAL_NAME="public-data-portal"
+    PORTAL_NAME="public-portal"
     ;;
   triage)
     TMP_DIR_NAME="import-cron-triage"
@@ -49,7 +49,7 @@ case "$IMPORTER" in
     TMP_DIR_NAME="import-cron-msk"
     IMPORTER_NAME="msk-cmo"
     LOG_FILE_NAME="msk-cmo-importer.log"
-    PORTAL_NAME="msk-portal"
+    PORTAL_NAME="msk-automation-portal"
     ;;
   *)
     echo "Unsupported importer: $IMPORTER" >&2
