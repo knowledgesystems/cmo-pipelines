@@ -1,6 +1,9 @@
 """
 import_msk_dag.py
 Imports MSK study to MySQL and ClickHouse databases using blue/green deployment strategy.
+This DAG is commented out because further work is needed to migrate the full MSK import process to Airflow.
+"""
+
 """
 import os
 import sys
@@ -49,3 +52,5 @@ _MSK_CONFIG = ImporterConfig(
 )
 
 globals()[_MSK_CONFIG.dag_id] = build_import_dag(_MSK_CONFIG)
+"""
+pass
