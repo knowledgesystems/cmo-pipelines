@@ -22,11 +22,11 @@ source "$AUTOMATION_ENV_SCRIPT_FILEPATH"
 
 # Helper: returns success for MySQL-style imports (no blue/green), otherwise failure
 is_mysql_import() {
-    [[ "PORTAL_DATABASE" == "triage" ]]
+    [[ "$PORTAL_DATABASE" == "triage" ]]
 }
 
 # Configure names/paths based on portal database
-case "PORTAL_DATABASE" in
+case "$PORTAL_DATABASE" in
   genie)
     TMP_DIR_NAME="import-cron-genie"
     IMPORTER_NAME="genie-aws"
@@ -52,7 +52,7 @@ case "PORTAL_DATABASE" in
     PORTAL_NAME="msk-automation-portal"
     ;;
   *)
-    echo "Unsupported portal database: PORTAL_DATABASE" >&2
+    echo "Unsupported portal database: $PORTAL_DATABASE" >&2
     exit 1
     ;;
 esac
@@ -73,7 +73,7 @@ if ! is_mysql_import; then
         exit 1
     fi
 
-    if [ "PORTAL_DATABASE" != "msk" ]; then
+    if [ "$PORTAL_DATABASE" != "msk" ]; then
         # eg. genie-aws-importer-blue.jar
         IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer-${destination_database_color}.jar"
     else
@@ -110,6 +110,6 @@ fi
 echo "Refreshing CDD/ONCOTREE caches"
 bash "$PORTAL_SCRIPTS_DIRECTORY/refresh-cdd-oncotree-cache.sh"
 if [ $? -gt 0 ]; then
-    echo "Error: Failed to refresh CDD and/or ONCOTREE cache during PORTAL_DATABASE setup!" >&2
+    echo "Error: Failed to refresh CDD and/or ONCOTREE cache during $PORTAL_DATABASE setup!" >&2
     exit 1
 fi
