@@ -56,6 +56,7 @@ export PYTHON3_BINARY=/usr/bin/python3
 export MAVEN_BINARY=/opt/apache-maven-3.8.6/bin/mvn
 export HG_BINARY=/usr/bin/hg
 export GIT_BINARY=/usr/bin/git
+export YQ_BINARY=/home/cbioportal_importer/bin/yq
 export PATH=$(bash --login -c 'echo $PATH')
 
 #######################
