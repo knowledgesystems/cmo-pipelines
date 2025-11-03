@@ -58,6 +58,7 @@ export PYTHON3_BINARY=/usr/bin/python3
 export MAVEN_BINARY=/opt/apache-maven-3.8.3/bin/mvn
 export HG_BINARY=/usr/bin/hg
 export GIT_BINARY=/usr/bin/git
+export YQ_BINARY=/usr/local/bin/yq
 export PATH=$(bash --login -c 'echo $PATH')
 
 #######################
