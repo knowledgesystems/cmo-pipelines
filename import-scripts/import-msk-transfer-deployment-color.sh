@@ -497,9 +497,9 @@ function run_cache_warming_study_query() {
     basic_auth_username="set_this_value_appropriately_before_running_script"
     basic_auth_password="set_this_value_appropriately_before_running_script"
     if [ "$should_wait_for_response" == "wait_for_response" ] ; then
-        kubectl exec "$podname" -- /bin/bash -c 'session_header=$(curl "http://localhost:8888/j_spring_security_check?j_username='$basic_auth_username'&j_password='$basic_auth_password'" -I 2>/dev/null | grep "Set-Cookie") ; COOKIE_RE="Set-Cookie: ([[:graph:]]+);.*" ; [[ $session_header =~ $COOKIE_RE ]] ; header_value="Cookie: ${BASH_REMATCH[1]}" ; cacheoutfile="/tmp/cachewarmer.txt" ; cache_is_warm="no" ; attempts_remaining=4 ; while true ; do rm -f $cacheoutfile ; curl --fail --max-time 10 --connect-timeout 3 --header "$header_value" "http://localhost:8888/api/studies" > $cacheoutfile 2>/dev/null ; if grep -q mskimpact $cacheoutfile ; then cache_is_warm="yes" ; break ; fi ; if [ $attempts_remaining -eq 0 ] ; then break ; fi ; attempts_remaining=$(($attempts_remaining-1)) ; sleep 60 ; done ; curl --header "$header_value" "https://cbioportal.mskcc.org/j_spring_security_logout/" 2>/dev/null ; if [ $cache_is_warm == "yes" ] ; then echo "cache is warm" ; exit 0 ; fi ; echo "cache is cold" ; exit 1'
+        kubectl --kubeconfig "$EKS_CLUSTER_KUBECONFIG" exec "$podname" -- /bin/bash -c 'session_header=$(curl "http://localhost:8888/j_spring_security_check?j_username='$basic_auth_username'&j_password='$basic_auth_password'" -I 2>/dev/null | grep "Set-Cookie") ; COOKIE_RE="Set-Cookie: ([[:graph:]]+);.*" ; [[ $session_header =~ $COOKIE_RE ]] ; header_value="Cookie: ${BASH_REMATCH[1]}" ; cacheoutfile="/tmp/cachewarmer.txt" ; cache_is_warm="no" ; attempts_remaining=4 ; while true ; do rm -f $cacheoutfile ; curl --fail --max-time 10 --connect-timeout 3 --header "$header_value" "http://localhost:8888/api/studies" > $cacheoutfile 2>/dev/null ; if grep -q mskimpact $cacheoutfile ; then cache_is_warm="yes" ; break ; fi ; if [ $attempts_remaining -eq 0 ] ; then break ; fi ; attempts_remaining=$(($attempts_remaining-1)) ; sleep 60 ; done ; curl --header "$header_value" "https://cbioportal.mskcc.org/j_spring_security_logout/" 2>/dev/null ; if [ $cache_is_warm == "yes" ] ; then echo "cache is warm" ; exit 0 ; fi ; echo "cache is cold" ; exit 1'
     else
-        kubectl exec "$podname" -- /bin/bash -c 'session_header=$(curl "http://localhost:8888/j_spring_security_check?j_username='$basic_auth_username'&j_password='$basic_auth_password'" -I 2>/dev/null | grep "Set-Cookie") ; COOKIE_RE="Set-Cookie: ([[:graph:]]+);.*" ; [[ $session_header =~ $COOKIE_RE ]] ; header_value="Cookie: ${BASH_REMATCH[1]}" ; curl --fail --max-time 3 --connect-timeout 3 --header "$header_value" "http://localhost:8888/api/studies" > /dev/null 2>/dev/null ; sleep 1 ; curl --header "$header_value" "https://cbioportal.mskcc.org/j_spring_security_logout/" 2>/dev/null ; exit 0'
+        kubectl --kubeconfig "$EKS_CLUSTER_KUBECONFIG" exec "$podname" -- /bin/bash -c 'session_header=$(curl "http://localhost:8888/j_spring_security_check?j_username='$basic_auth_username'&j_password='$basic_auth_password'" -I 2>/dev/null | grep "Set-Cookie") ; COOKIE_RE="Set-Cookie: ([[:graph:]]+);.*" ; [[ $session_header =~ $COOKIE_RE ]] ; header_value="Cookie: ${BASH_REMATCH[1]}" ; curl --fail --max-time 3 --connect-timeout 3 --header "$header_value" "http://localhost:8888/api/studies" > /dev/null 2>/dev/null ; sleep 1 ; curl --header "$header_value" "https://cbioportal.mskcc.org/j_spring_security_logout/" 2>/dev/null ; exit 0'
     fi
 }
 
@@ -507,7 +507,7 @@ function attempt_to_warm_caches_of_incoming_deployments() {
     DESTINATION_COLOR=$1
     echo "attempting to warm caches"
     rm -f "$CACHE_WARMING_POD_LIST_FILEPATH"
-    kubectl get pods > "$CACHE_WARMING_POD_LIST_FILEPATH"
+    kubectl --kubeconfig "$EKS_CLUSTER_KUBECONFIG" get pods > "$CACHE_WARMING_POD_LIST_FILEPATH"
     # initial stage of warming - make study list query without waiting for reply
     pos=0
     while [ $pos -lt ${#BLUE_DEPLOYMENT_LIST[@]} ] ; do
