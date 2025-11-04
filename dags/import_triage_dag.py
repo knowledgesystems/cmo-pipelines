@@ -58,6 +58,8 @@ _TRIAGE_CONFIG = ImporterConfig(
         ),
     },
     wire_dependencies=_wire,
+    pool="triage_import_pool",
+    schedule_interval="0 0 * * *",
 )
 
 globals()[_TRIAGE_CONFIG.dag_id] = build_import_dag(_TRIAGE_CONFIG)

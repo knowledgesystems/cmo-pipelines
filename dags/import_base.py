@@ -41,6 +41,8 @@ class ImporterConfig:
     data_source_properties_filename: str = "importer-data-source-manager-config.yaml"
     params: Mapping[str, Param]
     wire_dependencies: WireDependencies
+    pool: Optional[str] = None
+    schedule_interval: Optional[str] = None
 
 
 def _script(scripts_dir: str, script_name: str, *args: object) -> str:
@@ -58,7 +60,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         description=config.description,
         max_active_runs=1,
         start_date=datetime(2024, 12, 3),
-        schedule_interval=None,
+        schedule_interval=config.schedule_interval,
         tags=list(config.tags),
         render_template_as_native_obj=True,
         params=params,
@@ -164,6 +166,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 params["trigger_rule"] = TriggerRule.ONE_FAILED
             elif name == "cleanup_data":
                 params["trigger_rule"] = TriggerRule.ALL_DONE
+
+            if config.pool is not None:
+                params["pool"] = config.pool
 
             ssh_targets: Sequence[str]
             if name in ("fetch_data", "cleanup_data"):
