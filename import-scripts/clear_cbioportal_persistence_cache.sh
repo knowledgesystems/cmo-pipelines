@@ -34,14 +34,12 @@ unset portal_to_cluster_map
 declare -A portal_to_cluster_map
 
 # public importer node
-portal_to_cluster_map["public"]="$CLUSTER_ID_PUBLICARGOCD" # ROB : this will be migrating to public-blue/public-green when we are ready to put the curation public-data in to full production as cbioportal.org after database updating
 portal_to_cluster_map["public-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["public-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["public-beta-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["public-beta-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["master-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["master-green"]="$CLUSTER_ID_PUBLICARGOCD"
-portal_to_cluster_map["clickhouse-only-db"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["clickhouse-only-db-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["clickhouse-only-db-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["genie-public-blue"]="$CLUSTER_ID_PUBLICARGOCD"
@@ -64,21 +62,18 @@ portal_to_cluster_map["sclc-green"]="$CLUSTER_ID_EKS"
 unset portal_to_deployment_map
 declare -A portal_to_deployment_map
 # importer node
-portal_to_deployment_map["public"]="cbioportal-spring-boot"
 portal_to_deployment_map["public-blue"]="cbioportal-backend-public-blue"
 portal_to_deployment_map["public-green"]="cbioportal-backend-public-green"
 portal_to_deployment_map["public-beta-blue"]="cbioportal-backend-public-beta-blue"
 portal_to_deployment_map["public-beta-green"]="cbioportal-backend-public-beta-green"
 portal_to_deployment_map["master-blue"]="cbioportal-backend-master-blue"
 portal_to_deployment_map["master-green"]="cbioportal-backend-master-green"
-portal_to_deployment_map["clickhouse-only-db"]="cbioportal-backend-clickhouse-only-db"
 portal_to_deployment_map["clickhouse-only-db-blue"]="cbioportal-backend-clickhouse-only-db-blue"
 portal_to_deployment_map["clickhouse-only-db-green"]="cbioportal-backend-clickhouse-only-db-green"
 portal_to_deployment_map["genie-public-blue"]="cbioportal-backend-genie-public-blue"
 portal_to_deployment_map["genie-public-green"]="cbioportal-backend-genie-public-green"
 portal_to_deployment_map["genie-private-blue"]="cbioportal-backend-genie-private-blue"
 portal_to_deployment_map["genie-private-green"]="cbioportal-backend-genie-private-green"
-portal_to_deployment_map["crdc"]="cbioportal-backend-nci"
 # pipelines3
 portal_to_deployment_map["triage"]="eks-triage"
 portal_to_deployment_map["hgnc"]="eks-hgnc"
@@ -96,21 +91,18 @@ portal_to_deployment_map["sclc-green"]="eks-sclc-green"
 unset portal_to_cache_service_basename
 declare -A portal_to_cache_service_basename
 # importer node
-portal_to_cache_service_basename["public"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["public-blue"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["public-green"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["public-beta-blue"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["public-beta-green"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["master-blue"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["master-green"]="cbioportal-public-persistence-redis"
-portal_to_cache_service_basename["clickhouse-only-db"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["clickhouse-only-db-blue"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["clickhouse-only-db-green"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["genie-public-blue"]="cbioportal-genie-persistence-redis"
 portal_to_cache_service_basename["genie-public-green"]="cbioportal-genie-persistence-redis"
 portal_to_cache_service_basename["genie-private-blue"]="cbioportal-genie-persistence-redis"
 portal_to_cache_service_basename["genie-private-green"]="cbioportal-genie-persistence-redis"
-portal_to_cache_service_basename["crdc"]="cbioportal-genie-persistence-redis"
 # pipelines3
 portal_to_cache_service_basename["triage"]="triage-cbioportal-persistence-redis"
 portal_to_cache_service_basename["hgnc"]=""
@@ -126,21 +118,18 @@ portal_to_cache_service_basename["sclc-green"]="eks-msk-cbioportal-persistence-r
 unset portal_to_cache_database_number
 declare -A portal_to_cache_database_number
 # importer node
-portal_to_cache_database_number["public"]="14"
 portal_to_cache_database_number["public-blue"]="8"
 portal_to_cache_database_number["public-green"]="9"
 portal_to_cache_database_number["public-beta-blue"]="6"
 portal_to_cache_database_number["public-beta-green"]="7"
 portal_to_cache_database_number["master-blue"]="10"
 portal_to_cache_database_number["master-green"]="11"
-portal_to_cache_database_number["clickhouse-only-db"]="13"
 portal_to_cache_database_number["clickhouse-only-db-blue"]="12"
 portal_to_cache_database_number["clickhouse-only-db-green"]="13"
 portal_to_cache_database_number["genie-public-blue"]="1"
 portal_to_cache_database_number["genie-public-green"]="2"
 portal_to_cache_database_number["genie-private-blue"]="3"
 portal_to_cache_database_number["genie-private-green"]="4"
-portal_to_cache_database_number["crdc"]="7"
 # pipelines3
 portal_to_cache_database_number["triage"]="1"
 portal_to_cache_database_number["hgnc"]="unassigned"
