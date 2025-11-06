@@ -18,7 +18,7 @@ CLUSTER_ID_EKSARGOCD="eksargocd"
 
 unset cluster_to_profile_map
 declare -A cluster_to_profile_map
-cluster_to_profile_map["$CLUSTER_ID_PUBLIC"]="$PROFILE_ID_PUBLIC" # ROB : this will be migrating to public-blue/public-green when we are ready to put the curation public-data in to full production as cbioportal.org after database updating
+cluster_to_profile_map["$CLUSTER_ID_PUBLIC"]="$PROFILE_ID_PUBLIC"
 cluster_to_profile_map["$CLUSTER_ID_PUBLICARGOCD"]="$PROFILE_ID_PUBLIC"
 cluster_to_profile_map["$CLUSTER_ID_EKS"]="$PROFILE_ID_EKS"
 cluster_to_profile_map["$CLUSTER_ID_EKSARGOCD"]="$PROFILE_ID_EKS"
@@ -34,7 +34,7 @@ unset portal_to_cluster_map
 declare -A portal_to_cluster_map
 
 # public importer node
-portal_to_cluster_map["public"]="$CLUSTER_ID_PUBLICARGOCD"
+portal_to_cluster_map["public"]="$CLUSTER_ID_PUBLICARGOCD" # ROB : this will be migrating to public-blue/public-green when we are ready to put the curation public-data in to full production as cbioportal.org after database updating
 portal_to_cluster_map["public-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["public-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["public-beta-blue"]="$CLUSTER_ID_PUBLICARGOCD"
@@ -42,6 +42,8 @@ portal_to_cluster_map["public-beta-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["master-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["master-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["clickhouse-only-db"]="$CLUSTER_ID_PUBLICARGOCD"
+portal_to_cluster_map["clickhouse-only-db-blue"]="$CLUSTER_ID_PUBLICARGOCD"
+portal_to_cluster_map["clickhouse-only-db-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["genie-public-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["genie-public-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["genie-private-blue"]="$CLUSTER_ID_PUBLICARGOCD"
@@ -70,6 +72,8 @@ portal_to_deployment_map["public-beta-green"]="cbioportal-backend-public-beta-gr
 portal_to_deployment_map["master-blue"]="cbioportal-backend-master-blue"
 portal_to_deployment_map["master-green"]="cbioportal-backend-master-green"
 portal_to_deployment_map["clickhouse-only-db"]="cbioportal-backend-clickhouse-only-db"
+portal_to_deployment_map["clickhouse-only-db-blue"]="cbioportal-backend-clickhouse-only-db-blue"
+portal_to_deployment_map["clickhouse-only-db-green"]="cbioportal-backend-clickhouse-only-db-green"
 portal_to_deployment_map["genie-public-blue"]="cbioportal-backend-genie-public-blue"
 portal_to_deployment_map["genie-public-green"]="cbioportal-backend-genie-public-green"
 portal_to_deployment_map["genie-private-blue"]="cbioportal-backend-genie-private-blue"
@@ -100,6 +104,8 @@ portal_to_cache_service_basename["public-beta-green"]="cbioportal-public-persist
 portal_to_cache_service_basename["master-blue"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["master-green"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["clickhouse-only-db"]="cbioportal-public-persistence-redis"
+portal_to_cache_service_basename["clickhouse-only-db-blue"]="cbioportal-public-persistence-redis"
+portal_to_cache_service_basename["clickhouse-only-db-green"]="cbioportal-public-persistence-redis"
 portal_to_cache_service_basename["genie-public-blue"]="cbioportal-genie-persistence-redis"
 portal_to_cache_service_basename["genie-public-green"]="cbioportal-genie-persistence-redis"
 portal_to_cache_service_basename["genie-private-blue"]="cbioportal-genie-persistence-redis"
@@ -128,6 +134,8 @@ portal_to_cache_database_number["public-beta-green"]="7"
 portal_to_cache_database_number["master-blue"]="10"
 portal_to_cache_database_number["master-green"]="11"
 portal_to_cache_database_number["clickhouse-only-db"]="13"
+portal_to_cache_database_number["clickhouse-only-db-blue"]="12"
+portal_to_cache_database_number["clickhouse-only-db-green"]="13"
 portal_to_cache_database_number["genie-public-blue"]="1"
 portal_to_cache_database_number["genie-public-green"]="2"
 portal_to_cache_database_number["genie-private-blue"]="3"
