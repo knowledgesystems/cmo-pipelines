@@ -14,7 +14,8 @@ SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
 DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
 COPY_MYSQL_DATABASE_TO_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/copy_mysql_database_tables_to_clickhouse.sh"
-TRANSFER_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/import-msk-transfer-deployment-color.sh"
+TRANSFER_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/transfer-deployment-color.sh"
+COLOR_SWAP_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/msk-db-color-swap-config.yaml"
 CREATE_DERIVED_TABLES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
 #TODO : need to create logic to download a dev branch of the following file from the upstream repo
 CREATE_DERIVED_TABLES_SQL_FILE_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/cdt/clickhouse.sql"
@@ -75,7 +76,7 @@ function create_derived_tables_in_target_clickhouse_database() {
 function transfer_color_to_new_database() {
     destination_database_color="$1"
     echo "transferring to databases with color $destination_database_color"
-    $TRANSFER_COLOR_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color
+    $TRANSFER_COLOR_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $COLOR_SWAP_CONFIG_FILEPATH $destination_database_color
 }
 
 function main() {

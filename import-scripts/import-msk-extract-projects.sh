@@ -3,6 +3,7 @@
 echo $(date)
 
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
+source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
 
 if [ -z $JAVA_BINARY ] | [ -z $GIT_BINARY ] | [ -z $PORTAL_HOME ] ; then
     message="import-msk-extract-projects.sh cannot be run without setting JAVA_BINARY, GIT_BINARY, PORTAL_HOME...)"
@@ -52,7 +53,7 @@ DATA_SOURCES_TO_BE_FETCHED="extract-projects"
 extract_projects_notification_file=$(mktemp $tmp/import-msk-extract-projects-notification.$now.XXXXXX)
 
 # grab data from extract-projects repos
-$DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull $DATA_SOURCES_TO_BE_FETCHED
+$DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull msk $DATA_SOURCES_TO_BE_FETCHED
 
 # import data into msk portal
 $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal extract-projects-to-msk-portal --notification-file $extract_projects_notification_file --oncotree-version $ONCOTREE_VERSION_TO_USE --transcript-overrides-source mskcc --disable-redcap-export
@@ -72,6 +73,6 @@ else
 fi
 
 # clean up extract-projects repo and send notification file
-$DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup $DATA_SOURCES_TO_BE_FETCHED
+$DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup msk $DATA_SOURCES_TO_BE_FETCHED
 EMAIL_BODY=`cat $extract_projects_notification_file`
 echo -e "The following Extract projects have been added or updated in the MSK cBioPortal:\n\n$EMAIL_BODY" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Updates to MSK cBioPortal (Extract Projects)" $PIPELINES_EMAIL_LIST
