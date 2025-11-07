@@ -51,7 +51,7 @@ function output_whether_preimport_steps_successfully_completed() {
     day_of_week_at_process_start=$(date +%u)
     update_status_is_valid="no"
     databases_are_prepared_for_import="no"
-    if $VERIFY_MANAGEMENT_SCRIPT_FILEPATH "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH $COLOR_SWAP_CONFIG_FILEPATH" ; then
+    if $VERIFY_MANAGEMENT_SCRIPT_FILEPATH "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" "$COLOR_SWAP_CONFIG_FILEPATH" ; then
         update_status_is_valid="yes"
     fi
     if [ $update_status_is_valid == "yes" ] ; then
