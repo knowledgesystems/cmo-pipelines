@@ -4,13 +4,8 @@ MAILTO=cbioportal-pipelines@cbioportal.org
 # Import Scripts (Comment these out when upgrading)
 ##########################
 * * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-portal-users.sh || echo "Failure in crontab ($HOSTNAME): import-portal-users.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab ($HOSTNAME)" cbioportal-pipelines@cbioportal.org
-* * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-cmo-data-triage.sh >> /data/portal-cron/logs/import-cmo-data-triage.log 2>&1
-* * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/kill-import-cmo-data-triage.sh >> /data/portal-cron/logs/kill-import-cmo-data-triage.log 2>&1
-* * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-hgnc-data.sh >> /data/portal-cron/logs/import-hgnc-data.log 2>&1
-* * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/kill-import-hgnc-data.sh >> /data/portal-cron/logs/kill-import-hgnc-data.log 2>&1
 0 18 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/fetch-and-import-dmp-data-wrapper.sh >> /data/portal-cron/logs/fetch-and-import-dmp-impact-data.log 2>&1 || echo "Failure in crontab ($HOSTNAME): fetch-and-import-dmp-data-wrapper.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab ($HOSTNAME)" cbioportal-pipelines@cbioportal.org
 0 4,12 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-public-data.sh >> /data/portal-cron/logs/import-public-data-msk.log 2>&1 || echo "Failure in crontab ($HOSTNAME): import-public-data.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab ($HOSTNAME)" cbioportal-pipelines@cbioportal.org
-0 1 * * * . /data/portal-cron/scripts/automation-environment.sh ; touch ${START_TRIAGE_IMPORT_TRIGGER_FILENAME}
 #0 2 * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/fetch-ddp-and-import-cmo-access-data.sh >> /data/portal-cron/logs/fetch-ddp-and-import-cmo-access-data.log 2>&1 || echo "Failure in crontab ($HOSTNAME): fetch-ddp-and-import-cmo-access-data.sh exited with non-zero exit status" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Failure in crontab ($HOSTNAME)" cbioportal-pipelines@cbioportal.org
 0 4 * * * . /data/portal-cron/scripts/merge_dremio_clinical_data_into_cmo_access.sh --runmode=dev >> /data/portal-cron/logs/merge_dremio_clinical_data_into_cmo_access.log 2>&1
 ##########################

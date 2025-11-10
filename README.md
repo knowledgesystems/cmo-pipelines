@@ -13,7 +13,4 @@ There are these Java components and applications:
 - ddp :  "ddp_fetcher", a pipeline which fetches clinical data from the darwin discovery platform web API
 - redcap : "redcap_pipeline", a pipeline which uploads data to or downloads data from the redcap clinical database server
 
-There is this compiled linux executable:
-- src : "import-tool", a program which writes appropriate improt trigger files for users who control the running of the import pipelines with import-tool scripts.
-
 There are numerous scripts for fetch / import / montior / notification / configuration in the "import-scripts" subdirectory. See [README](import-scripts/README.md) for some script descriptions. Also included are current schedule crontab entries.
