@@ -10,7 +10,7 @@ export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_DATA_HOME/$COHORT_NAME"
 export SOPHIA_TMPDIR="$SOPHIA_MSK_IMPACT_DATA_HOME/tmp"
 
 # Patient and sample attributes that we want to deliver in our data
-DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 RACE SEX ETHNICITY"
+DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 RACE SEX ETHNICITY CURRENT_AGE_DEID STAGE_HIGHEST_RECORDED NUM_ICDO_DX ADRENAL_GLANDS BONE CNS_BRAIN INTRA_ABDOMINAL LIVER LUNG LYMPH_NODES OTHER PLEURA REPRODUCTIVE_ORGANS SMOKING_PREDICTIONS_3_CLASSES GLEASON_FIRST_REPORTED GLEASON_HIGHEST_REPORTED HISTORY_OF_PDL1 HISTORY_OF_D_MMR PRIOR_MED_TO_MSK OS_MONTHS OS_STATUS"
 DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_SCORE MSI_TYPE SOMATIC_STATUS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE SEQ_DATE"
 
 # Duplicate columns that we want to filter out of MAF files
@@ -77,7 +77,7 @@ function merge_solid_heme_and_archer() {
 
     # Add clinical attribute headers
     INPUT_FILENAMES="$SOPHIA_TMPDIR/data_clinical_sample.txt $SOPHIA_TMPDIR/data_clinical_patient.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
+    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact -i $PORTAL_HOME/scripts/cdm_metadata.json
     if [ $? -gt 0 ] ; then
         echo "Failed to add clinical attribute metadata headers to MSK_SOLID_HEME and MSKARCHER merged dataset"
         return 1
@@ -87,6 +87,12 @@ function merge_solid_heme_and_archer() {
     cp $MSK_SOLID_HEME_DATA_HOME/meta_* $SOPHIA_TMPDIR
     if [ $? -gt 0 ] ; then
         echo "Failed to copy metadata files to MSK_SOLID_HEME and MSKARCHER merged dataset"
+        return 1
+    fi
+
+    sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to merge CDM timeline files"
         return 1
     fi
 }
@@ -122,6 +128,13 @@ function subset_consented_cohort_patients() {
         $SOPHIA_TMPDIR
     if [ $? -gt 0 ] ; then
         echo "Failed to subset on list of consented patients"
+        return 1
+    fi
+
+    # Add CDM timeline files
+    sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh "sophia_mskimpact" $SOPHIA_MSK_IMPACT_DATA_HOME $SOPHIA_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to generate CDM timeline files"
         return 1
     fi
 }
@@ -168,18 +181,6 @@ function filter_clinical_cols() {
         echo "Failed to filter clinical sample attributes"
         return 1
     fi
-}
-
-function rename_cdm_clinical_attribute_columns() {
-    # Rename clinical patient attributes coming from CDM:
-    # CURRENT_AGE_DEID -> AGE_CURRENT
-    # GENDER -> SEX
-
-    PATIENT_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
-    PATIENT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.renamed"
-
-    sed -e '1s/CURRENT_AGE_DEID/AGE_CURRENT/' -e '1s/GENDER/SEX/' $PATIENT_INPUT_FILEPATH > $PATIENT_OUTPUT_FILEPATH &&
-    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH"
 }
 
 function standardize_clinical_data() {
@@ -232,7 +233,7 @@ function add_seq_date_to_sample_file() {
 function add_metadata_headers() {
     # Calling merge.py strips out metadata headers from our clinical files - add them back in
     INPUT_FILENAMES="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt $SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
+    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact -i $PORTAL_HOME/scripts/cdm_metadata.json
 }
 
 function standardize_cna_data() {
@@ -354,6 +355,28 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[data_mutations_non_signedout.txt]+=1
     filenames_to_deliver[data_sv.txt]+=1
     filenames_to_deliver[sophia_mskimpact_data_cna_hg19.seg]+=1
+    filenames_to_deliver[data_timeline_bmi.txt]+=1
+    filenames_to_deliver[data_timeline_ca_125_labs.txt]+=1
+    filenames_to_deliver[data_timeline_ca_15-3_labs.txt]+=1
+    filenames_to_deliver[data_timeline_ca_19-9_labs.txt]+=1
+    filenames_to_deliver[data_timeline_cancer_presence.txt]+=1
+    filenames_to_deliver[data_timeline_cea_labs.txt]+=1
+    filenames_to_deliver[data_timeline_diagnosis.txt]+=1
+    filenames_to_deliver[data_timeline_ecog_kps.txt]+=1
+    filenames_to_deliver[data_timeline_follow_up.txt]+=1
+    filenames_to_deliver[data_timeline_gleason.txt]+=1
+    filenames_to_deliver[data_timeline_mmr.txt]+=1
+    filenames_to_deliver[data_timeline_pdl1.txt]+=1
+    filenames_to_deliver[data_timeline_prior_meds.txt]+=1
+    filenames_to_deliver[data_timeline_progression.txt]+=1
+    filenames_to_deliver[data_timeline_psa_labs.txt]+=1
+    filenames_to_deliver[data_timeline_radiation.txt]+=1
+    filenames_to_deliver[data_timeline_specimen_surgery.txt]+=1
+    filenames_to_deliver[data_timeline_specimen.txt]+=1
+    filenames_to_deliver[data_timeline_surgery.txt]+=1
+    filenames_to_deliver[data_timeline_treatment.txt]+=1
+    filenames_to_deliver[data_timeline_tsh_labs.txt]+=1
+    filenames_to_deliver[data_timeline_tumor_sites.txt]+=1
     filenames_to_deliver[DMP_IDs.txt]+=1
 
     # Remove any files/directories that are not specified above
@@ -420,11 +443,6 @@ printTimeStampedDataProcessingStepMessage "Post-process clinical files for Sophi
 # Filter clinical attribute columns from clinical files
 if ! filter_clinical_cols ; then
     report_error "Failed to filter non-delivered clinical attribute columns for Sophia MSK-IMPACT"
-fi
-
-# Rename columns coming from CDM
-if ! rename_cdm_clinical_attribute_columns ; then
-    report_error "Failed to rename CDM clinical attribute columns"
 fi
 
 # Standardize blank clinical data values to NA
