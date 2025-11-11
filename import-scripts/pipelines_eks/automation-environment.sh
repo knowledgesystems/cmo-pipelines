@@ -142,6 +142,8 @@ export SOPHIA_DATA_HOME=$PORTAL_DATA_HOME/sophia-data
 #######################
 #export INHIBIT_RECACHING_FROM_TOPBRAID=true
 export CASE_LIST_CONFIG_FILE=$PIPELINES_CONFIG_HOME/resources/case_list_config.tsv
+export SKIP_VERIFICATION_OF_GENETIC_ALTERATION_COPIES="yes"
+export SLING_GENETIC_ALTERATION_DATA_IN_CHUNKS="yes"
 
 #######################
 # environment variables used in the fetch-and-import-dmp-impact-data script
