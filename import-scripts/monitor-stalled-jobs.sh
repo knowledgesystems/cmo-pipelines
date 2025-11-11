@@ -1,6 +1,11 @@
 #!/bin/bash
 
-source /data/portal-cron/import-scripts/slack-message-functions.sh
+if [ -z "$SLACK_URL_FILE" ] ; then
+    echo "could not run monitor-stalled-jobs.sh: automation-environment.sh script must be run in order to set needed environment variables (like SLACK_URL_FILE, ...)"
+    exit 1
+fi
+
+SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 
 # converts timestamp (D:H:M:S) to seconds
 function convert_to_seconds () {
@@ -21,7 +26,8 @@ function send_email_notification () {
 
 # Function for alerting slack channel of stalled jobs
 function send_slack_warning_message () {
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "A stalled nightly import process has been detected. :tired_face:"
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"A stalled nightly import process has been detected.\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
+    # this comment corrects vim syntax coloring "
 }
 
 # Array of process names being checked
@@ -35,7 +41,7 @@ checked_process_list=(
 
 # Stalled times
 mt_users_genie=$(( 5 * 60 )) # import_portal_users_genie.sh: 5 minutes
-mt_import_users=$(( 30 * 60 )) # importUsers.py: 30 minutes
+mt_import_users=$(( 15 * 60 )) # importUsers.py: 15 minutes
 mt_import_dmp=$(( 10 * 60 * 60 )) # import-dmp-impact-data.sh: 10 hours
 mt_import_temp_study=$(( 3 * 60 * 60 )) # import-temp-study.sh: 3 hours
 mt_oncokb_annotator=$(( 4 * 60 * 60 )) # oncokb-annotator.sh: 4 hours

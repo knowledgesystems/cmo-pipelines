@@ -1,79 +1,13 @@
 #!/usr/bin/env python
-
+import argparse
 import os
+import sys
 
 import clinicalfile_utils
 import generate_case_lists
 
 SAMPLE_ID_COLUMN = "SAMPLE_ID"
 SEQUENCED_SAMPLES_HEADER_TAG = "#sequenced_samples:"
-
-def standardize_sv_file(sv_file):
-    """
-        Various processes for standardizing a structural variant file.
-        Other steps can be added in the future if necessary.
-    """
-    if not os.path.isfile(sv_file):
-        print "Specified structural variant file (%s) does not exist, no changes made..." % (sv_file)
-        return
-    remove_records_with_invalid_genes(sv_file)
-    standardize_sv_header(sv_file)
-
-def remove_records_with_invalid_genes(sv_file):
-    """
-        Standardizes a structural variant file by removing records
-        with invalid genes, ie, a record with no values for all of the 
-        following fields:
-            - Site1_Hugo_Symbol
-            - Site2_Hugo_Symbol
-            - Site1_Entrez_Gene_Id
-            - Site2_Entrez_Gene_Id
-    """
-    header_processed = False
-    header = []
-    to_write = []
-    required_columns = ["Site1_Hugo_Symbol", "Site2_Hugo_Symbol", "Site1_Entrez_Gene_Id", "Site2_Entrez_Gene_Id"]
-
-    with open(sv_file, "r") as f:
-        for line in f.readlines():
-            data = line.rstrip('\n').split('\t')
-            if line.startswith('#'):
-                # automatically add commented out lines
-                to_write.append(line.rstrip('\n'))
-            else:
-                if not header_processed:
-                    header = data
-                    to_write.append(line.rstrip('\n'))
-                    header_processed = True
-                    continue
-                if any([True if data[header.index(required_column)] else False for required_column in required_columns]):
-                    to_write.append(line.rstrip('\n'))
-   
-    clinicalfile_utils.write_data_list_to_file(sv_file, to_write)
-
-def standardize_sv_header(sv_file):
-    """
-        Standardize the data header in a structural variant file to the most updated format.
-        If the 'Sample_ID' header value is found, change it to 'Sample_Id'.
-    """
-    header_processed = False
-    to_write = []
-
-    with open(sv_file, "r") as f:
-        for line in f.readlines():
-            data = line.rstrip('\n').split('\t')
-            if line.startswith('#'):
-                # automatically add commented out lines
-                to_write.append(line.rstrip('\n'))
-            if not header_processed:
-                if 'Sample_ID' in data:
-                    processed_data = ['Sample_Id' if data_value == 'Sample_ID' else data_value for data_value in data]
-                    to_write.append('\t'.join(processed_data))
-                    header_processed = True
-                    continue 
-            to_write.append(line.rstrip('\n'))
-
-    clinicalfile_utils.write_data_list_to_file(sv_file, to_write)
 
 def standardize_cna_file(cna_file):
     """
@@ -159,7 +93,7 @@ def fill_in_blank_gene_panel_values(gene_matrix_file):
                     if data_value:
                         processed_data.append(data_value)
                     # special case for cna gene panel (copy mutations gene panel if it exists)
-                    elif mutations_gene_panel_index != -1 and index == cna_gene_panel_index and data[mutations_gene_panel_index]:
+                    elif mutations_gene_panel_index != -1 and index == cna_gene_panel_index:
                         processed_data.append(data[mutations_gene_panel_index])
                     # no mutations gene panel available OR any other blank values
                     else:
@@ -167,87 +101,6 @@ def fill_in_blank_gene_panel_values(gene_matrix_file):
                 to_write.append('\t'.join(processed_data))
 
     clinicalfile_utils.write_data_list_to_file(gene_matrix_file, to_write)
-
-def standardize_mutations_file(mutations_file):
-    """
-        Various processes for standardizing a mutations file.
-        Other steps can be added in the future if necessary.
-    """
-    if not os.path.isfile(mutations_file):
-        print "Specified mutations file (%s) does not exist, no changes made..." % (mutations_file)
-        return
-    fill_in_blank_variant_classification_values(mutations_file)
-    fix_invalid_ncbi_build_values(mutations_file)
-
-def fill_in_blank_variant_classification_values(mutations_file):
-    """
-        Fill in blank variant classification values with "Unknown" to pass validation
-    """
-    header_processed = False
-    header = []
-    to_write = []
-
-    with open(mutations_file, "r") as f:
-        for line in f.readlines():
-            data = line.rstrip('\n').split('\t')
-            if line.startswith('#'):
-                # Automatically add commented out lines
-                to_write.append(line.rstrip('\n'))
-            else:
-                if not header_processed:
-                    header = data
-                    variant_classification_index = clinicalfile_utils.get_index_for_column(header, "Variant_Classification")
-                    if variant_classification_index == -1:
-                        print "Variant_Classification column not found in mutations file %s." % (mutations_file)
-                        return
-                    to_write.append(line.rstrip('\n'))
-                    header_processed = True
-                    continue
-                # Only process the 'Variant_Classification' column
-                # Create copy of list with "Unknown" replacing blank/empty spaces
-                # No replacement occurs if there is a value
-                variant_classification_value = data[variant_classification_index]
-                if not variant_classification_value:
-                    data[variant_classification_index] = "Unknown"
-                to_write.append("\t".join(data))
-
-    clinicalfile_utils.write_data_list_to_file(mutations_file, to_write)
-
-def fix_invalid_ncbi_build_values(mutations_file):
-    """
-        Checks for invalid NCBI_Build data values, ie, any data value
-        not starting with prefix 'GRCh'. If an invalid value is found,
-        'GRCh' is prepended to the value.
-    """
-    header_processed = False
-    header = []
-    to_write = []
-
-    with open(mutations_file, "r") as f:
-        ncbi_build_value_prefix = "GRCh"
-        for line in f.readlines():
-            data = line.rstrip("\n").split("\t")
-            if line.startswith("#"):
-                # Automatically add commented out lines
-                to_write.append(line.rstrip("\n"))
-            else:
-                if not header_processed:
-                    header = data
-                    ncbi_build_index = clinicalfile_utils.get_index_for_column(header, "NCBI_Build")
-                    if ncbi_build_index == -1:
-                        print "NCBI_Build column not found in mutations file %s." % (mutations_file)
-                        return
-                    to_write.append(line.rstrip("\n"))
-                    header_processed = True
-                    continue
-                # Only process the 'NCBI_Build' column
-                # Prepend 'GRCh' to the data value if it doesn't already contain this prefix
-                ncbi_value = data[ncbi_build_index]
-                if ncbi_value and not ncbi_value.startswith(ncbi_build_value_prefix):
-                    data[ncbi_build_index] = ncbi_build_value_prefix + ncbi_value
-                to_write.append("\t".join(data))
-
-    clinicalfile_utils.write_data_list_to_file(mutations_file, to_write)
 
 def remove_duplicate_rows(filename, record_identifier_column):
     """

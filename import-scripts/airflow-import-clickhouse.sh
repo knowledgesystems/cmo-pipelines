@@ -26,6 +26,13 @@ COPY_TABLES_FROM_MYSQL_TO_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/
 DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/download_clickhouse_sql_scripts_py3.py"
 CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
 
+# ROB : short-circuit the public import process for testing 2025_11_05
+BLOCK_FILEPATH="/data/portal-cron/tmp/block_next_public_import_attempt"
+if [ "$PORTAL_DATABASE" == "public" ] && [ -f "$BLOCK_FILEPATH" ] ; then
+    rm -f "$BLOCK_FILEPATH"
+    exit 1
+fi
+
 # Get the current production database color
 current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
 destination_database_color="unset"
@@ -72,8 +79,11 @@ if [[ -d "$derived_table_sql_script_dirpath" && "$derived_table_sql_script_dirpa
 fi
 
 # Attempt to download the derived table SQL files from github
-# TODO: we need to modify this code eventually so that the derived table SQL script can be pulled from a dev branch
-if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name master "$derived_table_sql_script_dirpath" ; then
+clickhouse_schema_branch_name="master" # default
+if [ "$PORTAL_DATABASE" == "public" ] ; then
+    clickhouse_schema_branch_name="public-portal-db-clickhouse-sql-for-import"
+fi
+if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name "$clickhouse_schema_branch_name" "$derived_table_sql_script_dirpath" ; then
     echo "Error during download of derived table construction .sql files from github" >&2
     exit 1
 fi

@@ -1,0 +1,7 @@
+Íî·@ëZÛQ™gv #wñ˜¬÷#Ë“ÊHó­¦F¸ÛJÏHTTP/2.0 200 OK
+Content-Length: 302
+Cache-Control: no-cache, private
+Content-Type: application/json
+Date: Fri, 21 Jul 2023 16:23:29 GMT
+
+{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"node.k8s.io/v1beta1","resources":[{"name":"runtimeclasses","singularName":"","namespaced":false,"kind":"RuntimeClass","verbs":["create","delete","deletecollection","get","list","patch","update","watch"],"storageVersionHash":"8nMHWqj34s0="}]}

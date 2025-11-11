@@ -1,0 +1,1 @@
+{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"crd.k8s.amazonaws.com/v1alpha1","resources":[{"name":"eniconfigs","singularName":"eniconfig","namespaced":false,"group":"crd.k8s.amazonaws.com","version":"v1alpha1","kind":"ENIConfig","verbs":["delete","deletecollection","get","list","patch","create","update","watch"]}]}

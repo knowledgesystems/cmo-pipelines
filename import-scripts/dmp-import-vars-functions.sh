@@ -7,16 +7,15 @@ PERFORM_CRDB_FETCH=0
 PROCESS_UNLINKED_ARCHER_STUDY=0
 CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
 CVR_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/cvr_fetcher.jar"
+DARWIN_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/darwin_fetcher.jar"
 DDP_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/ddp_fetcher.jar"
 REDCAP_PIPELINE_JAR_FILENAME="$PORTAL_HOME/lib/redcap_pipeline.jar"
-IMPORTER_JAR_FILENAME_FOR_GIT_AND_MAIL_ONLY="$PORTAL_HOME/lib/msk-dmp-importer-for-git-and-mail-only.jar"
-JAVA_DD_AGENT_ARGS="-javaagent:/opt/datadog/apm/library/java/dd-java-agent.jar -Ddd.profiling.enabled=true -Ddd.profiling.directallocation.enabled=true -Ddd.profiling.allocation.enabled=true -Ddd.profiling.ddprof.liveheap.enabled=true -Ddd.service=msk-impact-cvr-fetcher -Ddd.env=dev -Ddd.version=3.0"
-JAVA_JPROFILER_AGENT_ARGS="-agentpath:/data/portal-cron/bin/jprofiler12.0.4/bin/linux-x64/libjprofilerti.so=port=2718"
-JAVA_CRDB_FETCHER_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED -jar $CRDB_FETCHER_JAR_FILENAME"
-JAVA_CVR_FETCHER_ARGS="-Xmx70g $JAVA_DD_AGENT_ARGS -jar $CVR_FETCHER_JAR_FILENAME"
-JAVA_DDP_FETCHER_ARGS="-Xmx48g $JAVA_SSL_ARGS -jar $DDP_FETCHER_JAR_FILENAME"
+IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-dmp-importer.jar"
+JAVA_CRDB_FETCHER_ARGS="-jar $CRDB_FETCHER_JAR_FILENAME"
+JAVA_CVR_FETCHER_ARGS="-jar $CVR_FETCHER_JAR_FILENAME"
+JAVA_DARWIN_FETCHER_ARGS="-jar $DARWIN_FETCHER_JAR_FILENAME"
+JAVA_DDP_FETCHER_ARGS="-jar $DDP_FETCHER_JAR_FILENAME"
 JAVA_REDCAP_PIPELINE_ARGS="$JAVA_SSL_ARGS -jar $REDCAP_PIPELINE_JAR_FILENAME"
-# the cvr server safety lockouts are no longer in use now that cvr timeout/retry loops are in effect
 CVR_TUMOR_SERVER_SAFETY_LOCKOUT_PERIOD_START_HOUR_MINUTES=0115 #HHMM
 CVR_TUMOR_SERVER_SAFETY_LOCKOUT_PERIOD_DURATION_MINUTES=75
 CVR_GERMLINE_SERVER_SAFETY_LOCKOUT_PERIOD_START_HOUR_MINUTES=0115 #HHMM
@@ -28,8 +27,9 @@ ENABLE_DEBUGGING=0
 if [ $ENABLE_DEBUGGING != "0" ] ; then
     java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 fi
-JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME_FOR_GIT_AND_MAIL_ONLY org.mskcc.cbio.importer.Admin"
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
+SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 
 DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT=2
 
@@ -39,41 +39,31 @@ FILTER_EMPTY_COLUMNS_KEEP_COLUMN_LIST="PATIENT_ID,SAMPLE_ID,ONCOTREE_CODE,PARTA_
 # -----------------------------------------------------------------------------------------------------------
 ## FUNCTIONS
 
-# import needed function send_slack_message_to_channel
-source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 # import needed function waitWhileWithinTimePeriod()
-source "$PORTAL_HOME/scripts/date-and-time-handling-functions.sh"
-# import needed for s3 functionality (e.g. uploadToS3OrSendFailureMessage)
-source $PORTAL_HOME/scripts/s3_functions.sh
+source $PORTAL_HOME/scripts/date-and-time-handling-functions.sh
 
 # Function for alerting slack channel of any failures
 function sendPreImportFailureMessageMskPipelineLogsSlack() {
     MESSAGE=$1
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines pre-import process failed :tired_face: : $MESSAGE"
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines pre-import process failed: $MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
 }
 
 # Function for alerting slack channel of any failures
 function sendImportFailureMessageMskPipelineLogsSlack() {
     MESSAGE=$1
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import process failed :tired_face: : $MESSAGE"
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines import process failed: $MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
 }
 
 # Function for alerting slack channel of successful imports
 function sendImportSuccessMessageMskPipelineLogsSlack() {
     STUDY_ID=$1
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import success: $STUDY_ID"
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"MSK cBio pipelines import success: $STUDY_ID\", \"icon_emoji\": \":tada:\"}" $SLACK_PIPELINES_MONITOR_URL
 }
 
 function printTimeStampedDataProcessingStepMessage {
     STEP_DESCRIPTION=$1
     echo -e "\n\n------------------------------------------------------------------------------------"
     echo "beginning $STEP_DESCRIPTION $(date)..."
-}
-
-function standardizeGenePanelMatrix {
-    STUDY_DATA_DIRECTORY=$1
-    GENE_PANEL_MATRIX_FILE="$STUDY_DATA_DIRECTORY/data_gene_matrix.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_gene_matrix_file.py --gene-panel-matrix-filename $GENE_PANEL_MATRIX_FILE
 }
 
 # Function to generate case lists by cancer type
@@ -169,6 +159,18 @@ function import_crdb_to_redcap {
     return $return_value
 }
 
+# Function for importing mskimpact darwin files to redcap
+function import_mskimpact_darwin_caisis_to_redcap {
+    return_value=0
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_supp_caisis_gbm.txt mskimpact_clinical_caisis ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_imaging_caisis_gbm.txt mskimpact_timeline_imaging_caisis ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_specimen_caisis_gbm.txt mskimpact_timeline_specimen_caisis ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_status_caisis_gbm.txt mskimpact_timeline_status_caisis ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_surgery_caisis_gbm.txt mskimpact_timeline_surgery_caisis ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_treatment_caisis_gbm.txt mskimpact_timeline_treatment_caisis ; then return_value=1 ; fi
+    return $return_value
+}
+
 # Function for importing mskimpact cvr files to redcap
 function import_mskimpact_cvr_to_redcap {
     return_value=0
@@ -187,7 +189,10 @@ function import_mskimpact_supp_date_to_redcap {
 function import_mskimpact_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp.txt mskimpact_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskimpact_data_clinical_ddp_age_at_seq ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_clinical_ddp_pediatrics.txt mskimpact_data_clinical_ddp_demographics_pediatrics ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskimpact_timeline_chemotherapy_ddp; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_ddp_radiation.txt mskimpact_timeline_radiation_ddp ; then return_value=1 ; fi
+    if ! import_project_to_redcap $MSK_IMPACT_DATA_HOME/data_timeline_ddp_surgery.txt mskimpact_timeline_surgery_ddp ; then return_value=1 ; fi
     return $return_value
 }
 
@@ -198,7 +203,7 @@ function import_hemepact_cvr_to_redcap {
     return $return_value
 }
 
-# Function for importing hemepact supp date files to redcap
+# Fucntion for importing hemepact supp date files to redcap
 function import_hemepact_supp_date_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical_supp_date.txt hemepact_data_clinical_supp_date ; then return_value=1 ; fi
@@ -209,7 +214,6 @@ function import_hemepact_supp_date_to_redcap {
 function import_hemepact_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_clinical_ddp.txt hemepact_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_clinical_ddp_age_at_seq.txt hemepact_data_clinical_ddp_age_at_seq ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_chemotherapy.txt hemepact_timeline_chemotherapy_ddp; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_radiation.txt hemepact_timeline_radiation_ddp ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_HEMEPACT_DATA_HOME/data_timeline_ddp_surgery.txt hemepact_data_timeline_surgery_ddp ; then return_value=1 ; fi
@@ -234,7 +238,6 @@ function import_archer_supp_date_to_redcap {
 function import_archer_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_ddp.txt mskarcher_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskarcher_data_clinical_ddp_age_at_seq ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskarcher_timeline_chemotherapy_ddp; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_radiation.txt mskarcher_timeline_radiation_ddp ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ARCHER_UNFILTERED_DATA_HOME/data_timeline_ddp_surgery.txt mskarcher_data_timeline_surgery_ddp ; then return_value=1 ; fi
@@ -259,7 +262,6 @@ function import_access_supp_date_to_redcap {
 function import_access_ddp_to_redcap {
     return_value=0
     if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_ddp.txt mskaccess_data_clinical_ddp_demographics ; then return_value=1 ; fi
-    if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_clinical_ddp_age_at_seq.txt mskaccess_data_clinical_ddp_age_at_seq ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_chemotherapy.txt mskaccess_timeline_chemotherapy_ddp; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_radiation.txt mskaccess_timeline_radiation_ddp ; then return_value=1 ; fi
     # if ! import_project_to_redcap $MSK_ACCESS_DATA_HOME/data_timeline_ddp_surgery.txt mskaccess_data_timeline_surgery_ddp ; then return_value=1 ; fi
@@ -269,17 +271,19 @@ function import_access_ddp_to_redcap {
 # Function for removing raw clinical and timeline files from study directory
 function remove_raw_clinical_timeline_data_files {
     STUDY_DIRECTORY=$1
+    # use rm -f and $HG_BINARY rm -f to ensure that both tracked and untracked
+    # raw clinical and timeline files are removed from the repository
 
     # remove raw clinical files except patient and sample cbio format clinical files
     for f in $STUDY_DIRECTORY/data_clinical*; do
         if [[ $f != *"data_clinical_patient.txt"* && $f != *"data_clinical_sample.txt"* ]] ; then
-            rm -f $f
+            $GIT_BINARY rm -f $f
         fi
     done
     # remove raw timeline files except cbio format timeline file
     for f in $STUDY_DIRECTORY/data_timeline*; do
         if [[ $f != *"data_timeline.txt"* ]] ; then
-            rm -f $f
+            $GIT_BINARY rm -f $f
         fi
     done
 }
@@ -303,60 +307,37 @@ function waitOutDmpGermlineServerInstabilityPeriod() {
     return 0
 }
 
-# Function for selecting the earlier of two instants in ISO 8601 format (which can be compared lexigraphically if both have the same timzone offset)
-function find_earlier_instant() {
-    instant1="$1"
-    instant2="$2"
-    if [[ "$instant1" < "$instant2" ]] ; then
-        echo "$instant1"
-    else
-        echo "$instant2"
-    fi
-}
-
 # Function for consuming fetched samples after successful import
 function consumeSamplesAfterSolidHemeImport {
-    drop_dead_instant_string=$(date --date="+3hours" -Iseconds) # 3 hours from now
     if [ -f $MSK_IMPACT_CONSUME_TRIGGER ] ; then
+        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming mskimpact tumor samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json
+        waitOutDmpGermlineServerInstabilityPeriod
         echo "Consuming mskimpact germline samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_DATA_HOME/cvr_gml_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -g -c $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json
         rm -f $MSK_IMPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_HEMEPACT_CONSUME_TRIGGER ] ; then
+        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming mskimpact_heme samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json
         rm -f $MSK_HEMEPACT_CONSUME_TRIGGER
     fi
     if [ -f $MSK_ACCESS_CONSUME_TRIGGER ] ; then
+        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming mskaccess samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json
         rm -f $MSK_ACCESS_CONSUME_TRIGGER
     fi
 }
 
 # Function for consuming fetched samples after successful archer import
 function consumeSamplesAfterArcherImport {
-    drop_dead_instant_string=$(date --date="+3hour" -Iseconds) # 3 hour from now
     if [ -f $MSK_ARCHER_CONSUME_TRIGGER ] ; then
+        waitOutDmpTumorServerInstabilityPeriod
         echo "Consuming archer samples from cvr"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -c $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json
         rm -f $MSK_ARCHER_CONSUME_TRIGGER
-    fi
-}
-
-function uploadToS3OrSendFailureMessage() {
-    DIR_TO_UPLOAD="$1"
-    DIR_NAME_IN_S3="$2"
-    BUCKET_NAME="$3"
-
-    # upload DIR_TO_UPLOAD directory to s3 bucket BUCKET_NAME
-    upload_to_s3 "$DIR_TO_UPLOAD" "$DIR_NAME_IN_S3" "$BUCKET_NAME"
-    if [ $? -gt 0 ]; then
-        message="Failed to upload $DIR_TO_UPLOAD to s3 bucket!"
-        echo $message
-        echo -e "$message" | mail -s "Failed to upload $DIR_TO_UPLOAD to s3" $PIPELINES_EMAIL_LIST
-        sendImportFailureMessageMskPipelineLogsSlack "$message"
     fi
 }

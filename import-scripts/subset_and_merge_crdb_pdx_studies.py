@@ -223,7 +223,7 @@ def create_destination_to_source_mapping(destination_source_patient_mapping_reco
                     HAS_ALL_METAFILES : False,
                     ANNOTATION_SUCCESS : False,
                     GENERATE_CASE_LISTS_SUCCESS : False,
-                    PASSED_VALIDATION : True
+                    PASSED_VALIDATION : False
             }
         if destination not in SKIPPED_SOURCE_STUDIES:
             SKIPPED_SOURCE_STUDIES[destination] = set()
@@ -285,10 +285,9 @@ def resolve_source_study_path(source_id, data_source_directories):
             source_paths.append(source_path)
         # find study by assuming study id is path representation (first three underscores represent directory hierarchy)
         split_source_id = source_id.split("_", 3)
-        if len(split_source_id) > 1:
-            source_path = os.path.join(data_source_directory, *split_source_id)
-            if os.path.isdir(source_path):
-                source_paths.append(source_path)
+        source_path = os.path.join(data_source_directory, *split_source_id)
+        if os.path.isdir(source_path):
+            source_paths.append(source_path)
     # only one path found, return value
     if len(source_paths) == 1:
         return source_paths[0]
@@ -450,18 +449,10 @@ def filter_clinical_annotations(source_subdirectory, clinical_annotations):
         # gets index of the "filtered attributes" in the header
         # writing out record columns by index (deals with metadata headers as well)
         attribute_indices = [header.index(attribute) for attribute in filtered_header]
-        needs_metadata_header_indicator = False
-        if attribute_indices[0] != 0:
-            needs_metadata_header_indicator = True
         with open(clinical_file, "r") as f:
             for line in f:
-                is_metadata_header_line = False
-                if line.startswith("#"):
-                    is_metadata_header_line = True
                 data = line.rstrip("\n").split("\t")
                 data_to_write = [data[index] for index in attribute_indices]
-                if is_metadata_header_line and needs_metadata_header_indicator:
-                    data_to_write[0] = "#" + str(data_to_write[0])
                 to_write.append("\t".join(data_to_write))
         clinicalfile_utils.write_data_list_to_file(clinical_file, to_write)
 
@@ -578,7 +569,7 @@ def post_process_and_cleanup_destination_study_data(lib, destination_to_source_m
     """
     insert_maf_sequenced_samples_header(destination_to_source_mapping, root_directory) # step 7(a)
     annotate_maf(destination_to_source_mapping, root_directory, annotator_jar) # step 7(b)
-    add_display_sample_name_column(lib, destination_to_source_mapping, root_directory) # step 7(c)
+    add_display_sample_name_column(destination_to_source_mapping, root_directory) # step 7(c)
     generate_destination_study_case_lists(lib, destination_to_source_mapping, root_directory, case_lists_config_file) # step 7(d)
     standardize_destination_study_cna_data(destination_to_source_mapping, root_directory) # step 7(e)
     standardize_destination_study_gene_matrix_data(destination_to_source_mapping, root_directory) # step 7(f)
@@ -623,13 +614,7 @@ def annotate_maf(destination_to_source_mapping, root_directory, annotator_jar):
             if os.path.isfile(annot_maf):
                 os.remove(annot_maf)
 
-def add_metadata_headers(destination_directory, lib):
-        add_metadata_headers_call = generate_add_metadata_headers_call(lib, destination_directory)
-	add_metadata_headers_status = subprocess.call(add_metadata_headers_call, shell = True)
-	if add_metadata_headers_status != 0:
-	    print >> OUTPUT_FILE, "Unable to add metadata headers for study %s" % os.path.basename(os.path.normpath(destination_directory))
-	
-def add_display_sample_name_column(lib, destination_to_source_mapping, root_directory):
+def add_display_sample_name_column(destination_to_source_mapping, root_directory):
     """
         Adds DISPLAY_SAMPLE_ID to clinical sample file to support frontend feature which allows
         value in DISPLAY_SAMPLE_ID to be displayed over value in SAMPLE_ID. This is to allow PDX
@@ -639,7 +624,6 @@ def add_display_sample_name_column(lib, destination_to_source_mapping, root_dire
     """
     for destination in destination_to_source_mapping:
         destination_directory = os.path.join(root_directory, destination)
-    	add_metadata_headers(destination_directory, lib)
         clinical_file = os.path.join(destination_directory, CLINICAL_SAMPLE_FILE_PATTERN)
         clinicalfile_utils.duplicate_existing_attribute_to_new_attribute(clinical_file, PDX_ID_COLUMN, DISPLAY_SAMPLE_NAME_COLUMN)
 
@@ -873,10 +857,6 @@ def generate_merge_call(lib, cancer_study_id, destination_directory, subdirector
 def generate_merge_clinical_files_call(lib, cancer_study_id, destination_directory):
     merge_clinical_files_call = 'python ' + lib + '/merge_clinical_files.py -d ' + destination_directory + ' -s ' + cancer_study_id
     return merge_clinical_files_call
-
-def generate_add_metadata_headers_call(lib, destination_directory):
-    add_metadata_headers_call = 'python ' + lib + '/add_clinical_attribute_metadata_headers.py -f ' + destination_directory + '/data_clinical*'
-    return add_metadata_headers_call 
 
 def generate_annotator_call(annotator_jar, destination_directory):
     annotator_call = 'java -jar ' + annotator_jar + ' -f ' + destination_directory + '/data_mutations_extended.txt ' + '-o ' + destination_directory + '/' + ANNOTATED_MAF_FILE_PATTERN + ' -i mskcc'

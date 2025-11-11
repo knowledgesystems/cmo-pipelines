@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import ssl
 import os
 import sys
 import urllib
@@ -11,8 +10,8 @@ from email.mime.text import MIMEText
 import smtplib
 import optparse
 
-PARTA_CONSENTED_URL = 'https://consent.mpath.k8.mskcc.org/api/consent/patient/deid/type/parta'
-PARTC_CONSENTED_URL = 'https://consent.mpath.k8.mskcc.org/api/consent/patient/deid/type/partc' 
+PARTA_CONSENTED_URL = 'http://draco.mskcc.org:9890/get_12245_list_parta'
+PARTC_CONSENTED_URL = 'http://draco.mskcc.org:9890/get_12245_list_partc'
 
 PARTA_FIELD_NAME = 'PARTA_CONSENTED_12_245'
 PARTC_FIELD_NAME = 'PARTC_CONSENTED_12_245'
@@ -38,22 +37,16 @@ def fetch_expected_consent_status_values():
         Fetches expected consent status values for 12-245
         Part A and C from CVR web service.
     '''
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
     expected_consent_status_values = {}
     for field,url in CVR_CONSENT_STATUS_ENDPOINTS.items():
-        response = urllib.urlopen(url, context=ssl_context)
+        response = urllib.urlopen(url)
         data = json.loads(response.read())
-        status_code = response.getcode()
-        
         consent_values = {}
-        if status_code != 200 or 'cases' not in data or len(data['cases']) == 0:
-            print >> ERROR_FILE, "WARNING: Could not retrieve %s consent values from germline server at %s" % (field, url)
-        else:
-            for pt,status in data['cases'].items():
-                if status:
-                    consent_values[pt] = 'YES'
-                else:
-                    consent_values[pt] = 'NO'
+        for pt,status in data['cases'].items():
+            if status:
+                consent_values[pt] = 'YES'
+            else:
+                consent_values[pt] = 'NO'
         expected_consent_status_values[field] = consent_values
     return expected_consent_status_values
 
@@ -102,36 +95,21 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
                     remove_list.add(record['SAMPLE_ID'])
                     samples_to_remove[field] = remove_list
 
-    removed_germline_mutations = False
     if samples_to_remove.get(PARTC_FIELD_NAME, set()):
-        # Attempt to remove germline mutation records where the Part C consent status has changed from YES => NO
-        removed_germline_mutations = remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
-
+        remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
     if samples_to_requeue != {} or samples_to_remove != {}:
-        email_consent_status_report(
-            samples_to_requeue,
-            samples_to_remove,
-            expected_consent_status_values,
-            removed_germline_mutations,
-            gmail_username,
-            gmail_password)
+        email_consent_status_report(samples_to_requeue, samples_to_remove, gmail_username, gmail_password)
 
 def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples):
     '''
         Removes germline mutation records from MAF for samples where
         Part C Consent Status has changed from Yes to No.
     '''
-
     tmpfile_name = cvr_mutation_file + ".tmp"
     tmpfile = open(tmpfile_name, "w")
-
-    num_germline_records = 0
-    num_removed_records = 0
     with open(cvr_mutation_file, 'rU') as data_file:
         header = []
-
-        lines = data_file.readlines()
-        for line in lines:
+        for line in data_file.readlines():
             if line.startswith("#"):
                 tmpfile.write(line)
                 continue
@@ -140,23 +118,11 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
                 tmpfile.write(line)
                 continue
             record = dict(zip(header, map(str.strip, line.split('\t'))))
-            if record[MUTATION_STATUS_COLUMN] == GERMLINE_MUTATION_STATUS:
-                num_germline_records += 1
-                if record[SAMPLE_ID_COLUMN] in revoked_germline_samples:
-                    num_removed_records += 1
-                    continue # Exclude this record from the new mutations file
+            if record[SAMPLE_ID_COLUMN] in revoked_germline_samples and record[MUTATION_STATUS_COLUMN] == GERMLINE_MUTATION_STATUS:
+               continue
             tmpfile.write(line)
     tmpfile.close()
-
-    pct_removed = 100*(float(num_removed_records) / float(num_germline_records))
-    cutoff = 20 # If we're trying to remove too many records, then something's probably wrong with the server response. 20% is an arbitrary cutoff
-    if pct_removed >= cutoff:
-        print >> ERROR_FILE, "WARNING: %.2f%% of germline records had their Part C consent status changed. No action will be taken-- please double-check the response of the upstream server." % (pct_removed)
-        os.remove(tmpfile_name)
-        return False
-
     os.rename(tmpfile_name, cvr_mutation_file)
-    return True
 
 def generate_attachment(message, attachment_name, samples):
     '''
@@ -166,13 +132,7 @@ def generate_attachment(message, attachment_name, samples):
     report.add_header('Content-Disposition', 'attachment', filename = attachment_name)
     message.attach(report)
 
-def email_consent_status_report(
-        samples_to_requeue,
-        samples_to_remove,
-        expected_consent_status_values,
-        removed_germline_mutations,
-        gmail_username,
-        gmail_password):
+def email_consent_status_report(samples_to_requeue, samples_to_remove, gmail_username, gmail_password):
     '''
         Constructs and sends email reporting consent status updates.
     '''
@@ -181,27 +141,16 @@ def email_consent_status_report(
     if samples_to_requeue != {}:
         summary += '\n\nCONSENT GRANTED:'
         for field,samples in samples_to_requeue.items():
-            missing_data = expected_consent_status_values[field] == {}
-            if missing_data:
-                summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, "A" if field == PARTA_FIELD_NAME else "C")
-            else:
-                summary += '\n\t%s:\t%s samples' % (field, len(samples))
-                filename = field.lower() + '_consent_granted_report.txt'
-                generate_attachment(message, filename, samples)
+            summary += '\n\t%s:\t%s samples' % (field, len(samples))
+            filename = field.lower() + '_consent_granted_report.txt'
+            generate_attachment(message, filename, samples)
 
     if samples_to_remove != {}:
         summary += '\n\nCONSENT REVOKED:'
         for field,samples in samples_to_remove.items():
-            missing_data = expected_consent_status_values[field] == {}
-            if missing_data:
-                summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, "A" if field == PARTA_FIELD_NAME else "C")
-            elif field == PARTC_FIELD_NAME and not removed_germline_mutations:
-                # If too many samples had their Part C cosent status changed, there is probably an issue with the upstream server, so we didn't remove any records.
-                summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.' % (field)
-            else:
-                summary += '\n\t%s:\t%s samples' % (field, len(samples))
-                filename = field.lower() + '_consent_revoked_report.txt'
-                generate_attachment(message, filename, samples)
+            summary += '\n\t%s:\t%s samples' % (field, len(samples))
+            filename = field.lower() + '_consent_revoked_report.txt'
+            generate_attachment(message, filename, samples)
 
     body = MIMEText(summary, 'plain')
     message.attach(body)
@@ -211,9 +160,7 @@ def email_consent_status_report(
     message['To'] = COMMASPACE.join(MESSAGE_RECIPIENTS)
     message['Date'] = formatdate(localtime=True)
 
-    s = smtplib.SMTP(SMTP_SERVER, 587)
-    s.ehlo()
-    s.starttls()
+    s = smtplib.SMTP_SSL(SMTP_SERVER, 465)
     s.login(gmail_username, gmail_password)
     s.sendmail(MESSAGE_SENDER, MESSAGE_RECIPIENTS, message.as_string())
     s.quit()

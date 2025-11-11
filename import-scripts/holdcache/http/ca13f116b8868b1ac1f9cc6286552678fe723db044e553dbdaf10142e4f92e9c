@@ -1,0 +1,7 @@
+ôå|µ£õ…‚ÖæpñððIWê‘Ç·ñÿ3;ÝB§áŸHTTP/2.0 200 OK
+Content-Length: 972
+Cache-Control: no-cache, private
+Content-Type: application/json
+Date: Fri, 21 Jul 2023 16:23:29 GMT
+
+{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"monitoring.coreos.com/v1","resources":[{"name":"prometheuses","singularName":"prometheus","namespaced":true,"kind":"Prometheus","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"C8naPY4eojU="},{"name":"prometheusrules","singularName":"prometheusrule","namespaced":true,"kind":"PrometheusRule","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"RSJ8iG+KDOo="},{"name":"servicemonitors","singularName":"servicemonitor","namespaced":true,"kind":"ServiceMonitor","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"JLhPcfa+5xE="},{"name":"alertmanagers","singularName":"alertmanager","namespaced":true,"kind":"Alertmanager","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"NshW3zg1K7o="}]}

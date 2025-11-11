@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-MAX_ATTEMPTS=5
+#TODO: reset this to 5 once the cache reset endpoint issue (ssh tunnel?) has been fixed
+MAX_ATTEMPTS=0
 
 function usage {
     echo "refresh-cdd-oncotree-cache.sh"

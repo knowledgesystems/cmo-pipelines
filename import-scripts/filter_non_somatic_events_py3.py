@@ -8,8 +8,8 @@ the file where every event which is not noted as SOMATIC has been removed.
 Usage:
     python3 filter_non_somatic_events_py3.py $INPUT_FILE_PATH $OUTPUT_FILE_PATH --event-type $FILE_TYPE \
 Example:
-    python3 filter_non_somatic_events_py3.py /path/to/az_mskimpact/data_mutation_extended.txt \
-        /path/to/az_mskimpact/data_mutation_extended.txt.filtered --event-type mutation
+    python3 filter_non_somatic_events_py3.py /path/to/az-msk-impact-2022/data_mutation_extended.txt \
+        /path/to/az-msk-impact-2022/data_mutation_extended.txt.filtered --event-type mutation
 """
 
 import argparse
@@ -45,7 +45,7 @@ class LineProcessor:
         return line[0] == '#'
 
     def process(self, line):
-        """Process each line of the given file to remove all events that are not 'SOMATIC' or 'UNKNOWN'.
+        """Process each line of the given file to remove all events that are not 'SOMATIC'.
 
         Args:
             line (string): A line from the input file
@@ -63,34 +63,19 @@ class LineProcessor:
             self.header_was_written = True
             return
 
-        cols = line.split('\t')
-
-        # Event status column is required for both mutation and SV event types
-        event_status_col_index = -1
-        if self.event_type == EventType.MUTATION:
+        col_index = None
+        if event_type == EventType.MUTATION:
             if 'Mutation_Status' not in self.col_indices:
                 raise IndexError('Unable to find Mutation_status column in event file')
-            event_status_col_index = self.col_indices['Mutation_Status']
-        elif self.event_type == EventType.STRUCTURAL_VARIANT:
+            col_index = self.col_indices['Mutation_Status']
+        elif event_type == EventType.STRUCTURAL_VARIANT:
             if 'SV_Status' not in self.col_indices:
                 raise IndexError('Unable to find SV_Status column in event file')
-            event_status_col_index = self.col_indices['SV_Status']
-        event_status_value = cols[event_status_col_index].rstrip('\n')
+            col_index = self.col_indices['SV_Status']
 
-        # PATH_SCORE col is only provided for mutation event types, and shouldn't error if not found for SV event types
-        path_score_col_index = self.col_indices.get('PATH_SCORE')
-        path_score_value = cols[path_score_col_index].rstrip('\n') if path_score_col_index else ''
-
-        # Filter out germline events that are not pathogenic/likely pathogenic
-        # This means that all germline SV events will be filtered out until we have a PATH_SCORE column for SV
-        if (
-            event_status_value.casefold() == 'somatic'
-            or event_status_value.casefold() == 'unknown'
-            or (
-                event_status_value.casefold() == 'germline'
-                and path_score_value.casefold() in ('likely pathogenic', 'pathogenic')
-            )
-        ):
+        cols = line.split('\t')
+        value = cols[col_index].rstrip('\n')
+        if value.casefold() == 'SOMATIC'.casefold():
             self.output_file_handle.write(line)
 
 
@@ -102,12 +87,12 @@ class FilteredFileWriter:
         self.output_file_path = output_file_path
         self.event_type = event_type
         self.data_handler = DataHandler(input_file_path)
-        self.col_indices = self.data_handler.get_col_indices({"Mutation_Status", "SV_Status", "PATH_SCORE"})
+        self.col_indices = self.data_handler.get_col_indices({"Mutation_Status", "SV_Status"})
 
     def write(self):
         """Processes the input file and writes out a filtered version including only somatic events"""
-        with open(self.input_file_path, "r") as input_file_handle:
-            with open(self.output_file_path, "w") as output_file_handle:
+        with open(input_file_path, "r") as input_file_handle:
+            with open(output_file_path, "w") as output_file_handle:
                 line_processor = LineProcessor(self.event_type, self.col_indices, output_file_handle)
                 for line in input_file_handle:
                     line_processor.process(line)

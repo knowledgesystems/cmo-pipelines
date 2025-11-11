@@ -11,10 +11,10 @@ Usage:
     python3 anonymize_age_at_seq_with_cap_py3.py $INPUT_PATIENT_FILE_PATH $OUTPUT_PATIENT_FILE_PATH $INPUT_SAMPLE_FILE_PATH $OUTPUT_SAMPLE_FILE_PATH [ --upper-age-limit $UPPER_AGE_LIMIT ] [ --os-months-precision $OS_MONTHS_PRECISION ]
 Example:
     python3 anonymize_age_at_seq_with_cap_py3.py \
-            path/to/az_mskimpact/data_clinical_patient.txt \
-            path/to/az_mskimpact/data_clinical_patient_output.txt \
-            path/to/az_mskimpact/data_clinical_sample.txt \
-            path/to/az_mskimpact/data_clinical_sample_output.txt \
+            path/to/az-msk-impact-2022/data_clinical_patient.txt \
+            path/to/az-msk-impact-2022/data_clinical_patient_output.txt \
+            path/to/az-msk-impact-2022/data_clinical_sample.txt \
+            path/to/az-msk-impact-2022/data_clinical_sample_output.txt \
             --upper-age-limit 89
             --os-months-precision 2
 """
@@ -88,7 +88,7 @@ class PatientLineProcessor(LineProcessor):
         self.os_months_precision = os_months_precision
 
     def apply_age_current_limit(self, cols, patient_id_col_index, age_current_col_index):
-        """Applies age limits to the 'AGE_CURRENT' column:
+        """Applies age limits to the 'AGE_AT_SEQ_REPORTED_YEARS' column:
             If 'AGE_CURRENT' > upper_age_limit, this function will overwrite the value of
                 'AGE_CURRENT' to '>{upper_age_limit}'.
 

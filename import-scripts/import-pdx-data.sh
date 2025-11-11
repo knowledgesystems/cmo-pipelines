@@ -14,17 +14,16 @@ declare -a study_list
 
 # Functions
 
-source "$PORTAL_HOME/scripts/slack-message-functions.sh"
-
+# Function for alerting slack channel of any failures
 function sendFailureMessageMskPipelineLogsSlack {
     MESSAGE=$1
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "$MESSAGE :tired_face:"
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"$MESSAGE\", \"icon_emoji\": \":tired_face:\"}" $SLACK_PIPELINES_MONITOR_URL
 }
 
 # Function for alerting slack channel of successful imports
 function sendSuccessMessageMskPipelineLogsSlack {
     MESSAGE=$1
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "$MESSAGE"
+    curl -X POST --data-urlencode "payload={\"channel\": \"#msk-pipeline-logs\", \"username\": \"cbioportal_importer\", \"text\": \"$MESSAGE\", \"icon_emoji\": \":tada:\"}" $SLACK_PIPELINES_MONITOR_URL
 }
 
 function purgeOrigFilesUnderDirectory {
@@ -134,16 +133,17 @@ if [[ -d "$CRDB_PDX_TMPDIR" && "$CRDB_PDX_TMPDIR" != "/" ]] ; then
 fi
 
 IMPORTER_JAR_LABEL=CMO
-IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-blue-importer.jar
+IMPORTER_JAR_FILENAME=$PORTAL_HOME/lib/msk-cmo-importer.jar
 IMPORTER_DEBUG_PORT=27182
 CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
 importer_notification_file=$(mktemp $CRDB_PDX_TMPDIR/importer-update-notification.$now.XXXXXX)
+SLACK_PIPELINES_MONITOR_URL=`cat $SLACK_URL_FILE`
 ENABLE_DEBUGGING=0
 java_debug_args=""
 if [ $ENABLE_DEBUGGING != "0" ] ; then
     java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=$IMPORTER_DEBUG_PORT"
 fi
-JAVA_CRDB_FETCHER_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED -jar $CRDB_FETCHER_JAR_FILENAME"
+JAVA_CRDB_FETCHER_ARGS="-jar $CRDB_FETCHER_JAR_FILENAME"
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CRDB_PDX_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 SUBSET_AND_MERGE_WARNINGS_FILENAME="subset_and_merge_pdx_studies_warnings.txt"
 # status flags (set to 1 when each stage is successfully completed)
@@ -294,19 +294,18 @@ if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
             IMPORT_SUCCESS=1
         fi
         num_studies_updated=`cat $CRDB_PDX_TMPDIR/num_studies_updated.txt`
-#### ROB : 2025_08_17 - persistence cache reset will now happen at the color transition instead
-####        # clear persistence cache (note : this script is constructing studies for the msk portal, including mskimpact sample data - that is why the msk portal cache is cleared)
-####        if [[ $IMPORT_SUCCESS -ne 0 && $num_studies_updated -gt 0 ]]; then
-####            echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portal ..."
-####            if ! clearPersistenceCachesForMskPortals ; then
-####                sendClearCacheFailureMessage msk import-pdx-data.sh
-####            else
-####                CLEAR_PERSISTENCE_CACHE_SUCCESS=1
-####            fi
-####        else
-####            echo "No studies have been updated, not clearing persistence cache for msk portal..."
-####            CLEAR_PERSISTENCE_CACHE_SUCCESS=1
-####        fi
+        # clear persistence cache (note : this script is constructing studies for the msk portal, including mskimpact sample data - that is why the msk portal cache is cleared)
+        if [[ $IMPORT_SUCCESS -ne 0 && $num_studies_updated -gt 0 ]]; then
+            echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portal ..."
+            if ! clearPersistenceCachesForMskPortals ; then
+                sendClearCacheFailureMessage msk import-pdx-data.sh
+            else
+                CLEAR_PERSISTENCE_CACHE_SUCCESS=1
+            fi
+        else
+            echo "No studies have been updated, not clearing persistence cache for msk portal..."
+            CLEAR_PERSISTENCE_CACHE_SUCCESS=1
+        fi
     fi
 fi
 

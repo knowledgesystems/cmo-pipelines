@@ -19,8 +19,8 @@ ACCESS_CONSUME_IDS_FILEPATH="$TMP_DIR/access_consume.ids"
 COMBINED_CONSUME_IDS_FILEPATH="$TMP_DIR/combined_consume.ids"
 CONSUME_ATTEMPT_OUTPUT_FILEPATH="$TMP_DIR/consume_attempt_output.json"
 DETECT_SAMPLES_TO_CONSUME_SCRIPT_FILEPATH=/data/portal-cron/scripts/detect_samples_with_null_dp_ad_fields.py
-
-source "$PORTAL_HOME/scripts/slack-message-functions.sh"
+CVR_MONITOR_SLACK_URI_FILE="/data/portal-cron/pipelines-credentials/cvr-monitor-webhook-uri"
+CVR_MONITOR_URI=$(cat "$CVR_MONITOR_SLACK_URI_FILE")
 
 function make_tmp_dir_if_necessary() {
     if ! [ -d "$TMP_DIR" ] ; then
@@ -68,14 +68,6 @@ function attempt_to_consume_samples() {
     done < ${COMBINED_CONSUME_IDS_FILEPATH}
 }
 
-function consume_hardcoded_samples() {
-    rm -f "${COMBINED_CONSUME_IDS_FILEPATH}"
-    echo "P-0025907-N01-IM6" > "${COMBINED_CONSUME_IDS_FILEPATH}"
-    if [ -f "${COMBINED_CONSUME_IDS_FILEPATH}" ] ; then
-        attempt_to_consume_samples
-    fi
-}
-
 function log_actions() {
     date
     echo -e "consumed the following samples with malformed events:\n${succeeded_to_consume_sample_list[*]}"
@@ -88,14 +80,11 @@ function post_slack_message() {
     if [ ${#failed_to_consume_sample_list[@]} -gt 0 ]; then
         MESSAGE="${MESSAGE} Attempted Unsuccessfully To Consume :\n${failed_to_consume_sample_list[*]}"
     fi
-    send_slack_message_to_channel "#msk-cvr" "blocks" "$MESSAGE"
+    curl -X POST -H 'Content-type: application/json' --data '{"blocks": [ { "type": "section", "text": { "type": "mrkdwn", "text": "'"$MESSAGE"'" } } ] }' "$CVR_MONITOR_URI"
 }
 
 date
 make_tmp_dir_if_necessary
-failed_to_consume_sample_list=() # temporary code
-succeeded_to_consume_sample_list=() # temporary code
-consume_hardcoded_samples # temporary code
 fetch_currently_queued_samples
 detect_samples_with_malformed_events
 exit_if_no_malformed_events_detected

@@ -575,6 +575,11 @@ def main():
             # update user authorities
             update_user_authorities(google_spreadsheet, cursor, sheet_records, app_name)
 
+            # commit changes before moving on to next spreadsheet
+            cursor.close()
+            connection.commit()
+            connection.close()
+
             # sending emails
             if new_user_map is not None:
                 if send_email_confirm == 'true':
@@ -597,11 +602,6 @@ def main():
                             send_mail([new_user.inst_email],subject,body, gmail_username, gmail_password, sender = from_field, bcc = bcc_field)
                         else:
                             send_mail([new_user_key], error_subject, error_body, gmail_username, gmail_password, sender = from_field, bcc = bcc_field)
-
-            # commit changes before moving on to next spreadsheet
-            cursor.close()
-            connection.commit()
-            connection.close()
 
 # ------------------------------------------------------------------------------
 # ready to roll

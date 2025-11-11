@@ -20,7 +20,7 @@ Usage:
         --output-dir $OUTPUT_DIR
 
 Example:
-    python3 generate_az_study_changelog_py3.py /path/to/az_mskimpact/
+    python3 generate_az_study_changelog_py3.py /path/to/az-msk-impact-2022/
 
 When `--output-filename` and `--output-dir` are not provided, the summary file
 is written to `$DATA_REPO_PATH/changelog_summary.txt` by default.
@@ -95,17 +95,16 @@ class DataHandler:
 
         return ret_map
 
-    def is_git_diff_header(self, line_tokens, mode):
+    def is_git_diff_header(self, line_tokens):
         """Determines if the given git diff line belongs to the git diff header.
 
         Args:
             line_tokens (list): Tab delimited values from the git diff line
-            mode (string): '+' or '-' as indicated by git diff
 
         Returns:
             boolean: True or False, indicating if the line belongs to the diff header
         """
-        return len(line_tokens) == 1 or mode not in {'-', '+'}
+        return len(line_tokens) == 1 or line_tokens[0][0] not in {'-', '+'}
 
     def is_commented_line(self, line_tokens):
         """Determines if the given git diff line is commented out and should not be processed.
@@ -116,7 +115,7 @@ class DataHandler:
         Returns:
             boolean: True or False, indicating if the line is commented
         """
-        return line_tokens[0][0] == '#'
+        return line_tokens[0][1] == '#'
 
     def is_data_header_line(self, line_tokens):
         """Determines if the given git diff line contains column names for the data file.
@@ -147,26 +146,21 @@ class DataHandler:
 
         # Obtain git diff for the file
         diff_info = g.diff('--unified=0', '--', self.data_path)
-
-        # Check if there is a git diff to process
-        if not diff_info:
-            return
-
         lines = diff_info.split('\n')
+
         for line in lines:
             tokens = line.split('\t')
-
-            # Git prepends each line of git diff with a '+' or '-'
-            # We will use this to correctly parse the changes to each line
-
-            mode = tokens[0][0]
-            tokens[0] = tokens[0][1:]
 
             # Only want to process the file contents (tab-delimited data)
             # Ignore commented lines - they are tab delimited, and will be marked as added on first commit
             # Ignore row that contains column names - this will be marked as added on first commit
-            if self.is_git_diff_header(tokens, mode) or self.is_commented_line(tokens) or self.is_data_header_line(tokens):
+            if self.is_git_diff_header(tokens) or self.is_commented_line(tokens) or self.is_data_header_line(tokens):
                 continue
+
+            # Git prepends each line of git diff with a '+' or '-'
+            # We will use this to correctly parse the changes to each line
+            mode = tokens[0][0]
+            tokens[0] = tokens[0][1:]
 
             yield mode, tokens
 

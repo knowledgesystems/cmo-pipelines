@@ -25,33 +25,31 @@ fi
 
 source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 
-# Get the current production database color
-GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_database_update_tools.properties"
-current_production_database_color=$($GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
-destination_database_color="unset"
-if [ ${current_production_database_color:0:4} == "blue" ] ; then
-    destination_database_color="green"
-fi
-if [ ${current_production_database_color:0:5} == "green" ] ; then
-    destination_database_color="blue"
-fi
-if [ "$destination_database_color" == "unset" ] ; then
-    echo "Error during determination of the destination database color" >&2
-    exit 1
-fi
-
-MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-dmp-$destination_database_color-importer.jar"
-MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
-JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$MSK_JAVA_IMPORTER_ARGS"
-
 IMPORT_FAIL=0
 mskspectrum_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskspectrum-portal-update-notification.$now.XXXXXX)
 # update msk-spectrum github repo
 fetch_updates_in_data_sources "datahub_shahlab"
 
+# fetch ddp timeline data
+printTimeStampedDataProcessingStepMessage "DDP demographics fetch for MSKSPECTRUM"
+mskspectrum_dmp_pids_file=$MSK_DMP_TMPDIR/mskspectrum_patient_list.txt
+grep -v "^#" $MSK_SPECTRUM_COHORT_DATA_HOME/data_clinical_patient.txt | cut -f1 | grep -v "PATIENT_ID" | sort | uniq > $mskspectrum_dmp_pids_file
+MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT=$(wc -l < $mskspectrum_dmp_pids_file)
+if [ $MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT -le $DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT ] ; then
+    MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT=$DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT
+fi
+
+$JAVA_BINARY $JAVA_DDP_FETCHER_ARGS -c mskspectrum -p $mskspectrum_dmp_pids_file -f diagnosis,radiation,chemotherapy,surgery,survival -o $MSK_SPECTRUM_COHORT_DATA_HOME -r $MSKSPECTRUM_DDP_DEMOGRAPHICS_RECORD_COUNT
+if [ $? -gt 0 ] ; then
+    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub_shahlab
+    sendPreImportFailureMessageMskPipelineLogsSlack "MSKSPECTRUM DDP Timeline Fetch"
+else
+    echo "commit ddp timeline data for MSKSPECTRUM"
+    cd $MSK_SHAHLAB_DATA_HOME ; rm -f $MSK_SPECTRUM_COHORT_DATA_HOME/data_clinical_ddp.txt ; $GIT_BINARY add $MSK_SPECTRUM_COHORT_DATA_HOME/data_timeline* ; $GIT_BINARY commit -m "Latest MSKSPECTRUM DDP timeline data" ; $GIT_BINARY push origin
+fi
+
 # update mskspectrum cohort in portal
-$JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-spectrum-portal --notification-file $mskspectrum_notification_file --oncotree-version $ONCOTREE_VERSION_TO_USE --transcript-overrides-source mskcc --disable-redcap-export
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal msk-spectrum-portal --notification-file $mskspectrum_notification_file --oncotree-version $ONCOTREE_VERSION_TO_USE --transcript-overrides-source mskcc --disable-redcap-export
 if [ $? -gt 0 ]; then
     echo "MSKSPECTRUM update failed!"
     IMPORT_FAIL=1
@@ -67,17 +65,16 @@ else
     num_studies_updated=0
 fi
 
-#### ROB : 2025_08_17 - persistence cache reset will now happen at the color transition instead
-##### clear persistence cache
-####if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
-####    echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portals..."
-####    if ! clearPersistenceCachesForMskPortals ; then
-####        sendClearCacheFailureMessage msk update-msk-spectrum-cohort.sh
-####    fi
-####else
-####    echo "No studies have been updated, not clearing persistence cache for msk portals..."
-####fi
+# clear persistence cache
+if [[ $IMPORT_FAIL -eq 0 && $num_studies_updated -gt 0 ]]; then
+    echo "'$num_studies_updated' studies have been updated, clearing persistence cache for msk portals..."
+    if ! clearPersistenceCachesForMskPortals ; then
+        sendClearCacheFailureMessage msk update-msk-spectrum-cohort.sh
+    fi
+else
+    echo "No studies have been updated, not clearing persistence cache for msk portals..."
+fi
 
 # clean up msk-spectrum repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub_shahlab
-$JAVA_BINARY $JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY --send-update-notification --portal msk-spectrum-portal --notification-file "$mskspectrum_notification_file"
+$JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal msk-spectrum-portal --notification-file "$mskspectrum_notification_file"

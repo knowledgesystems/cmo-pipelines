@@ -1,0 +1,8 @@
+·ç­Tÿ5=d³A¸q‘\„ä‰ÿm< æ¸Í€Ðf
+¸/HTTP/2.0 200 OK
+Content-Length: 704
+Cache-Control: no-cache, private
+Content-Type: application/json
+Date: Fri, 21 Jul 2023 16:23:29 GMT
+
+{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"policy/v1beta1","resources":[{"name":"poddisruptionbudgets","singularName":"","namespaced":true,"kind":"PodDisruptionBudget","verbs":["create","delete","deletecollection","get","list","patch","update","watch"],"shortNames":["pdb"],"storageVersionHash":"6BGBu0kpHtk="},{"name":"poddisruptionbudgets/status","singularName":"","namespaced":true,"kind":"PodDisruptionBudget","verbs":["get","patch","update"]},{"name":"podsecuritypolicies","singularName":"","namespaced":false,"kind":"PodSecurityPolicy","verbs":["create","delete","deletecollection","get","list","patch","update","watch"],"shortNames":["psp"],"storageVersionHash":"khBLobUXkqA="}]}

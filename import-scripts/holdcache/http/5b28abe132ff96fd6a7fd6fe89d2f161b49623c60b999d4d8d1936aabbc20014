@@ -1,0 +1,7 @@
+˜o—™á$ ªMîîäÚ)`@uÿ%D™jßñHTTP/2.0 200 OK
+Content-Length: 207
+Cache-Control: no-cache, private
+Content-Type: application/json
+Date: Fri, 21 Jul 2023 16:23:29 GMT
+
+{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"authentication.k8s.io/v1beta1","resources":[{"name":"tokenreviews","singularName":"","namespaced":false,"kind":"TokenReview","verbs":["create"]}]}

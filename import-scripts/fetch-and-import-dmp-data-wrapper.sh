@@ -117,3 +117,4 @@ function output_whether_preimport_steps_successfully_completed() {
     date
     echo "wrapper complete"
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH
+

@@ -2,7 +2,7 @@
 
 export CMO_EMAIL_LIST="cbioportal-cmo-importer@cbioportal.org"
 export PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
-export ALL_DATA_SOURCES="genie bic-mskcc-legacy cmo-argos private impact impact-MERGED knowledge-systems-curated-studies datahub datahub_shahlab msk-mind-datahub dmp pipelines-testing"
+export ALL_DATA_SOURCES="bic-mskcc-legacy cmo-argos private impact impact-MERGED knowledge-systems-curated-studies datahub datahub_shahlab msk-mind-datahub dmp pipelines-testing"
 
 unset DATA_SOURCE_NAME_TO_START_LOG_MESSAGE
 declare -Ax DATA_SOURCE_NAME_TO_START_LOG_MESSAGE
@@ -49,7 +49,7 @@ function fetch_updates_in_data_source {
     email_recipient=$7
 
     echo $start_log_msg
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY --fetch-data --data-source $data_source --run-date latest $extra_importer_args
+    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source $data_source --run-date latest $extra_importer_args
     if [ $? -ne 0 ]; then
         echo $failure_log_msg
         echo -e "Sending email $email_body"

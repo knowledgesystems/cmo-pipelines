@@ -76,3 +76,4 @@ fi
 $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup msk $DATA_SOURCES_TO_BE_FETCHED
 EMAIL_BODY=`cat $extract_projects_notification_file`
 echo -e "The following Extract projects have been added or updated in the MSK cBioPortal:\n\n$EMAIL_BODY" | mail -r "cbioportal-pipelines@cbioportal.org" -s "Updates to MSK cBioPortal (Extract Projects)" $PIPELINES_EMAIL_LIST
+

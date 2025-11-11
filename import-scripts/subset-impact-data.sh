@@ -6,11 +6,7 @@
 # (4): data filter criteria to subset IMPACT data with (either SEQ_DATE or <ATTRIBUTE_NAME>=[ATTRIBUTE_VAL1,ATTRIBUTE_VAL2,...])
 # (5): output subset filename
 # (6): data_clinical filename containing attribute being filtered in (4)
-# (7): portal scripts directory
-# (8): independent metadata filename
-# (9): whether to include MSK-CHORD data elements in the subset
 
-INCLUDE_MSK_CHORD_DATA="false"
 for i in "$@"; do
 case $i in
     -i=*|--study-id=*)
@@ -33,20 +29,12 @@ case $i in
     SUBSET_FILENAME="${i#*=}"
     shift # past argument=value
     ;;
-    -c=*|--clinical-filename=*)
-    CLINICAL_FILENAME="${i#*=}"
-    shift # past argument=value
-    ;;
     -p=*|--portal-scripts-directory=*)
     PORTAL_SCRIPTS_DIRECTORY="${i#*=}"
     shift # past argument=value
     ;;
-    -m=*|--metadata-filename=*)
-    METADATA_FILENAME="${i#*=}"
-    shift # past argument=value
-    ;;
-    -h=*|--include-msk-chord-data)
-    INCLUDE_MSK_CHORD_DATA="true"
+    -c=*|--clinical-filename=*)
+    CLINICAL_FILENAME="${i#*=}"
     shift # past argument=value
     ;;
     *)
@@ -55,15 +43,6 @@ case $i in
     ;;
 esac
 done
-if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
-    PORTAL_SCRIPTS_DIRECTORY="$PORTAL_HOME/scripts"
-fi
-if [ -z $METADATA_FILENAME ]; then
-    if [ -f $PORTAL_SCRIPTS_DIRECTORY/cdm_metadata.json ] ; then
-        METADATA_FILENAME="$PORTAL_SCRIPTS_DIRECTORY/cdm_metadata.json"
-    fi
-fi
-
 echo "Input arguments: "
 echo -e "\tSTUDY_ID="$STUDY_ID
 echo -e "\tOUTPUT_DIRECTORY="$OUTPUT_DIRECTORY
@@ -71,17 +50,15 @@ echo -e "\tINPUT_DIRECTORY="$INPUT_DIRECTORY
 echo -e "\tFILTER_CRITERIA="$FILTER_CRITERIA
 echo -e "\tSUBSET_FILENAME="$SUBSET_FILENAME
 echo -e "\tCLINICAL_FILENAME="$CLINICAL_FILENAME
+if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
+    PORTAL_SCRIPTS_DIRECTORY="$PORTAL_HOME/scripts"
+fi
 echo -e "\tPORTAL_SCRIPTS_DIRECTORY="$PORTAL_SCRIPTS_DIRECTORY
-echo -e "\tMETADATA_FILENAME="$METADATA_FILENAME
-echo -e "\tINCLUDE_MSK_CHORD_DATA="$INCLUDE_MSK_CHORD_DATA
 
 # status flags
 GEN_SUBSET_LIST_FAILURE=0
 MERGE_SCRIPT_FAILURE=0
 ADD_METADATA_HEADERS_FAILURE=0
-SUBSET_CDM_TIMELINE_FILES_FAILURE=0
-
-source $PORTAL_SCRIPTS_DIRECTORY/filter-clinical-arg-functions.sh
 
 if [ $STUDY_ID == "genie" ]; then
     # in the case of genie data, the input data directory must be the mskimpact data home, where we expect to see ddp_naaccr.txt
@@ -126,9 +103,9 @@ if [ $STUDY_ID == "genie" ]; then
 
         # add age at seq report using cvr/seq_date.txt
         echo "Adding AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt"
-        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-output-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --clinical-sample-file="$INPUT_DIRECTORY/data_clinical_sample.txt" --convert-to-days="true"
+        $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add-age-at-seq-report.py --clinical-file="$OUTPUT_DIRECTORY/data_clinical_supp_sample.txt" --seq-date-file="$INPUT_DIRECTORY/cvr/seq_date.txt" --age-file="$INPUT_DIRECTORY/ddp/ddp_age.txt" --convert-to-days="true"
         if [ $? -gt 0 ] ; then
-            echo "Failed to add AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt using $INPUT_DIRECTORY/data_clinical_sample.txt. Exiting..."
+            echo "Failed to add AGE_AT_SEQ_REPORT to $OUTPUT_DIRECTORY/data_clinical_supp_sample.txt using $INPUT_DIRECTORY/cvr/seq_date.txt. Exiting..."
             exit 2l
         fi
 
@@ -166,34 +143,12 @@ else
         if [ $? -gt 0 ]; then
             MERGE_SCRIPT_FAILURE=1
         else
-            # Filter CDM elements from clinical files if necessary
-            if [ $INCLUDE_MSK_CHORD_DATA == "false" ]; then
-                filter_cdm_clinical_elements $OUTPUT_DIRECTORY
-            fi
-
             # add clinical meta data headers if clinical sample file exists
             if [ -f $OUTPUT_DIRECTORY/data_clinical_sample.txt ]; then
                 echo "Adding clinical attribute meta data headers..."
-                # Determine if independent metadata filename flag should be included
-                if [ -z ${METADATA_FILENAME} ]; then
-                    METADATA_ARGS=""
-                else
-                    METADATA_ARGS="-i $METADATA_FILENAME"
-                fi
-                $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add_clinical_attribute_metadata_headers.py -f $OUTPUT_DIRECTORY/data_clinical* $METADATA_ARGS
+                $PYTHON_BINARY $PORTAL_SCRIPTS_DIRECTORY/add_clinical_attribute_metadata_headers.py -f $OUTPUT_DIRECTORY/data_clinical*
                 if [ $? -gt 0 ]; then
                     ADD_METADATA_HEADERS_FAILURE=1
-                fi
-            fi
-
-            if [ $INCLUDE_MSK_CHORD_DATA == "true" ]; then
-                # Subset CDM timeline files if they exist
-                # This is separate from the merge.py script because it takes too long to subset the quantity of CDM timeline files
-                if [ "$(ls -l $INPUT_DIRECTORY/data_timeline_*.txt 2>/dev/null | wc -l)" -gt 0 ]; then
-                    sh $PORTAL_SCRIPTS_DIRECTORY/subset-cdm-timeline-files.sh "$STUDY_ID" $OUTPUT_DIRECTORY $INPUT_DIRECTORY
-                    if [ $? -gt 0 ]; then
-                        SUBSET_CDM_TIMELINE_FILES_FAILURE=1
-                    fi
                 fi
             fi
         fi
@@ -214,11 +169,8 @@ fi
 if [ $ADD_METADATA_HEADERS_FAILURE -ne 0 ] ; then
     echo "Error while attempting to add clinical attribute meta data headers to $OUTPUT_DIRECTORY/data_clinical*"
 fi
-if [ $SUBSET_CDM_TIMELINE_FILES_FAILURE -ne 0 ] ; then
-    echo "Error while attempting to subset CDM timeline files from $INPUT_DIRECTORY to $OUTPUT_DIRECTORY"
-fi
 # exit accordingly
-if [[ $GEN_SUBSET_LIST_FAILURE -eq 0 && $MERGE_SCRIPT_FAILURE -eq 0 && $ADD_METADATA_HEADERS_FAILURE -eq 0 && $SUBSET_CDM_TIMELINE_FILES_FAILURE -eq 0 ]] ; then
+if [[ $GEN_SUBSET_LIST_FAILURE -eq 0 && $MERGE_SCRIPT_FAILURE -eq 0 && $ADD_METADATA_HEADERS_FAILURE -eq 0 ]] ; then
     echo "Successfully subset data from $INPUT_DIRECTORY by filter criteria $FILTER_CRITERIA"
     exit 0
 else

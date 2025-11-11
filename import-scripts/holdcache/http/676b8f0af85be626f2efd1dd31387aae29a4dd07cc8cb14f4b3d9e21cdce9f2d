@@ -1,0 +1,7 @@
+¼Z«ìEsÝrˆG S>diG"g;@¦H»÷ŠZ|è¬7HTTP/2.0 200 OK
+Content-Length: 765
+Cache-Control: no-cache, private
+Content-Type: application/json
+Date: Fri, 21 Jul 2023 16:23:29 GMT
+
+{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"certmanager.k8s.io/v1alpha1","resources":[{"name":"certificates","singularName":"certificate","namespaced":true,"kind":"Certificate","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"shortNames":["cert","certs"],"storageVersionHash":"x3gJkHOGQto="},{"name":"clusterissuers","singularName":"clusterissuer","namespaced":false,"kind":"ClusterIssuer","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"reakstCytMM="},{"name":"issuers","singularName":"issuer","namespaced":true,"kind":"Issuer","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"yQaBqq73YD0="}]}
