@@ -18,6 +18,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     fi
     # set data source env variables
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
+    source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
     source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 
     tmp=$PORTAL_HOME/tmp/import-cron-cmo-msk
@@ -42,26 +43,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     DATA_SOURCES_TO_BE_FETCHED="bic-mskcc-legacy cmo-argos private impact datahub_shahlab msk-mind-datahub"
     GMAIL_USERNAME=`grep gmail_username $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
     GMAIL_PASSWORD=`grep gmail_password $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
-
-    # Get the current production database color
-    GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
-    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_database_update_tools.properties"
-    current_production_database_color=$($GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
-    destination_database_color="unset"
-    if [ ${current_production_database_color:0:4} == "blue" ] ; then
-        destination_database_color="green"
-    fi
-    if [ ${current_production_database_color:0:5} == "green" ] ; then
-        destination_database_color="blue"
-    fi
-    if [ "$destination_database_color" == "unset" ] ; then
-        echo "Error during determination of the destination database color" >&2
-        exit 1
-    fi
-    DATA_SOURCE_MANAGER_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/data_source_repo_clone_manager.sh"
-    DATA_SOURCE_MANAGER_CONFIG_FILEPATH="$PORTAL_HOME/pipelines-credentials/importer-data-source-manager-config.yaml"
-    CMO_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-cmo-$destination_database_color-importer.jar"
-    CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    unset failed_data_source_fetches
+    declare -a failed_data_source_fetches
 
     # Get the current production database color
     GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
@@ -93,10 +76,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         fi
     fi
 
-    DATA_SOURCE_REPO_FETCH_FAIL=0
-    if ! $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull $DATA_SOURCES_TO_BE_FETCHED ; then
-        DATA_SOURCE_REPO_FETCH_FAIL=1
-    fi
+    # fetch updates to data source repos
+    $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull msk bic-mskcc-legacy cmo-argos private datahub_shahlab msk-mind
 
     DB_VERSION_FAIL=0
     # check database version before importing anything
@@ -107,7 +88,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         DB_VERSION_FAIL=1
     fi
 
-    if [[ $DB_VERSION_FAIL -eq 0 && $DATA_SOURCE_REPO_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
+    if [[ $DB_VERSION_FAIL -eq 0 && ${#failed_data_source_fetches[*]} -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
         # import vetted studies into MSK portal
         echo "importing cancer type updates into msk portal database..."
         $JAVA_BINARY -Xmx16g $CMO_JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
@@ -133,7 +114,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     fi
 
     echo "Cleaning up any untracked files from MSK-CMO import..."
-    $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup $DATA_SOURCES_TO_BE_FETCHED
+    $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup msk bic-mskcc-legacy cmo-argos private datahub_shahlab msk-mind
 
     $JAVA_BINARY $CMO_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
 
