@@ -12,7 +12,6 @@
 
 declare -a BLUE_SERVICE_LIST=()
 declare -a GREEN_SERVICE_LIST=()
-YQ_BINARY=${YQ_BINARY:-yq}
 
 function read_scalar() {
     local key="$1"
