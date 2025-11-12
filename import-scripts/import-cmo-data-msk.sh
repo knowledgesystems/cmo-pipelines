@@ -18,6 +18,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     fi
     # set data source env variables
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
+    source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
     source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 
     tmp=$PORTAL_HOME/tmp/import-cron-cmo-msk
