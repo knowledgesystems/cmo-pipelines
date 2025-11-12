@@ -36,6 +36,7 @@ def write_tsv(df, path, **opts):
     df.to_csv(
         path,
         sep="\t",
+        escapechar='\\',
         **opts,
     )
 

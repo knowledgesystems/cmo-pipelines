@@ -150,6 +150,8 @@ function consume_hardcoded_samples() {
     touch ${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}
     if [ "$COHORT" == "mskimpact" ] ; then
         echo "P-0025907-N01-IM6" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
+        echo "P-0122986-N01-IM7" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
+        echo "P-0123948-N01-IM7" >> "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}"
     fi
     if [ -f "${PROBLEMATIC_METADATA_CONSUME_IDS_FILEPATH}" ] ; then
         # Won't register attempt (so it doesn't show up in logs every night)
