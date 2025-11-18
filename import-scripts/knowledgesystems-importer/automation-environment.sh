@@ -56,6 +56,7 @@ export PYTHON3_BINARY=/usr/bin/python3
 export MAVEN_BINARY=/opt/apache-maven-3.8.6/bin/mvn
 export HG_BINARY=/usr/bin/hg
 export GIT_BINARY=/usr/bin/git
+export YQ_BINARY=/home/cbioportal_importer/bin/yq
 export PATH=$(bash --login -c 'echo $PATH')
 
 #######################
@@ -81,19 +82,6 @@ export AWS_SSL_TRUSTSTORE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore
 export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore.password
 export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
 export GMAIL_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/gmail.credentials
-export START_GENIE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/genie-import-start-request
-export KILL_GENIE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/genie-import-kill-request
-export GENIE_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/genie-import-in-progress
-export GENIE_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/genie-import-killing
-export GENIE_IMPORT_VERSION_EMAIL_INHIBIT_FILENAME=$PORTAL_HOME/import-trigger/genie-import-version-email-inhibit
-export START_TRIAGE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/triage-import-start-request
-export KILL_TRIAGE_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/triage-import-kill-request
-export TRIAGE_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/triage-import-in-progress
-export TRIAGE_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/triage-import-killing
-export START_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-start-request
-export KILL_HGNC_IMPORT_TRIGGER_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-kill-request
-export HGNC_IMPORT_IN_PROGRESS_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-in-progress
-export HGNC_IMPORT_KILLING_FILENAME=$PORTAL_HOME/import-trigger/hgnc-import-killing
 export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-kubeconfig
 export PUBLICARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/publicargocd-cluster-kubeconfig
 export EKS_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eks-cluster-kubeconfig
@@ -131,6 +119,8 @@ export MSK_SHAHLAB_DATA_HOME=$PORTAL_DATA_HOME/datahub_shahlab
 #######################
 #export INHIBIT_RECACHING_FROM_TOPBRAID=true
 export CASE_LIST_CONFIG_FILE=$PIPELINES_CONFIG_HOME/resources/case_list_config.tsv
+export SKIP_VERIFICATION_OF_GENETIC_ALTERATION_COPIES="yes"
+export SLING_GENETIC_ALTERATION_DATA_IN_CHUNKS="yes"
 
 #######################
 # environment variables used in the fetch-and-import-dmp-impact-data script

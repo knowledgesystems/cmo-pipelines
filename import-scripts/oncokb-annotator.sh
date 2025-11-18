@@ -210,12 +210,15 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
 
     # Update DMP repo before running annotations
     if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
-        echo $(date)
-        echo "Updating the DMP source repository..."
-        fetch_updates_in_data_sources dmp
-        if [ ${#failed_data_source_fetches[*]} -ne 0 ] ; then
-            echo "Failed to update the DMP source repository, exiting..."
-            ONCOKB_ANNOTATION_SUCCESS=0
+        # ROB : 2025_10_07 - fetching from dmp is failing due to blue/green importer effects. It is also not needed because this script will only run after the nightly dmp imports have completed.
+        if [ "$FORCE_ONCOKB_ANNOTATION_DMP_FETCH_ATTEMPT" == "yes" ] ; then
+            echo $(date)
+            echo "Updating the DMP source repository..."
+            fetch_updates_in_data_sources dmp
+            if [ ${#failed_data_source_fetches[*]} -ne 0 ] ; then
+                echo "Failed to update the DMP source repository, exiting..."
+                ONCOKB_ANNOTATION_SUCCESS=0
+            fi
         fi
     fi
 

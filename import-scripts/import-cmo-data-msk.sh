@@ -18,6 +18,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     fi
     # set data source env variables
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
+    source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
     source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 
     tmp=$PORTAL_HOME/tmp/import-cron-cmo-msk
@@ -63,24 +64,6 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     CMO_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-cmo-$destination_database_color-importer.jar"
     CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
-    # Get the current production database color
-    GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
-    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_database_update_tools.properties"
-    current_production_database_color=$($GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
-    destination_database_color="unset"
-    if [ ${current_production_database_color:0:4} == "blue" ] ; then
-        destination_database_color="green"
-    fi
-    if [ ${current_production_database_color:0:5} == "green" ] ; then
-        destination_database_color="blue"
-    fi
-    if [ "$destination_database_color" == "unset" ] ; then
-        echo "Error during determination of the destination database color" >&2
-        exit 1
-    fi
-    CMO_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-cmo-$destination_database_color-importer.jar"
-    CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
-
     CDD_ONCOTREE_RECACHE_FAIL=0
     if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
         # refresh cdd and oncotree cache
@@ -94,7 +77,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     fi
 
     DATA_SOURCE_REPO_FETCH_FAIL=0
-    if ! $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull $DATA_SOURCES_TO_BE_FETCHED ; then
+    if ! $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull msk $DATA_SOURCES_TO_BE_FETCHED ; then
         DATA_SOURCE_REPO_FETCH_FAIL=1
     fi
 
@@ -133,7 +116,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     fi
 
     echo "Cleaning up any untracked files from MSK-CMO import..."
-    $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup $DATA_SOURCES_TO_BE_FETCHED
+    $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup msk $DATA_SOURCES_TO_BE_FETCHED
 
     $JAVA_BINARY $CMO_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
 

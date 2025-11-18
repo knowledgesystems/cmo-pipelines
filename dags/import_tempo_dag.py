@@ -51,6 +51,7 @@ with DAG(
         task_id="import_tempo_data",
         ssh_conn_id=pipelines5_conn_id,
         command=f"{import_scripts_path}/import-tempo-data.sh {{ params.importer }}",
+        pool="triage_import_pool",
         dag=dag,
     )
 

@@ -8,7 +8,9 @@ if [ -z "$PORTAL_HOME" ] ; then
     export PORTAL_HOME=/data/portal-cron
 fi
 source "$PORTAL_HOME/scripts/slack-message-functions.sh"
-VERIFY_MANAGEMENT_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/import-msk-verify-management-state.sh"
+SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/set_update_process_state.sh"
+VERIFY_MANAGEMENT_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/verify-management-state.sh"
+COLOR_SWAP_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/msk-db-color-swap-config.yaml"
 MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_msk_database_update_tools.properties"
 MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/import-msk-preimport-steps-for-clickhouse.sh"
 MSK_PREIMPORT_STEPS_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/preimport-steps-for-clickhouse.out"
@@ -49,10 +51,20 @@ function output_whether_preimport_steps_successfully_completed() {
     day_of_week_at_process_start=$(date +%u)
     update_status_is_valid="no"
     databases_are_prepared_for_import="no"
-    if $VERIFY_MANAGEMENT_SCRIPT_FILEPATH "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" ; then
+    if $VERIFY_MANAGEMENT_SCRIPT_FILEPATH "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" "$COLOR_SWAP_CONFIG_FILEPATH" ; then
         update_status_is_valid="yes"
     fi
     if [ $update_status_is_valid == "yes" ] ; then
+        # Attempt to abandon any prior incomplete import attempt. Detect if already running.
+        if ! "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" running ; then 
+            echo "Warning : the update management database showed that a prior update attempt seemed to be running." 2>&1
+            echo "    Since this script is the only script which should be used to update the msk portal database," 2>&1
+            echo "    and because this script will not run if a run is in progress, we are inferring that the prior run" 2>&1
+            echo "    is no longer running and the update management database is incorrect. However, this inference will" 2>&1
+            echo "    no longer be valid if we introduce any other processes which might independently run an update" 2>&1
+            echo "    into the msk portal database. The update management database has been reset by abandoning the attempt." 2>&1
+        fi
+        "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned > /dev/null 2>&1
         # Launch the preimport setup script as a background process. This runs for about 2 hours and can run in parallel with fetches.
         rm "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH"
         nohup "$MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH" "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH" > $MSK_PREIMPORT_STEPS_OUTPUT_FILEPATH 2>&1 &

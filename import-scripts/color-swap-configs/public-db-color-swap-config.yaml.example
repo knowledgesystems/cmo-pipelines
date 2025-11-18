@@ -1,0 +1,48 @@
+service_account: public
+cluster_cfg: /data/portal-cron/pipelines-credentials/publicargocd-cluster-kubeconfig
+blue_deployment_list:
+  - cbioportal-backend-public-blue
+  - cbioportal-backend-public-beta-blue
+  - cbioportal-backend-master-blue
+green_deployment_list:
+  - cbioportal-backend-public-green
+  - cbioportal-backend-public-beta-green
+  - cbioportal-backend-master-green
+deployment_to_full_replica_count_map:
+  cbioportal-backend-public-blue: 4
+  cbioportal-backend-public-green: 4
+#  cbioportal-backend-public-beta-blue: 1
+#  cbioportal-backend-public-beta-green: 1
+  cbioportal-backend-public-beta-blue: 0
+  cbioportal-backend-public-beta-green: 0
+  cbioportal-backend-master-blue: 1
+  cbioportal-backend-master-green: 1
+deployment_to_yaml_filepath_map:
+  cbioportal-backend-public-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_blue.yaml
+  cbioportal-backend-public-beta-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_beta_blue.yaml
+  cbioportal-backend-master-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_master_blue.yaml
+  cbioportal-backend-public-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_green.yaml
+  cbioportal-backend-public-beta-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_beta_green.yaml
+  cbioportal-backend-master-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_master_green.yaml
+host_to_service_map:
+  blue:
+    www.cbioportal.org: cbioportal-backend-public-blue
+#    beta.cbioportal.org: cbioportal-backend-public-beta-blue
+    beta.cbioportal.org: cbioportal-backend-public-beta-offline
+    master.cbioportal.org: cbioportal-backend-master-blue
+  green:
+    www.cbioportal.org: cbioportal-backend-public-green
+#    beta.cbioportal.org: cbioportal-backend-public-beta-green
+    beta.cbioportal.org: cbioportal-backend-public-beta-offline
+    master.cbioportal.org: cbioportal-backend-master-green
+ingress_name: cbioportal-ingress
+ingress_yaml_filepath: argocd/aws/203403084713/clusters/cbioportal-prod/apps/ingress/cbio-ingress.yml
+replica_ready_check_pause_seconds: 20
+replica_ready_check_max_checkcount: 30
+temp_dir_path: /data/portal-cron/tmp/import-cron-public
+ks_k8s_depl_repo_dirpath: /data/portal-cron/git-repos/only_for_use_by_public_import_script/knowledgesystems-k8s-deployment
+warm_caches: false
+synchronize_user_tables: false
+clear_persistence_caches_blue_function: clearPersistenceCachesForPublicBluePortals
+clear_persistence_caches_green_function: clearPersistenceCachesForPublicGreenPortals
+git_commit_msg: "public import"

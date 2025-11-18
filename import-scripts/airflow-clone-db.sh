@@ -6,8 +6,9 @@
 # - Drop tables in the non-production database
 # - Clone the production database into the non-production database
 
-PORTAL_SCRIPTS_DIRECTORY=$1
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$2
+PORTAL_DATABASE=$1
+PORTAL_SCRIPTS_DIRECTORY=$2
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
@@ -19,7 +20,7 @@ fi
 source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
 # Create tmp directory for processing
-tmp=$PORTAL_HOME/tmp/import-cron-genie
+tmp=$PORTAL_HOME/tmp/import-cron-$PORTAL_DATABASE
 if ! [ -d "$tmp" ] ; then
     if ! mkdir -p "$tmp" ; then
         echo "Error: could not create tmp directory '$tmp'" >&2

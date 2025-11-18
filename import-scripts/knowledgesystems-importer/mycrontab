@@ -3,8 +3,6 @@ MAILTO=cbioportal-pipelines@cbioportal.org
 ##########################
 # Import Scripts (Comment these out when upgrading)
 ##########################
-* * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/import-genie-data.sh >> /data/portal-cron/logs/import-genie-data.log 2>&1
-* * * * * . /data/portal-cron/scripts/automation-environment.sh;/data/portal-cron/scripts/kill-import-genie-data.sh >> /data/portal-cron/logs/kill-import-genie-data.log 2>&1
 
 ##########################
 # Monitors

@@ -14,10 +14,12 @@ SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
 DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
 COPY_MYSQL_DATABASE_TO_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/copy_mysql_database_tables_to_clickhouse.sh"
-TRANSFER_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/import-msk-transfer-deployment-color.sh"
+DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/download_clickhouse_sql_scripts_py3.py"
+TRANSFER_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/transfer-deployment-color.sh"
+COLOR_SWAP_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/msk-db-color-swap-config.yaml"
 CREATE_DERIVED_TABLES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
-#TODO : need to create logic to download a dev branch of the following file from the upstream repo
-CREATE_DERIVED_TABLES_SQL_FILE_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/cdt/clickhouse.sql"
+CREATE_DERIVED_TABLES_SQL_FILE_DIRPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/create_clickhouse_derived_tables_download"
+CLICKHOUSE_SCHEMA_BRANCH_NAME="msk-portal-db-clickhouse-sql-for-import"
 
 function output_source_database_color() {
     # Get the current production database color
@@ -66,16 +68,42 @@ function copy_target_mysql_database_to_target_clickhouse_database() {
     return 0
 }
 
+function download_derived_table_construction_script() {
+    # Check if derived table sql script dirpath exists
+    # If not, try to create it
+    derived_table_sql_script_dirpath="$CREATE_DERIVED_TABLES_SQL_FILE_DIRPATH"
+    if ! [ -e "$derived_table_sql_script_dirpath" ] ; then
+        if ! mkdir -p "$derived_table_sql_script_dirpath" ; then
+            echo "Error: could not create target directory '$derived_table_sql_script_dirpath'" >&2
+            return 1
+        fi
+    fi
+    # Remove any scripts currently in the derived table sql script dirpath
+    if [[ -d "$derived_table_sql_script_dirpath" && "$derived_table_sql_script_dirpath" != "/" ]]; then
+        rm -rf "$derived_table_sql_script_dirpath"/*
+    fi
+    # Attempt to download the derived table SQL files from github
+    if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name "$CLICKHOUSE_SCHEMA_BRANCH_NAME" "$derived_table_sql_script_dirpath" ; then
+        echo "Error during download of derived table construction .sql files from github" >&2
+        return 1
+    fi
+    echo "downloaded clickhouse derived table construction file(s) from branch "$CLICKHOUSE_SCHEMA_BRANCH_NAME" of cbioportal github repository"
+    return 0
+}
+
 function create_derived_tables_in_target_clickhouse_database() {
     destination_database_color="$1"
+    if ! download_derived_table_construction_script ; then
+        return 1
+    fi
     echo "creating derived tables in clickhouse database with color $destination_database_color"
-    $CREATE_DERIVED_TABLES_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color $CREATE_DERIVED_TABLES_SQL_FILE_FILEPATH
+    $CREATE_DERIVED_TABLES_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color "$CREATE_DERIVED_TABLES_SQL_FILE_DIRPATH"/*
 }
 
 function transfer_color_to_new_database() {
     destination_database_color="$1"
     echo "transferring to databases with color $destination_database_color"
-    $TRANSFER_COLOR_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color
+    $TRANSFER_COLOR_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $COLOR_SWAP_CONFIG_FILEPATH $destination_database_color
 }
 
 function main() {
