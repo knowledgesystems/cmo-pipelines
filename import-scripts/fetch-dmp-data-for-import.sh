@@ -699,22 +699,22 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $? -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
     else
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact $MSK_CHORD_DATA_HOME/mskimpact $MSK_IMPACT_DATA_HOME
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact $MSK_CHORD_DATA_HOME/mskimpact $MSK_IMPACT_DATA_HOME $MSK_IMPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
         fi
 
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme $MSK_CHORD_DATA_HOME/mskimpact_heme $MSK_HEMEPACT_DATA_HOME
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme $MSK_CHORD_DATA_HOME/mskimpact_heme $MSK_HEMEPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
         fi
 
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher $MSK_CHORD_DATA_HOME/mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher $MSK_CHORD_DATA_HOME/mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
         fi
 
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess $MSK_CHORD_DATA_HOME/mskaccess $MSK_ACCESS_DATA_HOME
+        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess $MSK_CHORD_DATA_HOME/mskaccess $MSK_ACCESS_DATA_HOME $MSK_ACCESS_DATA_HOME
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
         fi
