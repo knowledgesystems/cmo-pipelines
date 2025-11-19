@@ -19,11 +19,6 @@ MSK_ACCESS_DATA_HOME="$4"
 MAPPED_ARCHER_SAMPLES_FILE=$MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/mapped_archer_samples.txt
 
 function check_args() {
-    if [[ -z $COHORT ]] ; then
-        usage
-        exit 1
-    fi
-
     if [ ! -d $MSK_SOLID_HEME_DATA_HOME ] || [ ! -d $MSK_IMPACT_DATA_HOME ] || [ ! -d $MSK_HEMEPACT_DATA_HOME ] || [ ! -d $MSK_ACCESS_DATA_HOME ] ; then
         echo "`date`: Unable to locate required data directories, exiting..."
         exit 1
