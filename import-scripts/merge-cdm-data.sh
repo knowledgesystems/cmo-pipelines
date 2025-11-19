@@ -13,9 +13,9 @@ fi
 source $PORTAL_HOME/scripts/automation-environment.sh
 
 COHORT=$1
-CDM_DATA_DIR="$2"
-MERGE_DIR="$3"
-OUTPUT_DIR="$4"
+CDM_DATA_DIR=$2
+MERGE_DIR=$3
+OUTPUT_DIR=$4
 
 function check_args() {
     if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
@@ -24,7 +24,7 @@ function check_args() {
     fi
 
     # Check that required directories exist
-    if [ ! -d $CDM_DATA_DIR ] || [ ! -d $OUTPUT_DIR ] ; then
+    if [ ! -d $CDM_DATA_DIR ] || [ ! -d $MERGE_DIR ] || [ ! -d $OUTPUT_DIR ] ; then
         echo "`date`: Unable to locate required data directories, exiting..."
         exit 1
     fi
@@ -57,7 +57,7 @@ function merge_cdm_data_and_commit() {
         echo "Error: Unable to merge CDM and $COHORT clinical files"
         exit 1
     else
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt -i /data/portal-cron/scripts/cdm_metadata.json
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
         if [ $? -gt 0 ] ; then
             echo "Unable to add metadata headers to merged CDM and $COHORT clinical files"
             exit 1
