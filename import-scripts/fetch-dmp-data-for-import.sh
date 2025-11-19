@@ -804,7 +804,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     else
         echo "MIXEDPACT merge successful!"
         echo $(date)
-        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mixedpact
+        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mixedpact $MSK_MIXEDPACT_DATA_HOME "$MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_RAINDANCE_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ACCESS_DATA_HOME"
         if [ $? -gt 0 ] ; then
           sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM timeline file merge for MIXEDPACT"
         fi
@@ -812,7 +812,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     printTimeStampedDataProcessingStepMessage "merge of MSK-IMPACT, HEMEPACT, ACCESS data for MSKSOLIDHEME"
     # MSKSOLIDHEME merge and check exit code
-    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_SOLID_HEME_DATA_HOME -i mskimpact -m "true" -e $MAPPED_ARCHER_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME
+    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_SOLID_HEME_DATA_HOME -i mskimpact -m "true" -e $MAPPED_ARCHER_SAMPLES_FILE "$MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME"
     if [ $? -gt 0 ] ; then
         echo "MSKSOLIDHEME merge failed! Study will not be updated in the portal."
         echo $(date)
@@ -831,7 +831,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
         addCancerTypeCaseLists $MSK_SOLID_HEME_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
         # Merge CDM timeline files
-        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mskimpact
+        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mskimpact $MSK_SOLID_HEME_DATA_HOME "$MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME"
         if [ $? -gt 0 ] ; then
           sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM timeline file merge for MSKSOLIDHEME"
         fi
