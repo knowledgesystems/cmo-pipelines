@@ -12,10 +12,10 @@ fi
 
 source $PORTAL_HOME/scripts/automation-environment.sh
 
-COHORT=$1
-CDM_DATA_DIR=$2
-MERGE_DIR=$3
-OUTPUT_DIR=$4
+COHORT="$1"
+CDM_DATA_DIR="$2"
+MERGE_DIR="$3"
+OUTPUT_DIR="$4"
 
 function check_args() {
     if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
