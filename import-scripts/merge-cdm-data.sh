@@ -6,7 +6,7 @@ if ! [ -n "$PORTAL_HOME" ] ; then
 fi
 
 if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] ; then
-    echo "`date`: Unable to locate automation_env, exiting..."
+    echo "`date`: Unable to locate automation-env, exiting..."
     exit 1
 fi
 
@@ -63,7 +63,9 @@ function merge_cdm_data_and_commit() {
             exit 1
         else
             cp -a $TMP_PROCESSING_DIRECTORY/data_clinical*.txt $OUTPUT_DIR
-            cp -a $CDM_DATA_DIR/data_timeline*.txt $OUTPUT_DIR
+            if [[ "$CDM_DATA_DIR" != "$OUTPUT_DIR" ]]; then
+                cp -a $CDM_DATA_DIR/data_timeline*.txt $OUTPUT_DIR
+            fi
         fi
     fi
     rm -rf $TMP_PROCESSING_DIRECTORY
