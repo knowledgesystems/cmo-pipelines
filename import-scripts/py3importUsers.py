@@ -204,7 +204,7 @@ def get_sheet_records(client, ss, ws):
     except Exception as e:
         print("There was an error connecting to google.", file = ERROR_FILE)
         exit(0)
- 
+
     return sheet_records
 
 # ------------------------------------------------------------------------------
@@ -418,7 +418,7 @@ def manage_users(client, spreadsheet, cursor, sheet_records, portal_name):
     print('Checking for new users', file = OUTPUT_FILE)
     new_user_map = get_new_user_map(spreadsheet, sheet_records, current_user_map, portal_name)
     if (len(new_user_map) > 0):
-        print('We have %s new user(s) to add' % len(new_user_map), file = OUTPUT_FILE)  
+        print('We have %s new user(s) to add' % len(new_user_map), file = OUTPUT_FILE)
         emails_to_remove = insert_new_users(cursor, new_user_map.values())
         return new_user_map, emails_to_remove
     else:
@@ -463,7 +463,7 @@ def get_portal_name_map(google_spreadsheet,client):
     portal_name = {}
     print('Getting access control parameter from google spreadsheet', file = OUTPUT_FILE)
     access_control_sheet = get_sheet_records(client,google_spreadsheet,ACCESS_CONTROL_WORKSHEET)
-    for row in access_control_sheet: 
+    for row in access_control_sheet:
         if row[PORTAL_NAME_KEY] is not None and row[SPREADSHEET_NAME_KEY] is not None:
             portal_name[row[SPREADSHEET_NAME_KEY].strip()] = row[PORTAL_NAME_KEY].strip()
     return portal_name
@@ -471,7 +471,7 @@ def get_portal_name_map(google_spreadsheet,client):
 
 def establish_new_db_connection(portal_properties, port, ssl_ca_filename):
     # get db connection & create cursor
-    print('Connecting to database: ' + portal_properties.cgds_database_name, file = OUTPUT_FILE)  
+    print('Connecting to database: ' + portal_properties.cgds_database_name, file = OUTPUT_FILE)
     connection = get_db_connection(portal_properties, port, ssl_ca_filename)
     if connection is not None:
         cursor = connection.cursor()
@@ -530,7 +530,7 @@ def main():
             port = a
 
     if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or port == '' or
-        (send_email_confirm != 'true' and send_email_confirm != 'false') or 
+        (send_email_confirm != 'true' and send_email_confirm != 'false') or
         (send_email_confirm == 'true' and (gmail_username == '' or gmail_password == ''))):
         usage()
         sys.exit(2)
@@ -556,23 +556,23 @@ def main():
     for google_spreadsheet in google_spreadsheets:
         if not google_spreadsheet == '':
             (connection, cursor) = establish_new_db_connection(portal_properties, port, ssl_ca_filename)
-            
+
             sheet_records = get_sheet_records(client, google_spreadsheet,
                                                 portal_properties.google_worksheet)
             spreadsheet_title = get_spreadsheet_title(client, google_spreadsheet)
-           
+
             print('Importing ' + spreadsheet_title + ' ...', file = OUTPUT_FILE)
             app_name = portal_name_map[spreadsheet_title]
-            
+
             # the 'guts' of the script
             # note: original script depended on one to one mapping of spreadsheet to app name - and lookup was by spreadsheet
             # with a now decommissioned app (genie-archive) we wanted to be able to do one to many mapping (one spreadsheet to multiple apps)
             # to fit this logic would have to rework how we specify properties or introduce new column (db name) as index but might have other effects
             new_user_map, emails_to_remove = manage_users(client, google_spreadsheet, cursor, sheet_records, app_name)
-            
+
             # update user authorities
             update_user_authorities(google_spreadsheet, cursor, sheet_records, app_name)
-            
+
             # commit changes before moving on to next spreadsheet
             cursor.close()
             connection.commit()
