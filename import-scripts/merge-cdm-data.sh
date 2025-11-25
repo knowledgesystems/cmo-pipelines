@@ -47,7 +47,7 @@ function validate_sample_file() {
     fi
 }
 
-function merge_cdm_data_and_commit() {
+function merge_cdm_data() {
     # Create tmp_processing_directory for merging mskimpact and cdm clinical files
     # All processing is done here and only copied over if everything succeeds
     # No git cleanup needed - tmp_processing_directory removed at the end
@@ -74,6 +74,6 @@ function merge_cdm_data_and_commit() {
 date
 check_args
 validate_sample_file
-merge_cdm_data_and_commit
+merge_cdm_data
 
 echo "`date`: CDM merge for $COHORT complete"
