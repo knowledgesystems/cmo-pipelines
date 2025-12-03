@@ -79,11 +79,11 @@ function add_meta_files() {
     # Copy over metadata files from production msk_solid_heme study
     rsync -a --include="*meta*.txt" $MSK_SOLID_HEME_DATA_HOME/ $OUTPUT_DIR/
 
-    # Replace cancer_study_identifier and stable_id with $STUDY_ID in meta files
+    # Replace cancer_study_identifier and stable_id with $MERGED_STUDY_ID in meta files
     sed -i "/^cancer_study_identifier: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/*meta*.txt
     sed -i "/^stable_id: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" ${OUTPUT_DIR}/*meta*.txt
 
-    # Replace cancer_study_identifier and stable_id with $STUDY_ID in case list files
+    # Replace cancer_study_identifier and stable_id with $MERGED_STUDY_ID in case list files
     sed -i "/^cancer_study_identifier: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/case_lists/case_list*.txt
     sed -i "/^stable_id: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/case_lists/case_list*.txt
 }
