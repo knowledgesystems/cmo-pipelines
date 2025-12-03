@@ -59,6 +59,10 @@ function merge_timeline_files() {
             fi
         done
         $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i $FILES_TO_MERGE -o $OUTPUT_DIR/$TIMELINE_FILE -m outer
+        if [ $? -gt 0 ] ; then
+            echo "Error: CDM timeline file merge for MSKSOLIDHEME"
+            exit 1
+        fi
     done
 }
 

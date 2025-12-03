@@ -21,9 +21,15 @@ MSK_ACCESS_DIR="$5"
 MAPPED_ARCHER_SAMPLES_FILE=$MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/mapped_archer_samples.txt
 
 function check_args() {
-    if [ ! -d $OUTPUT_DIR ] || [ ! -d $MSK_IMPACT_DIR ] || [ ! -d $MSK_HEMEPACT_DIR ] || [ ! -d $MSK_ACCESS_DIR ] ; then
+    # Ensure that data directories exist
+    if [ ! -d $MSK_IMPACT_DIR ] || [ ! -d $MSK_HEMEPACT_DIR ] || [ ! -d $MSK_ACCESS_DIR ] ; then
         echo "`date`: Unable to locate required data directories, exiting..."
         exit 1
+    fi
+
+    # Create output dir if it doesn't exist
+    if [ ! -d $OUTPUT_DIR ] ; then
+        mkdir $OUTPUT_DIR
     fi
 }
 
@@ -64,11 +70,22 @@ function solid_heme_merge() {
 }
 
 function add_meta_files() {
+    # If meta files already exist for this study, don't recreate them
+    if ls $OUTPUT_DIR/*meta*.txt 1> /dev/null 2>&1; then
+        exit 0
+    fi
+
+    echo "Adding metadata files to MSKSOLIDHEME"
     # Copy over metadata files from production msk_solid_heme study
     rsync -a --include="*meta*.txt" $MSK_SOLID_HEME_DATA_HOME/ $OUTPUT_DIR/
 
     # Replace cancer_study_identifier with msk_chord_review
     sed -i "/^cancer_study_identifier: .*$/s/mskimpact/$STUDY_ID/g" $OUTPUT_DIR/*meta*.txt
+    sed -i "/^stable_id: .*$/s/mskimpact/$STUDY_ID/g" $OUTPUT_DIR/*meta*.txt
+
+    # Replace cancer_study_identifier and stable_id with $STUDY_ID in case list files
+    sed -i "/^cancer_study_identifier: .*$/s/mskimpact/$STUDY_ID/g" $OUTPUT_DIR/case_lists/case_list*.txt
+    sed -i "/^stable_id: .*$/s/mskimpact/$STUDY_ID/g" $OUTPUT_DIR/case_lists/case_list*.txt
 }
 
 date
