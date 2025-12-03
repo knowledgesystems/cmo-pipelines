@@ -13,7 +13,7 @@ fi
 source $PORTAL_HOME/scripts/automation-environment.sh
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
-STUDY_ID="$1"
+MERGED_STUDY_ID="$1"
 OUTPUT_DIR="$2"
 MSK_IMPACT_DIR="$3"
 MSK_HEMEPACT_DIR="$4"
@@ -35,7 +35,7 @@ function check_args() {
 
 function usage {
     echo "airflow-solid-heme-merge.sh \$OUTPUT_DIR \$MSK_IMPACT_DIR \$MSK_HEMEPACT_DIR \$MSK_ACCESS_DIR"
-    echo -e "\t\$STUDY_ID                           cancer_study_identifier for study"
+    echo -e "\t\$MERGED_STUDY_ID                    cancer_study_identifier for study"
     echo -e "\t\$OUTPUT_DIR                         path for msk_solid_heme merged output"
     echo -e "\t\$MSK_IMPACT_DIR                     path to mskimpact cohort"
     echo -e "\t\$MSK_HEMEPACT_DIR                   path to mskimpact_heme cohort"
@@ -79,13 +79,13 @@ function add_meta_files() {
     # Copy over metadata files from production msk_solid_heme study
     rsync -a --include="*meta*.txt" $MSK_SOLID_HEME_DATA_HOME/ $OUTPUT_DIR/
 
-    # Replace cancer_study_identifier with msk_chord_review
-    sed -i "/^cancer_study_identifier: .*$/s/mskimpact/$STUDY_ID/g" $OUTPUT_DIR/*meta*.txt
-    sed -i "/^stable_id: .*$/s/mskimpact/$STUDY_ID/g" $OUTPUT_DIR/*meta*.txt
+    # Replace cancer_study_identifier and stable_id with $STUDY_ID in meta files
+    sed -i "/^cancer_study_identifier: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/*meta*.txt
+    sed -i "/^stable_id: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" ${OUTPUT_DIR}/*meta*.txt
 
     # Replace cancer_study_identifier and stable_id with $STUDY_ID in case list files
-    sed -i "/^cancer_study_identifier: .*$/s/mskimpact/$STUDY_ID/g" $OUTPUT_DIR/case_lists/case_list*.txt
-    sed -i "/^stable_id: .*$/s/mskimpact/$STUDY_ID/g" $OUTPUT_DIR/case_lists/case_list*.txt
+    sed -i "/^cancer_study_identifier: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/case_lists/case_list*.txt
+    sed -i "/^stable_id: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/case_lists/case_list*.txt
 }
 
 date
