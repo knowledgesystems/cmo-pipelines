@@ -52,14 +52,20 @@ function solid_heme_merge() {
     else
         echo "MSKSOLIDHEME merge successful! Creating cancer type case lists..."
         echo $(date)
-        # add metadata headers and overrides before importing
+
+        # Add metadata headers and overrides before importing
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $OUTPUT_DIR/data_clinical_sample.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $OUTPUT_DIR/data_clinical_patient.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
         if [ $? -gt 0 ] ; then
             echo "Error: Adding metadata headers for MSKSOLIDHEME failed!"
             exit 1
         fi
+
+        # Add case list files, update cancer_study_identifier and stable_id with $MERGED_STUDY_ID
         addCancerTypeCaseLists $OUTPUT_DIR "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
+        sed -i "/^cancer_study_identifier: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/case_lists/case_list*.txt
+        sed -i "/^stable_id: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/case_lists/case_list*.txt
+
         # Merge CDM timeline files
         sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mskimpact $OUTPUT_DIR "$MSK_IMPACT_DIR $MSK_HEMEPACT_DIR $MSK_ACCESS_DIR"
         if [ $? -gt 0 ] ; then
@@ -82,10 +88,6 @@ function add_meta_files() {
     # Replace cancer_study_identifier and stable_id with $MERGED_STUDY_ID in meta files
     sed -i "/^cancer_study_identifier: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/*meta*.txt
     sed -i "/^stable_id: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" ${OUTPUT_DIR}/*meta*.txt
-
-    # Replace cancer_study_identifier and stable_id with $MERGED_STUDY_ID in case list files
-    sed -i "/^cancer_study_identifier: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/case_lists/case_list*.txt
-    sed -i "/^stable_id: .*$/s/mskimpact/${MERGED_STUDY_ID}/g" $OUTPUT_DIR/case_lists/case_list*.txt
 }
 
 date
