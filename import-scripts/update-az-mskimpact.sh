@@ -302,7 +302,7 @@ function generate_case_lists() {
             return 1
         fi
     fi
-    $PYTHON_BINARY /data/portal-cron/scripts/generate_case_lists.py --case-list-config-file $CASE_LIST_CONFIG_FILE --case-list-dir $CASE_LIST_DIR --study-dir $AZ_MSK_IMPACT_DATA_HOME --study-id $AZ_MSKIMPACT_STABLE_ID -o
+    $PYTHON_BINARY $PORTAL_HOME/scripts/generate_case_lists.py --case-list-config-file $CASE_LIST_CONFIG_FILE --case-list-dir $CASE_LIST_DIR --study-dir $AZ_MSK_IMPACT_DATA_HOME --study-id $AZ_MSKIMPACT_STABLE_ID -o
 }
 
 function run_validation_script() {
