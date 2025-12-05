@@ -80,6 +80,7 @@ def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="
             df_merged,
             output_file,
             quoting=csv.QUOTE_NONE,
+            escapechar="\\",
         )
 
 
