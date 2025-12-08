@@ -11,23 +11,17 @@ fi
 PROFILE_ID_PUBLIC="automation_public"
 PROFILE_ID_EKS="automation_eks"
 
-#CLUSTER_ID_PUBLIC="public"
 CLUSTER_ID_PUBLICARGOCD="publicargocd"
-#CLUSTER_ID_EKS="eks"
 CLUSTER_ID_EKSARGOCD="eksargocd"
 
 unset cluster_to_profile_map
 declare -A cluster_to_profile_map
-#cluster_to_profile_map["$CLUSTER_ID_PUBLIC"]="$PROFILE_ID_PUBLIC"
 cluster_to_profile_map["$CLUSTER_ID_PUBLICARGOCD"]="$PROFILE_ID_PUBLIC"
-#cluster_to_profile_map["$CLUSTER_ID_EKS"]="$PROFILE_ID_EKS"
 cluster_to_profile_map["$CLUSTER_ID_EKSARGOCD"]="$PROFILE_ID_EKS"
 
 unset cluster_to_kubeconfig_filepath
 declare -A cluster_to_kubeconfig_filepath
-#cluster_to_kubeconfig_filepath["$CLUSTER_ID_PUBLIC"]="$PUBLIC_CLUSTER_KUBECONFIG"
 cluster_to_kubeconfig_filepath["$CLUSTER_ID_PUBLICARGOCD"]="$PUBLICARGOCD_CLUSTER_KUBECONFIG"
-#cluster_to_kubeconfig_filepath["$CLUSTER_ID_EKS"]="$EKS_CLUSTER_KUBECONFIG"
 cluster_to_kubeconfig_filepath["$CLUSTER_ID_EKSARGOCD"]="$EKSARGOCD_CLUSTER_KUBECONFIG"
 
 unset portal_to_cluster_map
