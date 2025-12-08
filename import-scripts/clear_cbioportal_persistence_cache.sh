@@ -11,23 +11,17 @@ fi
 PROFILE_ID_PUBLIC="automation_public"
 PROFILE_ID_EKS="automation_eks"
 
-CLUSTER_ID_PUBLIC="public"
 CLUSTER_ID_PUBLICARGOCD="publicargocd"
-CLUSTER_ID_EKS="eks"
 CLUSTER_ID_EKSARGOCD="eksargocd"
 
 unset cluster_to_profile_map
 declare -A cluster_to_profile_map
-cluster_to_profile_map["$CLUSTER_ID_PUBLIC"]="$PROFILE_ID_PUBLIC"
 cluster_to_profile_map["$CLUSTER_ID_PUBLICARGOCD"]="$PROFILE_ID_PUBLIC"
-cluster_to_profile_map["$CLUSTER_ID_EKS"]="$PROFILE_ID_EKS"
 cluster_to_profile_map["$CLUSTER_ID_EKSARGOCD"]="$PROFILE_ID_EKS"
 
 unset cluster_to_kubeconfig_filepath
 declare -A cluster_to_kubeconfig_filepath
-cluster_to_kubeconfig_filepath["$CLUSTER_ID_PUBLIC"]="$PUBLIC_CLUSTER_KUBECONFIG"
 cluster_to_kubeconfig_filepath["$CLUSTER_ID_PUBLICARGOCD"]="$PUBLICARGOCD_CLUSTER_KUBECONFIG"
-cluster_to_kubeconfig_filepath["$CLUSTER_ID_EKS"]="$EKS_CLUSTER_KUBECONFIG"
 cluster_to_kubeconfig_filepath["$CLUSTER_ID_EKSARGOCD"]="$EKSARGOCD_CLUSTER_KUBECONFIG"
 
 unset portal_to_cluster_map
@@ -48,16 +42,16 @@ portal_to_cluster_map["genie-private-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["genie-private-green"]="$CLUSTER_ID_PUBLICARGOCD"
 
 # pipelines3
-portal_to_cluster_map["triage"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["hgnc"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["msk-beta-blue"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["msk-beta-green"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["msk-blue"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["msk-green"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["private-blue"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["private-green"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["sclc-blue"]="$CLUSTER_ID_EKS"
-portal_to_cluster_map["sclc-green"]="$CLUSTER_ID_EKS"
+portal_to_cluster_map["triage"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["hgnc"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["msk-beta-blue"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["msk-beta-green"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["msk-blue"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["msk-green"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["private-blue"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["private-green"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["sclc-blue"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["sclc-green"]="$CLUSTER_ID_EKSARGOCD"
 
 unset portal_to_deployment_map
 declare -A portal_to_deployment_map
@@ -196,42 +190,27 @@ else
     exit 1
 fi
 
-# WORKAROUND(12/2/2025): Zain is currently performing a rolling update of the msk cluster.
-# During this time, whenever the persistence cache for an
-# internal portal is cleared, we should clear it for *both* the eks and eksargocd clusters.
-# Once the transition to the eksargocd cluster is complete
-# (and the portal_to_cluster_map above has been updated), this
-# workaround can be removed.
-declare -a kubeconfig_filepaths
-kubeconfig_filepaths+=("$kubeconfig_filepath")
-if [ "$cluster_id" == "$CLUSTER_ID_EKS" ] ; then
-    kubeconfig_filepaths+=("$EKSARGOCD_CLUSTER_KUBECONFIG")
+kubeconfig_arg="--kubeconfig=$kubeconfig_filepath"
+
+"$KUBECTL_BINARY" $kubeconfig_arg set env deployment "$deployment_id" --env="LAST_RESTART=$(date)"
+webapp_restart_status=$?
+if [ $webapp_restart_status -ne 0 ] ; then
+    echo "warning : the attempt to restart portal '$portal_id' failed : $KUBECTL_BINARY returned status $webapp_restart_status" >&2
+    echo "          nonetheless, a command to clear the persistence cache will now occur." >&2
 fi
 
-for kubeconfig_filepath in "${kubeconfig_filepaths[@]}"; do
-    kubeconfig_arg="--kubeconfig=$kubeconfig_filepath"
-
-    "$KUBECTL_BINARY" $kubeconfig_arg set env deployment "$deployment_id" --env="LAST_RESTART=$(date)"
-    webapp_restart_status=$?
-    if [ $webapp_restart_status -ne 0 ] ; then
-        echo "warning : the attempt to restart portal '$portal_id' failed : $KUBECTL_BINARY returned status $webapp_restart_status" >&2
-        echo "          nonetheless, a command to clear the persistence cache will now occur." >&2
+cache_service_basename="${portal_to_cache_service_basename[$portal_id]}"
+cache_leader_pod_name="${cache_service_basename}-master-0"
+cache_database_number="${portal_to_cache_database_number[$portal_id]}"
+if [ -n "$cache_service_basename" ] && database_number_is_valid "$cache_database_number" ; then
+    "$KUBECTL_BINARY" $kubeconfig_arg exec -t -n "default" "$cache_leader_pod_name" -- "/bin/bash" -c "redis-cli -a \$REDIS_PASSWORD -n $cache_database_number FLUSHDB"
+    cache_flush_status=$?
+    if [ $cache_flush_status -ne 0 ] ; then
+        echo "error encountered during attempt to clear portal persistence cache for portal $portal_id : $KUBECTL_BINARY returned status $cache_flush_status" >&2
+        exit 1
     fi
-
-    cache_service_basename="${portal_to_cache_service_basename[$portal_id]}"
-    cache_leader_pod_name="${cache_service_basename}-master-0"
-    cache_database_number="${portal_to_cache_database_number[$portal_id]}"
-    if [ -n "$cache_service_basename" ] && database_number_is_valid "$cache_database_number" ; then
-        "$KUBECTL_BINARY" $kubeconfig_arg exec -t -n "default" "$cache_leader_pod_name" -- "/bin/bash" -c "redis-cli -a \$REDIS_PASSWORD -n $cache_database_number FLUSHDB"
-        cache_flush_status=$?
-        if [ $cache_flush_status -ne 0 ] ; then
-            echo "error encountered during attempt to clear portal persistence cache for portal $portal_id : $KUBECTL_BINARY returned status $cache_flush_status" >&2
-            #exit 1
-        fi
-    else
-        echo "portal $portal_id has no persistence cache service or has no valid database number. skipping."
-        #exit 0
-    fi
-done
-
+else
+    echo "portal $portal_id has no persistence cache service or has no valid database number. skipping."
+    exit 0
+fi
 exit 0
