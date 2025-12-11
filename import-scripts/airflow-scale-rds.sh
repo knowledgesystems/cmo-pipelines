@@ -42,6 +42,10 @@ err_mismatched_instance_class() {
     echo "ERROR: trying to scale $DIRECTION when $rds_node_id node is already scaled $DIRECTION" >&2
     exit 1
 }
+err_failed_to_change_instance_class() {
+    echo "ERROR: failed to scale $rds_node_id node $DIRECTION" >&2
+    exit 1
+}
 
 # Get the scale up / scale down classes for this portal
 scale_up_class=$(read_cfg_knob $PORTAL 'rds_scale_up_class')
@@ -64,4 +68,12 @@ if [[ "$DIRECTION" == "up" ]]; then
     rds_set_class "$rds_node_id" "$scale_up_class"
 else
     rds_set_class "$rds_node_id" "$scale_down_class"
+fi
+
+# After scaling: validate that the instance class was changed successfully
+new_class=$(rds_current_class $rds_node_id)
+if [[ "$DIRECTION" == "up" ]]; then
+    [[ "$new_class" == "$scale_up_class" ]] || err_failed_to_change_instance_class
+else
+    [[ "$new_class" == "$scale_down_class" ]] || err_failed_to_change_instance_class
 fi
