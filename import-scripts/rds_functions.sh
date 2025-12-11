@@ -10,11 +10,21 @@ rds_current_class() {
         --output text
 }
 
+# Get current instance status
+rds_current_status() {
+    local id="$1"
+
+    aws rds describe-db-instances \
+        --db-instance-identifier "$id" \
+        --query 'DBInstances[0].DBInstanceStatus' \
+        --output text
+}
+
 # Start instance
 rds_start() {
     local id="$1"
 
-    aws rds start-db-instance --db-instance-identifier "$id"
+    aws rds start-db-instance --db-instance-identifier "$id" --no-cli-pager
     aws rds wait db-instance-available --db-instance-identifier "$id"
 }
 
@@ -22,8 +32,22 @@ rds_start() {
 rds_stop() {
     local id="$1"
 
-    aws rds stop-db-instance --db-instance-identifier "$id"
-    aws rds wait db-instance-stopped --db-instance-identifier "$id"
+    aws rds stop-db-instance --db-instance-identifier "$id" --no-cli-pager
+
+    # The functionality to check whether an RDS instance is stopped doesn't yet exist from the AWS CLI;
+    # we have to emulate it ourselves manually
+    # aws rds wait db-instance-stopped --db-instance-identifier "$id"
+
+    while true; do
+        STATUS=$(rds_current_status "$id")
+        
+        if [ "$STATUS" = "stopped" ]; then
+            # instance is stopped
+            break
+        fi
+        
+        sleep 5
+    done
 }
 
 # Validate that a class is orderable for the instance's engine/version
@@ -46,7 +70,7 @@ rds_validate_class() {
         --engine "$engine" \
         --engine-version "$engine_version" \
         --query "OrderableDBInstanceOptions[?DBInstanceClass=='$new_class'].DBInstanceClass" \
-        --output text | grep -qx "$new_class"
+        --output text | grep -qw "$new_class"
 }
 
 # Explicitly set class
@@ -62,7 +86,8 @@ rds_set_class() {
     aws rds modify-db-instance \
         --db-instance-identifier "$id" \
         --db-instance-class "$new_class" \
-        --apply-immediately
+        --apply-immediately \
+        --no-cli-pager
 
     aws rds wait db-instance-available --db-instance-identifier "$id"
 }
