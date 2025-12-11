@@ -818,7 +818,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     printTimeStampedDataProcessingStepMessage "merge of MSK-IMPACT, HEMEPACT, ACCESS data for MSKSOLIDHEME"
     # MSKSOLIDHEME merge and check exit code
-    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_SOLID_HEME_DATA_HOME -i mskimpact -m "true" -e $MAPPED_ARCHER_SAMPLES_FILE "$MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME"
+    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py -d $MSK_SOLID_HEME_DATA_HOME -i mskimpact -m "true" -e $MAPPED_ARCHER_SAMPLES_FILE $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME
     if [ $? -gt 0 ] ; then
         echo "MSKSOLIDHEME merge failed! Study will not be updated in the portal."
         echo $(date)
