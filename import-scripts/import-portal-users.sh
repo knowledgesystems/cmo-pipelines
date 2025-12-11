@@ -12,6 +12,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-portal-users.lock"
     GMAIL_PASSWORD=`grep gmail_password $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
     GENIE_BLUE_DATABASE_PROPERTIES_FILENAME="portal.properties.genie.blue"
     GENIE_GREEN_DATABASE_PROPERTIES_FILENAME="portal.properties.genie.green"
+    GENIE_BLUE_CLICKHOUSE_CLIENT_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/clickhouse_client_genie_blue_config.yaml"
+    GENIE_GREEN_CLICKHOUSE_CLIENT_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/clickhouse_client_genie_green_config.yaml"
+    CLICKHOUSE_COMMANDS_PENDING_DIRPATH="/data/portal-cron/tmp/import-users-genie/pending_clickhouse_commands"
+    CLICKHOUSE_COMMANDS_COMPLETED_DIRPATH="/data/portal-cron/tmp/import-users-genie/completed_clickhouse_commands"
+    CLICKHOUSE_BINARY_FILEPATH="/home/cbioportal_importer/tools/clickhouse/bin/clickhouse"
     GET_DATABASE_CURRENTLY_IN_PRODUCTION_SCRIPT="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
     MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_genie_database_update_tools.properties"
     CURRENT_DATABASE_OUTPUT_FILEPATH=$(mktemp $PORTAL_HOME/tmp/import-portal-users/get_current_database_output.txt.XXXXXX)
@@ -23,9 +28,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-portal-users.lock"
     rm -f $CURRENT_DATABASE_OUTPUT_FILEPATH
     if [ ${current_production_database_color:0:5} == "green" ] ; then
         GENIE_PRODUCTION_DATABASE_PROPERTIES_FILENAME="$GENIE_GREEN_DATABASE_PROPERTIES_FILENAME"
+        GENIE_CLICKHOUSE_CLIENT_CONFIG_FILEPATH="$GENIE_GREEN_CLICKHOUSE_CLIENT_CONFIG_FILEPATH"
     else
         if [ ${current_production_database_color:0:4} == "blue" ] ; then
             GENIE_PRODUCTION_DATABASE_PROPERTIES_FILENAME="$GENIE_BLUE_DATABASE_PROPERTIES_FILENAME"
+            GENIE_CLICKHOUSE_CLIENT_CONFIG_FILEPATH="$GENIE_BLUE_CLICKHOUSE_CLIENT_CONFIG_FILEPATH"
         else
             echo "error : Failed to properly detect the current production database for genie" >> "$USERSGENIELOGFILENAME"
         fi
@@ -35,6 +42,18 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-portal-users.lock"
     date >> "$USERSGENIELOGFILENAME"
     $PYTHON_BINARY $PORTAL_HOME/scripts/importUsers.py --port 3306 --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/${GENIE_PRODUCTION_DATABASE_PROPERTIES_FILENAME} --send-email-confirm true --sender GENIE --ssl-ca $PORTAL_HOME/pipelines-credentials/pipelines-genie-db-aws-rds-combined-ca-bundle.pem --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD >> "$USERSGENIELOGFILENAME" 2>&1
     CGDS_GENIE_IMPORT_STATUS=$?
+    clickhouse_commands_filepath=$(ls ${CLICKHOUSE_COMMANDS_PENDING_DIRPATH}/*.sql | head -n 1)
+    if [ $CGDS_GENIE_IMPORT_STATUS -eq 0 ] && [ -f "$clickhouse_commands_filepath" ] ; then
+        echo "executing clickhouse commands from $clickhouse_commands_filepath" >> "$USERSGENIELOGFILENAME"
+        date >> "$USERSGENIELOGFILENAME"
+        "$CLICKHOUSE_BINARY_FILEPATH" client --config-file="$GENIE_CLICKHOUSE_CLIENT_CONFIG_FILEPATH" --multiquery < "$clickhouse_commands_filepath"
+        CLICKHOUSE_IMPORT_STATUS=$?
+        if [ $CLICKHOUSE_IMPORT_STATUS -eq 0 ] ; then
+            mv "$clickhouse_commands_filepath" "$CLICKHOUSE_COMMANDS_COMPLETED_DIRPATH"
+        else
+            $CGDS_GENIE_IMPORT_STATUS=2 # failure flag
+        fi
+    fi
 
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
     FAILED_DATABASES=""
