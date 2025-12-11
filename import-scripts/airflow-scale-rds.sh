@@ -12,6 +12,7 @@
 # 2. if we're scaling up, validate that we're scaled down. if we're scaling down, validate that we're scaled up
 # - this can be checked via rds_get_current_class
 # 3. call rds_set_class with the new instance type
+# 4. validate that the new instance class matches the one we changed it to
 
 # considerations:
 # - where to store the scale up/down instance classes? (eg in a config file?)
