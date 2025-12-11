@@ -35,27 +35,30 @@ COLOR="$4"
 read_cfg_knob() {
     ; # TODO discuss how to implement
 }
+
 get_node_id() {
     ;
 }
+
 err_mismatched_instance_class() {
     echo "ERROR: trying to scale $DIRECTION when $rds_node_id node is already scaled $DIRECTION" >&2
     exit 1
 }
+
 err_failed_to_change_instance_class() {
     echo "ERROR: failed to scale $rds_node_id node $DIRECTION" >&2
     exit 1
 }
 
 # Get the scale up / scale down classes for this portal
-scale_up_class=$(read_cfg_knob $PORTAL 'rds_scale_up_class')
-scale_down_class=$(read_cfg_knob $PORTAL 'rds_scale_down_class')
+scale_up_class=$(read_cfg_knob "$PORTAL" 'rds_scale_up_class')
+scale_down_class=$(read_cfg_knob "$PORTAL" 'rds_scale_down_class')
 
 
 # Validate the current class for the given direction
 # We should be scaling up from a downsized node, and scaling down from an upsized node
-rds_node_id=$(get_node_id $PORTAL $COLOR)
-current_class=$(rds_current_class $rds_node_id)
+rds_node_id=$(get_node_id "$PORTAL" "$COLOR")
+current_class=$(rds_current_class "$rds_node_id")
 
 if [[ "$DIRECTION" == "up" ]]; then
     [[ "$current_class" == "$scale_down_class" ]] || err_mismatched_instance_class
@@ -71,7 +74,7 @@ else
 fi
 
 # After scaling: validate that the instance class was changed successfully
-new_class=$(rds_current_class $rds_node_id)
+new_class=$(rds_current_class "$rds_node_id")
 if [[ "$DIRECTION" == "up" ]]; then
     [[ "$new_class" == "$scale_up_class" ]] || err_failed_to_change_instance_class
 else
