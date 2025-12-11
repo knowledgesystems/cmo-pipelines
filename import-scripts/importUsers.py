@@ -47,6 +47,10 @@ from googleapiclient.discovery import build
 # ------------------------------------------------------------------------------
 # globals
 
+# hardcoded file path for clickhouse
+UNIX_EPOC_SECONDS = str(int(time.time()))
+CLICKHOUSE_COMMANDS_FILEPATH = '/data/portal-cron/tmp/import-users-genie/pending_clickhouse_commands/%s.sql' % UNIX_EPOC_SECONDS
+
 # some file descriptors
 ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
@@ -106,8 +110,7 @@ ERROR_EMAIL_BODY_CMO = "Thank you for your interest in the cBioPortal. There was
 
 class PortalProperties(object):
     def __init__(self,
-                 cgds_database_host,
-                 cgds_database_name, cgds_database_user, cgds_database_pw,
+                 cgds_database_host, cgds_database_name, cgds_database_user, cgds_database_pw,
                  google_id, google_pw, google_spreadsheet, google_worksheet,google_importer_spreadsheet):
         self.cgds_database_host = cgds_database_host
         self.cgds_database_name = cgds_database_name
@@ -225,9 +228,15 @@ def get_spreadsheet_title(client, ss):
 # ------------------------------------------------------------------------------
 # insert new users into table - this list does not contain users already in table
 
+def append_command_to_clickhouse_file(sql_command_string):
+    with open(CLICKHOUSE_COMMANDS_FILEPATH, "a") as clickhouse_sql_file:
+        clickhouse_sql_file.write(sql_command_string)
+
 def insert_new_users(cursor, new_user_list):
     # list of emails for users which returned an error when inserting into database
     emails_to_remove = []
+    added_user_triples = []
+    added_user_authority_duples = []
     for user in new_user_list:
         print >> OUTPUT_FILE, "new user: %s" % user.google_email;
         try:
@@ -235,15 +244,28 @@ def insert_new_users(cursor, new_user_list):
             if isinstance(user_name, unicode):
                 user_name = user_name.encode('utf-8')
             user_email_escaped=user.google_email.lower().replace('\'', '\\\'')
-            cursor.execute("insert into users values('%s', '%s', '%s')" % (user_email_escaped, user_name, user.enabled))
+            user_triple = (user_email_escaped, user_name, user.enabled)
+            sql_command_string = "insert into users values ('%s', '%s', '%s')" % user_triple
+            cursor.execute(sql_command_string)
+            added_user_triples.append(user_triple)
             # authorities is semicolon delimited
             authorities = user.authorities
-            cursor.executemany("insert into authorities values(%s, %s)", [(user_email_escaped, authority) for authority in authorities])
+            cursor.executemany("insert into authorities values (%s, %s)", [(user_email_escaped, authority) for authority in authorities])
+            added_user_authority_duples += ([(user_email_escaped, authority) for authority in authorities])
         except MySQLdb.Error, msg:
             print >> OUTPUT_FILE, msg
             print >> OUTPUT_FILE, "Removing user: %s" % user_name
             print >> ERROR_FILE, msg
             emails_to_remove.append(user.google_email.lower())
+    # output commands to be executed on clickhouse sever
+    if len(added_user_triples) > 0:
+        values_string_items = ["('%s','%s','%s')" % triple for triple in added_user_triples]
+        sql_command_string = "INSERT INTO users VALUES %s;" % ",".join(values_string_items)
+        append_command_to_clickhouse_file(sql_command_string)
+    if len(added_user_authority_duples) > 0:
+        values_string_items = ["('%s','%s')" % duple for duple in added_user_authority_duples]
+        sql_command_string = "INSERT INTO authorities VALUES %s;" % ",".join(values_string_items)
+        append_command_to_clickhouse_file(sql_command_string)
     return emails_to_remove
 
 # ------------------------------------------------------------------------------
