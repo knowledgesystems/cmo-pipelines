@@ -720,7 +720,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
         else
             echo "pushing mskarcher CDM data to S3"
-            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher" "mskimpact-databricks"
+            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
         fi
 
         sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess $MSK_CHORD_DATA_HOME/mskaccess $MSK_ACCESS_DATA_HOME $MSK_ACCESS_DATA_HOME
