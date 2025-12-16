@@ -88,6 +88,13 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 db_properties_filepath,
                 color_swap_config_filepath,
             ),
+            "scale_up_rds_node": _script(
+                scripts_dir,
+                "scale-rds.sh",
+                "up",
+                importer,
+                color_swap_config_filepath,
+            ),
             "clone_database": _script(
                 scripts_dir,
                 "airflow-clone-db.sh",
@@ -123,6 +130,13 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 importer,
                 scripts_dir,
                 db_properties_filepath,
+            ),
+            "scale_down_rds_node": _script(
+                scripts_dir,
+                "scale-rds.sh",
+                "down",
+                importer,
+                color_swap_config_filepath,
             ),
             "transfer_deployment": _script(
                 scripts_dir,
