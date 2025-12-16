@@ -20,17 +20,26 @@
 #!/usr/bin/env bash
 set -eEuo pipefail
 
-PORTAL_SCRIPTS_DIRECTORY="$1"
-source "$PORTAL_SCRIPTS_DIRECTORY/rds_functions.sh"
-
-DIRECTION="$2"
-PORTAL_DATABASE="$3"
+DIRECTION="$1"
+PORTAL_DATABASE="$2"
+COLOR_SWAP_CONFIG_FILEPATH="$3"
 
 [[ "$DIRECTION" == "up" || "$DIRECTION" == "down" ]]
 [[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" ]]
+[[ -f "$COLOR_SWAP_CONFIG_FILEPATH" ]]
 
-read_cfg_knob() {
-    ; # TODO discuss how to implement
+source /data/portal-cron/scripts/automation-environment.sh
+source /data/portal-cron/scripts/rds_functions.sh
+
+function read_scalar() {
+    local key="$1"
+    local value
+    value=$("$YQ_BINARY" -r "$key" "$COLOR_SWAP_CONFIG_FILEPATH")
+    if [ "$value" == "null" ] || [ -z "$value" ] ; then
+        echo "Error : missing required scalar '$key' in $COLOR_SWAP_CONFIG_FILEPATH" >&2
+        exit 1
+    fi
+    printf '%s\n' "$value"
 }
 
 get_node_id() {
@@ -59,8 +68,8 @@ err_failed_to_change_instance_class() {
 }
 
 # Get the scale up / scale down classes for this portal
-scale_up_class=$(read_cfg_knob "$PORTAL_DATABASE" 'rds_scale_up_class')
-scale_down_class=$(read_cfg_knob "$PORTAL_DATABASE" 'rds_scale_down_class')
+scale_up_class=$(read_scalar '.rds_scale_up_class')
+scale_down_class=$(read_scalar '.rds_scale_down_class')
 
 
 # Validate the current class for the given direction
