@@ -7,7 +7,8 @@ rds_current_class() {
     aws rds describe-db-instances \
         --db-instance-identifier "$id" \
         --query 'DBInstances[0].DBInstanceClass' \
-        --output text
+        --output text \
+        --profile automation_public
 }
 
 # Get current instance status
@@ -17,22 +18,31 @@ rds_current_status() {
     aws rds describe-db-instances \
         --db-instance-identifier "$id" \
         --query 'DBInstances[0].DBInstanceStatus' \
-        --output text
+        --output text \
+        --profile automation_public
 }
 
 # Start instance
 rds_start() {
     local id="$1"
 
-    aws rds start-db-instance --db-instance-identifier "$id" --no-cli-pager
-    aws rds wait db-instance-available --db-instance-identifier "$id"
+    aws rds start-db-instance \
+        --db-instance-identifier "$id" \
+        --no-cli-pager \
+        --profile automation_public
+    aws rds wait db-instance-available \
+        --db-instance-identifier "$id" \
+        --profile automation_public
 }
 
 # Stop instance
 rds_stop() {
     local id="$1"
 
-    aws rds stop-db-instance --db-instance-identifier "$id" --no-cli-pager
+    aws rds stop-db-instance \
+        --db-instance-identifier "$id" \
+        --no-cli-pager \
+        --profile automation_public
 
     # The functionality to check whether an RDS instance is stopped doesn't yet exist from the AWS CLI;
     # we have to emulate it ourselves manually
@@ -59,7 +69,8 @@ rds_validate_class() {
     read -r engine engine_version <<<"$(aws rds describe-db-instances \
         --db-instance-identifier "$id" \
         --query 'DBInstances[0].[Engine,EngineVersion]' \
-        --output text)"
+        --output text \
+        --profile automation_public)"
 
     if [[ -z "$engine" || -z "$engine_version" ]]; then
         echo "Unable to determine engine/version for '$id'" >&2
@@ -70,13 +81,15 @@ rds_validate_class() {
         --engine "$engine" \
         --engine-version "$engine_version" \
         --query "OrderableDBInstanceOptions[?DBInstanceClass=='$new_class'].DBInstanceClass" \
-        --output text | grep -qw "$new_class"
+        --output text \
+        --profile automation_public | grep -qw "$new_class"
 }
 
 # Explicitly set class
 rds_set_class() {
     local id="$1"
     local new_class="$2"
+    local timeout_seconds="${3:-900}"
 
     if ! rds_validate_class "$id" "$new_class"; then
         echo "Invalid DB instance class '$new_class' for '$id'" >&2
@@ -87,7 +100,39 @@ rds_set_class() {
         --db-instance-identifier "$id" \
         --db-instance-class "$new_class" \
         --apply-immediately \
-        --no-cli-pager
+        --no-cli-pager \
+        --profile automation_public
 
-    aws rds wait db-instance-available --db-instance-identifier "$id"
+    wait_for_class "$id" "$new_class" "$timeout_seconds"
+}
+
+# Wait for the instance class change to complete and become available
+wait_for_class() {
+    local id="$1"
+    local new_class="$2"
+    local timeout="${3:-900}"
+    local start now class status pending
+
+    start=$(date +%s)
+
+    while true; do
+        read -r class status pending <<<"$(aws rds describe-db-instances \
+            --db-instance-identifier "$id" \
+            --query 'DBInstances[0].[DBInstanceClass,DBInstanceStatus,PendingModifiedValues.DBInstanceClass]' \
+            --output text \
+            --profile automation_public)"
+
+        # Succeed when the new class is applied, instance is available, and no pending modification remains
+        if [[ "$class" == "$new_class" && "$status" == "available" && ( "$pending" == "None" || -z "$pending" ) ]]; then
+            return 0
+        fi
+
+        now=$(date +%s)
+        if (( now - start >= timeout )); then
+            echo "Timed out waiting for $id to become $new_class (status=$status, pending=$pending, current=$class)" >&2
+            return 1
+        fi
+
+        sleep 10
+    done
 }
