@@ -25,11 +25,16 @@ PORTAL_DATABASE="$2"
 COLOR_SWAP_CONFIG_FILEPATH="$3"
 
 [[ "$DIRECTION" == "up" || "$DIRECTION" == "down" ]]
-[[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" ]]
+#[[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" ]]
 [[ -f "$COLOR_SWAP_CONFIG_FILEPATH" ]]
 
 source /data/portal-cron/scripts/automation-environment.sh
 source /data/portal-cron/scripts/rds_functions.sh
+
+# Authenticate with AWS
+# (for now everything's on the public service acct --
+#  but switch on PORTAL_DATABASE and auth for private for msk portal)
+/data/portal-cron/scripts/authenticate_service_account.sh public
 
 function read_scalar() {
     local key="$1"
@@ -49,6 +54,9 @@ get_node_id() {
             ;;
         genie)
             echo "cbioportal-genie-db-blue"
+            ;;
+        test)
+            echo "cbioportal-nci-db"
             ;;
         *)
             echo "Unsupported portal: $PORTAL_DATABASE" >&2
