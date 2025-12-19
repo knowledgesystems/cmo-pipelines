@@ -137,6 +137,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 "down",
                 importer,
                 color_swap_config_filepath,
+                "{{ '' if dag_run.get_task_instance('scale_up_rds_node').state == 'success' else '--skip-pre-validation' }}",
             ),
             "transfer_deployment": _script(
                 scripts_dir,
@@ -185,6 +186,10 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             if name == "set_import_abandoned":
                 params["trigger_rule"] = TriggerRule.ONE_FAILED
             elif name == "cleanup_data":
+                params["trigger_rule"] = TriggerRule.ALL_DONE
+            elif name == "scale_up_rds_node":
+                params["do_xcom_push"] = True
+            elif name == "scale_down_rds_node":
                 params["trigger_rule"] = TriggerRule.ALL_DONE
 
             if config.pool is not None:

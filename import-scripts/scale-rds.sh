@@ -23,6 +23,7 @@ set -eEuo pipefail
 DIRECTION="$1"
 PORTAL_DATABASE="$2"
 COLOR_SWAP_CONFIG_FILEPATH="$3"
+SKIP_PRE_VALIDATION="${4:-}"
 
 [[ "$DIRECTION" == "up" || "$DIRECTION" == "down" ]]
 #[[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" ]]
@@ -76,22 +77,28 @@ err_failed_to_change_instance_class() {
 }
 
 # Get the scale up / scale down classes for this portal
+echo "Reading configuration knobs"
 scale_up_class=$(read_scalar '.rds_scale_up_class')
 scale_down_class=$(read_scalar '.rds_scale_down_class')
 
 
-# Validate the current class for the given direction
-# We should be scaling up from a downsized node, and scaling down from an upsized node
 rds_node_id=$(get_node_id)
 current_class=$(rds_current_class "$rds_node_id")
 
-if [[ "$DIRECTION" == "up" ]]; then
-    [[ "$current_class" == "$scale_down_class" ]] || err_mismatched_instance_class
-else
-    [[ "$current_class" == "$scale_up_class" ]] || err_mismatched_instance_class
+if [[ "$SKIP_PRE_VALIDATION" != "--skip-pre-validation" ]]; then
+    # Validate the current class for the given direction
+    # We should be scaling up from a downsized node, and scaling down from an upsized node
+    echo "Validating RDS instance class pre-scaling"
+
+    if [[ "$DIRECTION" == "up" ]]; then
+        [[ "$current_class" == "$scale_down_class" ]] || err_mismatched_instance_class
+    else
+        [[ "$current_class" == "$scale_up_class" ]] || err_mismatched_instance_class
+    fi
 fi
 
 # Do the scaling
+echo "Scaling node $DIRECTION"
 if [[ "$DIRECTION" == "up" ]]; then
     rds_set_class "$rds_node_id" "$scale_up_class"
 else
@@ -99,6 +106,7 @@ else
 fi
 
 # After scaling: validate that the instance class was changed successfully
+echo "Validating RDS instance class post-scaling"
 new_class=$(rds_current_class "$rds_node_id")
 if [[ "$DIRECTION" == "up" ]]; then
     [[ "$new_class" == "$scale_up_class" ]] || err_failed_to_change_instance_class
