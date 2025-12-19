@@ -7,16 +7,18 @@ COLOR_SWAP_CONFIG_FILEPATH="$3"
 SKIP_PRE_VALIDATION="${4:-}"
 
 [[ "$DIRECTION" == "up" || "$DIRECTION" == "down" ]]
-[[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" ]]
+[[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" || "$PORTAL_DATABASE" == "msk" ]]
 [[ -f "$COLOR_SWAP_CONFIG_FILEPATH" ]]
 
 source /data/portal-cron/scripts/automation-environment.sh
 source /data/portal-cron/scripts/rds_functions.sh
 
 # Authenticate with AWS
-# (for now everything's on the public service acct --
-#  but switch on PORTAL_DATABASE and auth for private for msk portal)
-/data/portal-cron/scripts/authenticate_service_account.sh public
+if [[ "$PORTAL_DATABASE" == "msk" ]]; then
+    /data/portal-cron/scripts/authenticate_service_account.sh eks
+else
+    /data/portal-cron/scripts/authenticate_service_account.sh public
+fi
 
 function read_scalar() {
     local key="$1"
@@ -30,12 +32,18 @@ function read_scalar() {
 }
 
 get_node_id() {
+    # NOTE: the color names in these RDS nodes do *not* have anything to do
+    # with the blue-green switching that's deployed in production today.
+    # they are relics of old times.
     case "$PORTAL_DATABASE" in
         public)
             echo "cbioportal-public-db-green"
             ;;
         genie)
             echo "cbioportal-genie-db-blue"
+            ;;
+        msk)
+            echo "mskdb-cbioportal-blue"
             ;;
         *)
             echo "Unsupported portal: $PORTAL_DATABASE" >&2
