@@ -1,22 +1,3 @@
-# inputs:
-# scale 'up' or 'down' ?
-# which portal are we scaling for?
-
-# logic:
-# 1. for the given portal -- determine its 'scale up' and 'scale down' instance types
-# - eg. for the public portal: up = r5.4xlarge, down = t3.micro (cheapest possible class)
-# - (may want to consider switching to ARM CPUs.
-#   in that case -- up = r6g/r7g.4xlarge, down = t4g.micro)
-# - for now, abstract it out
-# 2. if we're scaling up, validate that we're scaled down. if we're scaling down, validate that we're scaled up ✅
-# - this can be checked via rds_get_current_class
-# 3. call rds_set_class with the new instance type ✅
-# 4. validate that the new instance class matches the one we changed it to ✅
-
-# considerations:
-# - where to store the scale up/down instance classes? (eg in a config file?)
-# - do we only want to run this script via airflow, or should it be usable as a general-purpose CLI script?
-
 #!/usr/bin/env bash
 set -eEuo pipefail
 
@@ -26,7 +7,7 @@ COLOR_SWAP_CONFIG_FILEPATH="$3"
 SKIP_PRE_VALIDATION="${4:-}"
 
 [[ "$DIRECTION" == "up" || "$DIRECTION" == "down" ]]
-#[[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" ]]
+[[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" ]]
 [[ -f "$COLOR_SWAP_CONFIG_FILEPATH" ]]
 
 source /data/portal-cron/scripts/automation-environment.sh
@@ -56,9 +37,6 @@ get_node_id() {
         genie)
             echo "cbioportal-genie-db-blue"
             ;;
-        test)
-            echo "cbioportal-nci-db"
-            ;;
         *)
             echo "Unsupported portal: $PORTAL_DATABASE" >&2
             exit 1
@@ -77,7 +55,7 @@ err_failed_to_change_instance_class() {
 }
 
 # Get the scale up / scale down classes for this portal
-echo "Reading configuration knobs"
+echo "Reading configuration knobs from $COLOR_SWAP_CONFIG_FILEPATH"
 scale_up_class=$(read_scalar '.rds_scale_up_class')
 scale_down_class=$(read_scalar '.rds_scale_down_class')
 
