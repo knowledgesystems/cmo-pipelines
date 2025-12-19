@@ -137,7 +137,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 "down",
                 importer,
                 color_swap_config_filepath,
-                "{{ '' if dag_run.get_task_instance('scale_up_rds_node').state == 'success' else '--skip-pre-validation' }}",
+                "{{ '' if (dag_run.get_task_instance('scale_up_rds_node', map_index=ti.map_index) and dag_run.get_task_instance('scale_up_rds_node', map_index=ti.map_index).state == 'success') else '--skip-pre-validation' }}",
             ),
             "transfer_deployment": _script(
                 scripts_dir,
