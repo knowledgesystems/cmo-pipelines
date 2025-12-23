@@ -51,6 +51,8 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="review-importer.log"
     PORTAL_NAME="hgnc-portal"
     ONCOTREE_VERSION="oncotree_latest_stable"
+    # Need to set a different PORTAL_DATA_HOME instead of pulling from the same Datahub clone as public
+    export PORTAL_DATA_HOME="/data2/portal-cron/cbio-portal-data-publicdbv7-rebuild"
     ;;
 #   msk)
 #     TMP_DIR_NAME="import-cron-msk"
