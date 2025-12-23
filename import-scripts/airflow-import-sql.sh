@@ -19,7 +19,7 @@ fi
 source "$AUTOMATION_ENV_SCRIPT_FILEPATH"
 
 function is_mysql_import() {
-    [[ "$PORTAL_DATABASE" = "triage" ]]
+    [[ "$PORTAL_DATABASE" = "triage" || "$PORTAL_DATABASE" = "review" ]]
 }
 
 # Set needed paths/filenames for import
@@ -44,6 +44,13 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="triage-cmo-importer.log"
     PORTAL_NAME="triage-portal"
     ONCOTREE_VERSION="oncotree_candidate_release"
+    ;;
+  review)
+    TMP_DIR_NAME="import-cron-review"
+    IMPORTER_NAME="review"
+    LOG_FILE_NAME="review-importer.log"
+    PORTAL_NAME="hgnc-portal"
+    ONCOTREE_VERSION="oncotree_latest_stable"
     ;;
 #   msk)
 #     TMP_DIR_NAME="import-cron-msk"
