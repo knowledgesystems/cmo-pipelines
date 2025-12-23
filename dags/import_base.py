@@ -88,6 +88,13 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 db_properties_filepath,
                 color_swap_config_filepath,
             ),
+            "scale_up_rds_node": _script(
+                scripts_dir,
+                "scale-rds.sh",
+                "up",
+                importer,
+                color_swap_config_filepath,
+            ),
             "clone_database": _script(
                 scripts_dir,
                 "airflow-clone-db.sh",
@@ -123,6 +130,19 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 importer,
                 scripts_dir,
                 db_properties_filepath,
+            ),
+            "scale_down_rds_node": _script(
+                scripts_dir,
+                "scale-rds.sh",
+                "down",
+                importer,
+                color_swap_config_filepath,
+                # Normally, we would verify that we are in a "scaled up" state before trying to scale down.
+                # However, if the DAG run failed before "scale_up_rds_node" completed successfully,
+                # we may still be in a "scaled down" state when we run the scale down task
+                # (which runs regardless of upstream failures).
+                # In those cases -- skip verifying that we're in a scaled down state
+                "{{ '' if (dag_run.get_task_instance('scale_up_rds_node', map_index=ti.map_index) and dag_run.get_task_instance('scale_up_rds_node', map_index=ti.map_index).state == 'success') else '--skip-pre-validation' }}",
             ),
             "transfer_deployment": _script(
                 scripts_dir,
@@ -171,6 +191,12 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             if name == "set_import_abandoned":
                 params["trigger_rule"] = TriggerRule.ONE_FAILED
             elif name == "cleanup_data":
+                params["trigger_rule"] = TriggerRule.ALL_DONE
+            elif name == "scale_up_rds_node":
+                # Use XCom to signal downstream that the scale up task completed successfully
+                params["do_xcom_push"] = True
+            elif name == "scale_down_rds_node":
+                # Run scale down task regardless of upstream failures during import
                 params["trigger_rule"] = TriggerRule.ALL_DONE
 
             if config.pool is not None:
