@@ -26,7 +26,6 @@ _REVIEW_CONFIG = ImporterConfig(
         "fetch_data",
         "setup_import",
         "import_sql",
-        "clear_persistence_caches",
         "cleanup_data",
     ),
     db_properties_filename="manage_review_database_update_tools.properties",
