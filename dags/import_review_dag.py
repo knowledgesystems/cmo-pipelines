@@ -13,7 +13,7 @@ from dags.import_base import ImporterConfig, build_import_dag
 def _wire(tasks: dict[str, object]) -> None:
     tasks["data_repos"] >> tasks["fetch_data"]
     tasks["fetch_data"] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["clear_persistence_caches"] >> tasks["cleanup_data"]
+    tasks["setup_import"] >> tasks["import_sql"] >> tasks["cleanup_data"]
 
 _REVIEW_CONFIG = ImporterConfig(
     dag_id="import_review_dag",
