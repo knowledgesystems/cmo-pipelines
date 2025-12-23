@@ -7,6 +7,11 @@ COLOR_SWAP_CONFIG_FILEPATH="$3"
 SKIP_PRE_VALIDATION="${4:-}"
 
 [[ "$DIRECTION" == "up" || "$DIRECTION" == "down" ]]
+# NOTE: this script has not been tested on the msk portal yet.
+# It's uncertain whether it will work straight out of the box with
+# msk, since the RDS functions auth using the automation_public profile--
+# if it doesn't, we will have to pass the AWS profile from the script
+# (eg. via export AWS_PROFILE= or changing the function signatures to accept a profile).
 [[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" || "$PORTAL_DATABASE" == "msk" ]]
 [[ -f "$COLOR_SWAP_CONFIG_FILEPATH" ]]
 
