@@ -19,7 +19,7 @@ fi
 source "$AUTOMATION_ENV_SCRIPT_FILEPATH"
 
 function is_mysql_import() {
-    [[ "$PORTAL_DATABASE" = "triage" ]]
+    [[ "$PORTAL_DATABASE" = "triage" || "$PORTAL_DATABASE" = "review" ]]
 }
 
 # Set needed paths/filenames for import
