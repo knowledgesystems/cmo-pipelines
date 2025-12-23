@@ -16,7 +16,7 @@ def _wire(tasks: dict[str, object]) -> None:
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["clear_persistence_caches"] >> tasks["cleanup_data"]
 
 _REVIEW_CONFIG = ImporterConfig(
-    dag_id="import_triage_dag",
+    dag_id="import_review_dag",
     description="Imports Review study to MySQL database",
     importer="review",
     tags=["review"],
