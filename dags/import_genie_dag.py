@@ -11,9 +11,10 @@ from dags.import_base import ImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> tasks["verify_management_state"] >> [tasks["fetch_data"], tasks["clone_database"]]
+    tasks["data_repos"] >> tasks["verify_management_state"] >> [tasks["fetch_data"], tasks["scale_up_rds_node"]]
+    tasks["scale_up_rds_node"] >> tasks["clone_database"]
     [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["set_import_abandoned"] >> tasks["cleanup_data"]
+    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["scale_down_rds_node"] >> tasks["set_import_abandoned"] >> tasks["cleanup_data"]
 
 _GENIE_CONFIG = ImporterConfig(
     dag_id="import_genie_dag",
@@ -24,12 +25,14 @@ _GENIE_CONFIG = ImporterConfig(
     data_nodes=("importer_ssh",),
     task_names=(
         "verify_management_state",
+        "scale_up_rds_node",
         "clone_database",
         "fetch_data",
         "setup_import",
         "import_sql",
         "import_clickhouse",
         "transfer_deployment",
+        "scale_down_rds_node",
         "set_import_abandoned",
         "cleanup_data",
     ),
