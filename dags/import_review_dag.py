@@ -21,7 +21,7 @@ _REVIEW_CONFIG = ImporterConfig(
     importer="review",
     tags=["review"],
     target_nodes=("importer_ssh",),
-    data_nodes=("importer_ssh", "pipelines3_ssh"),
+    data_nodes=("importer_ssh",),
     task_names=(
         "fetch_data",
         "setup_import",
@@ -32,11 +32,11 @@ _REVIEW_CONFIG = ImporterConfig(
     color_swap_config_filename=None, # Not used for MySQL
     params={
         "data_repos": Param(
-            ["datahub"],
+            ["datahub-publicdbv7"],
             type="array",
             description="Comma-separated list of data repositories to pull updates from/cleanup.",
             title="Data Repositories",
-            examples=["datahub", "impact", "private"],
+            examples=["datahub-publicdbv7"],
         ),
     },
     wire_dependencies=_wire,
