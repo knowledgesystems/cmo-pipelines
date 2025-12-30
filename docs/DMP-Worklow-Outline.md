@@ -4,7 +4,7 @@
 **********************************************************************
 **Remove existing tmp files from $MSK_DMP_TMPDIR**
 **Check environment variables**
-**Refresh CDD and OncoTree Cache**
+**Refresh CDD Cache**
 **Update DMP Git repository**
 
 ## 1. REDCap Exports

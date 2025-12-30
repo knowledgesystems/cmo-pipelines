@@ -40,19 +40,19 @@ ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
 # -------------------------
 
 # Flags for individual steps required for successful import
-CDD_ONCOTREE_RECACHE_FAIL=0
+CDD_RECACHE_FAIL=0
 DB_VERSION_FAIL=0
 DATABRICKS_EXPORT_FAIL=0
 IMPORT_SUCCESS=0
 CLEAR_PERSISTENCE_CACHE_SUCCESS=0
 
-# Refresh CDD/Oncotree
+# Refresh CDD
 if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
-    # refresh cdd and oncotree cache
-    bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
+    # refresh cdd cache
+    bash $PORTAL_HOME/scripts/refresh-cdd-cache.sh
     if [ $? -gt 0 ]; then
-        CDD_ONCOTREE_RECACHE_FAIL=1
-        message="Failed to refresh CDD and/or ONCOTREE cache during CRDB PDX import!"
+        CDD_RECACHE_FAIL=1
+        message="Failed to refresh CDD cache during CRDB PDX import!"
         echo $message
     fi
 fi
@@ -100,7 +100,7 @@ $PYTHON_BINARY /data/portal-cron/scripts/merge.py -e /home/cbioportal_importer/t
 python /data/portal-cron/scripts/generate_case_lists.py -i msk_tempo -s /data/portal-cron/tmp/import-tempo/pipelines-testing/studies/msk_tempo -c /data/portal-cron/scripts/case_list_config.tsv  -d /data/portal-cron/tmp/import-tempo/pipelines-testing/studies/msk_tempo/case_lists
 # -------------------------
 
-if [[ $DB_VERSION_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 && $DATABRICKS_EXPORT_FAIL -eq 0 ]] ; then
+if [[ $DB_VERSION_FAIL -eq 0 && $CDD_RECACHE_FAIL -eq 0 && $DATABRICKS_EXPORT_FAIL -eq 0 ]] ; then
         echo "importing study data to database using $IMPORTER_JAR_FILENAME ..."
         $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --update-study-data --portal hot-deploy --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -ne 0 ]; then

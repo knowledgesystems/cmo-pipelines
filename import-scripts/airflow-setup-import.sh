@@ -3,7 +3,7 @@
 # Generic pre-import setup
 # - Determines correct importer JAR (color-specific for blue/green importers)
 # - Runs DB version check
-# - Refreshes CDD/Oncotree caches
+# - Refreshes CDD cache
 
 PORTAL_DATABASE=$1
 PORTAL_SCRIPTS_DIRECTORY=$2
@@ -106,10 +106,10 @@ if [ $? -gt 0 ]; then
     exit 1
 fi
 
-# Refresh CDD/Oncotree cache to pull latest metadata
-echo "Refreshing CDD/ONCOTREE caches"
-bash "$PORTAL_SCRIPTS_DIRECTORY/refresh-cdd-oncotree-cache.sh"
+# Refresh CDD cache to pull latest metadata
+echo "Refreshing CDD cache"
+bash "$PORTAL_SCRIPTS_DIRECTORY/refresh-cdd-cache.sh"
 if [ $? -gt 0 ]; then
-    echo "Error: Failed to refresh CDD and/or ONCOTREE cache during $PORTAL_DATABASE setup!" >&2
+    echo "Error: Failed to refresh CDD cache during $PORTAL_DATABASE setup!" >&2
     exit 1
 fi

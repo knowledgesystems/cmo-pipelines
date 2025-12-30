@@ -64,15 +64,15 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     CMO_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-cmo-$destination_database_color-importer.jar"
     CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
-    CDD_ONCOTREE_RECACHE_FAIL=0
+    CDD_RECACHE_FAIL=0
     if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
-        # refresh cdd and oncotree cache
-        bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
+        # refresh cdd cache
+        bash $PORTAL_HOME/scripts/refresh-cdd-cache.sh
         if [ $? -gt 0 ]; then
-            CDD_ONCOTREE_RECACHE_FAIL=1
-            message="Failed to refresh CDD and/or ONCOTREE cache during TRIAGE import!"
+            CDD_RECACHE_FAIL=1
+            message="Failed to refresh CDD cache during TRIAGE import!"
             echo $message
-            echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $PIPELINES_EMAIL_LIST
+            echo -e "$message" | mail -s "CDD cache failed to refresh" $PIPELINES_EMAIL_LIST
         fi
     fi
 
@@ -90,7 +90,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         DB_VERSION_FAIL=1
     fi
 
-    if [[ $DB_VERSION_FAIL -eq 0 && $DATA_SOURCE_REPO_FETCH_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
+    if [[ $DB_VERSION_FAIL -eq 0 && $DATA_SOURCE_REPO_FETCH_FAIL -eq 0 && $CDD_RECACHE_FAIL -eq 0 ]] ; then
         # import vetted studies into MSK portal
         echo "importing cancer type updates into msk portal database..."
         $JAVA_BINARY -Xmx16g $CMO_JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}

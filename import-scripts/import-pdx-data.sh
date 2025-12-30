@@ -3,7 +3,7 @@
 echo $(date)
 
 PATH_TO_AUTOMATION_SCRIPT=/data/portal-cron/scripts/automation-environment.sh
-# PIPELINES_EMAIL_LIST receives low level emails (fail to recache oncotree, fail to clear persistence cache, ...)
+# PIPELINES_EMAIL_LIST receives low level emails (fail to clear persistence cache, ...)
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 # PDX_EMAIL_LIST receives a daily summary email of import statistics and problems
 PDX_EMAIL_LIST="cbioportal-pdx-importer@cbioportal.org"
@@ -158,15 +158,15 @@ ALL_DATA_SOURCE_FETCH_SUCCESS=0
 IMPORT_SUCCESS=0
 CLEAR_PERSISTENCE_CACHE_SUCCESS=0
 
-CDD_ONCOTREE_RECACHE_FAIL=0
+CDD_RECACHE_FAIL=0
 if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
-    # refresh cdd and oncotree cache
-    bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh
+    # refresh cdd cache
+    bash $PORTAL_HOME/scripts/refresh-cdd-cache.sh
     if [ $? -gt 0 ]; then
-        CDD_ONCOTREE_RECACHE_FAIL=1
-        message="Failed to refresh CDD and/or ONCOTREE cache during CRDB PDX import!"
+        CDD_RECACHE_FAIL=1
+        message="Failed to refresh CDD cache during CRDB PDX import!"
         echo $message
-        echo -e "$message" | mail -s "CDD and/or ONCOTREE cache failed to refresh" $PIPELINES_EMAIL_LIST
+        echo -e "$message" | mail -s "CDD cache failed to refresh" $PIPELINES_EMAIL_LIST
     fi
 fi
 
@@ -281,7 +281,7 @@ pushAllChangesets $CRDB_FETCHER_PDX_HOME
 if [ $CRDB_PDX_SUBSET_AND_MERGE_SUCCESS -ne 0 ] ; then
     # import if all went well (only if trigger file is present)
     # if the database version is correct and ALL fetches succeed, then import
-    if [[ $DB_VERSION_FAIL -eq 0 && $CDD_ONCOTREE_RECACHE_FAIL -eq 0 ]] ; then
+    if [[ $DB_VERSION_FAIL -eq 0 && $CDD_RECACHE_FAIL -eq 0 ]] ; then
         echo "importing study data to database using $IMPORTER_JAR_FILENAME ..."
         $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --update-study-data --portal crdb-pdx-portal --use-never-import --update-worksheet --notification-file "$importer_notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -ne 0 ]; then
