@@ -5,28 +5,14 @@ MAX_ATTEMPTS=5
 function usage {
     echo "refresh-cdd-oncotree-cache.sh"
     echo -e "\t-h | --help                          prints usage statement and exits"
-    echo -e "\t-c | --cdd-only                      refresh CDD cache only [cannot be used with --oncotree-only]"
-    echo -e "\t-o | --oncotree-only                 refresh Oncotree cache only [cannot be used with --cdd-only]"
     exit 2
 }
 
 # set default value(s)
 REFRESH_SERVICE="ALL"
-CDD_ONLY=0
-ONCOTREE_ONLY=0
 
 for i in "$@"; do
 case $i in
-    -c|--cdd-only)
-    CDD_ONLY=1
-    REFRESH_SERVICE="CDD"
-    shift
-    ;;
-    -o|--oncotree-only)
-    ONCOTREE_ONLY=1
-    REFRESH_SERVICE="ONCOTREE"
-    shift
-    ;;
     -h|--help)
         usage
     shift
@@ -35,12 +21,6 @@ case $i in
     ;;
 esac
 done
-
-# validate input arguments
-if [[ $CDD_ONLY -eq 1 && $ONCOTREE_ONLY -eq 1 ]]; then
-    echo -e "ERROR: either no arguments or only one argument ('--cdd-only' or '--oncotree-only') can be passed!"
-    usage
-fi
 
 ## FUNCTIONS
 
@@ -191,55 +171,11 @@ function refreshCddCache {
     return $return_value
 }
 
-function refreshOncotreeCache {
-    # attempt to recache ONCOTREE
-    ENDPOINT="api/refreshCache"
-    ONCOTREE_SERVER1="https://oncotree.info"
-    ONCOTREE_SERVER_LIST=($ONCOTREE_SERVER1)
-    refreshCache "ONCOTREE" $MAX_ATTEMPTS $ENDPOINT ${ONCOTREE_SERVER_LIST[@]}; return_value=$?
-    if [ $return_value -gt 0 ] ; then
-        # query oncotree for known oncotree code and check response - if still failed then alert pipelines team
-        # that subsequent imports might fail if importer also fails to query oncotree service when
-        # generating oncotree code cache
-        echo -e "\nRecache of ONCOTREE attempt failed!"
-        echo -e "\nChecking for valid stale cache to fallback on for ONCOTREE"
-        KNOWN_WORKING_ENDPOINT="api/tumorTypes/search/code/TISSUE?exactMatch=true&levels=0,1"
-        checkForValidStaleCache "ONCOTREE" $KNOWN_WORKING_ENDPOINT ${ONCOTREE_SERVER_LIST[@]}; return_value=$?
-    fi
-    return $return_value
-}
-
-## REFRESH CACHE FOR DESIRED SERVICE(S)
-
-# NOTE: We only really care about stopping the imports when the return value for
-#        'refreshOncotreeCache' is non-zero.
+## REFRESH CACHE FOR CDD
+# NOTE: If the CDD service fails to recache then we are okay letting the
+#       imports continue and we will see the error in the importer logs, email, and slack.
 #
-#         If the CDD service fails to recache then we are okay letting the
-#        imports continue and we will see the error in the importer logs, email, and slack.
-#
-#        However, if the ONCOTREE service fails to recache AND the service failed
-#        to fall back on a 'stale' cache then we want to prevent imports from running
-#        so that the issue can be addressed immediately, perhaps by manually
-#        restarting the oncotree tomcat. Therefore the 'return_value' will only be
-#        overwritten by the 'refreshOncotreeCache' call, and not the 'refreshCddCache'
-#        unless the --cdd-only option was passed.
 
 return_value=0
-case $REFRESH_SERVICE in
-    ALL)
-        refreshCddCache
-        refreshOncotreeCache; return_value=$?
-    ;;
-    CDD)
-        refreshCddCache; return_value=$?
-    ;;
-    ONCOTREE)
-        refreshOncotreeCache; return_value=$?
-    ;;
-    *)
-        # sanity checking that REFRESH_SERVICE gets resolved correctly
-        echo -e "REFRESH_SERVICE is not set to valid value: $REFRESH_SERVICE not in [ALL | CDD | ONCOTREE]"
-        usage
-    ;;
-esac
+refreshCddCache; return_value=$?
 exit $return_value
