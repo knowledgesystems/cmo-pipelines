@@ -7,11 +7,6 @@ COLOR_SWAP_CONFIG_FILEPATH="$3"
 SKIP_PRE_VALIDATION="${4:-}"
 
 [[ "$DIRECTION" == "up" || "$DIRECTION" == "down" ]]
-# NOTE: this script has not been tested on the msk portal yet.
-# It's uncertain whether it will work straight out of the box with
-# msk, since the RDS functions auth using the automation_public profile--
-# if it doesn't, we will have to pass the AWS profile from the script
-# (eg. via export AWS_PROFILE= or changing the function signatures to accept a profile).
 [[ "$PORTAL_DATABASE" == "genie" || "$PORTAL_DATABASE" == "public" || "$PORTAL_DATABASE" == "msk" ]]
 [[ -f "$COLOR_SWAP_CONFIG_FILEPATH" ]]
 
@@ -19,10 +14,13 @@ source /data/portal-cron/scripts/automation-environment.sh
 source /data/portal-cron/scripts/rds_functions.sh
 
 # Authenticate with AWS
+# We choose the automation profile based on portal to ensure the RDS helpers hit the right account.
 if [[ "$PORTAL_DATABASE" == "msk" ]]; then
     /data/portal-cron/scripts/authenticate_service_account.sh eks
+    aws_profile="automation_eks"
 else
     /data/portal-cron/scripts/authenticate_service_account.sh public
+    aws_profile="automation_public"
 fi
 
 function read_scalar() {
@@ -74,7 +72,7 @@ scale_down_class=$(read_scalar '.rds_scale_down_class')
 
 
 rds_node_id=$(get_node_id)
-current_class=$(rds_current_class "$rds_node_id")
+current_class=$(rds_current_class "$rds_node_id" "$aws_profile")
 
 if [[ "$SKIP_PRE_VALIDATION" != "--skip-pre-validation" ]]; then
     # Validate the current class for the given direction
@@ -91,14 +89,14 @@ fi
 # Do the scaling
 echo "Scaling node $DIRECTION"
 if [[ "$DIRECTION" == "up" ]]; then
-    rds_set_class "$rds_node_id" "$scale_up_class"
+    rds_set_class "$rds_node_id" "$aws_profile" "$scale_up_class"
 else
-    rds_set_class "$rds_node_id" "$scale_down_class"
+    rds_set_class "$rds_node_id" "$aws_profile" "$scale_down_class"
 fi
 
 # After scaling: validate that the instance class was changed successfully
 echo "Validating RDS instance class post-scaling"
-new_class=$(rds_current_class "$rds_node_id")
+new_class=$(rds_current_class "$rds_node_id" "$aws_profile")
 if [[ "$DIRECTION" == "up" ]]; then
     [[ "$new_class" == "$scale_up_class" ]] || err_failed_to_change_instance_class
 else
