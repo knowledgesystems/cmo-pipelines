@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -eEuo pipefail
 
 DIRECTION="$1"
