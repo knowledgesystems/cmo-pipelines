@@ -336,8 +336,8 @@ if __name__ == '__main__':
     )
     parser.add_argument('input_patient_file_path', help='Path to the input clinical patient file')
     parser.add_argument('output_patient_file_path', help='Path to which the output patient file is written')
-    parser.add_argument('input_sample_file_path', help='Path to the input clinical sample file', required=False)
-    parser.add_argument('output_sample_file_path', help='Path to which the output sample file is written', required=False)
+    parser.add_argument('--input_sample_file_path', help='Path to the input clinical sample file', required=False)
+    parser.add_argument('--output_sample_file_path', help='Path to which the output sample file is written', required=False)
     parser.add_argument(
         '--upper-age-limit',
         '-u',
