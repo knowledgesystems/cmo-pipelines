@@ -11,7 +11,6 @@ if [ ! -f $PORTAL_HOME/scripts/automation-environment.sh ] ; then
 fi
 
 source $PORTAL_HOME/scripts/automation-environment.sh
-source $PORTAL_HOME/scripts/s3_functions.sh
 
 COHORT="$1"
 CDM_DATA_DIR="$2"
