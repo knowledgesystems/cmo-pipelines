@@ -109,7 +109,7 @@ class PatientLineProcessor(LineProcessor):
 
         # Convert age to an integer
         try:
-            age_current_value = int(age_current_value)
+            age_current_value = float(age_current_value)
         except ValueError:
             # Leave non-numeric values alone (perhaps NA)
             return
