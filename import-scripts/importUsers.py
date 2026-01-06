@@ -67,7 +67,8 @@ CGDS_USERS_WORKSHEET = 'users.worksheet'
 IMPORTER_SPREADSHEET = 'importer.spreadsheet'
 
 # Worksheet that contains email contents
-IMPORTER_WORKSHEET = 'import_user_email'
+IMPORT_EMAIL_WORKSHEET = 'import_user_email'
+REJECT_EMAIL_WORKSHEET = 'reject_user_email'
 
 # Worksheet that contains portal names
 ACCESS_CONTROL_WORKSHEET = 'access_control'
@@ -350,6 +351,45 @@ def get_new_user_map(spreadsheet, sheet_records, current_user_map, portal_name):
     return to_return
 
 # ------------------------------------------------------------------------------
+# get rejected users from google spreadsheet (users with null or blank status)
+
+def get_rejected_user_map(spreadsheet, sheet_records, current_user_map, portal_name):
+
+    # map that we are returning
+    # key is the institutional email address + google (in case user has multiple google ids)
+    # of the user and value is a User object
+    to_return = {}
+    for row in sheet_records:
+        google_email = ''
+        inst_email = ''
+        # we are only concerned with entries that have null or blank status
+        if (row[STATUS_KEY] is None or row[STATUS_KEY].strip() == ''):
+            if row[INST_EMAIL_KEY] is not None:
+                inst_email = row[INST_EMAIL_KEY].strip().lower()
+            if row[OPENID_EMAIL_KEY] is not None:
+                google_email = row[OPENID_EMAIL_KEY].strip().lower()
+            name = row[FULLNAME_KEY].strip()
+            if row[AUTHORITIES_KEY] is not None:
+                authorities = row[AUTHORITIES_KEY].strip()
+            else:
+                authorities = ''
+            # do not add row if this row is a current user
+            # we lowercase google account because entries added to mysql are lowercased.
+            if google_email.lower() not in current_user_map and google_email != '':
+                if authorities[-1:] == ';':
+                    authorities = authorities[:-1]
+                if google_email.lower() in to_return:
+                    # there may be multiple entries per email address
+                    # in google spreadsheet, combine entries
+                    user = to_return[google_email.lower()]
+                    user.authorities.extend([portal_name + ':' + au for au in authorities.split(';')])
+                    to_return[google_email.lower()] = user
+                else:
+                    to_return[google_email.lower()] = User(inst_email, google_email, name, 0,
+                        [portal_name + ':' + au for au in authorities.split(';')])
+    return to_return
+
+# ------------------------------------------------------------------------------
 # get db connection
 
 def get_db_connection(portal_properties, port, ssl_ca_filename=None):
@@ -434,18 +474,20 @@ def manage_users(client, spreadsheet, cursor, sheet_records, portal_name):
         print >> OUTPUT_FILE, 'We have found %s current portal users' % len(current_user_map)
     else:
         print >> OUTPUT_FILE, 'Error reading user table'
-        return None, None
+        return None, None, None
 
     # get list of new users and insert
     print >> OUTPUT_FILE, 'Checking for new users'
     new_user_map = get_new_user_map(spreadsheet, sheet_records, current_user_map, portal_name)
+    rejected_user_map = get_rejected_user_map(spreadsheet, sheet_records, current_user_map, portal_name)
+    
     if (len(new_user_map) > 0):
         print >> OUTPUT_FILE, 'We have %s new user(s) to add' % len(new_user_map)
         emails_to_remove = insert_new_users(cursor, new_user_map.values())
-        return new_user_map, emails_to_remove
+        return new_user_map, rejected_user_map, emails_to_remove
     else:
         print >> OUTPUT_FILE, 'No new users to insert, exiting'
-        return None, None
+        return None, rejected_user_map, None
 
 # ------------------------------------------------------------------------------
 # updates user study access
@@ -468,13 +510,93 @@ def update_user_authorities(spreadsheet, cursor, sheet_records, portal_name):
                         print >> ERROR_FILE, msg
 
 # ------------------------------------------------------------------------------
+# adds rejected user emails to rejected_users worksheet in an idempotent fashion
+
+def add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, client, worksheet='rejected_users'):
+    if rejected_user_map is None or len(rejected_user_map) == 0:
+        return
+
+    print >> OUTPUT_FILE, 'Adding rejected users to rejected_users worksheet'
+
+    # get existing records from the rejected_users worksheet
+    # Note: get_sheet_records converts column names to lowercase with special chars removed
+    # So "EMAIL" becomes "email" and "DATE_REJECTED_UTC" becomes "daterejectedutc"
+    try:
+        existing_records = get_sheet_records(client, google_spreadsheet, worksheet)
+        existing_emails = set()
+        for record in existing_records:
+            # Column name "EMAIL" is normalized to "email" by get_sheet_records
+            if 'email' in record and record['email'] is not None:
+                existing_emails.add(record['email'].strip().lower())
+    except Exception as e:
+        # worksheet might not exist or be empty, start with empty set
+        print >> OUTPUT_FILE, 'Creating new rejected_users worksheet or worksheet is empty'
+        existing_emails = set()
+
+    # prepare new rows to append (only users not already in the worksheet)
+    new_rows = []
+    import datetime
+    current_utc_time = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
+    for user_email in rejected_user_map.keys():
+        if user_email.lower() not in existing_emails:
+            new_rows.append([user_email, current_utc_time])
+            print >> OUTPUT_FILE, 'Adding rejected user to worksheet: %s' % user_email
+
+    # append new rows to the worksheet if there are any
+    if len(new_rows) > 0:
+        try:
+            spreadsheet_service = client.spreadsheets()
+            # append the new rows
+            body = {
+                'values': new_rows
+            }
+            spreadsheet_service.values().append(
+                spreadsheetId=google_spreadsheet,
+                range=worksheet,
+                valueInputOption='RAW',
+                body=body
+            ).execute()
+            print >> OUTPUT_FILE, 'Added %s rejected user(s) to worksheet' % len(new_rows)
+        except Exception as e:
+            print >> ERROR_FILE, 'Error adding rejected users to worksheet: %s' % str(e)
+    else:
+        print >> OUTPUT_FILE, 'No new rejected users to add to worksheet'
+
+# ------------------------------------------------------------------------------
+# sends emails to users from a user map
+
+def send_emails(user_map, google_spreadsheet, client, worksheet, gmail_username, gmail_password, sender, emails_to_remove=None):
+    if user_map is None:
+        return
+
+    subject, body = get_email_parameters(google_spreadsheet, client, worksheet=worksheet)
+    for user_key in user_map.keys():
+        user = user_map[user_key]
+        from_field = MESSAGE_FROM_CMO
+        bcc_field = MESSAGE_BCC_CMO
+        error_subject = ERROR_EMAIL_SUBJECT_CMO
+        error_body = ERROR_EMAIL_BODY_CMO
+        if sender == 'GENIE':
+            from_field = MESSAGE_FROM_GENIE
+            bcc_field = MESSAGE_BCC_GENIE
+            error_subject = ERROR_EMAIL_SUBJECT_GENIE
+            error_body = ERROR_EMAIL_BODY_GENIE
+        if emails_to_remove is None or user_key not in emails_to_remove:
+            print >> OUTPUT_FILE, ('Sending confirmation email to user: %s at %s' %
+                                   (user.name, user.inst_email))
+            send_mail([user.inst_email], subject, body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field)
+        else:
+            send_mail([user_key], error_subject, error_body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field)
+
+# ------------------------------------------------------------------------------
 # gets email parameters from google spreadsheet
 
-def get_email_parameters(google_spreadsheet,client):
+def get_email_parameters(google_spreadsheet,client,worksheet):
     subject = ''
     body = ''
     print >> OUTPUT_FILE, 'Getting email parameters from google spreadsheet'
-    email_sheet_records = get_sheet_records(client, google_spreadsheet, IMPORTER_WORKSHEET)
+    email_sheet_records = get_sheet_records(client, google_spreadsheet, worksheet)
     for record in email_sheet_records:
         if record[SUBJECT_KEY] is not None and record[BODY_KEY] is not None:
             subject = record[SUBJECT_KEY].strip()
@@ -592,7 +714,7 @@ def main():
             # note: original script depended on one to one mapping of spreadsheet to app name - and lookup was by spreadsheet
             # with a now decommissioned app (genie-archive) we wanted to be able to do one to many mapping (one spreadsheet to multiple apps)
             # to fit this logic would have to rework how we specify properties or introduce new column (db name) as index but might have other effects
-            new_user_map, emails_to_remove = manage_users(client, google_spreadsheet, cursor, sheet_records, app_name)
+            new_user_map, rejected_user_map, emails_to_remove = manage_users(client, google_spreadsheet, cursor, sheet_records, app_name)
             
             # update user authorities
             update_user_authorities(google_spreadsheet, cursor, sheet_records, app_name)
@@ -603,27 +725,12 @@ def main():
             connection.close()
 
             # sending emails
-            if new_user_map is not None:
-                if send_email_confirm == 'true':
-                    subject,body = get_email_parameters(google_spreadsheet,client)
-                    for new_user_key in new_user_map.keys():
-                        new_user = new_user_map[new_user_key]
-                        from_field = MESSAGE_FROM_CMO
-                        bcc_field = MESSAGE_BCC_CMO
-                        error_subject = ERROR_EMAIL_SUBJECT_CMO
-                        error_body = ERROR_EMAIL_BODY_CMO
-                        if sender == 'GENIE':
-                            from_field = MESSAGE_FROM_GENIE
-                            bcc_field = MESSAGE_BCC_GENIE
-                            error_subject = ERROR_EMAIL_SUBJECT_GENIE
-                            error_body = ERROR_EMAIL_BODY_GENIE
-                        if new_user_key not in emails_to_remove:
-                            print >> OUTPUT_FILE, ('Sending confirmation email to new user: %s at %s' %
-                                               (new_user.name, new_user.inst_email))
+            if send_email_confirm == 'true':
+                send_emails(new_user_map, google_spreadsheet, client, IMPORT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, emails_to_remove)
+                send_emails(rejected_user_map, google_spreadsheet, client, REJECT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender)
 
-                            send_mail([new_user.inst_email],subject,body, gmail_username, gmail_password, sender = from_field, bcc = bcc_field)
-                        else:
-                            send_mail([new_user_key], error_subject, error_body, gmail_username, gmail_password, sender = from_field, bcc = bcc_field)
+            # add the emails from rejected_user_map to rejected_users worksheet in an idempotent fashion
+            add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, client)
 
 # ------------------------------------------------------------------------------
 # ready to roll
