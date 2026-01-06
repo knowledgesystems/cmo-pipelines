@@ -125,7 +125,7 @@ function subset_consented_cohort_patients() {
     fi
 
     # Add CDM timeline files
-    sh $IMPORT_SCRIPTS_DIR/subset-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_MSK_IMPACT_DATA_HOME $SOPHIA_TMPDIR
+    sh $PORTAL_SCRIPTS_DIR/subset-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_MSK_IMPACT_DATA_HOME $SOPHIA_TMPDIR
     if [ $? -gt 0 ] ; then
         echo "Failed to generate CDM timeline files"
         return 1
