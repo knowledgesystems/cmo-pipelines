@@ -132,6 +132,11 @@ function subset_consented_cohort_patients() {
     fi
 }
 
+function generate_cohort() {
+    merge_solid_heme_and_archer &&
+    subset_consented_cohort_patients
+}
+
 function rename_files_in_delivery_directory() {
     # We want to rename:
     # mskimpact_data_cna_hg19.seg -> sophia_mskimpact_data_cna_hg19.seg
