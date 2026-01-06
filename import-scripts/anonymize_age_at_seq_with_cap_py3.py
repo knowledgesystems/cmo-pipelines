@@ -87,17 +87,16 @@ class PatientLineProcessor(LineProcessor):
         self.upper_age_limit = upper_age_limit
         self.os_months_precision = os_months_precision
 
-    def apply_age_current_limit(self, cols, patient_id_col_index, age_current_col_index):
-        """Applies age limits to the 'AGE_CURRENT' column:
-            If 'AGE_CURRENT' > upper_age_limit, this function will overwrite the value of
-                'AGE_CURRENT' to '>{upper_age_limit}'.
+    def apply_age_current_limit(self, cols, age_current_col_index):
+        """Applies age limits to the 'CURRENT_AGE_DEID' column:
+            If 'CURRENT_AGE_DEID' > upper_age_limit, this function will overwrite the value of
+                'CURRENT_AGE_DEID' to '>{upper_age_limit}'.
 
         Args:
             cols (array of string): The column values from a line from the clinical patient file
             patient_id_col_index (int): Index of the 'PATIENT_ID' column
-            age_current_col_index (int): Index of the 'AGE_CURRENT' column
+            age_current_col_index (int): Index of the 'CURRENT_AGE_DEID' column
         """
-        patient_id_value = cols[patient_id_col_index]
         age_current_value = cols[age_current_col_index].strip()
 
         # Don't process blank age values
@@ -185,11 +184,11 @@ class PatientLineProcessor(LineProcessor):
             self.col_indices, 'OS_MONTHS', 'clinical patient'
         )
         age_current_col_index = self.find_required_column_index(
-            self.col_indices, 'AGE_CURRENT', 'clinical patient'
+            self.col_indices, 'CURRENT_AGE_DEID', 'clinical patient'
         )
         cols = line.rstrip('\n').split('\t')
         self.map_patient_id_to_os_years(cols, patient_id_col_index, os_months_col_index)
-        self.apply_age_current_limit(cols, patient_id_col_index, age_current_col_index)
+        self.apply_age_current_limit(cols, age_current_col_index)
         self.apply_os_months_precision_limit(cols, os_months_col_index, self.os_months_precision)
         self.write_data_line(cols)
 
@@ -204,7 +203,7 @@ class PatientFileWriter:
         self.upper_age_limit = upper_age_limit
         self.os_months_precision = os_months_precision
         self.data_handler = DataHandler(input_file_path)
-        self.col_indices = self.data_handler.get_col_indices({'PATIENT_ID', 'OS_MONTHS', 'AGE_CURRENT'})
+        self.col_indices = self.data_handler.get_col_indices({'PATIENT_ID', 'OS_MONTHS', 'CURRENT_AGE_DEID'})
         self.patient_os_years_map = {}
 
     def write(self):
@@ -337,8 +336,8 @@ if __name__ == '__main__':
     )
     parser.add_argument('input_patient_file_path', help='Path to the input clinical patient file')
     parser.add_argument('output_patient_file_path', help='Path to which the output patient file is written')
-    parser.add_argument('input_sample_file_path', help='Path to the input clinical sample file')
-    parser.add_argument('output_sample_file_path', help='Path to which the output sample file is written')
+    parser.add_argument('input_sample_file_path', help='Path to the input clinical sample file', required=False)
+    parser.add_argument('output_sample_file_path', help='Path to which the output sample file is written', required=False)
     parser.add_argument(
         '--upper-age-limit',
         '-u',
@@ -382,10 +381,11 @@ if __name__ == '__main__':
     patient_file_reader.write()
 
     # Transform the clinical sample file
-    sample_file_writer = SampleFileWriter(
-        input_sample_file_path,
-        output_sample_file_path,
-        upper_age_limit,
-        patient_file_reader.patient_os_years_map,
-    )
-    sample_file_writer.write()
+    if input_sample_file_path:
+        sample_file_writer = SampleFileWriter(
+            input_sample_file_path,
+            output_sample_file_path,
+            upper_age_limit,
+            patient_file_reader.patient_os_years_map,
+        )
+        sample_file_writer.write()

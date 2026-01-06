@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 
-# File containing list of patients should be passed in as argument
-export SUBSET_FILE="$1"
-export COHORT_NAME="$2"
-export PORTAL_SCRIPTS_DIR="$3"
-export CDM_METADATA="$4"
+export COHORT_NAME="$1"
+export PORTAL_SCRIPTS_DIR="$2"
+export CDM_METADATA="$3"
 export CURRENT_DATE="$(date '+%m.%d.%y')"
 export CDD_URL="https://cdd.cbioportal.mskcc.org/api/"
 
@@ -12,8 +10,8 @@ export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_DATA_HOME/$COHORT_NAME"
 export SOPHIA_TMPDIR="$SOPHIA_MSK_IMPACT_DATA_HOME/tmp"
 
 # Patient and sample attributes that we want to deliver in our data
-DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 RACE SEX ETHNICITY CURRENT_AGE_DEID STAGE_HIGHEST_RECORDED NUM_ICDO_DX ADRENAL_GLANDS BONE CNS_BRAIN INTRA_ABDOMINAL LIVER LUNG LYMPH_NODES OTHER PLEURA REPRODUCTIVE_ORGANS SMOKING_PREDICTIONS_3_CLASSES GLEASON_FIRST_REPORTED GLEASON_HIGHEST_REPORTED HISTORY_OF_PDL1 HISTORY_OF_D_MMR PRIOR_MED_TO_MSK OS_MONTHS OS_STATUS"
-DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_SCORE MSI_TYPE SOMATIC_STATUS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE SEQ_DATE"
+DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID GENDER RACE ETHNICITY CURRENT_AGE_DEID STAGE_HIGHEST_RECORDED NUM_ICDO_DX ADRENAL_GLANDS BONE CNS_BRAIN INTRA_ABDOMINAL LIVER LUNG LYMPH_NODES OTHER PLEURA REPRODUCTIVE_ORGANS SMOKING_PREDICTIONS_3_CLASSES GLEASON_FIRST_REPORTED GLEASON_HIGHEST_REPORTED HISTORY_OF_PDL1 HISTORY_OF_D_MMR PRIOR_MED_TO_MSK YOST_INDEX_IMPUTED_MEDIAN OS_MONTHS OS_STATUS ECOG_KPS OTHER_PATIENT_ID PARTA_CONSENTED_12_245 PARTC_CONSENTED_12_245"
+DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID GLEASON_SAMPLE_LEVEL PDL1_POSITIVE CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_COMMENT MSI_SCORE MSI_TYPE INSTITUTE SOMATIC_STATUS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE SEQ_DATE"
 
 # Duplicate columns that we want to filter out of MAF files
 MUTATIONS_EXTENDED_COLS_TO_FILTER="amino_acid_change,cdna_change,transcript,COMMENTS,Comments,comments,Matched_Norm_Sample_Barcode"
@@ -92,7 +90,8 @@ function merge_solid_heme_and_archer() {
         return 1
     fi
 
-    sh $PORTAL_SCRIPTS_DIR/merge-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_TMPDIR
+    # Add CDM timeline files
+    sh $PORTAL_SCRIPTS_DIR/merge-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_TMPDIR "$MSK_SOLID_HEME_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME"
     if [ $? -gt 0 ] ; then
         echo "Failed to merge CDM timeline files"
         return 1
@@ -101,7 +100,6 @@ function merge_solid_heme_and_archer() {
 
 function subset_consented_cohort_patients() {
     CONSENTED_SUBSET_FILE=$(mktemp -q)
-    CONSENTED_COHORT_SUBSET_FILE=$(mktemp -q)
 
     # Generate subset of Part A consented patients from merged solid heme and archer
     $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/generate-clinical-subset.py \
@@ -114,17 +112,10 @@ function subset_consented_cohort_patients() {
         return 1
     fi
 
-    # Get intersection of consented patients and patients in current cohort
-    comm -12 <(sort $SUBSET_FILE) <(sort $CONSENTED_SUBSET_FILE) > $CONSENTED_COHORT_SUBSET_FILE
-    if [ $? -gt 0 ] ; then
-        echo "Failed to generate list of consented patients in $COHORT_NAME cohort"
-        return 1
-    fi
-
     # Write out the subsetted data
     $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/merge.py \
         --study-id="mskimpact" \
-        --subset="$CONSENTED_COHORT_SUBSET_FILE" \
+        --subset="$CONSENTED_SUBSET_FILE" \
         --output-directory="$SOPHIA_MSK_IMPACT_DATA_HOME" \
         --merge-clinical="true" \
         $SOPHIA_TMPDIR
@@ -134,7 +125,11 @@ function subset_consented_cohort_patients() {
     fi
 
     # Add CDM timeline files
-    subset_consented_cohort_patients
+    sh $IMPORT_SCRIPTS_DIR/subset-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_MSK_IMPACT_DATA_HOME $SOPHIA_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to generate CDM timeline files"
+        return 1
+    fi
 }
 
 function rename_files_in_delivery_directory() {
@@ -226,17 +221,14 @@ function add_seq_date_to_sample_file() {
 function anonymize_age_at_seq_with_cap() {
     PATIENT_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.os_months_trunc"
-    SAMPLE_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt"
-    SAMPLE_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.age_anonymized"
     UPPER_AGE_LIMIT=80
     OS_MONTHS_PRECISION=2
 
     # Anonymize AGE_AT_SEQUENCING_REPORTED_YEARS and truncate OS_MONTHS
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/anonymize_age_at_seq_with_cap_py3.py "$PATIENT_INPUT_FILEPATH" "$PATIENT_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH" "$SAMPLE_OUTPUT_FILEPATH" -u "$UPPER_AGE_LIMIT" -o "$OS_MONTHS_PRECISION" &&
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/anonymize_age_at_seq_with_cap_py3.py "$PATIENT_INPUT_FILEPATH" "$PATIENT_OUTPUT_FILEPATH" -u "$UPPER_AGE_LIMIT" -o "$OS_MONTHS_PRECISION" &&
 
     # Rewrite the patient and sample files with updated data
-    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH" &&
-    mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
+    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH"
 }
 
 function add_metadata_headers() {
@@ -386,7 +378,6 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[data_timeline_treatment.txt]+=1
     filenames_to_deliver[data_timeline_tsh_labs.txt]+=1
     filenames_to_deliver[data_timeline_tumor_sites.txt]+=1
-    filenames_to_deliver[DMP_IDs.txt]+=1
 
     # Remove any files/directories that are not specified above
     for filepath in $SOPHIA_MSK_IMPACT_DATA_HOME/* ; do
@@ -466,7 +457,7 @@ fi
 
 # Anonymize ages
 if ! anonymize_age_at_seq_with_cap ; then
-    report_error "ERROR: Failed to anonymize AGE_AT_SEQUENCING_REPORTED_YEARS"
+    report_error "ERROR: Failed to anonymize AGE_CURRENT_DEID"
 fi
 
 # Add metadata headers to clinical files
