@@ -116,7 +116,7 @@ class PatientLineProcessor(LineProcessor):
 
         # Apply age limit if applicable
         if age_current_value > self.upper_age_limit:
-            cols[age_current_col_index] = '>' + str(self.upper_age_limit)
+            cols[age_current_col_index] = str(float(self.upper_age_limit))
 
     def apply_os_months_precision_limit(self, cols, os_months_col_index, os_months_precision):
         """Truncates OS_MONTHS to specified decimal precision (os_months_precision).
