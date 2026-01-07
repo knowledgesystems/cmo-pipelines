@@ -61,6 +61,12 @@ function setup_data_directories() {
             return 1
         fi
     fi
+
+    cp -a $MSK_SOLID_HEME_DATA_HOME/* $SOPHIA_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to populate temporary directory"
+        return 1
+    fi
 }
 
 function merge_solid_heme_and_archer() {
