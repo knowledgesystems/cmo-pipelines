@@ -41,6 +41,7 @@ from oauth2client.tools import run_flow, argparser
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.MIMEText import MIMEText
+from email.Header import Header
 from email.Utils import COMMASPACE, formatdate
 from email import Encoders
 
@@ -144,12 +145,12 @@ def send_mail(to, subject, body, gmail_username, gmail_password, sender=MESSAGE_
     assert type(bcc)==list
 
     msg = MIMEMultipart()
-    msg['Subject'] = subject
+    msg['Subject'] = Header(subject, 'utf-8')
     msg['From'] = sender
     msg['To'] = COMMASPACE.join(to)
     msg['Date'] = formatdate(localtime=True)
 
-    msg.attach(MIMEText(body))
+    msg.attach(MIMEText(body, _charset='utf-8'))
 
     # combine to and bcc lists for sending
     combined_to_list = []
