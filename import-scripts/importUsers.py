@@ -388,6 +388,7 @@ def get_rejected_user_map(spreadsheet, sheet_records, current_user_map, portal_n
                 else:
                     to_return[google_email.lower()] = User(inst_email, google_email, name, 0,
                         [portal_name + ':' + au for au in authorities.split(';')])
+                    print >> OUTPUT_FILE, 'Rejected user added to list: %s' % google_email.lower()
     return to_return
 
 # ------------------------------------------------------------------------------
