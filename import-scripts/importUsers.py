@@ -536,6 +536,11 @@ def add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, clien
         print >> OUTPUT_FILE, 'Creating new rejected_users worksheet or worksheet is empty'
         existing_emails = set()
 
+    # remove any rejected users that are already in the worksheet
+    for user_email in rejected_user_map.keys():
+        if user_email.lower() in existing_emails:
+            rejected_user_map.pop(user_email, None)
+
     # prepare new rows to append (only users not already in the worksheet)
     new_rows = []
     import datetime
@@ -576,17 +581,18 @@ def send_emails(user_map, google_spreadsheet, client, worksheet, gmail_username,
     subject, body = get_email_parameters(google_spreadsheet, client, worksheet=worksheet)
     for user_key in user_map.keys():
         user = user_map[user_key]
-        from_field = MESSAGE_FROM_CMO
-        bcc_field = MESSAGE_BCC_CMO
-        error_subject = ERROR_EMAIL_SUBJECT_CMO
-        error_body = ERROR_EMAIL_BODY_CMO
         if sender == 'GENIE':
             from_field = MESSAGE_FROM_GENIE
             bcc_field = MESSAGE_BCC_GENIE
             error_subject = ERROR_EMAIL_SUBJECT_GENIE
             error_body = ERROR_EMAIL_BODY_GENIE
+        else:
+            from_field = MESSAGE_FROM_CMO
+            bcc_field = MESSAGE_BCC_CMO
+            error_subject = ERROR_EMAIL_SUBJECT_CMO
+            error_body = ERROR_EMAIL_BODY_CMO
         if emails_to_remove is None or user_key not in emails_to_remove:
-            print >> OUTPUT_FILE, ('Sending confirmation email to user: %s at %s' %
+            print >> OUTPUT_FILE, ('Sending confirmation or rejection email to user: %s at %s' %
                                    (user.name, user.inst_email))
             send_mail([user.inst_email], subject, body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field)
         else:
@@ -727,13 +733,15 @@ def main():
             connection.commit()
             connection.close()
 
+            # add the emails from rejected_user_map to rejected_users worksheet in an idempotent fashion
+            # also remove any emails from rejected_user_map that already exist in the worksheet--
+            # we only want to email users that have been rejected for the first time
+            add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, client)
+
             # sending emails
             if send_email_confirm == 'true':
                 send_emails(new_user_map, google_spreadsheet, client, IMPORT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, emails_to_remove)
                 send_emails(rejected_user_map, google_spreadsheet, client, REJECT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender)
-
-            # add the emails from rejected_user_map to rejected_users worksheet in an idempotent fashion
-            add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, client)
 
 # ------------------------------------------------------------------------------
 # ready to roll
