@@ -497,12 +497,16 @@ cp "$MSK_SOLID_HEME_DATA_HOME/data_CNA.txt" "$MSK_SOLID_HEME_DATA_HOME/data_CNA_
 if [ $? -ne 0 ] ; then
     echo "warning : could not copy msk_solid_heme data_CNA.txt to data_CNA_transposed.txt"
 else
+    # TODO remove transposed file after testing long format
     $PORTAL_HOME/scripts/transpose_cna_py3.py "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
+    $PORTAL_HOME/scripts/convert_cna_to_long_format_py3.py "$MSK_SOLID_HEME_DATA_HOME/data_CNA.txt" "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
 fi
 
 uploadToS3OrSendFailureMessage "$DMP_DATA_HOME" "" "mskimpact-databricks"
 
-# now remove the tansposed data cna file we just created
-rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
+# now remove the tansposed data cna file we just created TODO remove after testing long format
+rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt" # TODO remove after testing long format
+# now remove the long format data cna file we just created
+rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_long_format.txt"
 
 exit 0
