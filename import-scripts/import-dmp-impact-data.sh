@@ -491,18 +491,16 @@ echo $(date)
 echo "Cleaning up any untracked files in $PORTAL_DATA_HOME/dmp..."
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $DMP_DATA_HOME
 
-# Copy data_CNA.txt file in msk_solid_heme and then transpose it
+# Convert data_CNA.txt to narrow format
 # Copy this to S3, then remove the file
-cp "$MSK_SOLID_HEME_DATA_HOME/data_CNA.txt" "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
+$PORTAL_HOME/scripts/convert_cna_to_narrow_py3.py "$MSK_SOLID_HEME_DATA_HOME/data_CNA.txt" "$MSK_SOLID_HEME_DATA_HOME/data_CNA_narrow.txt"
 if [ $? -ne 0 ] ; then
-    echo "warning : could not copy msk_solid_heme data_CNA.txt to data_CNA_transposed.txt"
-else
-    $PORTAL_HOME/scripts/transpose_cna_py3.py "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
+    echo "warning : could not convert msk_solid_heme data_CNA.txt to data_CNA_narrow.txt"
 fi
 
 uploadToS3OrSendFailureMessage "$DMP_DATA_HOME" "" "mskimpact-databricks"
 
-# now remove the tansposed data cna file we just created
-rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_transposed.txt"
+# now remove the narrow format data cna file we just created
+rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_narrow.txt"
 
 exit 0
