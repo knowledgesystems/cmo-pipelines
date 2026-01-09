@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-
 # ------------------------------------------------------------------------------
 # Script which adds new users from google spreadsheet into the the cgds
 # user table.  The following properties must be specified in portal.properties:
@@ -86,6 +85,7 @@ SUBJECT_KEY = "subject"
 BODY_KEY = "body"
 PORTAL_NAME_KEY = 'portalname'
 SPREADSHEET_NAME_KEY = 'spreadsheetname'
+REJECTED_EMAIL_KEY = 'email'
 
 # possible values in status column
 STATUS_APPROVED = "APPROVED"
@@ -209,6 +209,7 @@ def get_sheet_records(client, ss, ws):
                 sheet_records.append(new_record)
     except Exception as e:
         print >> ERROR_FILE, "There was an error connecting to google."
+        print >> ERROR_FILE, e
         exit(0)
  
     return sheet_records
@@ -225,6 +226,7 @@ def get_spreadsheet_title(client, ss):
         spreadsheet_title = data["title"]
     except Exception as e:
         print >> ERROR_FILE, "There was an error connecting to google."
+        print >> ERROR_FILE, e
         exit(0)
 
     return spreadsheet_title
@@ -529,8 +531,8 @@ def add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, clien
         existing_emails = set()
         for record in existing_records:
             # Column name "EMAIL" is normalized to "email" by get_sheet_records
-            if 'email' in record and record['email'] is not None:
-                existing_emails.add(record['email'].strip().lower())
+            if REJECTED_EMAIL_KEY in record and record[REJECTED_EMAIL_KEY] is not None:
+                existing_emails.add(record[REJECTED_EMAIL_KEY].strip().lower())
     except Exception as e:
         # worksheet might not exist or be empty, start with empty set
         print >> OUTPUT_FILE, 'Creating new rejected_users worksheet or worksheet is empty'
@@ -740,7 +742,9 @@ def main():
 
             # sending emails
             if send_email_confirm == 'true':
+                print >> OUTPUT_FILE, "Sending confirmation emails to new users"
                 send_emails(new_user_map, google_spreadsheet, client, IMPORT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, emails_to_remove)
+                print >> OUTPUT_FILE, "Sending rejection emails to newly rejected users"
                 send_emails(rejected_user_map, google_spreadsheet, client, REJECT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender)
 
 # ------------------------------------------------------------------------------
