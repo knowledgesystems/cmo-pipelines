@@ -11,7 +11,7 @@ from airflow.exceptions import AirflowException
 from airflow.models.param import Param
 from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.utils.trigger_rule import TriggerRule
-
+from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -50,6 +50,12 @@ def _script(scripts_dir: str, script_name: str, *args: object) -> str:
     parts.extend(str(arg) for arg in args)
     return " ".join(parts)
 
+dag_failure_slack_webhook_notification = send_slack_webhook_notification(
+    slack_webhook_conn_id="slack_default", text=f"DAG {{ dag.dag_id }} failed at {datetime.now()}"
+)
+dag_success_slack_webhook_notification = send_slack_webhook_notification(
+    slack_webhook_conn_id="slack_default", text=f"DAG {{ dag.dag_id }} succeeded at {datetime.now()}"
+)
 
 def build_import_dag(config: ImporterConfig) -> DAG:
     params = dict(config.params) if config.params else {}
@@ -63,6 +69,8 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         schedule_interval=config.schedule_interval,
         tags=list(config.tags),
         render_template_as_native_obj=True,
+        on_failure_callback=[dag_failure_slack_webhook_notification],
+        on_success_callback=[dag_success_slack_webhook_notification]
         params=params,
     )
 
