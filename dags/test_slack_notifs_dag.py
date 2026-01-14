@@ -28,8 +28,7 @@ def test_slack_notifs_dag():
     def hello():
         print('Hello world')
 
-    hello
-
+    hello()
 
 # Execute the dag
 test_slack_notifs_dag()
