@@ -22,6 +22,14 @@ _DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=5),
 }
 
+
+dag_failure_slack_webhook_notification = send_slack_webhook_notification(
+    slack_webhook_conn_id="slack_default", text=f"DAG {{{{ dag.dag_id }}}} failed at {datetime.now().isoformat(timespec='minutes')}"
+)
+dag_success_slack_webhook_notification = send_slack_webhook_notification(
+    slack_webhook_conn_id="slack_default", text=f"DAG {{{{ dag.dag_id }}}} succeeded at {datetime.now().isoformat(timespec='minutes')}"
+)
+
 WireDependencies = Callable[[dict[str, object]], None]
 
 
@@ -50,12 +58,6 @@ def _script(scripts_dir: str, script_name: str, *args: object) -> str:
     parts.extend(str(arg) for arg in args)
     return " ".join(parts)
 
-dag_failure_slack_webhook_notification = send_slack_webhook_notification(
-    slack_webhook_conn_id="slack_default", text=f"DAG {{ dag.dag_id }} failed at {datetime.now()}"
-)
-dag_success_slack_webhook_notification = send_slack_webhook_notification(
-    slack_webhook_conn_id="slack_default", text=f"DAG {{ dag.dag_id }} succeeded at {datetime.now()}"
-)
 
 def build_import_dag(config: ImporterConfig) -> DAG:
     params = dict(config.params) if config.params else {}
