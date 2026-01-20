@@ -13,17 +13,17 @@ from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
 
-fail_slack_msg = f"""
+fail_slack_msg = """
         :red_circle: DAG Failed.
-        *DAG ID*: {{{{ dag.dag_id }}}}
-        *Task ID*: {{{{ task_instance.task_id }}}}
-        *Execution Time*: {{{{ execution_date }}}}
-        *Log Url*: {{{{ task_instance.log_url }}}}
+        *DAG ID*: {{ dag.dag_id }}
+        *Task ID*: {{ task_instance.task_id }}
+        *Execution Time*: {{ execution_date }}
+        *Log Url*: {{ task_instance.log_url }}
 """
-success_slack_msg = f"""
+success_slack_msg = """
         :large_green_circle: DAG Success!
-        *DAG ID*: {{{{ dag.dag_id }}}}
-        *Execution Time*: {{{{ execution_date }}}}
+        *DAG ID*: {{ dag.dag_id }}
+        *Execution Time*: {{ execution_date }}
 """
 dag_failure_slack_webhook_notification = send_slack_webhook_notification(
     slack_webhook_conn_id="slack_default", text=fail_slack_msg
