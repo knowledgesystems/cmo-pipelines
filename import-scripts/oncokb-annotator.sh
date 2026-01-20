@@ -348,6 +348,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
 
     # Only commit if all steps succeeded
     if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
+        upload_to_s3 $ONCOKB_OUT_DIR "oncokb" "cdm-deliverable"
         gzip_oncokb_annotated_files
         rsync_latest_oncokb_annotated_msk_impact_to_clone
         commit_and_push_latest_oncokb_annotated_msk_impact
