@@ -13,6 +13,20 @@ from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
 
+fail_slack_msg = f"""
+        :red_circle: DAG Failed. 
+        *Dag*: {{{{ dag.dag_id }}}}
+        *Task ID*: {{{{ task_instance.task_id }}}}
+        *Execution Time*: {{{{ execution_date }}}}
+        *Log Url*: {{{{ task_instance.log_url }}}}
+"""
+dag_failure_slack_webhook_notification = send_slack_webhook_notification(
+    slack_webhook_conn_id="slack_default", text=fail_slack_msg
+)
+dag_success_slack_webhook_notification = send_slack_webhook_notification(
+    slack_webhook_conn_id="slack_default", text=f"DAG {{{{ dag.dag_id }}}} succeeded at {datetime.now().isoformat(timespec='minutes')}"
+)
+
 _DEFAULT_ARGS = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -20,15 +34,9 @@ _DEFAULT_ARGS = {
     "email_on_retry": False,
     "retries": 0,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": [dag_failure_slack_webhook_notification],
 }
 
-
-dag_failure_slack_webhook_notification = send_slack_webhook_notification(
-    slack_webhook_conn_id="slack_default", text=f"DAG {{{{ dag.dag_id }}}} failed at {datetime.now().isoformat(timespec='minutes')}"
-)
-dag_success_slack_webhook_notification = send_slack_webhook_notification(
-    slack_webhook_conn_id="slack_default", text=f"DAG {{{{ dag.dag_id }}}} succeeded at {datetime.now().isoformat(timespec='minutes')}"
-)
 
 WireDependencies = Callable[[dict[str, object]], None]
 
@@ -71,7 +79,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         schedule_interval=config.schedule_interval,
         tags=list(config.tags),
         render_template_as_native_obj=True,
-        on_failure_callback=[dag_failure_slack_webhook_notification],
         on_success_callback=[dag_success_slack_webhook_notification]
         params=params,
     )
