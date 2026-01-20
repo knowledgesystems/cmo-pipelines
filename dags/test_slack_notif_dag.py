@@ -40,15 +40,7 @@ def test_slack_notif_dag():
     def hello():
         print('Hello world')
 
-    @task
-    def failing_task():
-        raise ValueError('Failing task')
-    
-    @task
-    def another_task():
-        print('I am another task')
-
-    hello() >> failing_task() >> another_task()
+    hello()
 
 # Execute the dag
 test_slack_notif_dag()
