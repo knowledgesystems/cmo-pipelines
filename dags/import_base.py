@@ -42,7 +42,6 @@ _DEFAULT_ARGS = {
     "on_failure_callback": [dag_failure_slack_webhook_notification],
 }
 
-
 WireDependencies = Callable[[dict[str, object]], None]
 
 
