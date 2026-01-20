@@ -6,14 +6,14 @@ from airflow.providers.slack.notifications.slack_webhook import send_slack_webho
 
 fail_slack_msg = f"""
         :red_circle: DAG Failed.
-        *Dag ID*: {{{{ dag.dag_id }}}}
+        *DAG ID*: {{{{ dag.dag_id }}}}
         *Task ID*: {{{{ task_instance.task_id }}}}
         *Execution Time*: {{{{ execution_date }}}}
         *Log Url*: {{{{ task_instance.log_url }}}}
 """
 success_slack_msg = f"""
-        :green_circle: DAG Success!
-        *Dag*: {{{{ dag.dag_id }}}}
+        :large_green_circle: DAG Success!
+        *DAG ID*: {{{{ dag.dag_id }}}}
         *Execution Time*: {{{{ execution_date }}}}
 """
 dag_failure_slack_webhook_notification = send_slack_webhook_notification(
