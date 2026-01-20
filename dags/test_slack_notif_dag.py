@@ -5,17 +5,22 @@ from airflow.decorators import dag, task
 from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
 
 fail_slack_msg = f"""
-        :red_circle: DAG Failed. 
-        *Dag*: {{{{ dag.dag_id }}}}
+        :red_circle: DAG Failed.
+        *Dag ID*: {{{{ dag.dag_id }}}}
         *Task ID*: {{{{ task_instance.task_id }}}}
         *Execution Time*: {{{{ execution_date }}}}
         *Log Url*: {{{{ task_instance.log_url }}}}
+"""
+success_slack_msg = f"""
+        :green_circle: DAG Success!
+        *Dag*: {{{{ dag.dag_id }}}}
+        *Execution Time*: {{{{ execution_date }}}}
 """
 dag_failure_slack_webhook_notification = send_slack_webhook_notification(
     slack_webhook_conn_id="slack_default", text=fail_slack_msg
 )
 dag_success_slack_webhook_notification = send_slack_webhook_notification(
-    slack_webhook_conn_id="slack_default", text=f"DAG {{{{ dag.dag_id }}}} succeeded at {datetime.now().isoformat(timespec='minutes')}"
+    slack_webhook_conn_id="slack_default", text=success_slack_msg
 )
 
 @dag(
@@ -35,11 +40,7 @@ def test_slack_notif_dag():
     def hello():
         print('Hello world')
 
-    @task
-    def failing_task():
-        raise ValueError('Failing task')
-
-    hello() >> failing_task()
+    hello()
 
 # Execute the dag
 test_slack_notif_dag()
