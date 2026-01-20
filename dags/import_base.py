@@ -79,7 +79,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         schedule_interval=config.schedule_interval,
         tags=list(config.tags),
         render_template_as_native_obj=True,
-        on_success_callback=[dag_success_slack_webhook_notification]
+        on_success_callback=[dag_success_slack_webhook_notification],
         params=params,
     )
 
