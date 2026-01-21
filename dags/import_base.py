@@ -242,6 +242,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             raise AirflowException("Failing task because one or more upstream tasks failed.")
 
         list(dag.tasks) >> watcher()
+        
+        if "set_import_abandoned" in config.task_names:
+            list(dag.tasks) >> tasks["set_import_abandoned"]
 
     return dag
 

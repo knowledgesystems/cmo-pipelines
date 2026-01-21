@@ -12,7 +12,7 @@ from dags.import_base import ImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> tasks["verify_management_state"] >> tasks["set_import_running"] >> tasks["transfer_deployment"] >> tasks["set_import_abandoned"]
+    tasks["data_repos"] >> tasks["verify_management_state"] >> tasks["set_import_running"] >> tasks["transfer_deployment"]
 
 _ROLLBACK_GENIE_CONFIG = ImporterConfig(
     dag_id="rollback_genie_portal",
