@@ -244,7 +244,8 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         list(dag.tasks) >> watcher()
         
         if "set_import_abandoned" in config.task_names:
-            list(dag.tasks) >> tasks["set_import_abandoned"]
+            other_tasks = [t for t in dag.tasks if t.task_id != "set_import_abandoned"]
+            other_tasks >> tasks["set_import_abandoned"]
 
     return dag
 
