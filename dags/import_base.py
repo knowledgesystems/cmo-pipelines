@@ -237,7 +237,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         config.wire_dependencies(tasks)
 
-        @task(trigger_rule=TriggerRule.ONE_FAILED, retries=0)
+        @task(trigger_rule=TriggerRule.ONE_FAILED, retries=0, on_failure_callback=None)
         def watcher():
             raise AirflowException("Failing task because one or more upstream tasks failed.")
 
