@@ -22,7 +22,7 @@ source "$AUTOMATION_ENV_SCRIPT_FILEPATH"
 
 # Helper: returns success for MySQL-style imports (no blue/green), otherwise failure
 is_mysql_import() {
-    [[ "$PORTAL_DATABASE" == "triage" ]]
+    [[ "$PORTAL_DATABASE" == "triage" || "$PORTAL_DATABASE" == "review" ]]
 }
 
 # Configure names/paths based on portal database
@@ -44,6 +44,14 @@ case "$PORTAL_DATABASE" in
     IMPORTER_NAME="triage-cmo"
     LOG_FILE_NAME="triage-cmo-importer.log"
     PORTAL_NAME="triage-portal"
+    ;;
+  review)
+    TMP_DIR_NAME="import-cron-review"
+    IMPORTER_NAME="review"
+    LOG_FILE_NAME="review-importer.log"
+    PORTAL_NAME="hgnc-portal"
+    # Need to set a different PORTAL_DATA_HOME instead of pulling from the same Datahub clone as public
+    export PORTAL_DATA_HOME="/data2/portal-cron/cbio-portal-data-publicdbv7-rebuild"
     ;;
   msk)
     TMP_DIR_NAME="import-cron-msk"

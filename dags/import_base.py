@@ -11,7 +11,26 @@ from airflow.exceptions import AirflowException
 from airflow.models.param import Param
 from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
 
+fail_slack_msg = """
+        :red_circle: DAG Failed.
+        *DAG ID*: {{ dag.dag_id }}
+        *Task ID*: {{ task_instance.task_id }}
+        *Execution Time*: {{ execution_date }}
+        *Log Url*: {{ task_instance.log_url }}
+"""
+success_slack_msg = """
+        :large_green_circle: DAG Success!
+        *DAG ID*: {{ dag.dag_id }}
+        *Execution Time*: {{ execution_date }}
+"""
+dag_failure_slack_webhook_notification = send_slack_webhook_notification(
+    slack_webhook_conn_id="slack_default", text=fail_slack_msg
+)
+dag_success_slack_webhook_notification = send_slack_webhook_notification(
+    slack_webhook_conn_id="slack_default", text=success_slack_msg
+)
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -20,6 +39,7 @@ _DEFAULT_ARGS = {
     "email_on_retry": False,
     "retries": 0,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": [dag_failure_slack_webhook_notification],
 }
 
 WireDependencies = Callable[[dict[str, object]], None]
@@ -63,6 +83,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         schedule_interval=config.schedule_interval,
         tags=list(config.tags),
         render_template_as_native_obj=True,
+        on_success_callback=[dag_success_slack_webhook_notification],
         params=params,
     )
 
@@ -216,11 +237,15 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         config.wire_dependencies(tasks)
 
-        @task(trigger_rule=TriggerRule.ONE_FAILED, retries=0)
+        @task(trigger_rule=TriggerRule.ONE_FAILED, retries=0, on_failure_callback=None)
         def watcher():
             raise AirflowException("Failing task because one or more upstream tasks failed.")
 
         list(dag.tasks) >> watcher()
+        
+        if "set_import_abandoned" in config.task_names:
+            other_tasks = [t for t in dag.tasks if t.task_id not in ("set_import_abandoned", "watcher")]
+            other_tasks >> tasks["set_import_abandoned"]
 
     return dag
 
