@@ -164,14 +164,14 @@ function create_saml2aws_hidden_file_if_needed() {
 }
 
 function output_credentials_filepath_for_account_id() {
-    local cluser_account_id="$1"
+    local cluster_account_id="$1"
     local account_credentials_filename="${cluster_account_id_to_credentials_filename[$cluster_account_id]}"
     local account_credentials_filepath="$config_filepath_dir/$account_credentials_filename"
     echo "$account_credentials_filepath"
 }
 
 function authenticate_with_saml2aws() {
-    local cluser_account_id="$1"
+    local cluster_account_id="$1"
     local SESSION_DURATION_FOR_TOKEN_SECONDS=28800
     local saml2aws_profile="automation_$cluster_account_id"
     local account_credentials_filepath="$(output_credentials_filepath_for_account_id $cluster_account_id)"
