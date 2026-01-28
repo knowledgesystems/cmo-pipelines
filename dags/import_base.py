@@ -4,14 +4,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Callable, Mapping, Optional, Sequence
+import base64
+import binascii
+import logging
+import shlex
 
 from airflow import DAG
 from airflow.decorators import task
-from airflow.exceptions import AirflowException
+from airflow.exceptions import AirflowException, AirflowSkipException
 from airflow.models.param import Param
 from airflow.providers.ssh.operators.ssh import SSHOperator
+from airflow.providers.ssh.hooks.ssh import SSHHook
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.operators.python import get_current_context
 from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
+from airflow.providers.slack.hooks.slack_webhook import SlackWebhookHook
+from jinja2 import Template
 
 fail_slack_msg = """
         :red_circle: DAG Failed.
@@ -24,6 +32,13 @@ success_slack_msg = """
         :large_green_circle: DAG Success!
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
+"""
+import_status_slack_msg = """
+        :bell: Importer Status Report
+        *DAG ID*: {{ dag.dag_id }}
+        *Execution Time*: {{ execution_date }}
+        *Message*:
+        {{ message_text }}
 """
 dag_failure_slack_webhook_notification = send_slack_webhook_notification(
     slack_webhook_conn_id="slack_default", text=fail_slack_msg
@@ -43,6 +58,7 @@ _DEFAULT_ARGS = {
 }
 
 WireDependencies = Callable[[dict[str, object]], None]
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -94,10 +110,91 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         db_properties_filepath = f"{creds_dir}/{config.db_properties_filename}"
         color_swap_config_filepath = f"{creds_dir}/{config.color_swap_config_filename}"
         data_source_properties_filepath = f"{creds_dir}/{config.data_source_properties_filename}"
+        if len(config.target_nodes) != 1:
+            raise ValueError(
+                f"Expected exactly one target node for importer '{importer}', got {len(config.target_nodes)}."
+            )
 
         @task
         def get_data_repos(repos: list[str]) -> str:
             return " ".join(repos)
+
+        def _fetch_notification_text(ssh_conn_id: str, notification_file: str) -> str:
+            """
+            Reads the contents of the notification file on the remote machine.
+            """
+            if not notification_file:
+                logger.warning("Notification filename is empty; nothing to fetch.")
+                return ""
+            command = f"cat {shlex.quote(notification_file)}"
+            hook = SSHHook(ssh_conn_id=ssh_conn_id)
+            client = hook.get_conn()
+            stdin, stdout, stderr = client.exec_command(command)
+            exit_status = stdout.channel.recv_exit_status()
+            output = stdout.read().decode("utf-8", errors="replace")
+            err_output = stderr.read().decode("utf-8", errors="replace")
+            if exit_status != 0:
+                logger.warning(
+                    "Notification file fetch failed on %s (exit %s): %s",
+                    ssh_conn_id,
+                    exit_status,
+                    err_output.strip(),
+                )
+                return ""
+            return output.strip()
+
+        def _maybe_decode_base64(text: str) -> str:
+            try:
+                decoded = base64.b64decode(text, validate=True)
+            except (binascii.Error, ValueError):
+                return text
+            try:
+                return decoded.decode("utf-8")
+            except UnicodeDecodeError:
+                return text
+
+        def _extract_notification_filename(import_sql_output: str) -> str:
+            """
+            Extracts the notification filename from the import_sql log output.
+            We output a line like 'NOTIFICATION_FILE=...' and push to the send_update_notification
+            task via XCom.
+            """
+            text = import_sql_output or ""
+            for line in reversed(text.splitlines()):
+                if "NOTIFICATION_FILE=" in line:
+                    tail = line.split("NOTIFICATION_FILE=", 1)[1]
+                    return tail.strip()
+            logger.warning("Notification filename not found in import_sql output.")
+            return ""
+
+        # run this task even if import_sql failed -- we will send a message as long as the
+        # notification file is present
+        @task(trigger_rule=TriggerRule.ALL_DONE)
+        def send_update_notification(import_sql_output: object, ssh_conn_id: str) -> None:
+            """
+            Sends a Slack message to the #airflow-logs channel with the contents of the
+            notification file written to by the importer.
+            This tells us how many studies were updated, removed, or failed to import during the DAG run.
+            """
+            try:
+                base64_text = next((text for text in import_sql_output), "")
+            except Exception as exc:
+                logger.warning("Could not parse log output of upstream import_sql task; skipping Slack notification")
+                raise AirflowSkipException() from exc
+            
+            decoded_output = _maybe_decode_base64(str(base64_text))
+            notification_filename = _extract_notification_filename(decoded_output)
+            message_text = _fetch_notification_text(ssh_conn_id, notification_filename)
+            if not message_text:
+                logger.warning("Notification file is missing or empty; Slack message not sent.")
+                raise AirflowSkipException()
+
+            context = get_current_context()
+            rendered_message = Template(import_status_slack_msg).render(
+                message_text=message_text,
+                **context,
+            )
+            SlackWebhookHook(slack_webhook_conn_id="slack_default").send(text=rendered_message)
 
         data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
@@ -216,6 +313,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             elif name == "scale_up_rds_node":
                 # Use XCom to signal downstream that the scale up task completed successfully
                 params["do_xcom_push"] = True
+            elif name == "import_sql":
+                # Capture notification filename from stdout
+                params["do_xcom_push"] = True
             elif name == "scale_down_rds_node":
                 # Run scale down task regardless of upstream failures during import
                 params["trigger_rule"] = TriggerRule.ALL_DONE
@@ -233,7 +333,13 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         tasks: dict[str, object] = {"data_repos": data_repos}
         for name in config.task_names:
-            tasks[name] = _build_task(name)
+            if name == "send_update_notification":
+                tasks[name] = send_update_notification(
+                    import_sql_output=tasks["import_sql"].output,
+                    ssh_conn_id=list(config.target_nodes)[0],
+                )
+            else:
+                tasks[name] = _build_task(name)
 
         config.wire_dependencies(tasks)
 
@@ -243,7 +349,10 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         list(dag.tasks) >> watcher()
         
+        # set_import_abandoned needs to be directly downstream of all other DAG tasks in
+        # order for it to trigger if any one of them fails
         if "set_import_abandoned" in config.task_names:
+            # make sure we don't create a cyclical dependency
             other_tasks = [t for t in dag.tasks if t.task_id not in ("set_import_abandoned", "watcher")]
             other_tasks >> tasks["set_import_abandoned"]
 
