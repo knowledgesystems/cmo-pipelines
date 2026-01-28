@@ -13,7 +13,7 @@ from dags.import_base import ImporterConfig, build_import_dag
 def _wire(tasks: dict[str, object]) -> None:
     tasks["data_repos"] >> tasks["fetch_data"]
     tasks["fetch_data"] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["cleanup_data"]
+    tasks["setup_import"] >> tasks["import_sql"] >> tasks["send_update_notification"] >> tasks["cleanup_data"]
 
 _REVIEW_CONFIG = ImporterConfig(
     dag_id="import_review_dag",
@@ -27,6 +27,8 @@ _REVIEW_CONFIG = ImporterConfig(
         "fetch_data",
         "setup_import",
         "import_sql",
+        # The review portal doesn't have a persistence cache like triage, hence no clear_persistence_caches here
+        "send_update_notification",
         "cleanup_data",
     ),
     db_properties_filename="manage_review_database_update_tools.properties",
