@@ -23,7 +23,6 @@ _REVIEW_CONFIG = ImporterConfig(
     target_nodes=("importer_ssh",),
     data_nodes=("importer_ssh",),
     task_names=(
-        "data_repos",
         "fetch_data",
         "setup_import",
         "import_sql",

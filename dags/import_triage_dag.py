@@ -23,7 +23,6 @@ _TRIAGE_CONFIG = ImporterConfig(
     target_nodes=("pipelines3_ssh",),
     data_nodes=("pipelines3_ssh",),
     task_names=(
-        "data_repos",
         "fetch_data",
         "setup_import",
         "import_sql",

@@ -331,11 +331,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
             return SSHOperator.partial(**params).expand(ssh_conn_id=list(ssh_targets))
 
-        tasks: dict[str, object] = {}
+        tasks: dict[str, object] = {"data_repos": data_repos}
         for name in config.task_names:
-            if name == "data_repos":
-                tasks[name] = data_repos
-            elif name == "send_update_notification":
+            if name == "send_update_notification":
                 tasks[name] = send_update_notification(
                     import_sql_output=tasks["import_sql"].output,
                     ssh_conn_id=list(config.target_nodes)[0],

@@ -30,7 +30,6 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="genie-aws-importer.log"
     PORTAL_NAME="genie-portal"
     ONCOTREE_VERSION="oncotree_2019_12_01"
-    notification_file=$(mktemp $CMO_ACCESS_TMPDIR/)
     ;;
   public)
     TMP_DIR_NAME="import-cron-public-data"

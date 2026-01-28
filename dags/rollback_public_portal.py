@@ -22,7 +22,6 @@ _ROLLBACK_PUBLIC_CONFIG = ImporterConfig(
     target_nodes=("importer_ssh",),
     data_nodes=("importer_ssh",),
     task_names=(
-        "data_repos",
         "verify_management_state",
         "set_import_running",
         "transfer_deployment",

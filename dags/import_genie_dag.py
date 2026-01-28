@@ -24,7 +24,6 @@ _GENIE_CONFIG = ImporterConfig(
     target_nodes=("importer_ssh",),
     data_nodes=("importer_ssh",),
     task_names=(
-        "data_repos",
         "verify_management_state",
         "scale_up_rds_node",
         "clone_database",
