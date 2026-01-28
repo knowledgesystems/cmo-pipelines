@@ -147,6 +147,8 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             We output a line like 'NOTIFICATION_FILE=...' and push to the send_update_notification
             task via XCom.
             """
+            logger.info("Log output for import_sql:")
+            logger.info(import_sql_output)
             if isinstance(import_sql_output, list):
                 raw_text = next((text for text in import_sql_output if text), "")
             else:
