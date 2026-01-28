@@ -9,7 +9,7 @@ import shlex
 
 from airflow import DAG
 from airflow.decorators import task
-from airflow.exceptions import AirflowException
+from airflow.exceptions import AirflowException, AirflowSkipException
 from airflow.models.param import Param
 from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.providers.ssh.hooks.ssh import SSHHook
@@ -150,13 +150,13 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             logger.warning("Notification filename not found in import_sql output.")
             return ""
 
-        @task
+        @task(trigger_rule=TriggerRule.ALL_DONE)
         def send_update_notification(import_sql_output: object, ssh_conn_id: str) -> None:
             notification_filename = _extract_notification_filename(import_sql_output)
             message_text = _fetch_notification_text(ssh_conn_id, notification_filename)
             if not message_text:
                 logger.warning("Notification file is missing or empty; Slack message not sent.")
-                return
+                raise AirflowSkipException()
             context = get_current_context()
             rendered_message = Template(import_status_slack_msg).render(
                 message_text=message_text,
