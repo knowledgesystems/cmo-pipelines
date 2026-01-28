@@ -178,11 +178,13 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             """
             print("Output of upstream import_sql task:")
             print(import_sql_output)
-            if isinstance(import_sql_output, list) and len(import_sql_output) == 1:
-                base64_text = import_sql_output[0]
-            else:
+            print(type(import_sql_output))
+            print(len(list(import_sql_output)))
+            try:
+                base64_text = next((text for text in import_sql_output), "")
+            except Exception as exc:
                 logger.warning("Could not parse log output of upstream import_sql task; skipping Slack notification")
-                raise AirflowSkipException()
+                raise AirflowSkipException() from exc
             
             decoded_output = _maybe_decode_base64(str(base64_text))
             notification_filename = _extract_notification_filename(decoded_output)
