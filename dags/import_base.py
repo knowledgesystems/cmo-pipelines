@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Callable, Mapping, Optional, Sequence
+import base64
+import binascii
 import logging
 import shlex
 
@@ -141,19 +143,23 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 return ""
             return output.strip()
 
-        def _extract_notification_filename(import_sql_output: object) -> str:
+        def _maybe_decode_base64(text: str) -> str:
+            try:
+                decoded = base64.b64decode(text, validate=True)
+            except (binascii.Error, ValueError):
+                return text
+            try:
+                return decoded.decode("utf-8")
+            except UnicodeDecodeError:
+                return text
+
+        def _extract_notification_filename(import_sql_output: str) -> str:
             """
             Extracts the notification filename from the import_sql log output.
             We output a line like 'NOTIFICATION_FILE=...' and push to the send_update_notification
             task via XCom.
             """
-            logger.info("Log output for import_sql:")
-            logger.info(import_sql_output)
-            if isinstance(import_sql_output, list):
-                raw_text = next((text for text in import_sql_output if text), "")
-            else:
-                raw_text = import_sql_output or ""
-            text = str(raw_text)
+            text = import_sql_output or ""
             for line in reversed(text.splitlines()):
                 if "NOTIFICATION_FILE=" in line:
                     tail = line.split("NOTIFICATION_FILE=", 1)[1]
@@ -170,11 +176,19 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             notification file written to by the importer.
             This tells us how many studies were updated, removed, or failed to import during the DAG run.
             """
-            notification_filename = _extract_notification_filename(import_sql_output)
+            if isinstance(import_sql_output, list) and len(import_sql_output) == 1:
+                base64_text = import_sql_output[0]
+            else:
+                logger.warning("Could not parse log output of upstream import_sql task; skipping Slack notification")
+                raise AirflowSkipException()
+            
+            decoded_output = _maybe_decode_base64(str(base64_text))
+            notification_filename = _extract_notification_filename(decoded_output)
             message_text = _fetch_notification_text(ssh_conn_id, notification_filename)
             if not message_text:
                 logger.warning("Notification file is missing or empty; Slack message not sent.")
                 raise AirflowSkipException()
+
             context = get_current_context()
             rendered_message = Template(import_status_slack_msg).render(
                 message_text=message_text,
