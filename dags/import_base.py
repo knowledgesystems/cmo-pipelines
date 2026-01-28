@@ -153,8 +153,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 raw_text = import_sql_output or ""
             text = str(raw_text)
             for line in reversed(text.splitlines()):
-                if line.startswith("NOTIFICATION_FILE="):
-                    return line.split("=", 1)[1].strip()
+                if "NOTIFICATION_FILE=" in line:
+                    tail = line.split("NOTIFICATION_FILE=", 1)[1]
+                    return tail.strip()
             logger.warning("Notification filename not found in import_sql output.")
             return ""
 
