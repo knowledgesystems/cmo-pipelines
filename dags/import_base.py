@@ -118,6 +118,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             return " ".join(repos)
 
         def _fetch_notification_text(ssh_conn_id: str, notification_file: str) -> str:
+            """
+            Reads the contents of the notification file on the remote machine.
+            """
             if not notification_file:
                 logger.warning("Notification filename is empty; nothing to fetch.")
                 return ""
@@ -139,6 +142,11 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             return output.strip()
 
         def _extract_notification_filename(import_sql_output: object) -> str:
+            """
+            Extracts the notification filename from the import_sql log output.
+            We output a line like 'NOTIFICATION_FILE=...' and push to the send_update_notification
+            task via XCom.
+            """
             if isinstance(import_sql_output, list):
                 raw_text = next((text for text in import_sql_output if text), "")
             else:
@@ -150,8 +158,15 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             logger.warning("Notification filename not found in import_sql output.")
             return ""
 
+        # run this task even if import_sql failed -- we will send a message as long as the
+        # notification file is present
         @task(trigger_rule=TriggerRule.ALL_DONE)
         def send_update_notification(import_sql_output: object, ssh_conn_id: str) -> None:
+            """
+            Sends a Slack message to the #airflow-logs channel with the contents of the
+            notification file written to by the importer.
+            This tells us how many studies were updated, removed, or failed to import during the DAG run.
+            """
             notification_filename = _extract_notification_filename(import_sql_output)
             message_text = _fetch_notification_text(ssh_conn_id, notification_filename)
             if not message_text:

@@ -125,10 +125,15 @@ if [ $? -gt 0 ]; then
 fi
 
 echo "Importing $PORTAL_DATABASE study data into $destination_database_color mysql database"
+echo "NOTIFICATION_FILE=$notification_file"
 $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export --notification-file="$notification_file"
 if [ $? -gt 0 ]; then
     echo "Error: $PORTAL_DATABASE import failed!" >&2
     exit 1
+fi
+
+if [ ! -f "$notification_file" ]; then
+    echo "Warning: notification file not found at '$notification_file'" >&2
 fi
 
 num_studies_updated=''
@@ -141,9 +146,3 @@ if [[ -z $num_studies_updated ]] || [[ $num_studies_updated == "0" ]] ; then
     exit 1
 fi
 echo "$num_studies_updated number of studies were updated"
-
-if [ ! -f "$notification_file" ]; then
-    echo "Warning: notification file not found at '$notification_file'" >&2
-fi
-
-echo "NOTIFICATION_FILE=$notification_file"
