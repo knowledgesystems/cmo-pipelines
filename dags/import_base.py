@@ -176,10 +176,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             notification file written to by the importer.
             This tells us how many studies were updated, removed, or failed to import during the DAG run.
             """
-            print("Output of upstream import_sql task:")
-            print(import_sql_output)
-            print(type(import_sql_output))
-            print(len(list(import_sql_output)))
             try:
                 base64_text = next((text for text in import_sql_output), "")
             except Exception as exc:
