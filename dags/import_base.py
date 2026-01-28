@@ -117,8 +117,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         def get_data_repos(repos: list[str]) -> str:
             return " ".join(repos)
 
-        @task
-        def fetch_notification_text(ssh_conn_id: str, notification_file: str) -> str:
+        def _fetch_notification_text(ssh_conn_id: str, notification_file: str) -> str:
             if not notification_file:
                 logger.warning("Notification filename is empty; nothing to fetch.")
                 return ""
@@ -139,8 +138,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 return ""
             return output.strip()
 
-        @task
-        def extract_notification_filename(import_sql_output: object) -> str:
+        def _extract_notification_filename(import_sql_output: object) -> str:
             if isinstance(import_sql_output, list):
                 raw_text = next((text for text in import_sql_output if text), "")
             else:
@@ -153,8 +151,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             return ""
 
         @task
-        def send_update_notification(notification_texts: list[str]) -> None:
-            message_text = next((text for text in notification_texts if text and text.strip()), "")
+        def send_update_notification(import_sql_output: object, ssh_conn_id: str) -> None:
+            notification_filename = _extract_notification_filename(import_sql_output)
+            message_text = _fetch_notification_text(ssh_conn_id, notification_filename)
             if not message_text:
                 logger.warning("Notification file is missing or empty; Slack message not sent.")
                 return
@@ -305,12 +304,10 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             if name == "data_repos":
                 tasks[name] = data_repos
             elif name == "send_update_notification":
-                notification_filename = extract_notification_filename(tasks["import_sql"].output)
-                notification_texts = fetch_notification_text.expand(
-                    ssh_conn_id=list(config.target_nodes),
-                    notification_file=[notification_filename] * len(config.target_nodes),
+                tasks[name] = send_update_notification(
+                    import_sql_output=tasks["import_sql"].output,
+                    ssh_conn_id=list(config.target_nodes)[0],
                 )
-                tasks[name] = send_update_notification(notification_texts)
             else:
                 tasks[name] = _build_task(name)
 
