@@ -30,6 +30,7 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="genie-aws-importer.log"
     PORTAL_NAME="genie-portal"
     ONCOTREE_VERSION="oncotree_2019_12_01"
+    notification_file=$(mktemp $CMO_ACCESS_TMPDIR/)
     ;;
   public)
     TMP_DIR_NAME="import-cron-public-data"
@@ -91,6 +92,21 @@ fi
 tmp="${PORTAL_HOME}/tmp/${TMP_DIR_NAME}"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
+# Set up a temp notification file
+# After the importer runs with --notification-file, it will write to this file describing the number of studies updated / removed / had import errors
+# A subsequent Airflow task will send Slack messages to the #airflow-logs channel
+# with the contents of this notification file.
+
+# Ensure temp directory exists for mktemp and importer tmpdir
+if ! mkdir -p "$tmp"; then
+    echo "Error: could not create tmp directory '$tmp'" >&2
+    exit 1
+fi
+
+now=$(date "+%Y-%m-%d-%H-%M-%S")
+prefix="${PORTAL_DATABASE}-portal-update-notification"
+notification_file=$(mktemp "$tmp/$prefix.$now.XXXXXX")
+
 # Direct importer logs to stdout
 # Make sure to kill the tail process on exit so we don't hang the script
 tail -f "$PORTAL_HOME/logs/$LOG_FILE_NAME" &
@@ -109,7 +125,7 @@ if [ $? -gt 0 ]; then
 fi
 
 echo "Importing $PORTAL_DATABASE study data into $destination_database_color mysql database"
-$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export --notification-file="$notification_file"
 if [ $? -gt 0 ]; then
     echo "Error: $PORTAL_DATABASE import failed!" >&2
     exit 1
@@ -125,3 +141,9 @@ if [[ -z $num_studies_updated ]] || [[ $num_studies_updated == "0" ]] ; then
     exit 1
 fi
 echo "$num_studies_updated number of studies were updated"
+
+if [ ! -f "$notification_file" ]; then
+    echo "Warning: notification file not found at '$notification_file'" >&2
+fi
+
+echo "NOTIFICATION_FILE=$notification_file"
