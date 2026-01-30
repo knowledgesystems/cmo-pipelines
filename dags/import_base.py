@@ -135,14 +135,15 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             except UnicodeDecodeError:
                 return text
 
-        # run this task even if import_sql failed -- we will send a message as long as the
-        # notification file is present
+        # run this task even if import_sql failed
         @task(trigger_rule=TriggerRule.ALL_DONE)
         def send_update_notification(import_sql_output: object) -> None:
             """
-            Sends a Slack message to the #airflow-logs channel with the contents of the
-            notification file written to by the importer.
-            This tells us how many studies were updated, removed, or failed to import during the DAG run.
+            Sends a Slack message to the #airflow-logs channel with a link to the import_sql logs URL.
+            This tells the curators whether there were any studies that suceeded or failed to import during a given run.
+            To avoid confusion -- we run this task towards the end of the DAG
+            (eg. after the transfer_deployment step) because we don't want to
+            send a success message before the entire import run completes.
             """
             
             # Get the log URL for the import_sql task
@@ -157,6 +158,8 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 raise AirflowSkipException()
             
             # Search for the error string in the import_sql logs to see if any studies failed
+            # The notification file is always printed to stdout, and it
+            # will contain the error string iff there were studies that failed import
             try:
                 base64_text = next((text for text in import_sql_output), "")
             except Exception as exc:
@@ -297,7 +300,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 # Use XCom to signal downstream that the scale up task completed successfully
                 params["do_xcom_push"] = True
             elif name == "import_sql":
-                # Capture notification filename from stdout
+                # Capture notification file contents from stdout
                 params["do_xcom_push"] = True
             elif name == "scale_down_rds_node":
                 # Run scale down task regardless of upstream failures during import
