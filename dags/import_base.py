@@ -37,7 +37,7 @@ import_sql_slack_msg = """
         :red_circle: Import SQL Failed.
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
-        *Log Url*: {{ dag_run.get_task_instance('import_sql', map_index=0).log_url }}
+        *Log Url*: {{ import_sql_log_url }}
 """
 dag_failure_slack_webhook_notification = send_slack_webhook_notification(
     slack_webhook_conn_id="slack_default", text=fail_slack_msg
@@ -131,12 +131,14 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         # run this task even if import_sql failed -- we will send a message as long as the
         # notification file is present
         @task(trigger_rule=TriggerRule.ALL_DONE)
-        def send_update_notification(import_sql_output: object, ssh_conn_id: str) -> None:
+        def send_update_notification(import_sql_output: object) -> None:
             """
             Sends a Slack message to the #airflow-logs channel with the contents of the
             notification file written to by the importer.
             This tells us how many studies were updated, removed, or failed to import during the DAG run.
             """
+            
+            # Search for the error string in the import_sql logs to see if any studies failed
             try:
                 base64_text = next((text for text in import_sql_output), "")
             except Exception as exc:
@@ -151,7 +153,23 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 logger.info("No errors detected from upstream import_sql task; skipping Slack notification")
                 raise AirflowSkipException()
             
-            SlackWebhookHook(slack_webhook_conn_id="slack_default").send(text=import_sql_slack_msg)
+            # Get the log URL for the import_sql task
+            context = get_current_context()
+            ti = context.get("ti")
+            dag_run = context.get("dag_run")
+            import_sql_ti = None
+            if dag_run is not None and ti is not None:
+                import_sql_ti = dag_run.get_task_instance("import_sql", map_index=ti.map_index)
+            import_sql_log_url = import_sql_ti.log_url if import_sql_ti is not None else ""
+            if not import_sql_log_url:
+                logger.warning("Could not determine import_sql log url; skipping Slack notification.")
+                raise AirflowSkipException()
+            
+            rendered_message = Template(import_sql_slack_msg).render(
+                import_sql_log_url=import_sql_log_url,
+                **context,
+            )
+            SlackWebhookHook(slack_webhook_conn_id="slack_default").send(text=rendered_message)
 
         data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
@@ -293,7 +311,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             if name == "send_update_notification":
                 tasks[name] = send_update_notification(
                     import_sql_output=tasks["import_sql"].output,
-                    ssh_conn_id=list(config.target_nodes)[0],
                 )
             else:
                 tasks[name] = _build_task(name)
