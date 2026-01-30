@@ -33,8 +33,14 @@ success_slack_msg = """
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
 """
-import_sql_slack_msg = """
+import_sql_failure_slack_msg = """
         :red_circle: Import SQL Failed.
+        *DAG ID*: {{ dag.dag_id }}
+        *Execution Time*: {{ execution_date }}
+        *Log Url*: {{ import_sql_log_url }}
+"""
+import_sql_success_slack_msg = """
+        :large_green_circle: Import SQL Success!
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
         *Log Url*: {{ import_sql_log_url }}
@@ -148,10 +154,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             decoded_output = _maybe_decode_base64(str(base64_text))
             ERROR_STRING = "The following studies had errors during import"
             has_errors = ERROR_STRING in decoded_output
-            
-            if not has_errors:
-                logger.info("No errors detected from upstream import_sql task; skipping Slack notification")
-                raise AirflowSkipException()
+            msg_template = import_sql_failure_slack_msg if has_errors else import_sql_success_slack_msg
             
             # Get the log URL for the import_sql task
             context = get_current_context()
@@ -165,7 +168,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 logger.warning("Could not determine import_sql log url; skipping Slack notification.")
                 raise AirflowSkipException()
             
-            rendered_message = Template(import_sql_slack_msg).render(
+            rendered_message = Template(msg_template).render(
                 import_sql_log_url=import_sql_log_url,
                 **context,
             )
