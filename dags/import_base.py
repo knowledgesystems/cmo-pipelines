@@ -158,11 +158,10 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             
             # Get the log URL for the import_sql task
             context = get_current_context()
-            ti = context.get("ti")
             dag_run = context.get("dag_run")
             import_sql_ti = None
-            if dag_run is not None and ti is not None:
-                import_sql_ti = dag_run.get_task_instance("import_sql", map_index=ti.map_index)
+            if dag_run is not None:
+                import_sql_ti = dag_run.get_task_instance("import_sql", map_index=0)
             import_sql_log_url = import_sql_ti.log_url if import_sql_ti is not None else ""
             if not import_sql_log_url:
                 logger.warning("Could not determine import_sql log url; skipping Slack notification.")
