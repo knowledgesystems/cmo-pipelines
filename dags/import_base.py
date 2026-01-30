@@ -33,12 +33,11 @@ success_slack_msg = """
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
 """
-import_status_slack_msg = """
-        :bell: Importer Status Report
+import_sql_slack_msg = """
+        :red_circle: Import SQL Failed.
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
-        *Message*:
-        {{ message_text }}
+        *Log Url*: {{ dag_run.get_task_instance('import_sql', map_index=0).log_url }}
 """
 dag_failure_slack_webhook_notification = send_slack_webhook_notification(
     slack_webhook_conn_id="slack_default", text=fail_slack_msg
@@ -119,30 +118,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         def get_data_repos(repos: list[str]) -> str:
             return " ".join(repos)
 
-        def _fetch_notification_text(ssh_conn_id: str, notification_file: str) -> str:
-            """
-            Reads the contents of the notification file on the remote machine.
-            """
-            if not notification_file:
-                logger.warning("Notification filename is empty; nothing to fetch.")
-                return ""
-            command = f"cat {shlex.quote(notification_file)}"
-            hook = SSHHook(ssh_conn_id=ssh_conn_id)
-            client = hook.get_conn()
-            stdin, stdout, stderr = client.exec_command(command)
-            exit_status = stdout.channel.recv_exit_status()
-            output = stdout.read().decode("utf-8", errors="replace")
-            err_output = stderr.read().decode("utf-8", errors="replace")
-            if exit_status != 0:
-                logger.warning(
-                    "Notification file fetch failed on %s (exit %s): %s",
-                    ssh_conn_id,
-                    exit_status,
-                    err_output.strip(),
-                )
-                return ""
-            return output.strip()
-
         def _maybe_decode_base64(text: str) -> str:
             try:
                 decoded = base64.b64decode(text, validate=True)
@@ -152,20 +127,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 return decoded.decode("utf-8")
             except UnicodeDecodeError:
                 return text
-
-        def _extract_notification_filename(import_sql_output: str) -> str:
-            """
-            Extracts the notification filename from the import_sql log output.
-            We output a line like 'NOTIFICATION_FILE=...' and push to the send_update_notification
-            task via XCom.
-            """
-            text = import_sql_output or ""
-            for line in reversed(text.splitlines()):
-                if "NOTIFICATION_FILE=" in line:
-                    tail = line.split("NOTIFICATION_FILE=", 1)[1]
-                    return tail.strip()
-            logger.warning("Notification filename not found in import_sql output.")
-            return ""
 
         # run this task even if import_sql failed -- we will send a message as long as the
         # notification file is present
@@ -183,18 +144,14 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 raise AirflowSkipException() from exc
             
             decoded_output = _maybe_decode_base64(str(base64_text))
-            notification_filename = _extract_notification_filename(decoded_output)
-            message_text = _fetch_notification_text(ssh_conn_id, notification_filename)
-            if not message_text:
-                logger.warning("Notification file is missing or empty; Slack message not sent.")
+            ERROR_STRING = "The following studies had errors during import"
+            has_errors = ERROR_STRING in decoded_output
+            
+            if not has_errors:
+                logger.info("No errors detected from upstream import_sql task; skipping Slack notification")
                 raise AirflowSkipException()
-
-            context = get_current_context()
-            rendered_message = Template(import_status_slack_msg).render(
-                message_text=message_text,
-                **context,
-            )
-            SlackWebhookHook(slack_webhook_conn_id="slack_default").send(text=rendered_message)
+            
+            SlackWebhookHook(slack_webhook_conn_id="slack_default").send(text=import_sql_slack_msg)
 
         data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
