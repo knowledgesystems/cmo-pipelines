@@ -155,6 +155,8 @@ public class CVRCnaDataReader implements ItemStreamReader<String>{
                 Object value = cnaMap.get(gene, sample);
                 if (value != null) {
                     cnaValue = value.toString();
+                } else {
+                    cnaValue = "NA";
                 }
                 line.append("\t").append(cnaValue);
             }
@@ -178,8 +180,9 @@ public class CVRCnaDataReader implements ItemStreamReader<String>{
                 try {
                     for (int i = 1; i < header.size(); i++) {
                         if (!cvrSampleListUtil.getPortalSamples().contains(header.get(i))) {
-                            continue;
+                            continue; // Don't load data for samples that aren't in the portal
                         }
+                        // Also don't load data for new DMP samples
                         if (!cvrSampleListUtil.getNewDmpSamples().contains(header.get(i))) {
                             samples.add(header.get(i));
                             genes.add(data.get(0));
