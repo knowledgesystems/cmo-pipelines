@@ -157,25 +157,27 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 logger.warning("Could not determine import_sql log url; skipping Slack notification.")
                 raise AirflowSkipException()
             
-            # Search for the error string in the import_sql logs to see if any studies failed
-            # The notification file is always printed to stdout, and it
-            # will contain the error string iff there were studies that failed import
-            try:
-                base64_text = next((text for text in import_sql_output), "")
-            except Exception as exc:
-                logger.warning("Could not parse log output of upstream import_sql task; skipping Slack notification")
-                raise AirflowSkipException() from exc
-            
-            decoded_output = _maybe_decode_base64(str(base64_text))
-            ERROR_STRING = "The following studies had errors during import"
-            any_study_import_failed = (ERROR_STRING in decoded_output)
             import_sql_failed = (
                 import_sql_ti is not None and import_sql_ti.state == State.FAILED
             )
-            has_errors = import_sql_failed or any_study_import_failed
+            if not import_sql_failed:
+                # Search for the error string in the import_sql logs to see if any studies failed
+                # The notification file is always printed to stdout, and it
+                # will contain the error string iff there were studies that failed import
+                try:
+                    base64_text = next((text for text in import_sql_output), "")
+                    decoded_output = _maybe_decode_base64(str(base64_text))
+                    ERROR_STRING = "The following studies had errors during import"
+                    import_sql_failed = (ERROR_STRING in decoded_output)
+                except Exception as exc:
+                    logger.warning("Could not parse log output of upstream import_sql task; skipping Slack notification")
+                    logger.warning("Stack trace:")
+                    logger.warning(exc)
+                    raise AirflowSkipException() from exc
+            
             
             # Build the msg and send to Slack
-            msg_template = import_sql_failure_slack_msg if has_errors else import_sql_success_slack_msg
+            msg_template = import_sql_failure_slack_msg if import_sql_failed else import_sql_success_slack_msg
             rendered_message = Template(msg_template).render(
                 import_sql_log_url=import_sql_log_url,
                 **context,
