@@ -35,7 +35,7 @@ success_slack_msg = """
         *Execution Time*: {{ execution_date }}
 """
 import_sql_failure_slack_msg = """
-        :red_circle: Import SQL Failed.
+        :red_circle: Import SQL Failed. Please check the notification file in the Airflow logs.
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
         *Log Url*: {{ import_sql_log_url }}
