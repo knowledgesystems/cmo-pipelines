@@ -13,7 +13,7 @@ from dags.import_base import ImporterConfig, build_import_dag
 def _wire(tasks: dict[str, object]) -> None:
     tasks["data_repos"] >> tasks["fetch_data"]
     tasks["fetch_data"] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["clear_persistence_caches"] >> tasks["cleanup_data"]
+    tasks["setup_import"] >> tasks["import_sql"] >> tasks["clear_persistence_caches"] >> tasks["send_update_notification"] >> tasks["cleanup_data"]
 
 _TRIAGE_CONFIG = ImporterConfig(
     dag_id="import_triage_dag",
@@ -27,6 +27,7 @@ _TRIAGE_CONFIG = ImporterConfig(
         "setup_import",
         "import_sql",
         "clear_persistence_caches",
+        "send_update_notification",
         "cleanup_data",
     ),
     db_properties_filename="manage_triage_database_update_tools.properties",

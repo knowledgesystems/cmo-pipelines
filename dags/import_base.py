@@ -4,14 +4,23 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Callable, Mapping, Optional, Sequence
+import base64
+import binascii
+import logging
+import shlex
 
 from airflow import DAG
 from airflow.decorators import task
-from airflow.exceptions import AirflowException
+from airflow.exceptions import AirflowException, AirflowSkipException
 from airflow.models.param import Param
 from airflow.providers.ssh.operators.ssh import SSHOperator
+from airflow.providers.ssh.hooks.ssh import SSHHook
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.utils.state import State
+from airflow.operators.python import get_current_context
 from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
+from airflow.providers.slack.hooks.slack_webhook import SlackWebhookHook
+from jinja2 import Template
 
 fail_slack_msg = """
         :red_circle: DAG Failed.
@@ -24,6 +33,18 @@ success_slack_msg = """
         :large_green_circle: DAG Success!
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
+"""
+import_sql_failure_slack_msg = """
+        :red_circle: Import SQL Failed. Please check the notification file in the Airflow logs.
+        *DAG ID*: {{ dag.dag_id }}
+        *Execution Time*: {{ execution_date }}
+        *Log Url*: {{ import_sql_log_url }}
+"""
+import_sql_success_slack_msg = """
+        :large_green_circle: Import SQL Success!
+        *DAG ID*: {{ dag.dag_id }}
+        *Execution Time*: {{ execution_date }}
+        *Log Url*: {{ import_sql_log_url }}
 """
 dag_failure_slack_webhook_notification = send_slack_webhook_notification(
     slack_webhook_conn_id="slack_default", text=fail_slack_msg
@@ -43,6 +64,7 @@ _DEFAULT_ARGS = {
 }
 
 WireDependencies = Callable[[dict[str, object]], None]
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -94,10 +116,73 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         db_properties_filepath = f"{creds_dir}/{config.db_properties_filename}"
         color_swap_config_filepath = f"{creds_dir}/{config.color_swap_config_filename}"
         data_source_properties_filepath = f"{creds_dir}/{config.data_source_properties_filename}"
+        if len(config.target_nodes) != 1:
+            raise ValueError(
+                f"Expected exactly one target node for importer '{importer}', got {len(config.target_nodes)}."
+            )
 
         @task
         def get_data_repos(repos: list[str]) -> str:
             return " ".join(repos)
+
+        def _maybe_decode_base64(text: str) -> str:
+            try:
+                decoded = base64.b64decode(text, validate=True)
+            except (binascii.Error, ValueError):
+                return text
+            try:
+                return decoded.decode("utf-8")
+            except UnicodeDecodeError:
+                return text
+
+        # run this task even if import_sql failed
+        @task(trigger_rule=TriggerRule.ALL_DONE)
+        def send_update_notification(import_sql_output: object) -> None:
+            """
+            Sends a Slack message to the #airflow-logs channel with a link to the import_sql logs URL.
+            This tells the curators whether there were any studies that suceeded or failed to import during a given run.
+            To avoid confusion -- we run this task towards the end of the DAG
+            (eg. after the transfer_deployment step) because we don't want to
+            send a success message before the entire import run completes.
+            """
+            
+            # Get the log URL for the import_sql task
+            context = get_current_context()
+            dag_run = context.get("dag_run")
+            import_sql_ti = None
+            if dag_run is not None:
+                import_sql_ti = dag_run.get_task_instance("import_sql", map_index=0)
+            import_sql_log_url = import_sql_ti.log_url if import_sql_ti is not None else ""
+            if not import_sql_log_url:
+                logger.warning("Could not determine import_sql log url; skipping Slack notification.")
+                raise AirflowSkipException()
+            
+            import_sql_failed = (
+                import_sql_ti is not None and import_sql_ti.state == State.FAILED
+            )
+            if not import_sql_failed:
+                # Search for the error string in the import_sql logs to see if any studies failed
+                # The notification file is always printed to stdout, and it
+                # will contain the error string iff there were studies that failed import
+                try:
+                    base64_text = next((text for text in import_sql_output), "")
+                    decoded_output = _maybe_decode_base64(str(base64_text))
+                    ERROR_STRING = "The following studies had errors during import"
+                    import_sql_failed = (ERROR_STRING in decoded_output)
+                except Exception as exc:
+                    logger.warning("Could not parse log output of upstream import_sql task; skipping Slack notification")
+                    logger.warning("Stack trace:")
+                    logger.warning(exc)
+                    raise AirflowSkipException() from exc
+            
+            
+            # Build the msg and send to Slack
+            msg_template = import_sql_failure_slack_msg if import_sql_failed else import_sql_success_slack_msg
+            rendered_message = Template(msg_template).render(
+                import_sql_log_url=import_sql_log_url,
+                **context,
+            )
+            SlackWebhookHook(slack_webhook_conn_id="slack_default").send(text=rendered_message)
 
         data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
@@ -216,6 +301,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             elif name == "scale_up_rds_node":
                 # Use XCom to signal downstream that the scale up task completed successfully
                 params["do_xcom_push"] = True
+            elif name == "import_sql":
+                # Capture notification file contents from stdout
+                params["do_xcom_push"] = True
             elif name == "scale_down_rds_node":
                 # Run scale down task regardless of upstream failures during import
                 params["trigger_rule"] = TriggerRule.ALL_DONE
@@ -233,7 +321,12 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         tasks: dict[str, object] = {"data_repos": data_repos}
         for name in config.task_names:
-            tasks[name] = _build_task(name)
+            if name == "send_update_notification":
+                tasks[name] = send_update_notification(
+                    import_sql_output=tasks["import_sql"].output,
+                )
+            else:
+                tasks[name] = _build_task(name)
 
         config.wire_dependencies(tasks)
 
@@ -243,7 +336,10 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         list(dag.tasks) >> watcher()
         
+        # set_import_abandoned needs to be directly downstream of all other DAG tasks in
+        # order for it to trigger if any one of them fails
         if "set_import_abandoned" in config.task_names:
+            # make sure we don't create a cyclical dependency
             other_tasks = [t for t in dag.tasks if t.task_id not in ("set_import_abandoned", "watcher")]
             other_tasks >> tasks["set_import_abandoned"]
 

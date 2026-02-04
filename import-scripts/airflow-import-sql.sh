@@ -91,6 +91,21 @@ fi
 tmp="${PORTAL_HOME}/tmp/${TMP_DIR_NAME}"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
+# Set up a temp notification file
+# After the importer runs with --notification-file, it will write to this file describing the number of studies updated / removed / had import errors
+# The notification contents are emitted to stdout so Airflow logs contain them.
+# A subsequent Airflow task links to the import_sql log in Slack.
+
+# Ensure temp directory exists for mktemp and importer tmpdir
+if ! mkdir -p "$tmp"; then
+    echo "Error: could not create tmp directory '$tmp'" >&2
+    exit 1
+fi
+
+now=$(date "+%Y-%m-%d-%H-%M-%S")
+prefix="${PORTAL_DATABASE}-portal-update-notification"
+notification_file=$(mktemp "$tmp/$prefix.$now.XXXXXX")
+
 # Direct importer logs to stdout
 # Make sure to kill the tail process on exit so we don't hang the script
 tail -f "$PORTAL_HOME/logs/$LOG_FILE_NAME" &
@@ -109,8 +124,18 @@ if [ $? -gt 0 ]; then
 fi
 
 echo "Importing $PORTAL_DATABASE study data into $destination_database_color mysql database"
-$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export
-if [ $? -gt 0 ]; then
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export --notification-file="$notification_file"
+exitcode=$?
+
+if [ -f "$notification_file" ]; then
+    echo "========= BEGIN NOTIFICATION FILE ========="
+    cat "$notification_file"
+    echo "========== END NOTIFICATION FILE =========="
+else
+    echo "Warning: notification file not found at '$notification_file'" >&2
+fi
+
+if [ $exitcode -gt 0 ]; then
     echo "Error: $PORTAL_DATABASE import failed!" >&2
     exit 1
 fi
