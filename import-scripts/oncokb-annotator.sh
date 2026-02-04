@@ -8,8 +8,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
     fi
 
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
-
     source $PORTAL_HOME/scripts/set-data-source-environment-vars.sh
+    source $PORTAL_HOME/scripts/s3_functions.sh
 
     DELIVERED_FILE_LIST="""
         data_clinical_sample.oncokb.pdf
@@ -65,6 +65,19 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
             sleep $PROBE_DELAY_SECONDS
         done
         return 1 # completion of import did not happen before timeout
+    }
+
+    function push_to_s3() {
+        LOCAL_PATH="${STAGING_DIR}/oncokb-annotation"
+        S3_PATH="oncokb-annotation"
+        S3_BUCKET="cdm-deliverable"
+
+        echo $(date)
+        echo "Uploading data files to S3 bucket"
+        mkdir -p $LOCAL_PATH
+        cp -r $ONCOKB_OUT_DIR/data*.txt $LOCAL_PATH
+        upload_to_s3 $LOCAL_PATH $S3_PATH $S3_BUCKET
+        rm -rf $LOCAL_PATH
     }
 
     function gzip_oncokb_annotated_files() {
@@ -348,6 +361,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
 
     # Only commit if all steps succeeded
     if [ $ONCOKB_ANNOTATION_SUCCESS -eq 1 ] ; then
+        push_to_s3
         gzip_oncokb_annotated_files
         rsync_latest_oncokb_annotated_msk_impact_to_clone
         commit_and_push_latest_oncokb_annotated_msk_impact
