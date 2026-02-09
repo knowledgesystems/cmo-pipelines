@@ -167,7 +167,7 @@ CLEAR_CACHES_AFTER_IMPACT_IMPORT=0
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SOLID_HEME_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import of MSKSOLIDHEME (will be renamed MSKIMPACT) study"
     # this usage is a little different -- we are comparing the backup-study-id "yesterday_mskimpact" because we will be renaming this imported study to mskimpact after a successful import
-    bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="mskimpact" --temp-study-id="temporary_mskimpact" --backup-study-id="yesterday_mskimpact" --portal-name="msk-solid-heme-portal" --study-path="$MSK_SOLID_HEME_DATA_HOME" --notification-file="$msk_solid_heme_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+    $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_SOLID_HEME_DATA_HOME"
     if [ $? -eq 0 ] ; then
         consumeSamplesAfterSolidHemeImport
         CLEAR_CACHES_AFTER_IMPACT_IMPORT=1
@@ -204,7 +204,7 @@ fi
 # TEMP STUDY IMPORT: MSKARCHER
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_ARCHER_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for mskarcher"
-    bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="mskarcher" --temp-study-id="temporary_mskarcher" --backup-study-id="yesterday_mskarcher" --portal-name="mskarcher-portal" --study-path="$MSK_ARCHER_DATA_HOME" --notification-file="$mskarcher_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+    $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_ARCHER_DATA_HOME"
     if [ $? -eq 0 ] ; then
         consumeSamplesAfterArcherImport
 ####        CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT=1
@@ -244,7 +244,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: KINGSCOUNTY
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_KINGS_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_kingscounty"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_kingscounty" --temp-study-id="temporary_msk_kingscounty" --backup-study-id="yesterday_msk_kingscounty" --portal-name="msk-kingscounty-portal" --study-path="$MSK_KINGS_DATA_HOME" --notification-file="$kingscounty_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_KINGS_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
             IMPORT_FAIL_KINGS=0
@@ -266,7 +266,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: LEHIGHVALLEY
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_LEHIGH_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_lehighvalley"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_lehighvalley" --temp-study-id="temporary_msk_lehighvalley" --backup-study-id="yesterday_msk_lehighvalley" --portal-name="msk-lehighvalley-portal" --study-path="$MSK_LEHIGH_DATA_HOME" --notification-file="$lehighvalley_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_LEHIGH_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
             IMPORT_FAIL_LEHIGH=0
@@ -288,7 +288,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: QUEENSCANCERCENTER
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_QUEENS_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_queenscancercenter"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_queenscancercenter" --temp-study-id="temporary_msk_queenscancercenter" --backup-study-id="yesterday_msk_queenscancercenter" --portal-name="msk-queenscancercenter-portal" --study-path="$MSK_QUEENS_DATA_HOME" --notification-file="$queenscancercenter_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_QUEENS_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
             IMPORT_FAIL_QUEENS=0
@@ -310,7 +310,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: MIAMICANCERINSTITUTE
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_MCI_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_miamicancerinstitute"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_miamicancerinstitute" --temp-study-id="temporary_msk_miamicancerinstitute" --backup-study-id="yesterday_msk_miamicancerinstitute" --portal-name="msk-mci-portal" --study-path="$MSK_MCI_DATA_HOME" --notification-file="$miamicancerinstitute_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_MCI_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
             IMPORT_FAIL_MCI=0
@@ -332,7 +332,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: HARTFORDHEALTHCARE
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_HARTFORD_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_hartfordhealthcare"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_hartfordhealthcare" --temp-study-id="temporary_msk_hartfordhealthcare" --backup-study-id="yesterday_msk_hartfordhealthcare" --portal-name="msk-hartford-portal" --study-path="$MSK_HARTFORD_DATA_HOME" --notification-file="$hartfordhealthcare_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_HARTFORD_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
             IMPORT_FAIL_HARTFORD=0
@@ -354,7 +354,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: RALPHLAUREN
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RALPHLAUREN_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_ralphlauren"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_ralphlauren" --temp-study-id="temporary_msk_ralphlauren" --backup-study-id="yesterday_msk_ralphlauren" --portal-name="msk-ralphlauren-portal" --study-path="$MSK_RALPHLAUREN_DATA_HOME" --notification-file="$ralphlauren_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_RALPHLAUREN_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
             IMPORT_FAIL_RALPHLAUREN=0
@@ -376,7 +376,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: RIKENGENESISJAPAN
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_rikengenesisjapan"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="msk_rikengenesisjapan" --temp-study-id="temporary_msk_rikengenesisjapan" --backup-study-id="yesterday_msk_rikengenesisjapan" --portal-name="msk-tailormedjapan-portal" --study-path="$MSK_RIKENGENESISJAPAN_DATA_HOME" --notification-file="$rikengenesisjapan_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_RIKENGENESISJAPAN_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
             IMPORT_FAIL_RIKENGENESISJAPAN=0
@@ -405,7 +405,7 @@ if ! [[ $SKIP_SCLC_MSKIMPACT_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: SCLCMSKIMPACT
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SCLC_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for sclc_mskimpact_2017 study"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="sclc_mskimpact_2017" --temp-study-id="temporary_sclc_mskimpact_2017" --backup-study-id="yesterday_sclc_mskimpact_2017" --portal-name="msk-sclc-portal" --study-path="$MSK_SCLC_DATA_HOME" --notification-file="$sclc_mskimpact_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$MSK_SCLC_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_SCLC_IMPORT=1
             IMPORT_FAIL_SCLC_MSKIMPACT=0
@@ -431,7 +431,7 @@ if ! [[ $SKIP_LYMPHOMA_IMPORT == '1' ]] ; then
     # TEMP STUDY IMPORT: LYMPHOMASUPERCOHORT
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for lymphoma_super_cohort_fmi_msk study"
-        bash $PORTAL_HOME/scripts/import-temp-study.sh --study-id="lymphoma_super_cohort_fmi_msk" --temp-study-id="temporary_lymphoma_super_cohort_fmi_msk" --backup-study-id="yesterday_lymphoma_super_cohort_fmi_msk" --portal-name="msk-fmi-lymphoma-portal" --study-path="$LYMPHOMA_SUPER_COHORT_DATA_HOME" --notification-file="$lymphoma_super_cohort_notification_file" --tmp-directory="$MSK_DMP_TMPDIR" --email-list="$PIPELINES_EMAIL_LIST" --oncotree-version="${ONCOTREE_VERSION_TO_USE}" --importer-jar="$MSK_IMPORTER_JAR_FILENAME" --transcript-overrides-source="mskcc"
+        $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT --study-directory="$LYMPHOMA_SUPER_COHORT_DATA_HOME"
         if [ $? -eq 0 ] ; then
 ####            CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=1
             IMPORT_FAIL_LYMPHOMA=0
