@@ -209,6 +209,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                     IMPORT_STATUS_IMPACT=1
                 else
                     FETCH_CVR_IMPACT_FAIL=0
+
+                    addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
+
                     echo "pushing cvr data to s3"
                     upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
                 fi
@@ -240,6 +243,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 #override the success of the tumor sample cvr fetch with a failed status
                 FETCH_CVR_IMPACT_FAIL=1
             else
+                addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
                 echo "pushing CVR germline data to s3"
                 upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
             fi
@@ -282,6 +286,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 IMPORT_STATUS_HEME=1
             else
                 FETCH_CVR_HEME_FAIL=0
+                addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
                 echo "pushing cvr data for heme to s3"
                 upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
             fi
@@ -309,6 +314,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 #override the success of the tumor sample cvr fetch with a failed status
                 FETCH_CVR_HEME_FAIL=1
             else
+                addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
                 echo "uploading CVR germline data to s3"
                 upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
             fi
@@ -351,6 +357,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 IMPORT_STATUS_ARCHER=1
             else
                 FETCH_CVR_ARCHER_FAIL=0
+
+                addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "data_clinical_patient.txt" "data_clinical_sample.txt"
+
                 echo "pushing archer unfiltered data to s3"
                 upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
             fi
@@ -394,6 +403,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 IMPORT_STATUS_ACCESS=1
             else
                 FETCH_CVR_ACCESS_FAIL=0
+
+                addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_patient.txt" "data_clinical_sample.txt"
+
                 echo "pushing access data to s3"
                 upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
             fi
@@ -476,6 +488,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
         else
             upload_to_s3 "$MAPPED_ARCHER_SAMPLES_FILE" "mskarcher_unfiltered/cvr/mapped_archer_samples.txt" "mskimpact-databricks"
+            addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
             upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
         fi
     fi
@@ -489,6 +502,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
         else
             upload_to_s3 "$MAPPED_ARCHER_SAMPLES_FILE" "mskarcher_unfiltered/cvr/mapped_archer_samples.txt" "mskimpact-databricks"
+            addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
         fi
     fi
@@ -620,6 +634,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 if [ $? -gt 0 ] ; then
                     download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
                 else
+                    addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
                     upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
                 fi
             fi
@@ -638,6 +653,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT Redcap Export"
         else
             touch $MSK_HEMEPACT_CONSUME_TRIGGER
+            addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_sample.txt" "data_clinical_patient.txt"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
         fi
     fi
@@ -660,6 +676,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
             touch $MSK_ARCHER_IMPORT_TRIGGER
             touch $MSK_ARCHER_CONSUME_TRIGGER
+            addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "data_clinical_sample.txt" "data_clinical_patient.txt"
             upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
         fi
     fi
@@ -675,6 +692,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap Export"
         else
             touch $MSK_ACCESS_CONSUME_TRIGGER
+            addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_sample.txt" "data_clinical_patient.txt"
             upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
         fi
     fi
@@ -692,6 +710,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
         else
+            addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
             echo "pushing mskimpact CDM data to S3"
             upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
         fi
@@ -700,6 +719,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
         else
+            addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_sample.txt" "data_clinical_patient.txt"
             echo "pushing hemepact CDM data to S3"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
         fi
@@ -708,6 +728,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
         else
+            addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "data_clinical_sample.txt" "data_clinical_patient.txt"
             echo "pushing mskarcher CDM data to S3"
             upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
         fi
@@ -716,6 +737,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
         else
+            addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_sample.txt" "data_clinical_patient.txt"
             echo "pushing mskaccess CDM data to S3"
             upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
         fi
@@ -756,8 +778,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                         echo "Error: Adding CDM timeline files for UNLINKED_ARCHER failed!"
                     fi
                     # commit updates and generated case lists
-                    upload_to_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher" "mskimpact-databricks"
                     addCancerTypeCaseLists $MSK_ARCHER_DATA_HOME "mskarcher" "data_clinical_sample.txt" "data_clinical_patient.txt"
+                    upload_to_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher" "mskimpact-databricks"
                     upload_to_s3 "$MSK_ARCHER_DATA_HOME/case_lists" "mskarcher/case_lists" "mskimpact-databricks"
                     download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
                 fi
@@ -853,6 +875,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         download_from_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks" 
     else
         echo "Committing MIXEDPACT data"
+        addCancerTypeCaseLists $MSK_MIXEDPACT_DATA_HOME "mixedpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
         upload_to_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks"
     fi
 
@@ -1202,6 +1225,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         download_from_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks" 
     else
         echo "Committing Lymphoma super cohort data"
+        addCancerTypeCaseLists $LYMPHOMA_SUPER_COHORT_DATA_HOME "lymphoma_super_cohort_fmi_msk" "data_clinical_sample.txt" "data_clinical_patient.txt"
         upload_to_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks" 
     fi
 
