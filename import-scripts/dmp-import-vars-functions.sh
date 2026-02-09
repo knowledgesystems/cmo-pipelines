@@ -76,6 +76,26 @@ function standardizeGenePanelMatrix {
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_gene_matrix_file.py --gene-panel-matrix-filename $GENE_PANEL_MATRIX_FILE
 }
 
+function addAllCaseLists {
+    addCancerTypeCaseLists "$1" "$2" "$3" "$4"
+    addDataTypeCaseLists "$1" "$2"
+}
+
+function addDataTypeCaseLists {
+    STUDY_DATA_DIRECTORY=$1
+    STUDY_ID=$2
+
+    CASE_LISTS_DIRECTORY="$STUDY_DATA_DIRECTORY/case_lists"
+
+    $PYTHON_BINARY $GENERATE_CASE_LISTS_SCRIPT \
+        --case-list-config-file $CASE_LIST_CONFIG_FILEPATH \
+        --case-list-dir $CASE_LISTS_DIRECTORY \
+        --study-dir $STUDY_DATA_DIRECTORY \
+        --study-id $STUDY_ID \
+        --overwrite \
+        --verbose
+}
+
 # Function to generate case lists by cancer type
 function addCancerTypeCaseLists {
     STUDY_DATA_DIRECTORY=$1
