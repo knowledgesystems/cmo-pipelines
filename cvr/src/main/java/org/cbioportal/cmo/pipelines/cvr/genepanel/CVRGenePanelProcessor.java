@@ -56,7 +56,9 @@ public class CVRGenePanelProcessor implements ItemProcessor<CVRGenePanelRecord, 
         List<String> record = new ArrayList<>();
         record.add(cvrUtilities.convertWhitespace(i.getSAMPLE_ID()));
         for (String profile : geneticProfiles) {
-            record.add(cvrUtilities.convertWhitespace(i.getPanelMap().get(profile)));
+            String raw = i.getPanelMap().get(profile);
+            String value = (raw == null || raw.trim().isEmpty()) ? "NA" : raw;
+            record.add(cvrUtilities.convertWhitespace(value));
         }
         return String.join("\t", record);
     }
