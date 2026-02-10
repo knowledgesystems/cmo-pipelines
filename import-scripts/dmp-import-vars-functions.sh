@@ -76,7 +76,8 @@ function standardizeGenePanelMatrix {
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_gene_matrix_file.py --gene-panel-matrix-filename $GENE_PANEL_MATRIX_FILE
 }
 
-function addAllCaseLists {
+function preImportProcessingSteps {
+    updateCancerTypeFromOncotreeCode "$3"
     addCancerTypeCaseLists "$1" "$2" "$3" "$4"
     addDataTypeCaseLists "$1" "$2"
 }
@@ -94,6 +95,14 @@ function addDataTypeCaseLists {
         --study-id $STUDY_ID \
         --overwrite \
         --verbose
+}
+
+function updateCancerTypeFromOncotreeCode {
+    FILEPATH=$1
+    ONCOTREE_URL="http://oncotree.mskcc.org/"
+    # ONCOTREE_VERSION_TO_USE should already be defined
+
+    $PYTHON_BINARY $PORTAL_HOME/scripts/oncotree_code_converter.py --oncotree-url $ONCOTREE_URL --oncotree-version $ONCOTREE_VERSION_TO_USE --clinical-file $FILEPATH --force
 }
 
 # Function to generate case lists by cancer type
@@ -124,7 +133,7 @@ function addCancerTypeCaseLists {
     fi
     # remove current case lists and run oncotree converter before creating new cancer case lists
     rm -f $STUDY_DATA_DIRECTORY/case_lists/*
-    $PYTHON_BINARY $PORTAL_HOME/scripts/oncotree_code_converter.py --oncotree-url "http://oncotree.mskcc.org/" --oncotree-version $ONCOTREE_VERSION_TO_USE --clinical-file $FILEPATH_1 --force
+    updateCancerTypeFromOncotreeCode $FILEPATH_1
     $PYTHON_BINARY $PORTAL_HOME/scripts/create_case_lists_by_cancer_type.py --clinical-file-list="$CLINICAL_FILE_LIST" --output-directory="$STUDY_DATA_DIRECTORY/case_lists" --study-id="$STUDY_ID" --attribute="CANCER_TYPE"
     if [ "$STUDY_ID" == "mskimpact" ] || [ "$STUDY_ID" == "mixedpact" ] || [ "$STUDY_ID" == "msk_solid_heme" ] ; then
        $PYTHON_BINARY $PORTAL_HOME/scripts/create_case_lists_by_cancer_type.py --clinical-file-list="$CLINICAL_FILE_LIST" --output-directory="$STUDY_DATA_DIRECTORY/case_lists" --study-id="$STUDY_ID" --attribute="PARTC_CONSENTED_12_245"
