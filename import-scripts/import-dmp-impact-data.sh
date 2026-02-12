@@ -143,7 +143,7 @@ fi
 if [ $DB_VERSION_FAIL -eq 0 ] ; then
     # import into portal database
     echo "importing cancer type updates into msk portal database..."
-    $JAVA_BINARY -Xmx16g $MSK_JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
+    $PYTHON_BINARY $CBIO_IMPORTER_SCRIPT import-types-of-cancer --oncotree-url "http://oncotree.mskcc.org/" --oncotree-version $ONCOTREE_VERSION_TO_USE
     if [ $? -gt 0 ] ; then
         sendImportFailureMessageMskPipelineLogsSlack "Cancer type updates"
     fi
