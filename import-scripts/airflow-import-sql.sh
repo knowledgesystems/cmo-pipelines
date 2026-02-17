@@ -8,6 +8,7 @@
 PORTAL_DATABASE="$1"
 PORTAL_SCRIPTS_DIRECTORY="$2"
 MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$3"
+NOTIFICATION_FILE="$4"
 if [ -z "$PORTAL_SCRIPTS_DIRECTORY" ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
@@ -102,9 +103,14 @@ if ! mkdir -p "$tmp"; then
     exit 1
 fi
 
-now=$(date "+%Y-%m-%d-%H-%M-%S")
-prefix="${PORTAL_DATABASE}-portal-update-notification"
-notification_file=$(mktemp "$tmp/$prefix.$now.XXXXXX")
+if [ -n "$NOTIFICATION_FILE" ]; then
+    notification_file="$NOTIFICATION_FILE"
+    mkdir -p "$(dirname "$notification_file")"
+else
+    now=$(date "+%Y-%m-%d-%H-%M-%S")
+    prefix="${PORTAL_DATABASE}-portal-update-notification"
+    notification_file=$(mktemp "$tmp/$prefix.$now.XXXXXX")
+fi
 
 # Direct importer logs to stdout
 # Make sure to kill the tail process on exit so we don't hang the script
