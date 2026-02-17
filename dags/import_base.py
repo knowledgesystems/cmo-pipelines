@@ -154,12 +154,16 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 try:
                     ssh_hook = SSHHook(ssh_conn_id=ssh_conn_id)
                     ssh_client = ssh_hook.get_conn()
-                    _, agg_stdout, _ = ssh_hook.exec_ssh_client_command(
+                    exit_status, notif_contents, _ = ssh_hook.exec_ssh_client_command(
                         ssh_client, f"cat {shlex.quote(notification_filepath)}", get_pty=False,
                     )
-                    notification_content = agg_stdout.decode("utf-8")
-                    ERROR_STRING = "The following studies had errors during import"
-                    import_sql_failed = (ERROR_STRING in notification_content)
+                    if exit_status != 0:
+                        logger.warning("Notification file not found at %s; treating as failure", notification_filepath)
+                        import_sql_failed = True
+                    else:
+                        notification_content = notif_contents.decode("utf-8")
+                        ERROR_STRING = "The following studies had errors during import"
+                        import_sql_failed = (ERROR_STRING in notification_content)
                 except Exception as exc:
                     logger.warning("Could not read notification file from remote node; skipping Slack notification")
                     logger.warning("Stack trace:")
