@@ -65,12 +65,12 @@ function clearPersistenceCachesForPublicPortals() {
 }
 
 function clearPersistenceCachesForPublicBluePortals() {
-    all_public_portals="public-blue public-beta-blue master-blue clickhouse-only-db-blue"
+    all_public_portals="public-blue public-beta-blue master-blue"
     clearPersistenceCachesForPortals "$all_public_portals"
 }
 
 function clearPersistenceCachesForPublicGreenPortals() {
-    all_public_portals="public-green public-beta-green master-green clickhouse-only-db-green"
+    all_public_portals="public-green public-beta-green master-green"
     clearPersistenceCachesForPortals "$all_public_portals"
 }
 
