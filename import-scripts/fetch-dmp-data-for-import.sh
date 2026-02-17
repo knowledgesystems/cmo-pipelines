@@ -82,23 +82,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         exit 2
     fi 
 
-    if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
-        # refresh the CDD cache
-        CDD_RECACHE_FAIL=0;
-        bash $PORTAL_HOME/scripts/refresh-cdd-cache.sh
-        if [ $? -gt 0 ]; then
-            message="Failed to refresh CDD cache!"
-            echo $message
-            echo -e "$message" | mail -s "CDD cache failed to refresh" $PIPELINES_EMAIL_LIST
-            sendPreImportFailureMessageMskPipelineLogsSlack "$message"
-            CDD_RECACHE_FAIL=1
-        fi
-        if [[ $CDD_RECACHE_FAIL -gt 0 ]] ; then
-            echo "CDD recache failed! Exiting..."
-            exit 2
-        fi
-    fi
-
     # fetch clinical data from data repository
     echo "fetching updates from dmp repository..."
     download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
