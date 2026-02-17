@@ -113,11 +113,3 @@ if [ $? -gt 0 ]; then
     echo "Error: Database version expected by portal does not match version in database!" >&2
     exit 1
 fi
-
-# Refresh CDD cache to pull latest metadata
-echo "Refreshing CDD cache"
-bash "$PORTAL_SCRIPTS_DIRECTORY/refresh-cdd-cache.sh"
-if [ $? -gt 0 ]; then
-    echo "Error: Failed to refresh CDD cache during $PORTAL_DATABASE setup!" >&2
-    exit 1
-fi

@@ -62,23 +62,6 @@ if ! [ -d "$MSK_DMP_TMPDIR" ] ; then
     fi
 fi
 
-if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
-    # refresh CDD cache
-    CDD_RECACHE_FAIL=0;
-    bash $PORTAL_HOME/scripts/refresh-cdd-cache.sh
-    if [ $? -gt 0 ]; then
-        message="Failed to refresh CDD cache!"
-        echo $message
-        echo -e "$message" | mail -s "CDD cache failed to refresh" $PIPELINES_EMAIL_LIST
-        sendImportFailureMessageMskPipelineLogsSlack "$message"
-        CDD_RECACHE_FAIL=1
-    fi
-    if [[ $CDD_RECACHE_FAIL -ne 0 ]] ; then
-        echo "CDD recache failed! Exiting..."
-        exit 2
-    fi
-fi
-
 now=$(date "+%Y-%m-%d-%H-%M-%S")
 msk_solid_heme_notification_file=$(mktemp $MSK_DMP_TMPDIR/msk-solid-heme-portal-update-notification.$now.XXXXXX)
 mskarcher_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskarcher-portal-update-notification.$now.XXXXXX)
@@ -372,7 +355,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     else
         sendImportSuccessMessageMskPipelineLogsSlack "RALPHLAUREN"
     fi
-    
+
     # TEMP STUDY IMPORT: RIKENGENESISJAPAN
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_rikengenesisjapan"
@@ -394,10 +377,10 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     else
         sendImportSuccessMessageMskPipelineLogsSlack "RIKENGENESISJAPAN"
     fi
-    
+
     ## END Institute affiliate imports
 fi
-    
+
 #-------------------------------------------------------------------------------------------------------------------------------------
 ####CLEAR_CACHES_AFTER_SCLC_IMPORT=0
 
