@@ -155,7 +155,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                     ssh_hook = SSHHook(ssh_conn_id=ssh_conn_id)
                     ssh_client = ssh_hook.get_conn()
                     exit_status, notif_contents, _ = ssh_hook.exec_ssh_client_command(
-                        ssh_client, f"cat {shlex.quote(notification_filepath)}", get_pty=False,
+                        ssh_client, f"cat {shlex.quote(notification_filepath)}", get_pty=False, environment=None
                     )
                     if exit_status != 0:
                         logger.warning("Notification file not found at %s; treating as failure", notification_filepath)
