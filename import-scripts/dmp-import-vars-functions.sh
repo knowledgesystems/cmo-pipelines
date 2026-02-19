@@ -92,6 +92,8 @@ function addDataTypeCaseLists {
     STUDY_DATA_DIRECTORY=$1
     STUDY_ID=$2
 
+    GENERATE_CASE_LISTS_SCRIPT="$PORTAL_HOME/scripts/generate_case_lists.py"
+    CASE_LIST_CONFIG_FILEPATH="$PORTAL_HOME/scripts/case_list_config.tsv"
     CASE_LISTS_DIRECTORY="$STUDY_DATA_DIRECTORY/case_lists"
 
     $PYTHON_BINARY $GENERATE_CASE_LISTS_SCRIPT \
