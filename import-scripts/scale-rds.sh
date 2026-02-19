@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 set -eEuo pipefail
 
 DIRECTION="$1"
@@ -66,14 +65,30 @@ err_failed_to_change_instance_class() {
     exit 1
 }
 
+function warn_already_at_desired_class_and_exit() {
+    desired_class="$1"
+    scaling_direction="$2"
+    echo "WARN: instance class was already at desired class $desired_class when we would have expected to scale the node in $scaling_direction direction." >&2
+    exit 0
+}
+
 # Get the scale up / scale down classes for this portal
 echo "Reading configuration knobs from $COLOR_SWAP_CONFIG_FILEPATH"
 scale_up_class=$(read_scalar '.rds_scale_up_class')
 scale_down_class=$(read_scalar '.rds_scale_down_class')
-
-
 rds_node_id=$(get_node_id)
 current_class=$(rds_current_class "$rds_node_id" "$aws_profile")
+
+# If we are already at the desired size, log warning but exit without error
+if [[ "$DIRECTION" == "up" ]]; then
+    if [[ "$current_class" == "$scale_up_class" ]] ; then
+        warn_already_at_desired_class_and_exit "$current_class" "$DIRECTION"
+    fi
+else
+    if [[ "$current_class" == "$scale_down_class" ]] ; then
+        warn_already_at_desired_class_and_exit "$current_class" "$DIRECTION"
+    fi
+fi
 
 if [[ "$SKIP_PRE_VALIDATION" != "--skip-pre-validation" ]]; then
     # Validate the current class for the given direction
