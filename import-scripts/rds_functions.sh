@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+DEFAULT_WAIT_TIMEOUT_FOR_RDS_INSTANCE_SCALING=3600 # seconds
+
 # Get current instance class
 rds_current_class() {
     local id="$1"
@@ -54,12 +56,10 @@ rds_stop() {
 
     while true; do
         STATUS=$(rds_current_status "$id" "$profile")
-        
         if [ "$STATUS" = "stopped" ]; then
             # instance is stopped
             break
         fi
-        
         sleep 5
     done
 }
@@ -95,7 +95,7 @@ rds_set_class() {
     local id="$1"
     local profile="$2"
     local new_class="$3"
-    local timeout_seconds="${4:-900}"
+    local timeout_seconds="${4:-$DEFAULT_WAIT_TIMEOUT_FOR_RDS_INSTANCE_SCALING}"
 
     if ! rds_validate_class "$id" "$profile" "$new_class"; then
         echo "Invalid DB instance class '$new_class' for '$id'" >&2
@@ -117,11 +117,10 @@ wait_for_class() {
     local id="$1"
     local profile="$2"
     local new_class="$3"
-    local timeout="${4:-900}"
+    local timeout="${4:-$DEFAULT_WAIT_TIMEOUT_FOR_RDS_INSTANCE_SCALING}"
     local start now class status pending
 
     start=$(date +%s)
-
     while true; do
         read -r class status pending <<<"$(aws rds describe-db-instances \
             --db-instance-identifier "$id" \
@@ -133,13 +132,11 @@ wait_for_class() {
         if [[ "$class" == "$new_class" && "$status" == "available" && ( "$pending" == "None" || -z "$pending" ) ]]; then
             return 0
         fi
-
         now=$(date +%s)
         if (( now - start >= timeout )); then
             echo "Timed out waiting for $id to become $new_class (status=$status, pending=$pending, current=$class)" >&2
             return 1
         fi
-
         sleep 10
     done
 }
