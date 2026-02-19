@@ -82,8 +82,6 @@ function preImportProcessingSteps {
     # accept 1 or 2 data_clinical filenames
     FILENAME_1="$3" # this will be oncotree converted then added to the list
     FILENAME_2="$4" # this will not be converted but will be added to the list
-    FILEPATH_1="$STUDY_DATA_DIRECTORY/$FILENAME_1"
-    FILEPATH_2="$STUDY_DATA_DIRECTORY/$FILENAME_2"
 
     updateCancerTypeFromOncotreeCode "$STUDY_DATA_DIRECTORY" "$FILENAME_1"
     addCancerTypeCaseLists "$STUDY_DATA_DIRECTORY" "$STUDY_ID" "$FILENAME_1" "$FILENAME_2"
@@ -143,7 +141,6 @@ function addCancerTypeCaseLists {
     fi
     # remove current case lists and run oncotree converter before creating new cancer case lists
     rm -f $STUDY_DATA_DIRECTORY/case_lists/*
-    updateCancerTypeFromOncotreeCode $FILEPATH_1
     $PYTHON_BINARY $PORTAL_HOME/scripts/create_case_lists_by_cancer_type.py --clinical-file-list="$CLINICAL_FILE_LIST" --output-directory="$STUDY_DATA_DIRECTORY/case_lists" --study-id="$STUDY_ID" --attribute="CANCER_TYPE"
     if [ "$STUDY_ID" == "mskimpact" ] || [ "$STUDY_ID" == "mixedpact" ] || [ "$STUDY_ID" == "msk_solid_heme" ] ; then
        $PYTHON_BINARY $PORTAL_HOME/scripts/create_case_lists_by_cancer_type.py --clinical-file-list="$CLINICAL_FILE_LIST" --output-directory="$STUDY_DATA_DIRECTORY/case_lists" --study-id="$STUDY_ID" --attribute="PARTC_CONSENTED_12_245"
