@@ -652,9 +652,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT Redcap Export"
         else
-            touch $MSK_HEMEPACT_CONSUME_TRIGGER
             preImportProcessingSteps $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_sample.txt" "data_clinical_patient.txt"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
+            touch $MSK_HEMEPACT_CONSUME_TRIGGER
         fi
     fi
 
@@ -674,10 +674,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             if [ $? -eq 0 ] ; then
                 mv $archer_data_clinical_tmp_file $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_sample.txt
             fi
-            touch $MSK_ARCHER_IMPORT_TRIGGER
-            touch $MSK_ARCHER_CONSUME_TRIGGER
             preImportProcessingSteps $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "data_clinical_sample.txt" "data_clinical_patient.txt"
             upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
+            touch $MSK_ARCHER_IMPORT_TRIGGER
+            touch $MSK_ARCHER_CONSUME_TRIGGER
         fi
     fi
 
@@ -691,9 +691,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
             sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap Export"
         else
-            touch $MSK_ACCESS_CONSUME_TRIGGER
             preImportProcessingSteps $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_sample.txt" "data_clinical_patient.txt"
             upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
+            touch $MSK_ACCESS_CONSUME_TRIGGER
         fi
     fi
 
