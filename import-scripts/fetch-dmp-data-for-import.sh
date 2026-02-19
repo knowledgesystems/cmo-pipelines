@@ -358,7 +358,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             else
                 FETCH_CVR_ARCHER_FAIL=0
 
-                preImportProcessingSteps $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "data_clinical_patient.txt" "data_clinical_sample.txt"
+                preImportProcessingSteps $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "data_clinical_sample.txt" "data_clinical_patient.txt"
 
                 echo "pushing archer unfiltered data to s3"
                 upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
@@ -404,7 +404,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             else
                 FETCH_CVR_ACCESS_FAIL=0
 
-                preImportProcessingSteps $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_patient.txt" "data_clinical_sample.txt"
+                preImportProcessingSteps $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_sample.txt" "data_clinical_patient.txt"
 
                 echo "pushing access data to s3"
                 upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
