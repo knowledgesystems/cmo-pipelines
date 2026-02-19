@@ -77,9 +77,17 @@ function standardizeGenePanelMatrix {
 }
 
 function preImportProcessingSteps {
-    updateCancerTypeFromOncotreeCode "$3"
-    addCancerTypeCaseLists "$1" "$2" "$3" "$4"
-    addDataTypeCaseLists "$1" "$2"
+    STUDY_DATA_DIRECTORY=$1
+    STUDY_ID=$2
+    # accept 1 or 2 data_clinical filenames
+    FILENAME_1="$3" # this will be oncotree converted then added to the list
+    FILENAME_2="$4" # this will not be converted but will be added to the list
+    FILEPATH_1="$STUDY_DATA_DIRECTORY/$FILENAME_1"
+    FILEPATH_2="$STUDY_DATA_DIRECTORY/$FILENAME_2"
+
+    updateCancerTypeFromOncotreeCode "$STUDY_DATA_DIRECTORY" "$FILENAME_1"
+    addCancerTypeCaseLists "$STUDY_DATA_DIRECTORY" "$STUDY_ID" "$FILENAME_1" "$FILENAME_2"
+    addDataTypeCaseLists "$STUDY_DATA_DIRECTORY" "$STUDY_ID"
 }
 
 function addDataTypeCaseLists {
@@ -98,11 +106,13 @@ function addDataTypeCaseLists {
 }
 
 function updateCancerTypeFromOncotreeCode {
-    FILEPATH=$1
+    STUDY_DATA_DIRECTORY=$1
+    FILENAME_1=$2
+    FILEPATH_1="$STUDY_DATA_DIRECTORY/$FILENAME_1"
     ONCOTREE_URL="http://oncotree.mskcc.org/"
     # ONCOTREE_VERSION_TO_USE should already be defined
 
-    $PYTHON_BINARY $PORTAL_HOME/scripts/oncotree_code_converter.py --oncotree-url $ONCOTREE_URL --oncotree-version $ONCOTREE_VERSION_TO_USE --clinical-file $FILEPATH --force
+    $PYTHON_BINARY $PORTAL_HOME/scripts/oncotree_code_converter.py --oncotree-url $ONCOTREE_URL --oncotree-version $ONCOTREE_VERSION_TO_USE --clinical-file $FILEPATH_1 --force
 }
 
 # Function to generate case lists by cancer type
