@@ -76,18 +76,6 @@ function standardizeGenePanelMatrix {
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_gene_matrix_file.py --gene-panel-matrix-filename $GENE_PANEL_MATRIX_FILE
 }
 
-function preImportProcessingSteps {
-    STUDY_DATA_DIRECTORY=$1
-    STUDY_ID=$2
-    # accept 1 or 2 data_clinical filenames
-    FILENAME_1="$3" # this will be oncotree converted then added to the list
-    FILENAME_2="$4" # this will not be converted but will be added to the list
-
-    updateCancerTypeFromOncotreeCode "$STUDY_DATA_DIRECTORY" "$FILENAME_1"
-    addCancerTypeCaseLists "$STUDY_DATA_DIRECTORY" "$STUDY_ID" "$FILENAME_1" "$FILENAME_2"
-    addDataTypeCaseLists "$STUDY_DATA_DIRECTORY" "$STUDY_ID"
-}
-
 function addDataTypeCaseLists {
     STUDY_DATA_DIRECTORY=$1
     STUDY_ID=$2
@@ -95,7 +83,6 @@ function addDataTypeCaseLists {
     GENERATE_CASE_LISTS_SCRIPT="$PORTAL_HOME/scripts/generate_case_lists.py"
     CASE_LIST_CONFIG_FILEPATH="$PORTAL_HOME/scripts/case_list_config.tsv"
     CASE_LISTS_DIRECTORY="$STUDY_DATA_DIRECTORY/case_lists"
-    
 
     $PYTHON_BINARY $GENERATE_CASE_LISTS_SCRIPT \
         --case-list-config-file $CASE_LIST_CONFIG_FILEPATH \
