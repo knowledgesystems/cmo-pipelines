@@ -630,7 +630,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 else
                     addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
                     addDataTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact"
-                    upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
+                    upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks" # last mandatory upload of mskimpact
                 fi
             fi
             touch $MSK_IMPACT_CONSUME_TRIGGER
@@ -649,7 +649,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_sample.txt" "data_clinical_patient.txt"
             addDataTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme"
-            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
+            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks" # last mandatory upload of hemepact
             touch $MSK_HEMEPACT_CONSUME_TRIGGER
         fi
     fi
@@ -672,7 +672,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
             addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "data_clinical_sample.txt" "data_clinical_patient.txt"
             addDataTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered"
-            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
+            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks" # last mandatory upload of archer
             touch $MSK_ARCHER_IMPORT_TRIGGER
             touch $MSK_ARCHER_CONSUME_TRIGGER
         fi
@@ -690,13 +690,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
             addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_sample.txt" "data_clinical_patient.txt"
             addDataTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess"
-            upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
+            upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks" # last mandatory upload of access
             touch $MSK_ACCESS_CONSUME_TRIGGER
         fi
     fi
 
     #--------------------------------------------------------------
     # CDM Fetch is optional -- does not break import if it fails, but will send notif
+    # Do not bother re-generating case lists during this step -- we should only be adding new attributes
 
     echo "fetching CDM clinical demographics & timeline updates from S3..."
     download_from_s3 "$MSK_CHORD_DATA_HOME" "msk-chord" "cdm-deliverable"
@@ -771,11 +772,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                     if [ $? -gt 0 ]; then
                         echo "Error: Adding CDM timeline files for UNLINKED_ARCHER failed!"
                     fi
-                    # commit updates and generated case lists
+                    # commit updates and re-generate case lists (since cohort has changed)
                     addCancerTypeCaseLists $MSK_ARCHER_DATA_HOME "mskarcher" "data_clinical_sample.txt" "data_clinical_patient.txt"
                     addDataTypeCaseLists $MSK_ARCHER_DATA_HOME "mskarcher"
-                    upload_to_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher" "mskimpact-databricks" # last mskarcher upload
-                    upload_to_s3 "$MSK_ARCHER_DATA_HOME/case_lists" "mskarcher/case_lists" "mskimpact-databricks" # last mskarcher/case_lists upload
+                    upload_to_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher" "mskimpact-databricks"
+                    upload_to_s3 "$MSK_ARCHER_DATA_HOME/case_lists" "mskarcher/case_lists" "mskimpact-databricks"
                     download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
                 fi
             fi
