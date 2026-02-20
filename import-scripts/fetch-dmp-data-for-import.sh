@@ -697,7 +697,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
         else
             echo "pushing mskimpact CDM data to S3"
-            upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks" # last mskimpact upload
+            upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
         fi
 
         sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme $MSK_CHORD_DATA_HOME/mskimpact_heme $MSK_HEMEPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME
@@ -705,7 +705,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
         else
             echo "pushing hemepact CDM data to S3"
-            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks" # last mskimpact_heme upload
+            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
         fi
 
         sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher $MSK_CHORD_DATA_HOME/mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME
@@ -713,7 +713,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
         else
             echo "pushing mskarcher CDM data to S3"
-            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks" # last mskarcher_unfiltered upload
+            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
         fi
 
         sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess $MSK_CHORD_DATA_HOME/mskaccess $MSK_ACCESS_DATA_HOME $MSK_ACCESS_DATA_HOME
@@ -721,7 +721,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
         else
             echo "pushing mskaccess CDM data to S3"
-            upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks" # last mskaccess upload
+            upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
         fi
     fi
 
