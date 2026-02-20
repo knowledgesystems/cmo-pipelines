@@ -620,6 +620,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 if [ $? -gt 0 ] ; then
                     download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
                 else
+                    preImportProcessingSteps $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
                     upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
                 fi
             fi
