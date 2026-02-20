@@ -695,7 +695,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
         else
-            preImportProcessingSteps $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
             echo "pushing mskimpact CDM data to S3"
             upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks" # last mskimpact upload
         fi
@@ -704,7 +703,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
         else
-            preImportProcessingSteps $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_sample.txt" "data_clinical_patient.txt"
             echo "pushing hemepact CDM data to S3"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks" # last mskimpact_heme upload
         fi
@@ -713,7 +711,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
         else
-            preImportProcessingSteps $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "data_clinical_sample.txt" "data_clinical_patient.txt"
             echo "pushing mskarcher CDM data to S3"
             upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks" # last mskarcher_unfiltered upload
         fi
@@ -722,7 +719,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
         else
-            preImportProcessingSteps $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_sample.txt" "data_clinical_patient.txt"
             echo "pushing mskaccess CDM data to S3"
             upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks" # last mskaccess upload
         fi
@@ -831,7 +827,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         else
           touch $MSK_SOLID_HEME_IMPORT_TRIGGER
         fi
-        preImportProcessingSteps $MSK_SOLID_HEME_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
         # Merge CDM timeline files
         sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mskimpact $MSK_SOLID_HEME_DATA_HOME "$MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME"
         if [ $? -gt 0 ] ; then
@@ -871,6 +866,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
     else
         echo "Committing MSKSOLIDHEME data"
+        preImportProcessingSteps $MSK_SOLID_HEME_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
         upload_to_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"  # last msk_solid_heme upload
     fi
 
@@ -1219,7 +1215,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to s3 bucket"
     # push all data into s3
     S3_BUCKET_PUSH_FAIL=0
-    upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+    upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" # last upload: full DMP_DATA_HOME sync
     if [ $? -gt 0 ] ; then
         S3_BUCKET_PUSH_FAIL=1
         sendPreImportFailureMessageMskPipelineLogsSlack "S3 PUSH (dmp) :fire: - address ASAP!"
