@@ -418,6 +418,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # add "DATE ADDED" info to clinical data for MSK-IMPACT
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] && [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
         addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
+        upload_to_s3 "$MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt" "mskimpact/data_clinical_mskimpact_data_clinical_cvr.txt" "mskimpact-databricks"
         upload_to_s3 "$MSK_IMPACT_DATA_HOME/case_lists" "mskimpact/case_lists" "mskimpact-databricks"
         if [ $EXPORT_SUPP_DATE_IMPACT_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_IMPACT_DATA_HOME "data_clinical_mskimpact_data_clinical_cvr.txt" "data_clinical_mskimpact_supp_date_cbioportal_added.txt"
@@ -429,6 +430,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # add "DATE ADDED" info to clinical data for HEMEPACT
     if [ $IMPORT_STATUS_HEME -eq 0 ] && [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
         addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
+        upload_to_s3 "$MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt" "mskimpact_heme/data_clinical_hemepact_data_clinical.txt" "mskimpact-databricks"
         upload_to_s3 "$MSK_HEMEPACT_DATA_HOME/case_lists" "mskimpact_heme/case_lists" "mskimpact-databricks"
         if [ $EXPORT_SUPP_DATE_HEME_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_HEMEPACT_DATA_HOME "data_clinical_hemepact_data_clinical.txt" "data_clinical_hemepact_data_clinical_supp_date.txt"
@@ -440,6 +442,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # add "DATE ADDED" info to clinical data for ARCHER
     if [[ $IMPORT_STATUS_ARCHER -eq 0 && $FETCH_CVR_ARCHER_FAIL -eq 0 ]] ; then
         addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher" "data_clinical_mskarcher_data_clinical.txt"
+        upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt" "mskarcher_unfiltered/data_clinical_mskarcher_data_clinical.txt" "mskimpact-databricks"
         upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME/case_lists" "mskarcher_unfiltered/case_lists" "mskimpact-databricks"
         if [ $EXPORT_SUPP_DATE_ARCHER_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_ARCHER_UNFILTERED_DATA_HOME "data_clinical_mskarcher_data_clinical.txt" "data_clinical_mskarcher_data_clinical_supp_date.txt"
@@ -451,6 +454,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # generate case lists by cancer type and add "DATE ADDED" info to clinical data for ACCESS
     if [ $IMPORT_STATUS_ACCESS -eq 0 ] && [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
         addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_mskaccess_data_clinical.txt"
+        upload_to_s3 "$MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt" "mskaccess/data_clinical_mskaccess_data_clinical.txt" "mskimpact-databricks"
         upload_to_s3 "$MSK_ACCESS_DATA_HOME/case_lists" "mskaccess/case_lists" "mskimpact-databricks"
         if [ $EXPORT_SUPP_DATE_ACCESS_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_ACCESS_DATA_HOME "data_clinical_mskaccess_data_clinical.txt" "data_clinical_mskaccess_data_clinical_supp_date.txt"
