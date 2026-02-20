@@ -282,7 +282,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 IMPORT_STATUS_HEME=1
             else
                 FETCH_CVR_HEME_FAIL=0
-                preImportProcessingSteps $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
                 echo "pushing cvr data for heme to s3"
                 upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
             fi
@@ -310,7 +309,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 #override the success of the tumor sample cvr fetch with a failed status
                 FETCH_CVR_HEME_FAIL=1
             else
-                preImportProcessingSteps $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
                 echo "uploading CVR germline data to s3"
                 upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
             fi
@@ -478,7 +476,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
         else
             upload_to_s3 "$MAPPED_ARCHER_SAMPLES_FILE" "mskarcher_unfiltered/cvr/mapped_archer_samples.txt" "mskimpact-databricks"
-            preImportProcessingSteps $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
             upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
         fi
     fi
@@ -492,7 +489,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
         else
             upload_to_s3 "$MAPPED_ARCHER_SAMPLES_FILE" "mskarcher_unfiltered/cvr/mapped_archer_samples.txt" "mskimpact-databricks"
-            preImportProcessingSteps $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
         fi
     fi
@@ -624,7 +620,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 if [ $? -gt 0 ] ; then
                     download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
                 else
-                    preImportProcessingSteps $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
                     upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
                 fi
             fi
@@ -1224,7 +1219,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to s3 bucket"
     # push all data into s3
     S3_BUCKET_PUSH_FAIL=0
-    upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" # last upload: full DMP_DATA_HOME sync
+    upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
     if [ $? -gt 0 ] ; then
         S3_BUCKET_PUSH_FAIL=1
         sendPreImportFailureMessageMskPipelineLogsSlack "S3 PUSH (dmp) :fire: - address ASAP!"
