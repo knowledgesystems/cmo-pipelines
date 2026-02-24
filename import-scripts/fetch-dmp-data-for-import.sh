@@ -726,6 +726,25 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             else
                 echo "UNLINKED_ARCHER subset successful! Creating cancer type case lists..."
                 echo $(date)
+
+                # Pull biobank data from S3
+                download_from_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher/data_clinical_patient_biobank.txt" "mskimpact-databricks"
+                download_from_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher/data_timeline_biobank_specimen.txt" "mskimpact-databricks"
+
+                # Merge biobank clinical file
+                INPUT_CLINICAL_FILE="$MSK_ARCHER_DATA_HOME/data_clinical_patient.txt"
+                BIOBANK_CLINICAL_FILE="$MSK_ARCHER_DATA_HOME/data_clinical_patient_biobank.txt"
+                MERGED_CLINICAL_FILE="$MSK_ARCHER_DATA_HOME/data_clinical_patient_merged.txt"
+                $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$INPUT_CLINICAL_FILE" "$BIOBANK_CLINICAL_FILE" -o "$MERGED_CLINICAL_FILE" -c "PATIENT_ID" -m left
+                if [ $? -gt 0 ] ; then
+                    echo "Failed to merge $INPUT_CLINICAL_FILE and $BIOBANK_CLINICAL_FILE"
+                    # TODO what should happen if this fails? will biobank clinical data just be skipped and not included in the portal import?
+                else
+                    mv "$MERGED_CLINICAL_FILE" "$INPUT_CLINICAL_FILE"
+                    # TODO should this be removed?
+                    rm "$BIOBANK_CLINICAL_FILE"
+                fi
+
                 # add metadata headers and overrides before importing
                 $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical* -i $PORTAL_HOME/scripts/cdm_metadata.json
                 if [ $? -gt 0 ] ; then
@@ -799,6 +818,25 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     else
         echo "MSKSOLIDHEME merge successful! Creating cancer type case lists..."
         echo $(date)
+
+        # Pull biobank data from S3
+        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme/data_clinical_patient_biobank.txt" "mskimpact-databricks"
+        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme/data_timeline_biobank_specimen.txt" "mskimpact-databricks"
+
+        # Merge biobank clinical file
+        INPUT_CLINICAL_FILE="$MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt"
+        BIOBANK_CLINICAL_FILE="$MSK_SOLID_HEME_DATA_HOME/data_clinical_patient_biobank.txt"
+        MERGED_CLINICAL_FILE="$MSK_SOLID_HEME_DATA_HOME/data_clinical_patient_merged.txt"
+        $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$INPUT_CLINICAL_FILE" "$BIOBANK_CLINICAL_FILE" -o "$MERGED_CLINICAL_FILE" -c "PATIENT_ID" -m left
+        if [ $? -gt 0 ] ; then
+            echo "Failed to merge $INPUT_CLINICAL_FILE and $BIOBANK_CLINICAL_FILE"
+            # TODO what should happen if this fails? will biobank clinical data just be skipped and not included in the portal import?
+        else
+            mv "$MERGED_CLINICAL_FILE" "$INPUT_CLINICAL_FILE"
+            # TODO should this be removed?
+            rm "$BIOBANK_CLINICAL_FILE"
+        fi
+
         # add metadata headers and overrides before importing
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
@@ -1204,7 +1242,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to git repository"
     # check updated data back into git
     GIT_PUSH_FAIL=0
-    cd $DMP_DATA_HOME ; $GIT_BINARY add ./*; git commit --amend --no-edit; $GIT_BINARY push origin --force
+    cd $DMP_DATA_HOME ; $GIT_BINARY add ./*; $GIT_BINARY commit --amend --no-edit; $GIT_BINARY push origin --force
     if [ $? -gt 0 ] ; then
         GIT_PUSH_FAIL=1
         sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (dmp) :fire: - address ASAP!"
