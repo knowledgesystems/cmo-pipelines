@@ -19,6 +19,7 @@ from airflow.operators.python import get_current_context
 from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
 from airflow.providers.slack.hooks.slack_webhook import SlackWebhookHook
 from jinja2 import Template
+from airflow.utils.dates import days_ago
 
 fail_slack_msg = """
         :red_circle: DAG Failed.
@@ -99,7 +100,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         default_args=_DEFAULT_ARGS,
         description=config.description,
         max_active_runs=1,
-        start_date=datetime(2024, 12, 3),
+        start_date=days_ago(2),
         schedule_interval=config.schedule_interval,
         tags=list(config.tags),
         render_template_as_native_obj=True,
