@@ -62,6 +62,7 @@ _TRIAGE_CONFIG = ImporterConfig(
     wire_dependencies=_wire,
     pool="triage_import_pool",
     schedule_interval="0 0 * * *",
+    catchup=False, # don't attempt to backfill missed runs that were scheduled
 )
 
 globals()[_TRIAGE_CONFIG.dag_id] = build_import_dag(_TRIAGE_CONFIG)
