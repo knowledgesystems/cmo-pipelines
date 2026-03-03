@@ -67,7 +67,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
-class ImporterConfig:
+class ClickhouseImporterConfig:
     dag_id: str
     description: str
     importer: str
@@ -92,7 +92,7 @@ def _script(scripts_dir: str, script_name: str, *args: object) -> str:
     return " ".join(parts)
 
 
-def build_import_dag(config: ImporterConfig) -> DAG:
+def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
     params = dict(config.params) if config.params else {}
 
     dag = DAG(
@@ -189,20 +189,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 db_properties_filepath,
                 color_swap_config_filepath,
             ),
-            "scale_up_rds_node": _script(
-                scripts_dir,
-                "scale-rds.sh",
-                "up",
-                importer,
-                color_swap_config_filepath,
-            ),
-            "clone_database": _script(
-                scripts_dir,
-                "airflow-clone-db.sh",
-                importer,
-                scripts_dir,
-                db_properties_filepath,
-            ),
             "fetch_data": _script(
                 scripts_dir,
                 "data_source_repo_clone_manager.sh",
@@ -218,33 +204,12 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 scripts_dir,
                 db_properties_filepath,
             ),
-            "import_sql": _script(
-                scripts_dir,
-                "airflow-import-sql.sh",
-                importer,
-                scripts_dir,
-                db_properties_filepath,
-                notification_filepath,
-            ),
             "import_clickhouse": _script(
                 scripts_dir,
                 "airflow-import-clickhouse.sh",
                 importer,
                 scripts_dir,
                 db_properties_filepath,
-            ),
-            "scale_down_rds_node": _script(
-                scripts_dir,
-                "scale-rds.sh",
-                "down",
-                importer,
-                color_swap_config_filepath,
-                # Normally, we would verify that we are in a "scaled up" state before trying to scale down.
-                # However, if the DAG run failed before "scale_up_rds_node" completed successfully,
-                # we may still be in a "scaled down" state when we run the scale down task
-                # (which runs regardless of upstream failures).
-                # In those cases -- skip verifying that we're in a scaled down state
-                "{{ '' if (dag_run.get_task_instance('scale_up_rds_node', map_index=ti.map_index) and dag_run.get_task_instance('scale_up_rds_node', map_index=ti.map_index).state == 'success') else '--skip-pre-validation' }}",
             ),
             "transfer_deployment": _script(
                 scripts_dir,
@@ -340,4 +305,4 @@ def build_import_dag(config: ImporterConfig) -> DAG:
     return dag
 
 
-__all__ = ["ImporterConfig", "build_import_dag", "_script"]
+__all__ = ["ClickhouseImporterConfig", "build_import_dag", "_script"]
