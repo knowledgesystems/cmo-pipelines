@@ -107,7 +107,6 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
             raise ValueError(
                 f"Expected exactly one target node for importer '{importer}', got {len(config.target_nodes)}."
             )
-        notification_filepath = f"/tmp/airflow-notifications/{config.dag_id}/{{{{ ts_nodash }}}}.txt"
 
         @task
         def get_data_repos(repos: list[str]) -> str:
@@ -138,9 +137,10 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 scripts_dir,
                 db_properties_filepath,
             ),
+            # TODO
             "import_direct_to_clickhouse": _script(
                 scripts_dir,
-                "airflow-import-clickhouse.sh",
+                "airflow-import-direct-to-clickhouse.sh",
                 importer,
                 scripts_dir,
                 db_properties_filepath,
@@ -152,21 +152,24 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 db_properties_filepath,
                 color_swap_config_filepath,
             ),
+            # TODO: do we need this?
             "clear_persistence_caches": _script(
                 scripts_dir,
                 "airflow-clear-persistence-caches.sh",
                 importer,
                 scripts_dir,
             ),
+            # TODO: do we need this?
             "set_import_running": _script(
                 scripts_dir,
-                "set_update_process_state.sh",
+                "ch_set_update_process_state.sh",
                 db_properties_filepath,
                 "running",
             ),
+            # TODO: do we need this?
             "set_import_abandoned": _script(
                 scripts_dir,
-                "set_update_process_state.sh",
+                "ch_set_update_process_state.sh",
                 db_properties_filepath,
                 "abandoned",
             ),

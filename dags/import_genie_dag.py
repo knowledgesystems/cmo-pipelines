@@ -17,7 +17,7 @@ def _wire(tasks: dict[str, object]) -> None:
 
 _GENIE_CONFIG = ImporterConfig(
     dag_id="import_genie_dag",
-    description="Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy",
+    description="Imports Genie study directly to Clickhouse",
     importer="genie",
     tags=["genie"],
     target_nodes=("importer_ssh",),
