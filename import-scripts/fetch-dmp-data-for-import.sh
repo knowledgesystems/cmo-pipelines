@@ -728,8 +728,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 echo $(date)
 
                 # Pull biobank data from S3
-                download_from_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher/data_clinical_patient_biobank.txt" "mskimpact-databricks"
-                download_from_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher/data_timeline_biobank_specimen.txt" "mskimpact-databricks"
+                download_from_s3 "$MSK_ARCHER_DATA_HOME/data_clinical_patient_biobank.txt" "mskarcher/data_clinical_patient_biobank.txt" "mskimpact-databricks"
+                download_from_s3 "$MSK_ARCHER_DATA_HOME/data_timeline_biobank_specimen.txt" "mskarcher/data_timeline_biobank_specimen.txt" "mskimpact-databricks"
 
                 # Merge biobank clinical file
                 INPUT_CLINICAL_FILE="$MSK_ARCHER_DATA_HOME/data_clinical_patient.txt"
@@ -741,7 +741,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                     # TODO what should happen if this fails? will biobank clinical data just be skipped and not included in the portal import?
                 else
                     mv "$MERGED_CLINICAL_FILE" "$INPUT_CLINICAL_FILE"
-                    # TODO should this be removed?
                     rm "$BIOBANK_CLINICAL_FILE"
                 fi
 
@@ -820,8 +819,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo $(date)
 
         # Pull biobank data from S3
-        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme/data_clinical_patient_biobank.txt" "mskimpact-databricks"
-        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme/data_timeline_biobank_specimen.txt" "mskimpact-databricks"
+        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME/data_clinical_patient_biobank.txt" "msk_solid_heme/data_clinical_patient_biobank.txt" "mskimpact-databricks"
+        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME/data_timeline_biobank_specimen.txt" "msk_solid_heme/data_timeline_biobank_specimen.txt" "mskimpact-databricks"
 
         # Merge biobank clinical file
         INPUT_CLINICAL_FILE="$MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt"
@@ -833,7 +832,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             # TODO what should happen if this fails? will biobank clinical data just be skipped and not included in the portal import?
         else
             mv "$MERGED_CLINICAL_FILE" "$INPUT_CLINICAL_FILE"
-            # TODO should this be removed?
             rm "$BIOBANK_CLINICAL_FILE"
         fi
 
