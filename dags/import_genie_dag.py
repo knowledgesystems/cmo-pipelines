@@ -13,7 +13,7 @@ from dags.import_base import ImporterConfig, build_import_dag
 def _wire(tasks: dict[str, object]) -> None:
     tasks["data_repos"] >> tasks["verify_management_state"] >> tasks["set_import_running_clickhouse"] >> [tasks["fetch_data"], tasks["clone_clickhouse_database"]]
     [tasks["fetch_data"], tasks["clone_clickhouse_database"]] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_direct_to_clickhouse"] >> tasks["transfer_deployment"] >> tasks["send_update_notification"] >> tasks["cleanup_data"]
+    tasks["setup_import"] >> tasks["import_direct_to_clickhouse"] >> tasks["transfer_deployment"] >> tasks["cleanup_data"]
 
 _GENIE_CONFIG = ImporterConfig(
     dag_id="import_genie_dag",
@@ -29,7 +29,6 @@ _GENIE_CONFIG = ImporterConfig(
         "setup_import",
         "import_direct_to_clickhouse",
         "transfer_deployment",
-        "send_update_notification",
         "cleanup_data",
         "set_import_abandoned_clickhouse",
     ),

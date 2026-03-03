@@ -33,18 +33,6 @@ success_slack_msg = """
         *DAG ID*: {{ dag.dag_id }}
         *Execution Time*: {{ execution_date }}
 """
-import_direct_to_clickhouse_failure_slack_msg = """
-        :red_circle: Import SQL Failed. Please check the notification file in the Airflow logs.
-        *DAG ID*: {{ dag.dag_id }}
-        *Execution Time*: {{ execution_date }}
-        *Log Url*: {{ import_direct_to_clickhouse_log_url }}
-"""
-import_direct_to_clickhouse_success_slack_msg = """
-        :large_green_circle: Import SQL Success!
-        *DAG ID*: {{ dag.dag_id }}
-        *Execution Time*: {{ execution_date }}
-        *Log Url*: {{ import_direct_to_clickhouse_log_url }}
-"""
 dag_failure_slack_webhook_notification = send_slack_webhook_notification(
     slack_webhook_conn_id="slack_default", text=fail_slack_msg
 )
@@ -124,60 +112,6 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
         @task
         def get_data_repos(repos: list[str]) -> str:
             return " ".join(repos)
-
-        # run this task even if import_direct_to_clickhouse failed
-        @task(trigger_rule=TriggerRule.ALL_DONE)
-        def send_update_notification(notification_filepath: str, ssh_conn_id: str) -> None:
-            """
-            Sends a Slack message to the #airflow-logs channel with a link to the import_direct_to_clickhouse logs URL.
-            This tells the curators whether there were any studies that suceeded or failed to import during a given run.
-            To avoid confusion -- we run this task towards the end of the DAG
-            (eg. after the transfer_deployment step) because we don't want to
-            send a success message before the entire import run completes.
-            """
-
-            # Get the log URL for the import_direct_to_clickhouse task
-            context = get_current_context()
-            dag_run = context.get("dag_run")
-            import_direct_to_clickhouse_ti = None
-            if dag_run is not None:
-                import_direct_to_clickhouse_ti = dag_run.get_task_instance("import_direct_to_clickhouse", map_index=0)
-            import_direct_to_clickhouse_log_url = import_direct_to_clickhouse_ti.log_url if import_direct_to_clickhouse_ti is not None else ""
-            if not import_direct_to_clickhouse_log_url:
-                logger.warning("Could not determine import_direct_to_clickhouse log url; skipping Slack notification.")
-                raise AirflowSkipException()
-
-            import_direct_to_clickhouse_failed = (
-                import_direct_to_clickhouse_ti is not None and import_direct_to_clickhouse_ti.state == State.FAILED
-            )
-            if not import_direct_to_clickhouse_failed:
-                # Read the notification file from the remote node to check if any studies failed
-                try:
-                    ssh_hook = SSHHook(ssh_conn_id=ssh_conn_id)
-                    ssh_client = ssh_hook.get_conn()
-                    exit_status, notif_contents, _ = ssh_hook.exec_ssh_client_command(
-                        ssh_client, f"cat {shlex.quote(notification_filepath)}", get_pty=False, environment=None
-                    )
-                    if exit_status != 0:
-                        logger.warning("Notification file not found at %s; treating as failure", notification_filepath)
-                        import_direct_to_clickhouse_failed = True
-                    else:
-                        notification_content = notif_contents.decode("utf-8")
-                        ERROR_STRING = "The following studies had errors during import"
-                        import_direct_to_clickhouse_failed = (ERROR_STRING in notification_content)
-                except Exception as exc:
-                    logger.warning("Could not read notification file from remote node; skipping Slack notification")
-                    logger.warning("Stack trace:")
-                    logger.warning(exc)
-                    raise AirflowSkipException() from exc
-
-            # Build the msg and send to Slack
-            msg_template = import_direct_to_clickhouse_failure_slack_msg if import_direct_to_clickhouse_failed else import_direct_to_clickhouse_success_slack_msg
-            rendered_message = Template(msg_template).render(
-                import_direct_to_clickhouse_log_url=import_direct_to_clickhouse_log_url,
-                **context,
-            )
-            SlackWebhookHook(slack_webhook_conn_id="slack_default").send(text=rendered_message)
 
         data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
@@ -279,13 +213,7 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
 
         tasks: dict[str, object] = {"data_repos": data_repos}
         for name in config.task_names:
-            if name == "send_update_notification":
-                tasks[name] = send_update_notification(
-                    notification_filepath=notification_filepath,
-                    ssh_conn_id=config.target_nodes[0],
-                )
-            else:
-                tasks[name] = _build_task(name)
+            tasks[name] = _build_task(name)
 
         config.wire_dependencies(tasks)
 
