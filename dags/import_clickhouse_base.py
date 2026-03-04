@@ -137,7 +137,7 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 scripts_dir,
                 db_properties_filepath,
             ),
-            # TODO
+            # new script
             "import_direct_to_clickhouse": _script(
                 scripts_dir,
                 "airflow-import-direct-to-clickhouse.sh",
@@ -152,24 +152,22 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 db_properties_filepath,
                 color_swap_config_filepath,
             ),
-            # TODO: do we need this?
-            "clear_persistence_caches": _script(
-                scripts_dir,
-                "airflow-clear-persistence-caches.sh",
-                importer,
-                scripts_dir,
-            ),
-            # TODO: do we need this?
+            # don't think we need this post clickhouse
+            # "clear_persistence_caches": _script(
+            #     scripts_dir,
+            #     "airflow-clear-persistence-caches.sh",
+            #     importer,
+            #     scripts_dir,
+            # ),
             "set_import_running": _script(
                 scripts_dir,
-                "ch_set_update_process_state.sh",
+                "set_update_process_state_clickhouse.sh",
                 db_properties_filepath,
                 "running",
             ),
-            # TODO: do we need this?
             "set_import_abandoned": _script(
                 scripts_dir,
-                "ch_set_update_process_state.sh",
+                "set_update_process_state_clickhouse.sh",
                 db_properties_filepath,
                 "abandoned",
             ),
