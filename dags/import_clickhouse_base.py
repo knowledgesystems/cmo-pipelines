@@ -161,13 +161,13 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
             # ),
             "set_import_running": _script(
                 scripts_dir,
-                "set_update_process_state_clickhouse.sh",
+                "set_update_process_state.sh",
                 db_properties_filepath,
                 "running",
             ),
             "set_import_abandoned": _script(
                 scripts_dir,
-                "set_update_process_state_clickhouse.sh",
+                "set_update_process_state.sh",
                 db_properties_filepath,
                 "abandoned",
             ),
