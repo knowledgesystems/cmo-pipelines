@@ -7,33 +7,29 @@ import sys
 from airflow.models.param import Param
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dags.import_base import ImporterConfig, build_import_dag
+from dags.import_clickhouse_base import ClickhouseImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> tasks["verify_management_state"] >> [tasks["fetch_data"], tasks["scale_up_rds_node"]]
-    tasks["scale_up_rds_node"] >> tasks["clone_database"]
-    [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["scale_down_rds_node"] >> tasks["send_update_notification"] >> tasks["cleanup_data"]
+    tasks["data_repos"] >> tasks["verify_management_state"] >> tasks["set_import_running_clickhouse"] >> [tasks["fetch_data"], tasks["clone_clickhouse_database"]]
+    [tasks["fetch_data"], tasks["clone_clickhouse_database"]] >> tasks["setup_import"]
+    tasks["setup_import"] >> tasks["import_sql"] >> tasks["transfer_deployment"] >> tasks["cleanup_data"]
 
-_GENIE_CONFIG = ImporterConfig(
+_GENIE_CONFIG = ClickhouseImporterConfig(
     dag_id="import_genie_dag",
-    description="Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy",
+    description="Imports Genie study directly to Clickhouse",
     importer="genie",
     tags=["genie"],
     target_nodes=("importer_ssh",),
     data_nodes=("importer_ssh",),
     task_names=(
         "verify_management_state",
-        "scale_up_rds_node",
-        "clone_database",
+        "set_import_running",
         "fetch_data",
+        "clone_clickhouse_database",
         "setup_import",
         "import_sql",
-        "import_clickhouse",
         "transfer_deployment",
-        "scale_down_rds_node",
-        "send_update_notification",
         "cleanup_data",
         "set_import_abandoned",
     ),
