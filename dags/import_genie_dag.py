@@ -7,7 +7,7 @@ import sys
 from airflow.models.param import Param
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dags.import_base import ImporterConfig, build_import_dag
+from dags.import_clickhouse_base import ClickhouseImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
@@ -15,7 +15,7 @@ def _wire(tasks: dict[str, object]) -> None:
     [tasks["fetch_data"], tasks["clone_clickhouse_database"]] >> tasks["setup_import"]
     tasks["setup_import"] >> tasks["import_sql"] >> tasks["transfer_deployment"] >> tasks["cleanup_data"]
 
-_GENIE_CONFIG = ImporterConfig(
+_GENIE_CONFIG = ClickhouseImporterConfig(
     dag_id="import_genie_dag",
     description="Imports Genie study directly to Clickhouse",
     importer="genie",
