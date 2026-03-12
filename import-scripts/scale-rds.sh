@@ -11,6 +11,7 @@ SKIP_PRE_VALIDATION="${4:-}"
 [[ -f "$COLOR_SWAP_CONFIG_FILEPATH" ]]
 
 source /data/portal-cron/scripts/automation-environment.sh
+source /data/portal-cron/scripts/color-config-parsing-functions.sh
 source /data/portal-cron/scripts/rds_functions.sh
 
 # Authenticate with AWS
@@ -22,17 +23,6 @@ else
     /data/portal-cron/scripts/authenticate_service_account.sh public
     aws_profile="automation_public"
 fi
-
-function read_scalar() {
-    local key="$1"
-    local value
-    value=$("$YQ_BINARY" -r "$key" "$COLOR_SWAP_CONFIG_FILEPATH")
-    if [ "$value" == "null" ] || [ -z "$value" ] ; then
-        echo "Error : missing required scalar '$key' in $COLOR_SWAP_CONFIG_FILEPATH" >&2
-        exit 1
-    fi
-    printf '%s\n' "$value"
-}
 
 get_node_id() {
     # NOTE: the color names in these RDS nodes do *not* have anything to do
@@ -74,8 +64,8 @@ function warn_already_at_desired_class_and_exit() {
 
 # Get the scale up / scale down classes for this portal
 echo "Reading configuration knobs from $COLOR_SWAP_CONFIG_FILEPATH"
-scale_up_class=$(read_scalar '.rds_scale_up_class')
-scale_down_class=$(read_scalar '.rds_scale_down_class')
+scale_up_class=$(read_scalar_from_yaml "$COLOR_SWAP_CONFIG_FILEPATH" '.rds_scale_up_class')
+scale_down_class=$(read_scalar_from_yaml "$COLOR_SWAP_CONFIG_FILEPATH" '.rds_scale_down_class')
 rds_node_id=$(get_node_id)
 current_class=$(rds_current_class "$rds_node_id" "$aws_profile")
 

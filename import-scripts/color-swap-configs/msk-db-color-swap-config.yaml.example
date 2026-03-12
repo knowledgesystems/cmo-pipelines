@@ -62,8 +62,33 @@ host_to_service_map:
     private.cbioportal.aws.mskcc.org: eks-private-green
     sclc.cbioportal.mskcc.org: eks-sclc-green
     sclc.cbioportal.aws.mskcc.org: eks-sclc-green
-ingress_name: msk-eks-prod-ingress
-ingress_yaml_filepath: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+host_to_ingress_name_map:
+    cbioportal.mskcc.org: msk-eks-prod-ingress
+    cbioportal.aws.mskcc.org: msk-eks-prod-ingress
+    beta.cbioportal.mskcc.org: msk-eks-prod-ingress
+    beta.cbioportal.aws.mskcc.org: msk-eks-prod-ingress
+    private.cbioportal.mskcc.org: msk-eks-prod-ingress
+    private.cbioportal.aws.mskcc.org: msk-eks-prod-ingress
+    sclc.cbioportal.mskcc.org: msk-eks-prod-ingress
+    sclc.cbioportal.aws.mskcc.org: msk-eks-prod-ingress
+host_to_ingress_type_map:
+    cbioportal.mskcc.org: ingress
+    cbioportal.aws.mskcc.org: ingress
+    beta.cbioportal.mskcc.org: ingress
+    beta.cbioportal.aws.mskcc.org: ingress
+    private.cbioportal.mskcc.org: ingress
+    private.cbioportal.aws.mskcc.org: ingress
+    sclc.cbioportal.mskcc.org: ingress
+    sclc.cbioportal.aws.mskcc.org: ingress
+host_to_ingress_yaml_filepath_map:
+    cbioportal.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+    cbioportal.aws.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+    beta.cbioportal.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+    beta.cbioportal.aws.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+    private.cbioportal.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+    private.cbioportal.aws.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+    sclc.cbioportal.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+    sclc.cbioportal.aws.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
 replica_ready_check_pause_seconds: 20
 replica_ready_check_max_checkcount: 30
 temp_dir_path: /data/portal-cron/tmp/import-cron-dmp-msk
@@ -77,3 +102,4 @@ clear_persistence_caches_green_function: clearPersistenceCachesForMskGreenPortal
 git_commit_msg: "msk import"
 cache_warming_username: "<REDACTED>"
 cache_warming_password: "<REDACTED>"
+updates_disabled: false
