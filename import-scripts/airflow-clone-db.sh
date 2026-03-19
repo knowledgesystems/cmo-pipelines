@@ -33,8 +33,16 @@ fi
 
 SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process_state.sh"
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
-DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_mysql_database.sh"
-CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/clone_mysql_database.sh"
+
+if [[ "$PORTAL_DATABASE" == "triage_clickhouse" ]] ; then
+    DB_TYPE=clickhouse
+    DROP_TABLES_FROM_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
+    CLONE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/clone_clickhouse_database.sh"
+else
+    DB_TYPE=mysql
+    DROP_TABLES_FROM_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_mysql_database.sh"
+    CLONE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/clone_mysql_database.sh"
+fi
 
 # Update the process status database
 if ! $SET_UPDATE_PROCESS_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH running ; then
@@ -63,16 +71,16 @@ echo "Source DB color: $source_database_color"
 echo "Destination DB color: $destination_database_color"
 
 # Drop tables in the non-production database to make space for cloning
-echo "dropping tables from mysql database $destination_database_color"
-if ! $DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
-    message="Error during dropping of tables from mysql database $destination_database_color"
+echo "dropping tables from $DB_TYPE database $destination_database_color"
+if ! $DROP_TABLES_FROM_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
+    message="Error during dropping of tables from $DB_TYPE database $destination_database_color"
     echo $message >&2
     exit 1
 else
     # Clone the content of the production MySQL database into the non-production database
-    echo "copying tables from mysql database $source_database_color to $destination_database_color"
-    if ! $CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $source_database_color $destination_database_color ; then
-        message="Error during cloning the mysql database (from $source_database_color to $destination_database_color)"
+    echo "copying tables from $DB_TYPE database $source_database_color to $destination_database_color"
+    if ! $CLONE_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $source_database_color $destination_database_color ; then
+        message="Error during cloning the $DB_TYPE database (from $source_database_color to $destination_database_color)"
         echo $message >&2
         exit 1
     fi
