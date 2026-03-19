@@ -212,6 +212,16 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 db_properties_filepath,
                 notification_filepath,
             ),
+            # reuse the old import-sql script for now
+            # TODO: we might need to update the send_update_notification code here
+            "import_direct_to_clickhouse": _script(
+                scripts_dir,
+                "airflow-import-sql.sh",
+                importer,
+                scripts_dir,
+                db_properties_filepath,
+                notification_filepath,
+            ),
             "transfer_deployment": _script(
                 scripts_dir,
                 "airflow-transfer-deployment.sh",

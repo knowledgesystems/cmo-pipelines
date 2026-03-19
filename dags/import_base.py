@@ -226,15 +226,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 db_properties_filepath,
                 notification_filepath,
             ),
-            # reuse the old import-sql script for now
-            "import_direct_to_clickhouse": _script(
-                scripts_dir,
-                "airflow-import-sql.sh",
-                importer,
-                scripts_dir,
-                db_properties_filepath,
-                notification_filepath,
-            ),
             "import_clickhouse": _script(
                 scripts_dir,
                 "airflow-import-clickhouse.sh",
