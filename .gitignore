@@ -21,3 +21,4 @@ target
 core-scripts
 tmp/
 test-deploy.sh
+config-files/

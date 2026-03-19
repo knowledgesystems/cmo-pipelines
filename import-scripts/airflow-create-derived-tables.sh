@@ -8,7 +8,6 @@
 PORTAL_DATABASE=$1
 PORTAL_SCRIPTS_DIRECTORY=$2
 MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
-DESTINATION_DATABASE_COLOR=$4
 if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
@@ -20,6 +19,21 @@ fi
 source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
 tmp=$PORTAL_HOME/tmp/import-cron-$PORTAL_DATABASE
+
+GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
+current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+DESTINATION_DATABASE_COLOR="unset"
+if [ ${current_production_database_color:0:4} == "blue" ] ; then
+    DESTINATION_DATABASE_COLOR="green"
+fi
+if [ ${current_production_database_color:0:5} == "green" ] ; then
+    DESTINATION_DATABASE_COLOR="blue"
+fi
+if [ "$DESTINATION_DATABASE_COLOR" == "unset" ] ; then
+    echo "Error during determination of the destination database color" >&2
+    exit 1
+fi
+
 DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/download_clickhouse_sql_scripts_py3.py"
 CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
 

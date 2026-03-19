@@ -38,11 +38,11 @@ def _wire(tasks: dict[str, object]) -> None:
         tasks["send_update_notification"]
     ]
     
-    [
-        tasks["clear_persistence_caches"],
-        tasks["cleanup_data"],
-        tasks["send_update_notification"]
-    ] >> tasks["set_import_complete"]
+    # [
+    #     tasks["clear_persistence_caches"],
+    #     tasks["cleanup_data"],
+    #     tasks["send_update_notification"]
+    # ] >> tasks["set_import_complete"]
     
     # for now, all the 'finally' handlers are taken care of by the parent class
 
@@ -66,7 +66,7 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
         "clear_persistence_caches",
         "send_update_notification",
         "cleanup_data",
-        "set_import_complete",
+        # "set_import_complete",
         "set_import_abandoned",
     ),
     db_properties_filename="manage_triage_clickhouse_database_update_tools.properties",

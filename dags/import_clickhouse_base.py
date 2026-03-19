@@ -136,15 +136,15 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
             send a success message before the entire import run completes.
             """
 
-            # Get the log URL for the import_sql task
+            # Get the log URL for the import_direct_to_clickhouse task
             context = get_current_context()
             dag_run = context.get("dag_run")
             import_sql_ti = None
             if dag_run is not None:
-                import_sql_ti = dag_run.get_task_instance("import_sql", map_index=0)
+                import_sql_ti = dag_run.get_task_instance("import_direct_to_clickhouse", map_index=0)
             import_sql_log_url = import_sql_ti.log_url if import_sql_ti is not None else ""
             if not import_sql_log_url:
-                logger.warning("Could not determine import_sql log url; skipping Slack notification.")
+                logger.warning("Could not determine import_direct_to_clickhouse log url; skipping Slack notification.")
                 raise AirflowSkipException()
 
             import_sql_failed = (
@@ -189,6 +189,26 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 db_properties_filepath,
                 color_swap_config_filepath,
             ),
+            "clone_database": _script(
+                scripts_dir,
+                "airflow-clone-db.sh",
+                importer,
+                scripts_dir,
+                db_properties_filepath,
+            ),
+            "create_derived_tables": _script(
+                scripts_dir,
+                "airflow-create-derived-tables.sh",
+                importer,
+                scripts_dir,
+                db_properties_filepath,
+            ),
+            # "set_import_complete": _script(
+            #     scripts_dir,
+            #     "set_update_process_state.sh",
+            #     db_properties_filepath,
+            #     "complete",
+            # ),
             "fetch_data": _script(
                 scripts_dir,
                 "data_source_repo_clone_manager.sh",
@@ -203,14 +223,6 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 importer,
                 scripts_dir,
                 db_properties_filepath,
-            ),
-            "import_sql": _script(
-                scripts_dir,
-                "airflow-import-sql.sh",
-                importer,
-                scripts_dir,
-                db_properties_filepath,
-                notification_filepath,
             ),
             # reuse the old import-sql script for now
             # TODO: we might need to update the send_update_notification code here
