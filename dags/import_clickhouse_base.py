@@ -300,9 +300,11 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
 
             return SSHOperator.partial(**params).expand(ssh_conn_id=list(ssh_targets))
 
-        tasks: dict[str, object] = {"data_repos": data_repos}
+        tasks: dict[str, object] = {}
         for name in config.task_names:
-            if name == "send_update_notification":
+            if name == "data_repos":
+                tasks[name] = data_repos
+            elif name == "send_update_notification":
                 tasks[name] = send_update_notification(
                     notification_filepath=notification_filepath,
                     ssh_conn_id=config.target_nodes[0],
