@@ -11,9 +11,34 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dags.import_clickhouse_base import ClickhouseImporterConfig, build_import_dag
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> tasks["fetch_data"]
-    tasks["fetch_data"] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["clear_persistence_caches"] >> tasks["send_update_notification"] >> tasks["cleanup_data"]
+    
+    tasks["data_repos"] >> tasks["verify_management_state"]
+    
+    tasks["verify_management_state"] >> tasks["set_import_running"]
+    
+    tasks["set_import_running"] >> [
+        tasks["fetch_data"],
+        tasks["clone_database"]
+    ]
+    
+    [
+        tasks["fetch_data"],
+        tasks["clone_database"]
+    ] >> tasks["setup_import"]
+    
+    tasks["setup_import"] >> tasks["import_direct_to_clickhouse"]
+    
+    tasks["import_direct_to_clickhouse"] >> tasks["transfer_deployment"]
+    
+    tasks["transfer_deployment"] >> [
+        tasks["cleanup_data"],
+        tasks["send_update_notification"]
+    ]
+    
+    [
+        tasks["cleanup_data"],
+        tasks["send_update_notification"]
+    ] >> tasks["set_import_complete"]
 
 _TRIAGE_CONFIG = ClickhouseImporterConfig(
     dag_id="import_triage_clickhouse_dag",
@@ -23,11 +48,17 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
     target_nodes=("pipelines3_ssh",),
     data_nodes=("pipelines3_ssh",),
     task_names=(
+        "data_repos",
+        "verify_management_state",
+        "set_import_running",
         "fetch_data",
         "setup_import",
-        "import_sql",
+        "import_direct_to_clickhouse",
+        "transfer_deployment",
         "send_update_notification",
         "cleanup_data",
+        "set_import_complete",
+        "set_import_abandoned",
     ),
     db_properties_filename="manage_triage_clickhouse_database_update_tools.properties",
     color_swap_config_filename="triage-db-color-swap-config.yaml",
