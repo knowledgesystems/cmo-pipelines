@@ -28,7 +28,7 @@ def _wire(tasks: dict[str, object]) -> None:
     
     tasks["setup_import"] >> tasks["import_direct_to_clickhouse"]
     
-    tasks["import_direct_to_clickhouse"] >> tasks["transfer_deployment"]
+    tasks["import_sql"] >> tasks["transfer_deployment"]
     
     tasks["transfer_deployment"] >> [
         tasks["cleanup_data"],
@@ -39,6 +39,8 @@ def _wire(tasks: dict[str, object]) -> None:
         tasks["cleanup_data"],
         tasks["send_update_notification"]
     ] >> tasks["set_import_complete"]
+    
+    # for now, all the 'finally' handlers are taken care of by the parent class
 
 _TRIAGE_CONFIG = ClickhouseImporterConfig(
     dag_id="import_triage_clickhouse_dag",
@@ -53,7 +55,7 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
         "set_import_running",
         "fetch_data",
         "setup_import",
-        "import_direct_to_clickhouse",
+        "import_sql",
         "transfer_deployment",
         "send_update_notification",
         "cleanup_data",
