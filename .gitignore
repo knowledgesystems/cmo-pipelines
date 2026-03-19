@@ -19,3 +19,5 @@ target
 .vscode/
 
 core-scripts
+tmp/
+test-deploy.sh

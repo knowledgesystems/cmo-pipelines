@@ -99,6 +99,8 @@ portal_to_cache_service_basename["genie-private-blue"]="cbioportal-genie-persist
 portal_to_cache_service_basename["genie-private-green"]="cbioportal-genie-persistence-redis"
 # pipelines3
 portal_to_cache_service_basename["triage"]="triage-cbioportal-persistence-redis"
+portal_to_cache_service_basename["triage-blue"]="triage-cbioportal-persistence-redis"
+portal_to_cache_service_basename["triage-green"]="triage-cbioportal-persistence-redis"
 portal_to_cache_service_basename["hgnc"]=""
 portal_to_cache_service_basename["msk-beta-blue"]="eks-msk-cbioportal-persistence-redis"
 portal_to_cache_service_basename["msk-beta-green"]="eks-msk-cbioportal-persistence-redis"

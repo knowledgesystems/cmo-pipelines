@@ -33,11 +33,13 @@ def _wire(tasks: dict[str, object]) -> None:
     tasks["create_derived_tables"] >> tasks["transfer_deployment"]
     
     tasks["transfer_deployment"] >> [
+        tasks["clear_persistence_caches"],
         tasks["cleanup_data"],
         tasks["send_update_notification"]
     ]
     
     [
+        tasks["clear_persistence_caches"],
         tasks["cleanup_data"],
         tasks["send_update_notification"]
     ] >> tasks["set_import_complete"]
@@ -61,6 +63,7 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
         "import_direct_to_clickhouse",
         "create_derived_tables",
         "transfer_deployment",
+        "clear_persistence_caches",
         "send_update_notification",
         "cleanup_data",
         "set_import_complete",
