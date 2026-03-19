@@ -28,10 +28,19 @@ def _wire(tasks: dict[str, object]) -> None:
     
     tasks["import_direct_to_clickhouse"] >> tasks["create_derived_tables"]
     
+    # TODO: add back transfer_deployment and clear_persistence_caches once deployments are set up and the rest of the DAG is tested
+    """
     tasks["create_derived_tables"] >> tasks["transfer_deployment"]
     
     tasks["transfer_deployment"] >> [
         tasks["clear_persistence_caches"],
+        tasks["cleanup_data"],
+        tasks["send_update_notification"]
+    ]
+    """
+    
+    tasks["create_derived_tables"] >> [
+        tasks["set_import_complete"],
         tasks["cleanup_data"],
         tasks["send_update_notification"]
     ]
@@ -60,11 +69,11 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
         "setup_import",
         "import_direct_to_clickhouse",
         "create_derived_tables",
-        "transfer_deployment",
+        #"transfer_deployment",
         "clear_persistence_caches",
         "send_update_notification",
         "cleanup_data",
-        # "set_import_complete",
+        "set_import_complete",
         "set_import_abandoned",
     ),
     db_properties_filename="manage_triage_clickhouse_database_update_tools.properties",

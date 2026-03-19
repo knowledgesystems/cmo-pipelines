@@ -203,12 +203,12 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 scripts_dir,
                 db_properties_filepath,
             ),
-            # "set_import_complete": _script(
-            #     scripts_dir,
-            #     "set_update_process_state.sh",
-            #     db_properties_filepath,
-            #     "complete",
-            # ),
+            "set_import_complete": _script(
+                scripts_dir,
+                "set_update_process_state.sh",
+                db_properties_filepath,
+                "complete",
+            ),
             "fetch_data": _script(
                 scripts_dir,
                 "data_source_repo_clone_manager.sh",
