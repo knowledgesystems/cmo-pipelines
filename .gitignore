@@ -17,3 +17,5 @@ target
 **/dependency-reduced-pom.xml
 .idea/
 .vscode/
+
+core-scripts

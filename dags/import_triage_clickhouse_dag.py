@@ -28,7 +28,9 @@ def _wire(tasks: dict[str, object]) -> None:
     
     tasks["setup_import"] >> tasks["import_direct_to_clickhouse"]
     
-    tasks["import_sql"] >> tasks["transfer_deployment"]
+    tasks["import_direct_to_clickhouse"] >> tasks["create_derived_tables"]
+    
+    tasks["create_derived_tables"] >> tasks["transfer_deployment"]
     
     tasks["transfer_deployment"] >> [
         tasks["cleanup_data"],
@@ -45,8 +47,8 @@ def _wire(tasks: dict[str, object]) -> None:
 _TRIAGE_CONFIG = ClickhouseImporterConfig(
     dag_id="import_triage_clickhouse_dag",
     description="Imports Triage study to Clickhouse database",
-    importer="triage_clickhouse",
-    tags=["triage_clickhouse"],
+    importer="triage-clickhouse",
+    tags=["triage-clickhouse"],
     target_nodes=("pipelines3_ssh",),
     data_nodes=("pipelines3_ssh",),
     task_names=(
@@ -54,8 +56,10 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
         "verify_management_state",
         "set_import_running",
         "fetch_data",
+        "clone_database",
         "setup_import",
-        "import_sql",
+        "import_direct_to_clickhouse",
+        "create_derived_tables",
         "transfer_deployment",
         "send_update_notification",
         "cleanup_data",
