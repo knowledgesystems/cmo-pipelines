@@ -14,9 +14,7 @@ def _wire(tasks: dict[str, object]) -> None:
     
     tasks["data_repos"] >> tasks["verify_management_state"]
     
-    tasks["verify_management_state"] >> tasks["set_import_running"]
-    
-    tasks["set_import_running"] >> [
+    tasks["verify_management_state"] >> [
         tasks["fetch_data"],
         tasks["clone_database"]
     ]
@@ -56,7 +54,7 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
     task_names=(
         "data_repos",
         "verify_management_state",
-        "set_import_running",
+        #"set_import_running",
         "fetch_data",
         "clone_database",
         "setup_import",

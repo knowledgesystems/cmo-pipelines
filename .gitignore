@@ -22,3 +22,4 @@ core-scripts
 tmp/
 test-deploy.sh
 config-files/
+deploy*.sh
