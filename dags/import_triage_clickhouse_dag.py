@@ -12,9 +12,14 @@ from dags.import_clickhouse_base import ClickhouseImporterConfig, build_import_d
 
 def _wire(tasks: dict[str, object]) -> None:
     
-    tasks["data_repos"] >> tasks["verify_management_state"]
+    # tasks["data_repos"] >> tasks["verify_management_state"]
     
-    tasks["verify_management_state"] >> [
+    # tasks["verify_management_state"] >> [
+    #     tasks["fetch_data"],
+    #     tasks["clone_database"]
+    # ]
+    
+    tasks["data_repos"] >> [
         tasks["fetch_data"],
         tasks["clone_database"]
     ]
@@ -62,7 +67,7 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
     data_nodes=("pipelines3_ssh",),
     task_names=(
         "data_repos",
-        "verify_management_state",
+        #"verify_management_state",
         #"set_import_running",
         "fetch_data",
         "clone_database",
@@ -70,7 +75,7 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
         "import_direct_to_clickhouse",
         "create_derived_tables",
         #"transfer_deployment",
-        "clear_persistence_caches",
+        #"clear_persistence_caches",
         "send_update_notification",
         "cleanup_data",
         "set_import_complete",
