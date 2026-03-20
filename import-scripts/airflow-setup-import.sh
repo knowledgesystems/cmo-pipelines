@@ -45,6 +45,13 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="triage-cmo-importer.log"
     PORTAL_NAME="triage-portal"
     ;;
+  triage-clickhouse)
+    TMP_DIR_NAME="import-cron-triage-clickhouse"
+    IMPORTER_NAME="triage-clickhouse"
+    LOG_FILE_NAME="triage-clickhouse-importer.log"
+    PORTAL_NAME="triage-portal"
+    ONCOTREE_VERSION="oncotree_candidate_release"
+    ;;
   review)
     TMP_DIR_NAME="import-cron-review"
     IMPORTER_NAME="review"
