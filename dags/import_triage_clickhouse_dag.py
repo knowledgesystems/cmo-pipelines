@@ -12,14 +12,9 @@ from dags.import_clickhouse_base import ClickhouseImporterConfig, build_import_d
 
 def _wire(tasks: dict[str, object]) -> None:
     
-    # tasks["data_repos"] >> tasks["verify_management_state"]
+    tasks["data_repos"] >> tasks["verify_management_state"]
     
-    # tasks["verify_management_state"] >> [
-    #     tasks["fetch_data"],
-    #     tasks["clone_database"]
-    # ]
-    
-    tasks["data_repos"] >> [
+    tasks["verify_management_state"] >> [
         tasks["fetch_data"],
         tasks["clone_database"]
     ]
@@ -33,8 +28,6 @@ def _wire(tasks: dict[str, object]) -> None:
     
     tasks["import_direct_to_clickhouse"] >> tasks["create_derived_tables"]
     
-    # TODO: add back transfer_deployment and clear_persistence_caches once deployments are set up and the rest of the DAG is tested
-    """
     tasks["create_derived_tables"] >> tasks["transfer_deployment"]
     
     tasks["transfer_deployment"] >> [
@@ -42,19 +35,6 @@ def _wire(tasks: dict[str, object]) -> None:
         tasks["cleanup_data"],
         tasks["send_update_notification"]
     ]
-    """
-    
-    tasks["create_derived_tables"] >> [
-        tasks["set_import_complete"],
-        tasks["cleanup_data"],
-        tasks["send_update_notification"]
-    ]
-    
-    # [
-    #     tasks["clear_persistence_caches"],
-    #     tasks["cleanup_data"],
-    #     tasks["send_update_notification"]
-    # ] >> tasks["set_import_complete"]
     
     # for now, all the 'finally' handlers are taken care of by the parent class
 
@@ -67,18 +47,16 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
     data_nodes=("pipelines3_ssh",),
     task_names=(
         "data_repos",
-        #"verify_management_state",
-        #"set_import_running",
+        "verify_management_state",
         "fetch_data",
         "clone_database",
         "setup_import",
         "import_direct_to_clickhouse",
         "create_derived_tables",
-        #"transfer_deployment",
-        #"clear_persistence_caches",
+        "transfer_deployment",
+        "clear_persistence_caches",
         "send_update_notification",
         "cleanup_data",
-        "set_import_complete",
         "set_import_abandoned",
     ),
     db_properties_filename="manage_triage_clickhouse_database_update_tools.properties",
