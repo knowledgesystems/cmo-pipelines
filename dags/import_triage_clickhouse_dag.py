@@ -31,7 +31,6 @@ def _wire(tasks: dict[str, object]) -> None:
     tasks["create_derived_tables"] >> tasks["transfer_deployment"]
     
     tasks["transfer_deployment"] >> [
-        tasks["clear_persistence_caches"],
         tasks["cleanup_data"],
         tasks["send_update_notification"]
     ]
@@ -47,6 +46,7 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
     data_nodes=("pipelines3_ssh",),
     task_names=(
         "data_repos",
+        #"set_import_running",
         "verify_management_state",
         "fetch_data",
         "clone_database",
@@ -54,9 +54,10 @@ _TRIAGE_CONFIG = ClickhouseImporterConfig(
         "import_direct_to_clickhouse",
         "create_derived_tables",
         "transfer_deployment",
-        "clear_persistence_caches",
+        #"clear_persistence_caches",
         "send_update_notification",
         "cleanup_data",
+        #"set_import_complete",
         "set_import_abandoned",
     ),
     db_properties_filename="manage_triage_clickhouse_database_update_tools.properties",
