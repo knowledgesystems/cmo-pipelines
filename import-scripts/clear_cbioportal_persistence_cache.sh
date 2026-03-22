@@ -43,6 +43,8 @@ portal_to_cluster_map["genie-private-green"]="$CLUSTER_ID_PUBLICARGOCD"
 
 # pipelines3
 portal_to_cluster_map["triage"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["triage-blue"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["triage-green"]="$CLUSTER_ID_EKSARGOCD"
 portal_to_cluster_map["hgnc"]="$CLUSTER_ID_EKSARGOCD"
 portal_to_cluster_map["msk-beta-blue"]="$CLUSTER_ID_EKSARGOCD"
 portal_to_cluster_map["msk-beta-green"]="$CLUSTER_ID_EKSARGOCD"
