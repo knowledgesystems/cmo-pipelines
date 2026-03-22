@@ -70,6 +70,8 @@ portal_to_deployment_map["genie-private-blue"]="cbioportal-backend-genie-private
 portal_to_deployment_map["genie-private-green"]="cbioportal-backend-genie-private-green"
 # pipelines3
 portal_to_deployment_map["triage"]="eks-triage"
+portal_to_deployment_map["triage-blue"]="eks-triage-blue"
+portal_to_deployment_map["triage-green"]="eks-triage-green"
 portal_to_deployment_map["hgnc"]="eks-hgnc"
 portal_to_deployment_map["msk-beta-blue"]="eks-msk-beta-blue"
 portal_to_deployment_map["msk-beta-green"]="eks-msk-beta-green"
@@ -128,6 +130,8 @@ portal_to_cache_database_number["genie-private-blue"]="3"
 portal_to_cache_database_number["genie-private-green"]="4"
 # pipelines3
 portal_to_cache_database_number["triage"]="1"
+portal_to_cache_database_number["triage-blue"]="10"
+portal_to_cache_database_number["triage-green"]="11"
 portal_to_cache_database_number["hgnc"]="unassigned"
 portal_to_cache_database_number["msk-beta-blue"]="6"
 portal_to_cache_database_number["msk-beta-green"]="7"

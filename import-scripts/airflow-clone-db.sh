@@ -77,7 +77,7 @@ if ! $DROP_TABLES_FROM_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES
     echo $message >&2
     exit 1
 else
-    # Clone the content of the production MySQL database into the non-production database
+    # Clone the content of the production database into the non-production database
     echo "copying tables from $DB_TYPE database $source_database_color to $destination_database_color"
     if ! $CLONE_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $source_database_color $destination_database_color ; then
         message="Error during cloning the $DB_TYPE database (from $source_database_color to $destination_database_color)"
