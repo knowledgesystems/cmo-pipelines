@@ -34,7 +34,7 @@ deployment_to_yaml_filepath_map:
   eks-msk-blue: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-msk-blue-deployment-service.yaml
   eks-msk-beta-blue: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-msk-beta-blue-deployment-service.yaml
   eks-private-blue: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-private-blue-deployment-service.yaml
-  eks-sclc-blue: dargocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-sclc-blue-deployment-service.yaml
+  eks-sclc-blue: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-sclc-blue-deployment-service.yaml
   eks-msk-green: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-msk-green-deployment-service.yaml
   eks-msk-beta-green: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-msk-beta-green-deployment-service.yaml
   eks-private-green: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-private-green-deployment-service.yaml
