@@ -1,5 +1,5 @@
 service_account: eks
-cluster_cfg: /data/portal-cron/pipelines-credentials/eks-cluster-kubeconfig
+cluster_cfg: /data/portal-cron/pipelines-credentials/eksargocd-cluster-kubeconfig
 blue_deployment_list:
   - eks-msk-blue
   - eks-msk-beta-blue
@@ -31,14 +31,14 @@ deployment_to_cache_warming_policy:
   eks-sclc-blue: initial
   eks-sclc-green: initial
 deployment_to_yaml_filepath_map:
-  eks-msk-blue: digits-eks/eks-prod/cbioportal-eks-msk-blue-deployment-service.yaml
-  eks-msk-beta-blue: digits-eks/eks-prod/cbioportal-eks-msk-beta-blue-deployment-service.yaml
-  eks-private-blue: digits-eks/eks-prod/cbioportal-eks-private-blue-deployment-service.yaml
-  eks-sclc-blue: digits-eks/eks-prod/cbioportal-eks-sclc-blue-deployment-service.yaml
-  eks-msk-green: digits-eks/eks-prod/cbioportal-eks-msk-green-deployment-service.yaml
-  eks-msk-beta-green: digits-eks/eks-prod/cbioportal-eks-msk-beta-green-deployment-service.yaml
-  eks-private-green: digits-eks/eks-prod/cbioportal-eks-private-green-deployment-service.yaml
-  eks-sclc-green: digits-eks/eks-prod/cbioportal-eks-sclc-green-deployment-service.yaml
+  eks-msk-blue: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-msk-blue-deployment-service.yaml
+  eks-msk-beta-blue: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-msk-beta-blue-deployment-service.yaml
+  eks-private-blue: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-private-blue-deployment-service.yaml
+  eks-sclc-blue: dargocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-sclc-blue-deployment-service.yaml
+  eks-msk-green: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-msk-green-deployment-service.yaml
+  eks-msk-beta-green: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-msk-beta-green-deployment-service.yaml
+  eks-private-green: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-private-green-deployment-service.yaml
+  eks-sclc-green: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/cbioportal-eks-sclc-green-deployment-service.yaml
 host_to_service_map:
   blue:
     cbioportal.mskcc.org: eks-msk-blue
@@ -81,14 +81,14 @@ host_to_ingress_type_map:
     sclc.cbioportal.mskcc.org: ingress
     sclc.cbioportal.aws.mskcc.org: ingress
 host_to_ingress_yaml_filepath_map:
-    cbioportal.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
-    cbioportal.aws.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
-    beta.cbioportal.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
-    beta.cbioportal.aws.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
-    private.cbioportal.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
-    private.cbioportal.aws.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
-    sclc.cbioportal.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
-    sclc.cbioportal.aws.mskcc.org: digits-eks/eks-prod/shared-services/ingress/eks-msk-ingress.yaml
+    cbioportal.mskcc.org: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/eks-msk-ingress.yaml
+    cbioportal.aws.mskcc.org: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/eks-msk-ingress.yaml
+    beta.cbioportal.mskcc.org: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/eks-msk-ingress.yaml
+    beta.cbioportal.aws.mskcc.org: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/eks-msk-ingress.yaml
+    private.cbioportal.mskcc.org: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/eks-msk-ingress.yaml
+    private.cbioportal.aws.mskcc.org: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/eks-msk-ingress.yaml
+    sclc.cbioportal.mskcc.org: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/eks-msk-ingress.yaml
+    sclc.cbioportal.aws.mskcc.org: argocd/aws/666628074417/clusters/cbioportal-prod/apps/cbioportal/eks-msk-ingress.yaml
 replica_ready_check_pause_seconds: 20
 replica_ready_check_max_checkcount: 30
 temp_dir_path: /data/portal-cron/tmp/import-cron-dmp-msk
