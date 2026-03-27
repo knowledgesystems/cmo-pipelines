@@ -43,6 +43,8 @@ portal_to_cluster_map["genie-private-green"]="$CLUSTER_ID_PUBLICARGOCD"
 
 # pipelines3
 portal_to_cluster_map["triage"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["triage-blue"]="$CLUSTER_ID_EKSARGOCD"
+portal_to_cluster_map["triage-green"]="$CLUSTER_ID_EKSARGOCD"
 portal_to_cluster_map["hgnc"]="$CLUSTER_ID_EKSARGOCD"
 portal_to_cluster_map["msk-beta-blue"]="$CLUSTER_ID_EKSARGOCD"
 portal_to_cluster_map["msk-beta-green"]="$CLUSTER_ID_EKSARGOCD"
@@ -70,6 +72,8 @@ portal_to_deployment_map["genie-private-blue"]="cbioportal-backend-genie-private
 portal_to_deployment_map["genie-private-green"]="cbioportal-backend-genie-private-green"
 # pipelines3
 portal_to_deployment_map["triage"]="eks-triage"
+portal_to_deployment_map["triage-blue"]="eks-triage-blue"
+portal_to_deployment_map["triage-green"]="eks-triage-green"
 portal_to_deployment_map["hgnc"]="eks-hgnc"
 portal_to_deployment_map["msk-beta-blue"]="eks-msk-beta-blue"
 portal_to_deployment_map["msk-beta-green"]="eks-msk-beta-green"
@@ -99,6 +103,8 @@ portal_to_cache_service_basename["genie-private-blue"]="cbioportal-genie-persist
 portal_to_cache_service_basename["genie-private-green"]="cbioportal-genie-persistence-redis"
 # pipelines3
 portal_to_cache_service_basename["triage"]="triage-cbioportal-persistence-redis"
+portal_to_cache_service_basename["triage-blue"]="triage-cbioportal-persistence-redis"
+portal_to_cache_service_basename["triage-green"]="triage-cbioportal-persistence-redis"
 portal_to_cache_service_basename["hgnc"]=""
 portal_to_cache_service_basename["msk-beta-blue"]="eks-msk-cbioportal-persistence-redis"
 portal_to_cache_service_basename["msk-beta-green"]="eks-msk-cbioportal-persistence-redis"
@@ -126,6 +132,8 @@ portal_to_cache_database_number["genie-private-blue"]="3"
 portal_to_cache_database_number["genie-private-green"]="4"
 # pipelines3
 portal_to_cache_database_number["triage"]="1"
+portal_to_cache_database_number["triage-blue"]="10"
+portal_to_cache_database_number["triage-green"]="11"
 portal_to_cache_database_number["hgnc"]="unassigned"
 portal_to_cache_database_number["msk-beta-blue"]="6"
 portal_to_cache_database_number["msk-beta-green"]="7"

@@ -17,3 +17,12 @@ target
 **/dependency-reduced-pom.xml
 .idea/
 .vscode/
+
+core-scripts
+tmp/
+test-deploy.sh
+config-files/
+deploy*.sh
+k8s-deployment
+k8s-ingress
+k8s-secrets/

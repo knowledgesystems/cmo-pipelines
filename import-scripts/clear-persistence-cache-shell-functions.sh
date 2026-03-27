@@ -88,3 +88,13 @@ function clearPersistenceCachesForCrdcPortals() {
     all_crdc_portals="crdc"
     clearPersistenceCachesForPortals "$all_crdc_portals"
 }
+
+function clearPersistenceCachesForTriageBluePortals() {
+    all_triage_portals="triage-blue"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}
+
+function clearPersistenceCachesForTriageGreenPortals() {
+    all_triage_portals="triage-green"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}

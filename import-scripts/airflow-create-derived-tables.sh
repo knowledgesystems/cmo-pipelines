@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# Script for creating derived tables in ClickHouse DB
+# Consists of the following:
+# - Download derived table SQL files from GitHub
+# - Create derived ClickHouse tables
+
+PORTAL_DATABASE=$1
+PORTAL_SCRIPTS_DIRECTORY=$2
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH=$3
+if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
+    PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
+fi
+AUTOMATION_ENV_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh"
+if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
+    echo "`date`: Unable to locate $AUTOMATION_ENV_SCRIPT_FILEPATH, exiting..."
+    exit 1
+fi
+source $AUTOMATION_ENV_SCRIPT_FILEPATH
+
+tmp=$PORTAL_HOME/tmp/import-cron-$PORTAL_DATABASE
+
+GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
+current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+DESTINATION_DATABASE_COLOR="unset"
+if [ ${current_production_database_color:0:4} == "blue" ] ; then
+    DESTINATION_DATABASE_COLOR="green"
+fi
+if [ ${current_production_database_color:0:5} == "green" ] ; then
+    DESTINATION_DATABASE_COLOR="blue"
+fi
+if [ "$DESTINATION_DATABASE_COLOR" == "unset" ] ; then
+    echo "Error during determination of the destination database color" >&2
+    exit 1
+fi
+
+DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/download_clickhouse_sql_scripts_py3.py"
+CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
+
+# Check if derived table sql script dirpath exists
+# If not, try to create it
+derived_table_sql_script_dirpath="$tmp/create_derived_clickhouse_tables"
+if ! [ -e "$derived_table_sql_script_dirpath" ] ; then
+    if ! mkdir -p "$derived_table_sql_script_dirpath" ; then
+        echo "Error: could not create target directory '$derived_table_sql_script_dirpath'" >&2
+        exit 1
+    fi
+fi
+
+# Remove any scripts currently in the derived table sql script dirpath
+if [[ -d "$derived_table_sql_script_dirpath" && "$derived_table_sql_script_dirpath" != "/" ]]; then
+    rm -rf "$derived_table_sql_script_dirpath"/*
+fi
+
+# Attempt to download the derived table SQL files from github
+clickhouse_schema_branch_name="master" # default
+if [ "$PORTAL_DATABASE" == "public" ] ; then
+    clickhouse_schema_branch_name="public-portal-db-clickhouse-sql-for-import"
+fi
+if [ "$PORTAL_DATABASE" == "genie" ] ; then
+    clickhouse_schema_branch_name="genie-portal-db-clickhouse-sql-for-import"
+fi
+if [ "$PORTAL_DATABASE" == "msk" ] ; then
+    clickhouse_schema_branch_name="msk-portal-db-clickhouse-sql-for-import"
+fi
+if [ "$PORTAL_DATABASE" == "triage-clickhouse" ]; then
+    clickhouse_schema_branch_name="triage-portal-db-clickhouse-sql-for-import"
+fi
+if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name "$clickhouse_schema_branch_name" "$derived_table_sql_script_dirpath" ; then
+    echo "Error during download of derived table construction .sql files from github" >&2
+    exit 1
+fi
+
+# Create the additional derived tables inside of non-production Clickhouse DB
+echo "creating derived tables in clickhouse database $DESTINATION_DATABASE_COLOR"
+if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $DESTINATION_DATABASE_COLOR "$derived_table_sql_script_dirpath"/* ; then
+    echo "Error during derivation of clickhouse tables in clickhouse database $DESTINATION_DATABASE_COLOR" >&2
+    exit 1
+fi
