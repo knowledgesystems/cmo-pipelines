@@ -78,7 +78,7 @@ echo "Destination DB color: $destination_database_color"
 echo "Using importer JAR: $IMPORTER_JAR_FILENAME"
 
 # Database check
-echo "Checking if mysql database version is compatible"
+echo "Checking if database version is compatible"
 "$JAVA_BINARY" $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ]; then
     echo "Error: Database version expected by portal does not match version in database!" >&2
