@@ -198,7 +198,7 @@ with DAG(
             f"""
             SELECT cancer_study_identifier
             FROM cancer_study
-            WHERE import_date < now() - INTERVAL {STUDY_EXPIRY_DAYS} DAY
+            WHERE parseDateTimeBestEffort(toString(import_date)) < now() - INTERVAL {STUDY_EXPIRY_DAYS} DAY
             """
         )
 
@@ -291,12 +291,8 @@ with DAG(
 
         logger.info("Marked %d studies for removal in the spreadsheet.", len(updates))
 
-    @task(trigger_rule=TriggerRule.ONE_FAILED, retries=0, on_failure_callback=None)
-    def watcher():
-        raise AirflowException("Failing task because one or more upstream tasks failed.")
-
     color = get_production_db_color()
     conn_params = get_clickhouse_connection_params(color)
     old_studies = get_old_triage_studies(conn_params)
     mark_task = mark_studies_for_removal(old_studies)
-    [color, conn_params, old_studies, mark_task] >> watcher()
+    color >> conn_params >> old_studies >> mark_task
