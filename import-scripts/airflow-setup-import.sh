@@ -41,12 +41,6 @@ case "$PORTAL_DATABASE" in
     PORTAL_NAME="triage-portal"
     ONCOTREE_VERSION="oncotree_candidate_release"
     ;;
-  msk)
-    TMP_DIR_NAME="import-cron-msk"
-    IMPORTER_NAME="msk-cmo"
-    LOG_FILE_NAME="msk-cmo-importer.log"
-    PORTAL_NAME="msk-automation-portal"
-    ;;
   *)
     echo "Unsupported portal database: $PORTAL_DATABASE" >&2
     exit 1
@@ -68,13 +62,8 @@ if [ "$destination_database_color" == "unset" ] ; then
     exit 1
 fi
 
-if [ "$PORTAL_DATABASE" != "msk" ]; then
-    # eg. genie-aws-importer-blue.jar
-    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer-${destination_database_color}.jar"
-else
-    # msk importer follows different naming convention (why??), eg. msk-cmo-blue-importer.jar
-    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-${destination_database_color}-importer.jar"
-fi
+# eg. genie-aws-importer-blue.jar
+IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer-${destination_database_color}.jar"
 
 tmp="$PORTAL_HOME/tmp/$TMP_DIR_NAME"
 JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"

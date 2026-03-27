@@ -60,9 +60,6 @@ fi
 if [ "$PORTAL_DATABASE" == "genie" ] ; then
     clickhouse_schema_branch_name="genie-portal-db-clickhouse-sql-for-import"
 fi
-if [ "$PORTAL_DATABASE" == "msk" ] ; then
-    clickhouse_schema_branch_name="msk-portal-db-clickhouse-sql-for-import"
-fi
 if [ "$PORTAL_DATABASE" == "triage-clickhouse" ]; then
     clickhouse_schema_branch_name="triage-portal-db-clickhouse-sql-for-import"
 fi
