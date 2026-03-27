@@ -79,9 +79,6 @@ fi
 if [ "$PORTAL_DATABASE" == "genie" ] ; then
     clickhouse_schema_branch_name="genie-portal-db-clickhouse-sql-for-import"
 fi
-if [ "$PORTAL_DATABASE" == "msk" ] ; then
-    clickhouse_schema_branch_name="msk-portal-db-clickhouse-sql-for-import"
-fi
 if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name "$clickhouse_schema_branch_name" "$derived_table_sql_script_dirpath" ; then
     echo "Error during download of derived table construction .sql files from github" >&2
     exit 1

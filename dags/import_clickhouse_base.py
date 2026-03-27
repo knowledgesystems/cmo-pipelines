@@ -196,19 +196,6 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 scripts_dir,
                 db_properties_filepath,
             ),
-            "create_derived_tables": _script(
-                scripts_dir,
-                "airflow-create-derived-tables.sh",
-                importer,
-                scripts_dir,
-                db_properties_filepath,
-            ),
-            "set_import_complete": _script(
-                scripts_dir,
-                "set_update_process_state.sh",
-                db_properties_filepath,
-                "complete",
-            ),
             "fetch_data": _script(
                 scripts_dir,
                 "data_source_repo_clone_manager.sh",
@@ -225,7 +212,6 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 db_properties_filepath,
             ),
             # reuse the old import-sql script for now
-            # TODO: we might need to update the send_update_notification code here
             "import_direct_to_clickhouse": _script(
                 scripts_dir,
                 "airflow-import-sql.sh",
@@ -234,24 +220,26 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 db_properties_filepath,
                 notification_filepath,
             ),
+            "create_derived_tables": _script(
+                scripts_dir,
+                "airflow-create-derived-tables.sh",
+                importer,
+                scripts_dir,
+                db_properties_filepath,
+            ),
+            "check_data_integrity": _script(
+                scripts_dir,
+                "airflow-check-data-integrity.sh",
+                importer,
+                scripts_dir,
+                db_properties_filepath,
+            ),
             "transfer_deployment": _script(
                 scripts_dir,
                 "airflow-transfer-deployment.sh",
                 scripts_dir,
                 db_properties_filepath,
                 color_swap_config_filepath,
-            ),
-            "clear_persistence_caches": _script(
-                scripts_dir,
-                "airflow-clear-persistence-caches.sh",
-                importer,
-                scripts_dir,
-            ),
-            "set_import_running": _script(
-                scripts_dir,
-                "set_update_process_state.sh",
-                db_properties_filepath,
-                "running",
             ),
             "set_import_abandoned": _script(
                 scripts_dir,
