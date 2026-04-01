@@ -82,6 +82,7 @@ export AWS_SSL_TRUSTSTORE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore
 export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore.password
 export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
 export GMAIL_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/gmail.credentials
+export MAIL_SMTP_SERVER=$PORTAL_HOME/pipelines-credentials/mail.smtp.server
 export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-kubeconfig
 export PUBLICARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/publicargocd-cluster-kubeconfig
 export EKS_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eks-cluster-kubeconfig
