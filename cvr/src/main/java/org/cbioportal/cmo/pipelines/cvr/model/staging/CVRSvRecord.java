@@ -454,7 +454,6 @@ public class CVRSvRecord {
         fieldNames.add("Tumor_Variant_Count");
         fieldNames.add("Normal_Paired_End_Read_Count");
         fieldNames.add("Normal_Split_End_Read_Count");
-        fieldNames.add("Comments");
         return fieldNames;
     }
 }

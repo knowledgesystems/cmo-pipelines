@@ -85,7 +85,6 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
             case "CANCER_TYPE_DETAILED": return record.getCANCER_TYPE_DETAILED();
             case "GENE_PANEL": return record.getGENE_PANEL();
             case "OTHER_PATIENT_ID": return record.getOTHER_PATIENT_ID();
-            case "SO_COMMENTS": return record.getSO_COMMENTS();
             case "SAMPLE_COVERAGE": return record.getSAMPLE_COVERAGE();
             case "CYCLE_THRESHOLD": return record.getCYCLE_THRESHOLD();
             case "TUMOR_PURITY": return record.getTUMOR_PURITY();

@@ -450,7 +450,6 @@ public class CVRClinicalRecord {
         fieldNames.add("CANCER_TYPE_DETAILED");
         fieldNames.add("GENE_PANEL");
         fieldNames.add("OTHER_PATIENT_ID");
-        fieldNames.add("SO_COMMENTS");
         fieldNames.add("SAMPLE_COVERAGE");
         fieldNames.add("TUMOR_PURITY");
         fieldNames.add("ONCOTREE_CODE");
