@@ -104,6 +104,8 @@ public class CVRSvDataProcessor implements ItemProcessor<CVRSvRecord, String> {
             case "Tumor_Variant_Count": return record.getTumor_Variant_Count();
             case "Normal_Paired_End_Read_Count": return record.getNormal_Paired_End_Read_Count();
             case "Normal_Split_End_Read_Count": return record.getNormal_Split_End_Read_Count();
+            // Comments: sensitive free-text may arrive from the API; emit empty for staging TSV output.
+            case "Comments": return "";
             default: return "";
         }
     }

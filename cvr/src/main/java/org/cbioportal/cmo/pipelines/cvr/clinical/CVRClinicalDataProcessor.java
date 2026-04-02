@@ -85,13 +85,16 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
             case "CANCER_TYPE_DETAILED": return record.getCANCER_TYPE_DETAILED();
             case "GENE_PANEL": return record.getGENE_PANEL();
             case "OTHER_PATIENT_ID": return record.getOTHER_PATIENT_ID();
+            // SO_COMMENTS: sensitive free-text may arrive from the API; emit empty for staging TSV output.
+            case "SO_COMMENTS": return "";
             case "SAMPLE_COVERAGE": return record.getSAMPLE_COVERAGE();
             case "CYCLE_THRESHOLD": return record.getCYCLE_THRESHOLD();
             case "TUMOR_PURITY": return record.getTUMOR_PURITY();
             case "ONCOTREE_CODE": return record.getONCOTREE_CODE();
             case "PARTA_CONSENTED_12_245": return record.getPARTA_CONSENTED_12_245();
             case "PARTC_CONSENTED_12_245": return record.getPARTC_CONSENTED_12_245();
-            case "MSI_COMMENT": return record.getMSI_COMMENT();
+            // MSI_COMMENT: sensitive free-text may arrive from the API; emit empty for staging TSV output.
+            case "MSI_COMMENT": return "";
             case "MSI_SCORE": return record.getMSI_SCORE();
             case "MSI_TYPE": return record.getMSI_TYPE();
             case "INSTITUTE": return record.getINSTITUTE();
