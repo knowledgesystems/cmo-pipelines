@@ -79,6 +79,10 @@ CLINICAL_PATIENT_META_PATTERN = 'meta_clinical_patient.txt'
 CLINICAL_SAMPLE_FILE_PATTERN = 'data_clinical_sample.txt'
 CLINICAL_SAMPLE_META_PATTERN = 'meta_clinical_sample.txt'
 
+# Cleared on every merge row so REDCap/other cohort files cannot repopulate free-text after CVR emits blanks.
+CLINICAL_SAMPLE_SENSITIVE_TEXT_COLUMNS = frozenset(['SO_COMMENTS', 'MSI_COMMENT'])
+SV_SENSITIVE_TEXT_COLUMNS = frozenset(['Comments'])
+
 GENE_MATRIX_FILE_PATTERN = 'data_gene_matrix.txt'
 GENE_MATRIX_META_PATTERN = 'meta_gene_matrix.txt'
 
@@ -278,12 +282,12 @@ def merge_files(data_filenames, file_type, reference_set, keep_match, output_dir
                         if indexed_id in id_to_row_index:
                             previous_record = rows[id_to_row_index[indexed_id]]
                             replicated_id_row_count += 1
-                            merge_rows(previous_record, data, new_header, indexed_id)
+                            merge_rows(previous_record, data, new_header, indexed_id, file_type)
                         else:
                             id_to_row_index[indexed_id] = len(rows)
-                            rows.append(normal_row(data, new_header))
+                            rows.append(normal_row(data, new_header, file_type))
                     else:
-                        rows.append(normal_row(data, new_header))
+                        rows.append(normal_row(data, new_header, file_type))
 
         is_first_profile_datafile = False
         data_file.close()
@@ -489,7 +493,7 @@ def process_header(data_filenames, reference_set, keep_match, merge_style):
 
     return header
 
-def merge_rows(previous_row_list, current_row_dict, header, patient_id):
+def merge_rows(previous_row_list, current_row_dict, header, patient_id, file_type=None):
     """
         Merges non-empty values from current_row_dict into previous_row_list,
         overwriting any values that conflict.
@@ -502,13 +506,25 @@ def merge_rows(previous_row_list, current_row_dict, header, patient_id):
                     print >> ERROR_FILE, "Ignoring value '%s' in favor of prior value '%s' for attribute '%s' in patient '%s'" % (value, previous_row_list[index], attribute, patient_id)
                 else:
                     previous_row_list[index] = value
+    if file_type == CLINICAL_SAMPLE_META_PATTERN:
+        for index, attribute in enumerate(header):
+            if attribute in CLINICAL_SAMPLE_SENSITIVE_TEXT_COLUMNS:
+                previous_row_list[index] = ''
 
-def normal_row(line, header):
+def normal_row(line, header, file_type=None):
     """
         Processes a normal merge style row.
         A row is stored as a dictionary - key => column name, value => datum
     """
     row = map(lambda x: process_datum(line.get(x, '')), header)
+    if file_type == CLINICAL_SAMPLE_META_PATTERN:
+        for index, attribute in enumerate(header):
+            if attribute in CLINICAL_SAMPLE_SENSITIVE_TEXT_COLUMNS:
+                row[index] = ''
+    elif file_type == SV_META_PATTERN:
+        for index, attribute in enumerate(header):
+            if attribute in SV_SENSITIVE_TEXT_COLUMNS:
+                row[index] = ''
 
     return row
 
