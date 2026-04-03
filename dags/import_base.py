@@ -128,8 +128,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             raise ValueError(
                 f"Expected exactly one target node for importer '{importer}', got {len(config.target_nodes)}."
             )
-        # eg. 'importer', 'pipelines3'
-        ec2_name = config.target_nodes[0].rstrip('_ssh')
         notification_filepath = f"/tmp/airflow-notifications/{config.dag_id}/{{{{ ts_nodash }}}}.txt"
 
         @task
@@ -272,20 +270,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             return group
 
         command_map = {
-            "turn_ec2_on": _script(
-                scripts_dir,
-                "airflow-toggle-ec2.sh",
-                "start",
-                ec2_name,
-                importer,
-            ),
-            "turn_ec2_off": _script(
-                scripts_dir,
-                "airflow-toggle-ec2.sh",
-                "stop",
-                ec2_name,
-                importer,
-            ),
             "verify_management_state": _script(
                 scripts_dir,
                 "airflow-verify-management.sh",
@@ -407,9 +391,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             elif name == "scale_down_rds_node":
                 # Run scale down task regardless of upstream failures during import
                 params["trigger_rule"] = TriggerRule.ALL_DONE
-            elif name == "turn_ec2_off":
-                # Always turn off the EC2 instance, even if the import failed
-                params["trigger_rule"] = TriggerRule.ALL_DONE
 
             if config.pool is not None:
                 params["pool"] = config.pool
@@ -417,8 +398,6 @@ def build_import_dag(config: ImporterConfig) -> DAG:
             ssh_targets: Sequence[str]
             if name in ("fetch_data", "cleanup_data"):
                 ssh_targets = config.data_nodes
-            elif name in ("turn_ec2_on", "turn_ec2_off"):
-                ssh_targets = ("pipelines3_ssh",)
             else:
                 ssh_targets = config.target_nodes
 
