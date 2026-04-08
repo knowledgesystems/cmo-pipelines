@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # ------------------------------------------------------------------------------
 # Script which adds new users from google spreadsheet into the the cgds
 # user table.  The following properties must be specified in portal.properties:
@@ -36,12 +36,10 @@ from oauth2client.file import Storage
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.tools import run_flow, argparser
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEBase import MIMEBase
-from email.MIMEText import MIMEText
-from email.Header import Header
-from email.Utils import COMMASPACE, formatdate
-from email import Encoders
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.header import Header
+from email.utils import COMMASPACE, formatdate
 
 from googleapiclient.discovery import build
 # ------------------------------------------------------------------------------
@@ -138,7 +136,7 @@ class User(object):
 def send_mail(to, subject, body, gmail_username, gmail_password, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, server=None):
 
     if server is None:
-        print >> ERROR_FILE, 'smtp server must be specified'
+        print('smtp server must be specified', file=ERROR_FILE)
         sys.exit(2)
 
     assert type(to)==list
@@ -213,10 +211,10 @@ def get_sheet_records(client, ss, ws):
                         new_record[header[index]] = None
                 sheet_records.append(new_record)
     except Exception as e:
-        print >> ERROR_FILE, "There was an error connecting to google."
-        print >> ERROR_FILE, e
+        print("There was an error connecting to google.", file=ERROR_FILE)
+        print(e, file=ERROR_FILE)
         exit(0)
- 
+
     return sheet_records
 
 # ------------------------------------------------------------------------------
@@ -230,8 +228,8 @@ def get_spreadsheet_title(client, ss):
         data = response.get('properties', {})
         spreadsheet_title = data["title"]
     except Exception as e:
-        print >> ERROR_FILE, "There was an error connecting to google."
-        print >> ERROR_FILE, e
+        print("There was an error connecting to google.", file=ERROR_FILE)
+        print(e, file=ERROR_FILE)
         exit(0)
 
     return spreadsheet_title
@@ -242,10 +240,8 @@ def insert_new_users(ch_client, new_user_list):
     added_user_rows = []
     added_authority_rows = []
     for user in new_user_list:
-        print >> OUTPUT_FILE, "new user: %s" % user.google_email
+        print("new user: %s" % user.google_email, file=OUTPUT_FILE)
         user_name = user.name
-        if isinstance(user_name, unicode):
-            user_name = user_name.encode('utf-8')
         user_email = user.google_email.lower()
         added_user_rows.append([user_email, user_name, user.enabled])
         added_authority_rows += [[user_email, authority] for authority in user.authorities]
@@ -270,7 +266,7 @@ def get_current_user_map(ch_client):
         for row in result.result_rows:
             to_return[row[0].lower()] = User(row[0].lower(), row[0].lower(), row[1], row[2], 'not_used_here')
     except Exception as msg:
-        print >> ERROR_FILE, msg
+        print(msg, file=ERROR_FILE)
         return None
 
     return to_return
@@ -291,7 +287,7 @@ def get_user_authorities(ch_client, google_email):
         for row in result.result_rows:
             to_return.append(row[1])
     except Exception as msg:
-        print >> ERROR_FILE, msg
+        print(msg, file=ERROR_FILE)
         return None
 
     return to_return
@@ -373,7 +369,7 @@ def get_rejected_user_map(spreadsheet, sheet_records, current_user_map, portal_n
                 else:
                     to_return[google_email.lower()] = User(inst_email, google_email, name, 0,
                         [portal_name + ':' + au for au in authorities.split(';')])
-                    print >> OUTPUT_FILE, 'Rejected user added to list: %s' % google_email.lower()
+                    print('Rejected user added to list: %s' % google_email.lower(), file=OUTPUT_FILE)
     return to_return
 
 # ------------------------------------------------------------------------------
@@ -389,7 +385,7 @@ def get_clickhouse_client(portal_properties):
             database=portal_properties.clickhouse_db,
         )
     except Exception as msg:
-        print >> ERROR_FILE, msg
+        print(msg, file=ERROR_FILE)
         return None
 
 
@@ -407,11 +403,11 @@ def get_portal_properties(portal_properties_filename):
             continue
         # store name/value
         property = line.split('=')
-        # spreadsheet url contains an '=' sign
-        if line.startswith(CGDS_USERS_SPREADSHEET):
+        # spreadsheet url / db pw may contain an '=' sign
+        if line.startswith(CGDS_USERS_SPREADSHEET) or line.startswith(CLICKHOUSE_PW):
             property = [property[0], line[line.index('=')+1:len(line)]]
         if (len(property) != 2):
-            print >> ERROR_FILE, 'Skipping invalid entry in property file: ' + line
+            print('Skipping invalid entry in property file: ' + line, file=ERROR_FILE)
             continue
         properties[property[0]] = property[1].strip()
     portal_properties_file.close()
@@ -427,7 +423,7 @@ def get_portal_properties(portal_properties_filename):
         CGDS_USERS_SPREADSHEET not in properties or len(properties[CGDS_USERS_SPREADSHEET]) == 0 or
         CGDS_USERS_WORKSHEET not in properties or len(properties[CGDS_USERS_WORKSHEET]) == 0 or
         IMPORTER_SPREADSHEET not in properties or len(properties[IMPORTER_SPREADSHEET]) == 0):
-        print >> ERROR_FILE, 'Missing one or more required properties, please check property file'
+        print('Missing one or more required properties, please check property file', file=ERROR_FILE)
         return None
 
     # return an instance of PortalProperties
@@ -449,25 +445,25 @@ def get_portal_properties(portal_properties_filename):
 def manage_users(client, spreadsheet, ch_client, sheet_records, portal_name):
 
     # get map of current portal users
-    print >> OUTPUT_FILE, 'Getting list of current portal users'
+    print('Getting list of current portal users', file=OUTPUT_FILE)
     current_user_map = get_current_user_map(ch_client)
     if current_user_map is not None:
-        print >> OUTPUT_FILE, 'We have found %s current portal users' % len(current_user_map)
+        print('We have found %s current portal users' % len(current_user_map), file=OUTPUT_FILE)
     else:
-        print >> OUTPUT_FILE, 'Error reading user table'
+        print('Error reading user table', file=OUTPUT_FILE)
         return None, None
 
     # get list of new users and insert
-    print >> OUTPUT_FILE, 'Checking for new users'
+    print('Checking for new users', file=OUTPUT_FILE)
     new_user_map = get_new_user_map(spreadsheet, sheet_records, current_user_map, portal_name)
     rejected_user_map = get_rejected_user_map(spreadsheet, sheet_records, current_user_map, portal_name)
 
     if (len(new_user_map) > 0):
-        print >> OUTPUT_FILE, 'We have %s new user(s) to add' % len(new_user_map)
+        print('We have %s new user(s) to add' % len(new_user_map), file=OUTPUT_FILE)
         insert_new_users(ch_client, new_user_map.values())
         return new_user_map, rejected_user_map
     else:
-        print >> OUTPUT_FILE, 'No new users to insert, exiting'
+        print('No new users to insert, exiting', file=OUTPUT_FILE)
         return None, rejected_user_map
 
 # ------------------------------------------------------------------------------
@@ -476,11 +472,11 @@ def manage_users(client, spreadsheet, ch_client, sheet_records, portal_name):
 def update_user_authorities(spreadsheet, ch_client, sheet_records, portal_name):
 
     # get map of current portal users
-    print >> OUTPUT_FILE, 'Getting list of current portal users from spreadsheet'
+    print('Getting list of current portal users from spreadsheet', file=OUTPUT_FILE)
     all_user_map = get_new_user_map(spreadsheet, sheet_records, {}, portal_name)
     if all_user_map is None:
         return None
-    print >> OUTPUT_FILE, 'Updating authorities for each user in current portal user list'
+    print('Updating authorities for each user in current portal user list', file=OUTPUT_FILE)
     new_authority_pairs = []
     for user in all_user_map.values():
         sheet_authorities = set(user.authorities)
@@ -496,7 +492,7 @@ def add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, clien
     if rejected_user_map is None or len(rejected_user_map) == 0:
         return
 
-    print >> OUTPUT_FILE, 'Adding rejected users to rejected_users worksheet'
+    print('Adding rejected users to rejected_users worksheet', file=OUTPUT_FILE)
 
     # get existing records from the rejected_users worksheet
     # Note: get_sheet_records converts column names to lowercase with special chars removed
@@ -510,23 +506,22 @@ def add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, clien
                 existing_emails.add(record[REJECTED_EMAIL_KEY].strip().lower())
     except Exception as e:
         # worksheet might not exist or be empty, start with empty set
-        print >> OUTPUT_FILE, 'Creating new rejected_users worksheet or worksheet is empty'
+        print('Creating new rejected_users worksheet or worksheet is empty', file=OUTPUT_FILE)
         existing_emails = set()
 
     # remove any rejected users that are already in the worksheet
-    for user_email in rejected_user_map.keys():
+    for user_email in list(rejected_user_map.keys()):
         if user_email.lower() in existing_emails:
             rejected_user_map.pop(user_email, None)
 
     # prepare new rows to append (only users not already in the worksheet)
     new_rows = []
-    import datetime
     current_utc_time = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
     for user_email in rejected_user_map.keys():
         if user_email.lower() not in existing_emails:
             new_rows.append([user_email, current_utc_time])
-            print >> OUTPUT_FILE, 'Adding rejected user to worksheet: %s' % user_email
+            print('Adding rejected user to worksheet: %s' % user_email, file=OUTPUT_FILE)
 
     # append new rows to the worksheet if there are any
     if len(new_rows) > 0:
@@ -542,11 +537,11 @@ def add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, clien
                 valueInputOption='RAW',
                 body=body
             ).execute()
-            print >> OUTPUT_FILE, 'Added %s rejected user(s) to worksheet' % len(new_rows)
+            print('Added %s rejected user(s) to worksheet' % len(new_rows), file=OUTPUT_FILE)
         except Exception as e:
-            print >> ERROR_FILE, 'Error adding rejected users to worksheet: %s' % str(e)
+            print('Error adding rejected users to worksheet: %s' % str(e), file=ERROR_FILE)
     else:
-        print >> OUTPUT_FILE, 'No new rejected users to add to worksheet'
+        print('No new rejected users to add to worksheet', file=OUTPUT_FILE)
 
 # ------------------------------------------------------------------------------
 # sends emails to users from a user map
@@ -569,8 +564,8 @@ def send_emails(user_map, google_spreadsheet, client, worksheet, gmail_username,
             error_subject = ERROR_EMAIL_SUBJECT_CMO
             error_body = ERROR_EMAIL_BODY_CMO
         if emails_to_remove is None or user_key not in emails_to_remove:
-            print >> OUTPUT_FILE, ('Sending confirmation or rejection email to user: %s at %s' %
-                                   (user.name, user.inst_email))
+            print('Sending confirmation or rejection email to user: %s at %s' %
+                  (user.name, user.inst_email), file=OUTPUT_FILE)
             send_mail([user.inst_email], subject, body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field, server=smtp_server)
         else:
             send_mail([user_key], error_subject, error_body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field, server=smtp_server)
@@ -581,7 +576,7 @@ def send_emails(user_map, google_spreadsheet, client, worksheet, gmail_username,
 def get_email_parameters(google_spreadsheet,client,worksheet):
     subject = ''
     body = ''
-    print >> OUTPUT_FILE, 'Getting email parameters from google spreadsheet'
+    print('Getting email parameters from google spreadsheet', file=OUTPUT_FILE)
     email_sheet_records = get_sheet_records(client, google_spreadsheet, worksheet)
     for record in email_sheet_records:
         if record[SUBJECT_KEY] is not None and record[BODY_KEY] is not None:
@@ -591,7 +586,7 @@ def get_email_parameters(google_spreadsheet,client,worksheet):
 
 def get_portal_name_map(google_spreadsheet,client):
     portal_name = {}
-    print >> OUTPUT_FILE, 'Getting access control parameter from google spreadsheet'
+    print('Getting access control parameter from google spreadsheet', file=OUTPUT_FILE)
     access_control_sheet = get_sheet_records(client,google_spreadsheet,ACCESS_CONTROL_WORKSHEET)
     for row in access_control_sheet: 
         if row[PORTAL_NAME_KEY] is not None and row[SPREADSHEET_NAME_KEY] is not None:
@@ -600,10 +595,10 @@ def get_portal_name_map(google_spreadsheet,client):
 
 
 def establish_clickhouse_client(portal_properties):
-    print >> OUTPUT_FILE, 'Connecting to ClickHouse: ' + portal_properties.clickhouse_host
+    print('Connecting to ClickHouse: ' + portal_properties.clickhouse_host, file=OUTPUT_FILE)
     ch_client = get_clickhouse_client(portal_properties)
     if ch_client is None:
-        print >> OUTPUT_FILE, 'Error connecting to ClickHouse, exiting'
+        print('Error connecting to ClickHouse, exiting', file=OUTPUT_FILE)
         sys.exit(2)
     return ch_client
 
@@ -612,7 +607,7 @@ def establish_clickhouse_client(portal_properties):
 # displays program usage (invalid args)
 
 def usage():
-    print >> OUTPUT_FILE, 'importUsers.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --sender [sender identifier - optional] --smtp-server [smtp server hostname - required when send-email-confirm is true]'
+    print('importUsersClickhouse.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --sender [sender identifier - optional] --smtp-server [smtp server hostname - required when send-email-confirm is true]', file=OUTPUT_FILE)
 
 # ------------------------------------------------------------------------------
 # the big deal main.
@@ -622,8 +617,8 @@ def main():
     # parse command line options
     try:
         opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'send-email-confirm=', 'use-institutional-id=', 'sender=', 'gmail-username=', 'gmail-password=', 'smtp-server='])
-    except getopt.error, msg:
-        print >> ERROR_FILE, msg
+    except getopt.error as msg:
+        print(msg, file=ERROR_FILE)
         usage()
         sys.exit(2)
 
@@ -663,14 +658,14 @@ def main():
 
     # check existence of file
     if not os.path.exists(properties_filename):
-        print >> ERROR_FILE, 'properties file cannot be found: ' + properties_filename
+        print('properties file cannot be found: ' + properties_filename, file=ERROR_FILE)
         sys.exit(2)
 
     # parse/get relevant portal properties
-    print >> OUTPUT_FILE, 'Reading portal properties file: ' + properties_filename
+    print('Reading portal properties file: ' + properties_filename, file=OUTPUT_FILE)
     portal_properties = get_portal_properties(properties_filename)
     if not portal_properties:
-        print >> OUTPUT_FILE, 'Error reading %s, exiting' % properties_filename
+        print('Error reading %s, exiting' % properties_filename, file=OUTPUT_FILE)
         return
 
     # create client for interacting with google sheets api
@@ -687,7 +682,7 @@ def main():
                                               portal_properties.google_worksheet)
             spreadsheet_title = get_spreadsheet_title(client, google_spreadsheet)
 
-            print >> OUTPUT_FILE, 'Importing ' + spreadsheet_title + ' ...'
+            print('Importing ' + spreadsheet_title + ' ...', file=OUTPUT_FILE)
             app_name = portal_name_map[spreadsheet_title]
 
             # the 'guts' of the script
@@ -706,9 +701,9 @@ def main():
 
             # sending emails
             if send_email_confirm == 'true':
-                print >> OUTPUT_FILE, "Sending confirmation emails to new users"
+                print("Sending confirmation emails to new users", file=OUTPUT_FILE)
                 send_emails(new_user_map, google_spreadsheet, client, IMPORT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, smtp_server)
-                print >> OUTPUT_FILE, "Sending rejection emails to newly rejected users"
+                print("Sending rejection emails to newly rejected users", file=OUTPUT_FILE)
                 send_emails(rejected_user_map, google_spreadsheet, client, REJECT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, smtp_server)
 
 # ------------------------------------------------------------------------------
