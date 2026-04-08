@@ -271,26 +271,6 @@ def get_current_user_map(ch_client):
 
     return to_return
 
-# ------------------------------------------------------------------------------
-# get current user authorities
-
-def get_user_authorities(ch_client, google_email):
-
-    # list of authorities (cancer studies) we are returning -- as a set
-    to_return = []
-
-    # recall each tuple in authorities table is ['EMAIL', 'AUTHORITY']
-    # no tuple can contain nulls
-    try:
-        result = ch_client.query('SELECT * FROM authorities WHERE email = {email:String}',
-                                 parameters={'email': google_email})
-        for row in result.result_rows:
-            to_return.append(row[1])
-    except Exception as msg:
-        print(msg, file=ERROR_FILE)
-        return None
-
-    return to_return
 
 # ------------------------------------------------------------------------------
 # get current users from google spreadsheet
@@ -369,7 +349,6 @@ def get_rejected_user_map(spreadsheet, sheet_records, current_user_map, portal_n
                 else:
                     to_return[google_email.lower()] = User(inst_email, google_email, name, 0,
                         [portal_name + ':' + au for au in authorities.split(';')])
-                    print('Rejected user added to list: %s' % google_email.lower(), file=OUTPUT_FILE)
     return to_return
 
 # ------------------------------------------------------------------------------
@@ -477,15 +456,21 @@ def update_user_authorities(spreadsheet, ch_client, sheet_records, portal_name):
     if all_user_map is None:
         return None
     total = len(all_user_map)
-    print('Updating authorities for %d user(s) in current portal user list' % total, file=OUTPUT_FILE)
+    print('Fetching existing authorities for %d user(s) in batch' % total, file=OUTPUT_FILE)
+    emails = list(all_user_map.keys())
+    result = ch_client.query('SELECT email, authority FROM authorities WHERE email IN {emails:Array(String)}',
+                             parameters={'emails': emails})
+    db_authorities_map = {}
+    for row in result.result_rows:
+        db_authorities_map.setdefault(row[0].lower(), set()).add(row[1])
+
     new_authority_pairs = []
-    for i, user in enumerate(all_user_map.values(), 1):
-        print('  [%d/%d] checking authorities for %s' % (i, total, user.google_email), file=OUTPUT_FILE)
+    for user in all_user_map.values():
         sheet_authorities = set(user.authorities)
-        db_authorities = set(get_user_authorities(ch_client, user.google_email))
+        db_authorities = db_authorities_map.get(user.google_email, set())
         added = [(user.google_email, authority) for authority in sheet_authorities - db_authorities]
         if added:
-            print('    -> adding %d new authority(s): %s' % (len(added), [a for _, a in added]), file=OUTPUT_FILE)
+            print('  %s: adding %d new authority(s)' % (user.google_email, len(added)), file=OUTPUT_FILE)
         new_authority_pairs += added
     if new_authority_pairs:
         print('Inserting %d new authority pair(s) into ClickHouse' % len(new_authority_pairs), file=OUTPUT_FILE)
