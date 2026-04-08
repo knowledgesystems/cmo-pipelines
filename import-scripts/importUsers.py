@@ -25,7 +25,7 @@ import os
 import sys
 import time
 import getopt
-import MySQLdb
+import clickhouse_connect
 import re
 import datetime
 
@@ -57,10 +57,11 @@ ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
 
 # fields in portal.properties
-CGDS_DATABASE_HOST = 'db.host'
-CGDS_DATABASE_NAME = 'db.portal_db_name'
-CGDS_DATABASE_USER = 'db.user'
-CGDS_DATABASE_PW = 'db.password'
+CLICKHOUSE_HOST = 'clickhouse.host'
+CLICKHOUSE_PORT = 'clickhouse.port'
+CLICKHOUSE_USER = 'clickhouse.user'
+CLICKHOUSE_PW = 'clickhouse.password'
+CLICKHOUSE_DB = 'clickhouse.db'
 GOOGLE_ID = 'google.id'
 GOOGLE_PW = 'google.pw'
 CGDS_USERS_SPREADSHEET = 'users.spreadsheet'
@@ -112,12 +113,13 @@ ERROR_EMAIL_BODY_CMO = "Thank you for your interest in the cBioPortal. There was
 
 class PortalProperties(object):
     def __init__(self,
-                 cgds_database_host, cgds_database_name, cgds_database_user, cgds_database_pw,
-                 google_id, google_pw, google_spreadsheet, google_worksheet,google_importer_spreadsheet):
-        self.cgds_database_host = cgds_database_host
-        self.cgds_database_name = cgds_database_name
-        self.cgds_database_user = cgds_database_user
-        self.cgds_database_pw = cgds_database_pw
+                 clickhouse_host, clickhouse_port, clickhouse_user, clickhouse_pw, clickhouse_db,
+                 google_id, google_pw, google_spreadsheet, google_worksheet, google_importer_spreadsheet):
+        self.clickhouse_host = clickhouse_host
+        self.clickhouse_port = clickhouse_port
+        self.clickhouse_user = clickhouse_user
+        self.clickhouse_pw = clickhouse_pw
+        self.clickhouse_db = clickhouse_db
         self.google_id = google_id
         self.google_pw = google_pw
         self.google_spreadsheet = google_spreadsheet
@@ -245,32 +247,18 @@ def append_command_to_clickhouse_file(sql_command_string):
     with open(CLICKHOUSE_COMMANDS_FILEPATH, "a") as clickhouse_sql_file:
         clickhouse_sql_file.write(sql_command_string)
 
-def insert_new_users(cursor, new_user_list):
-    # list of emails for users which returned an error when inserting into database
-    emails_to_remove = []
+def insert_new_users(new_user_list):
     added_user_triples = []
     added_user_authority_duples = []
     for user in new_user_list:
-        print >> OUTPUT_FILE, "new user: %s" % user.google_email;
-        try:
-            user_name = user.name
-            if isinstance(user_name, unicode):
-                user_name = user_name.encode('utf-8')
-            user_email_escaped=user.google_email.lower().replace('\'', '\\\'')
-            user_triple = (user_email_escaped, user_name, user.enabled)
-            sql_command_string = "insert into users values ('%s', '%s', '%s')" % user_triple
-            cursor.execute(sql_command_string)
-            added_user_triples.append(user_triple)
-            # authorities is semicolon delimited
-            authorities = user.authorities
-            cursor.executemany("insert into authorities values (%s, %s)", [(user_email_escaped, authority) for authority in authorities])
-            added_user_authority_duples += ([(user_email_escaped, authority) for authority in authorities])
-        except MySQLdb.Error, msg:
-            print >> OUTPUT_FILE, msg
-            print >> OUTPUT_FILE, "Removing user: %s" % user_name
-            print >> ERROR_FILE, msg
-            emails_to_remove.append(user.google_email.lower())
-    # output commands to be executed on clickhouse sever
+        print >> OUTPUT_FILE, "new user: %s" % user.google_email
+        user_name = user.name
+        if isinstance(user_name, unicode):
+            user_name = user_name.encode('utf-8')
+        user_email_escaped = user.google_email.lower().replace('\'', '\\\'')
+        added_user_triples.append((user_email_escaped, user_name, user.enabled))
+        added_user_authority_duples += [(user_email_escaped, authority) for authority in user.authorities]
+    # output commands to be executed on clickhouse server
     if len(added_user_triples) > 0:
         values_string_items = ["('%s','%s','%s')" % triple for triple in added_user_triples]
         sql_command_string = "INSERT INTO users VALUES %s;" % ",".join(values_string_items)
@@ -279,12 +267,11 @@ def insert_new_users(cursor, new_user_list):
         values_string_items = ["('%s','%s')" % duple for duple in added_user_authority_duples]
         sql_command_string = "INSERT INTO authorities VALUES %s;" % ",".join(values_string_items)
         append_command_to_clickhouse_file(sql_command_string)
-    return emails_to_remove
 
 # ------------------------------------------------------------------------------
 # get current users from database
 
-def get_current_user_map(cursor):
+def get_current_user_map(ch_client):
 
     # map that we are returning
     # key is the email address of the user (primary key) and value is a User object
@@ -293,10 +280,10 @@ def get_current_user_map(cursor):
     # recall each tuple in user table is ['EMAIL', 'NAME', 'ENABLED'] &
     # no tuple can contain nulls
     try:
-        cursor.execute('select * from users')
-        for row in cursor.fetchall():
+        result = ch_client.query('SELECT * FROM users')
+        for row in result.result_rows:
             to_return[row[0].lower()] = User(row[0].lower(), row[0].lower(), row[1], row[2], 'not_used_here')
-    except MySQLdb.Error, msg:
+    except Exception as msg:
         print >> ERROR_FILE, msg
         return None
 
@@ -305,22 +292,23 @@ def get_current_user_map(cursor):
 # ------------------------------------------------------------------------------
 # get current user authorities
 
-def get_user_authorities(cursor, google_email):
+def get_user_authorities(ch_client, google_email):
 
-        # list of authorities (cancer studies) we are returning -- as a set
-        to_return = []
+    # list of authorities (cancer studies) we are returning -- as a set
+    to_return = []
 
-        # recall each tuple in authorities table is ['EMAIL', 'AUTHORITY']
-        # no tuple can contain nulls
-        try:
-                cursor.execute('select * from authorities where email = (%s)', [google_email])
-                for row in cursor.fetchall():
-                        to_return.append(row[1])
-        except MySQLdb.Error, msg:
-                print >> ERROR_FILE, msg
-                return None
+    # recall each tuple in authorities table is ['EMAIL', 'AUTHORITY']
+    # no tuple can contain nulls
+    try:
+        result = ch_client.query('SELECT * FROM authorities WHERE email = {email:String}',
+                                 parameters={'email': google_email})
+        for row in result.result_rows:
+            to_return.append(row[1])
+    except Exception as msg:
+        print >> ERROR_FILE, msg
+        return None
 
-        return to_return
+    return to_return
 
 # ------------------------------------------------------------------------------
 # get current users from google spreadsheet
@@ -403,28 +391,20 @@ def get_rejected_user_map(spreadsheet, sheet_records, current_user_map, portal_n
     return to_return
 
 # ------------------------------------------------------------------------------
-# get db connection
+# get clickhouse client
 
-def get_db_connection(portal_properties, port, ssl_ca_filename=None):
-
-    # try and create a connection to the db
+def get_clickhouse_client(portal_properties):
     try:
-        if ssl_ca_filename:
-            connection = MySQLdb.connect(host=portal_properties.cgds_database_host, port=int(port),
-                                     user=portal_properties.cgds_database_user,
-                                     passwd=portal_properties.cgds_database_pw,
-                                     db=portal_properties.cgds_database_name,
-                                     ssl={'ca': ssl_ca_filename})
-        else:
-            connection = MySQLdb.connect(host=portal_properties.cgds_database_host, port=int(port),
-                                     user=portal_properties.cgds_database_user,
-                                     passwd=portal_properties.cgds_database_pw,
-                                     db=portal_properties.cgds_database_name)
-    except MySQLdb.Error, msg:
+        return clickhouse_connect.get_client(
+            host=portal_properties.clickhouse_host,
+            port=int(portal_properties.clickhouse_port),
+            username=portal_properties.clickhouse_user,
+            password=portal_properties.clickhouse_pw,
+            database=portal_properties.clickhouse_db,
+        )
+    except Exception as msg:
         print >> ERROR_FILE, msg
         return None
-
-    return connection
 
 
 # ------------------------------------------------------------------------------
@@ -451,10 +431,11 @@ def get_portal_properties(portal_properties_filename):
     portal_properties_file.close()
 
     # error check
-    if (CGDS_DATABASE_HOST not in properties or len(properties[CGDS_DATABASE_HOST]) == 0 or
-        CGDS_DATABASE_NAME not in properties or len(properties[CGDS_DATABASE_NAME]) == 0 or
-        CGDS_DATABASE_USER not in properties or len(properties[CGDS_DATABASE_USER]) == 0 or
-        CGDS_DATABASE_PW not in properties or len(properties[CGDS_DATABASE_PW]) == 0 or
+    if (CLICKHOUSE_HOST not in properties or len(properties[CLICKHOUSE_HOST]) == 0 or
+        CLICKHOUSE_PORT not in properties or len(properties[CLICKHOUSE_PORT]) == 0 or
+        CLICKHOUSE_USER not in properties or len(properties[CLICKHOUSE_USER]) == 0 or
+        CLICKHOUSE_PW not in properties or len(properties[CLICKHOUSE_PW]) == 0 or
+        CLICKHOUSE_DB not in properties or len(properties[CLICKHOUSE_DB]) == 0 or
         GOOGLE_ID not in properties or len(properties[GOOGLE_ID]) == 0 or
         GOOGLE_PW not in properties or len(properties[GOOGLE_PW]) == 0 or
         CGDS_USERS_SPREADSHEET not in properties or len(properties[CGDS_USERS_SPREADSHEET]) == 0 or
@@ -464,10 +445,11 @@ def get_portal_properties(portal_properties_filename):
         return None
 
     # return an instance of PortalProperties
-    return PortalProperties(properties[CGDS_DATABASE_HOST],
-                            properties[CGDS_DATABASE_NAME],
-                            properties[CGDS_DATABASE_USER],
-                            properties[CGDS_DATABASE_PW],
+    return PortalProperties(properties[CLICKHOUSE_HOST],
+                            properties[CLICKHOUSE_PORT],
+                            properties[CLICKHOUSE_USER],
+                            properties[CLICKHOUSE_PW],
+                            properties[CLICKHOUSE_DB],
                             properties[GOOGLE_ID],
                             properties[GOOGLE_PW],
                             properties[CGDS_USERS_SPREADSHEET],
@@ -478,49 +460,50 @@ def get_portal_properties(portal_properties_filename):
 # adds new users from the google spreadsheet into the cgds portal database
 # returns new user map if users have been inserted, None otherwise
 
-def manage_users(client, spreadsheet, cursor, sheet_records, portal_name):
+def manage_users(client, spreadsheet, ch_client, sheet_records, portal_name):
 
     # get map of current portal users
     print >> OUTPUT_FILE, 'Getting list of current portal users'
-    current_user_map = get_current_user_map(cursor)
+    current_user_map = get_current_user_map(ch_client)
     if current_user_map is not None:
         print >> OUTPUT_FILE, 'We have found %s current portal users' % len(current_user_map)
     else:
         print >> OUTPUT_FILE, 'Error reading user table'
-        return None, None, None
+        return None, None
 
     # get list of new users and insert
     print >> OUTPUT_FILE, 'Checking for new users'
     new_user_map = get_new_user_map(spreadsheet, sheet_records, current_user_map, portal_name)
     rejected_user_map = get_rejected_user_map(spreadsheet, sheet_records, current_user_map, portal_name)
-    
+
     if (len(new_user_map) > 0):
         print >> OUTPUT_FILE, 'We have %s new user(s) to add' % len(new_user_map)
-        emails_to_remove = insert_new_users(cursor, new_user_map.values())
-        return new_user_map, rejected_user_map, emails_to_remove
+        insert_new_users(new_user_map.values())
+        return new_user_map, rejected_user_map
     else:
         print >> OUTPUT_FILE, 'No new users to insert, exiting'
-        return None, rejected_user_map, None
+        return None, rejected_user_map
 
 # ------------------------------------------------------------------------------
 # updates user study access
 
-def update_user_authorities(spreadsheet, cursor, sheet_records, portal_name):
+def update_user_authorities(spreadsheet, ch_client, sheet_records, portal_name):
 
-        # get map of current portal users
-        print >> OUTPUT_FILE, 'Getting list of current portal users from spreadsheet'
-        all_user_map = get_new_user_map(spreadsheet, sheet_records, {}, portal_name)
-        if all_user_map is None:
-                return None;
-        print >> OUTPUT_FILE, 'Updating authorities for each user in current portal user list'
-        for user in all_user_map.values():
-                sheet_authorities = set(user.authorities)
-                db_authorities = set(get_user_authorities(cursor, user.google_email))
-                try:
-                        cursor.executemany("insert into authorities values(%s, %s)",
-                                           [(user.google_email, authority) for authority in sheet_authorities - db_authorities])
-                except MySQLdb.Error, msg:
-                        print >> ERROR_FILE, msg
+    # get map of current portal users
+    print >> OUTPUT_FILE, 'Getting list of current portal users from spreadsheet'
+    all_user_map = get_new_user_map(spreadsheet, sheet_records, {}, portal_name)
+    if all_user_map is None:
+        return None
+    print >> OUTPUT_FILE, 'Updating authorities for each user in current portal user list'
+    new_authority_pairs = []
+    for user in all_user_map.values():
+        sheet_authorities = set(user.authorities)
+        db_authorities = set(get_user_authorities(ch_client, user.google_email))
+        new_authority_pairs += [(user.google_email, authority) for authority in sheet_authorities - db_authorities]
+    # single batched write to ClickHouse file
+    if new_authority_pairs:
+        values_string_items = ["('%s','%s')" % pair for pair in new_authority_pairs]
+        append_command_to_clickhouse_file("INSERT INTO authorities VALUES %s;" % ",".join(values_string_items))
 
 # ------------------------------------------------------------------------------
 # adds rejected user emails to rejected_users worksheet in an idempotent fashion
@@ -632,23 +615,20 @@ def get_portal_name_map(google_spreadsheet,client):
     return portal_name
 
 
-def establish_new_db_connection(portal_properties, port, ssl_ca_filename):
-    # get db connection & create cursor
-    print >> OUTPUT_FILE, 'Connecting to database: ' + portal_properties.cgds_database_name
-    connection = get_db_connection(portal_properties, port, ssl_ca_filename)
-    if connection is not None:
-        cursor = connection.cursor()
-    else:
-        print >> OUTPUT_FILE, 'Error connecting to database, exiting'
+def establish_clickhouse_client(portal_properties):
+    print >> OUTPUT_FILE, 'Connecting to ClickHouse: ' + portal_properties.clickhouse_host
+    ch_client = get_clickhouse_client(portal_properties)
+    if ch_client is None:
+        print >> OUTPUT_FILE, 'Error connecting to ClickHouse, exiting'
         sys.exit(2)
-    return (connection, cursor)
+    return ch_client
 
 
 # ------------------------------------------------------------------------------
 # displays program usage (invalid args)
 
 def usage():
-    print >> OUTPUT_FILE, 'importUsers.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --port [mysql port number] --sender [sender identifier - optional] --ssl-ca [ssl certificate file - optional] --smtp-server [smtp server hostname - required when send-email-confirm is true]'
+    print >> OUTPUT_FILE, 'importUsers.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --sender [sender identifier - optional] --smtp-server [smtp server hostname - required when send-email-confirm is true]'
 
 # ------------------------------------------------------------------------------
 # the big deal main.
@@ -657,7 +637,7 @@ def main():
 
     # parse command line options
     try:
-        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'ssl-ca=', 'send-email-confirm=', 'use-institutional-id=', 'port=', 'sender=', 'gmail-username=', 'gmail-password=', 'smtp-server='])
+        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'send-email-confirm=', 'use-institutional-id=', 'sender=', 'gmail-username=', 'gmail-password=', 'smtp-server='])
     except getopt.error, msg:
         print >> ERROR_FILE, msg
         usage()
@@ -668,9 +648,7 @@ def main():
     creds_filename = ''
     properties_filename = ''
     send_email_confirm = ''
-    port = ''
     sender = ''
-    ssl_ca_filename = '' # not required
     gmail_username = ''
     gmail_password = ''
     smtp_server = ''
@@ -686,18 +664,14 @@ def main():
             gmail_password = a
         elif o == '--properties-file':
             properties_filename = a
-        elif o == '--ssl-ca':
-            ssl_ca_filename = a
         elif o == '--send-email-confirm':
             send_email_confirm = a
         elif o == '--sender':
             sender = a
-        elif o == '--port':
-            port = a
         elif o == '--smtp-server':
             smtp_server = a
 
-    if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or port == '' or
+    if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or
         (send_email_confirm != 'true' and send_email_confirm != 'false') or
         (send_email_confirm == 'true' and (gmail_username == '' or gmail_password == '' or smtp_server == ''))):
         usage()
@@ -720,31 +694,26 @@ def main():
     # connect to importer configuration spreadsheet and get mapping of spreadsheet to portal name
     portal_name_map = get_portal_name_map(portal_properties.google_importer_spreadsheet,client)
 
+    ch_client = establish_clickhouse_client(portal_properties)
+
     google_spreadsheets = portal_properties.google_spreadsheet.split(';')
     for google_spreadsheet in google_spreadsheets:
         if not google_spreadsheet == '':
-            (connection, cursor) = establish_new_db_connection(portal_properties, port, ssl_ca_filename)
-            
             sheet_records = get_sheet_records(client, google_spreadsheet,
-                                                portal_properties.google_worksheet)
+                                              portal_properties.google_worksheet)
             spreadsheet_title = get_spreadsheet_title(client, google_spreadsheet)
-           
+
             print >> OUTPUT_FILE, 'Importing ' + spreadsheet_title + ' ...'
             app_name = portal_name_map[spreadsheet_title]
-            
+
             # the 'guts' of the script
             # note: original script depended on one to one mapping of spreadsheet to app name - and lookup was by spreadsheet
             # with a now decommissioned app (genie-archive) we wanted to be able to do one to many mapping (one spreadsheet to multiple apps)
             # to fit this logic would have to rework how we specify properties or introduce new column (db name) as index but might have other effects
-            new_user_map, rejected_user_map, emails_to_remove = manage_users(client, google_spreadsheet, cursor, sheet_records, app_name)
-            
-            # update user authorities
-            update_user_authorities(google_spreadsheet, cursor, sheet_records, app_name)
+            new_user_map, rejected_user_map = manage_users(client, google_spreadsheet, ch_client, sheet_records, app_name)
 
-            # commit changes before moving on to next spreadsheet
-            cursor.close()
-            connection.commit()
-            connection.close()
+            # update user authorities
+            update_user_authorities(google_spreadsheet, ch_client, sheet_records, app_name)
 
             # add the emails from rejected_user_map to rejected_users worksheet in an idempotent fashion
             # also remove any emails from rejected_user_map that already exist in the worksheet--
@@ -754,7 +723,7 @@ def main():
             # sending emails
             if send_email_confirm == 'true':
                 print >> OUTPUT_FILE, "Sending confirmation emails to new users"
-                send_emails(new_user_map, google_spreadsheet, client, IMPORT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, smtp_server, emails_to_remove)
+                send_emails(new_user_map, google_spreadsheet, client, IMPORT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, smtp_server)
                 print >> OUTPUT_FILE, "Sending rejection emails to newly rejected users"
                 send_emails(rejected_user_map, google_spreadsheet, client, REJECT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, smtp_server)
 
