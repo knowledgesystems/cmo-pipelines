@@ -476,14 +476,22 @@ def update_user_authorities(spreadsheet, ch_client, sheet_records, portal_name):
     all_user_map = get_new_user_map(spreadsheet, sheet_records, {}, portal_name)
     if all_user_map is None:
         return None
-    print('Updating authorities for each user in current portal user list', file=OUTPUT_FILE)
+    total = len(all_user_map)
+    print('Updating authorities for %d user(s) in current portal user list' % total, file=OUTPUT_FILE)
     new_authority_pairs = []
-    for user in all_user_map.values():
+    for i, user in enumerate(all_user_map.values(), 1):
+        print('  [%d/%d] checking authorities for %s' % (i, total, user.google_email), file=OUTPUT_FILE)
         sheet_authorities = set(user.authorities)
         db_authorities = set(get_user_authorities(ch_client, user.google_email))
-        new_authority_pairs += [(user.google_email, authority) for authority in sheet_authorities - db_authorities]
+        added = [(user.google_email, authority) for authority in sheet_authorities - db_authorities]
+        if added:
+            print('    -> adding %d new authority(s): %s' % (len(added), [a for _, a in added]), file=OUTPUT_FILE)
+        new_authority_pairs += added
     if new_authority_pairs:
+        print('Inserting %d new authority pair(s) into ClickHouse' % len(new_authority_pairs), file=OUTPUT_FILE)
         ch_client.insert('authorities', new_authority_pairs, column_names=['email', 'authority'])
+    else:
+        print('No new authorities to insert', file=OUTPUT_FILE)
 
 # ------------------------------------------------------------------------------
 # adds rejected user emails to rejected_users worksheet in an idempotent fashion
