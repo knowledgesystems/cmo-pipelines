@@ -23,7 +23,6 @@
 # imports
 import os
 import sys
-import time
 import getopt
 import clickhouse_connect
 import re
@@ -47,10 +46,6 @@ from email import Encoders
 from googleapiclient.discovery import build
 # ------------------------------------------------------------------------------
 # globals
-
-# hardcoded file path for clickhouse
-UNIX_EPOC_SECONDS = str(int(time.time()))
-CLICKHOUSE_COMMANDS_FILEPATH = '/data/portal-cron/tmp/import-users-genie/pending_clickhouse_commands/%s.sql' % UNIX_EPOC_SECONDS
 
 # some file descriptors
 ERROR_FILE = sys.stderr
@@ -243,30 +238,21 @@ def get_spreadsheet_title(client, ss):
 # ------------------------------------------------------------------------------
 # insert new users into table - this list does not contain users already in table
 
-def append_command_to_clickhouse_file(sql_command_string):
-    with open(CLICKHOUSE_COMMANDS_FILEPATH, "a") as clickhouse_sql_file:
-        clickhouse_sql_file.write(sql_command_string)
-
-def insert_new_users(new_user_list):
-    added_user_triples = []
-    added_user_authority_duples = []
+def insert_new_users(ch_client, new_user_list):
+    added_user_rows = []
+    added_authority_rows = []
     for user in new_user_list:
         print >> OUTPUT_FILE, "new user: %s" % user.google_email
         user_name = user.name
         if isinstance(user_name, unicode):
             user_name = user_name.encode('utf-8')
-        user_email_escaped = user.google_email.lower().replace('\'', '\\\'')
-        added_user_triples.append((user_email_escaped, user_name, user.enabled))
-        added_user_authority_duples += [(user_email_escaped, authority) for authority in user.authorities]
-    # output commands to be executed on clickhouse server
-    if len(added_user_triples) > 0:
-        values_string_items = ["('%s','%s','%s')" % triple for triple in added_user_triples]
-        sql_command_string = "INSERT INTO users VALUES %s;" % ",".join(values_string_items)
-        append_command_to_clickhouse_file(sql_command_string)
-    if len(added_user_authority_duples) > 0:
-        values_string_items = ["('%s','%s')" % duple for duple in added_user_authority_duples]
-        sql_command_string = "INSERT INTO authorities VALUES %s;" % ",".join(values_string_items)
-        append_command_to_clickhouse_file(sql_command_string)
+        user_email = user.google_email.lower()
+        added_user_rows.append([user_email, user_name, user.enabled])
+        added_authority_rows += [[user_email, authority] for authority in user.authorities]
+    if added_user_rows:
+        ch_client.insert('users', added_user_rows, column_names=['email', 'name', 'enabled'])
+    if added_authority_rows:
+        ch_client.insert('authorities', added_authority_rows, column_names=['email', 'authority'])
 
 # ------------------------------------------------------------------------------
 # get current users from database
@@ -478,7 +464,7 @@ def manage_users(client, spreadsheet, ch_client, sheet_records, portal_name):
 
     if (len(new_user_map) > 0):
         print >> OUTPUT_FILE, 'We have %s new user(s) to add' % len(new_user_map)
-        insert_new_users(new_user_map.values())
+        insert_new_users(ch_client, new_user_map.values())
         return new_user_map, rejected_user_map
     else:
         print >> OUTPUT_FILE, 'No new users to insert, exiting'
@@ -500,10 +486,8 @@ def update_user_authorities(spreadsheet, ch_client, sheet_records, portal_name):
         sheet_authorities = set(user.authorities)
         db_authorities = set(get_user_authorities(ch_client, user.google_email))
         new_authority_pairs += [(user.google_email, authority) for authority in sheet_authorities - db_authorities]
-    # single batched write to ClickHouse file
     if new_authority_pairs:
-        values_string_items = ["('%s','%s')" % pair for pair in new_authority_pairs]
-        append_command_to_clickhouse_file("INSERT INTO authorities VALUES %s;" % ",".join(values_string_items))
+        ch_client.insert('authorities', new_authority_pairs, column_names=['email', 'authority'])
 
 # ------------------------------------------------------------------------------
 # adds rejected user emails to rejected_users worksheet in an idempotent fashion
