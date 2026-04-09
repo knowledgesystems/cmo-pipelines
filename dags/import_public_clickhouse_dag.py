@@ -57,8 +57,8 @@ _PUBLIC_CLICKHOUSE_CONFIG = ClickhouseImporterConfig(
         "cleanup_data",
         "set_import_abandoned",
     ),
-    db_properties_filename="manage_public_database_update_tools.properties",
-    color_swap_config_filename="public-db-color-swap-config.yaml",
+    db_properties_filename="manage_public_clickhouse_database_update_tools.properties",
+    color_swap_config_filename=None,
     params={
         "data_repos": Param(
             ["datahub"],
