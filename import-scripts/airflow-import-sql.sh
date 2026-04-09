@@ -42,6 +42,20 @@ case "$PORTAL_DATABASE" in
     PORTAL_NAME="triage-portal"
     ONCOTREE_VERSION="oncotree_candidate_release"
     ;;
+  public-clickhouse)
+    TMP_DIR_NAME="import-cron-public-clickhouse"
+    IMPORTER_NAME="public-clickhouse"
+    LOG_FILE_NAME="public-clickhouse-importer.log"
+    PORTAL_NAME="public-portal"
+    ONCOTREE_VERSION="oncotree_latest_stable"
+    ;;
+  genie-clickhouse)
+    TMP_DIR_NAME="import-cron-genie-clickhouse"
+    IMPORTER_NAME="genie-clickhouse"
+    LOG_FILE_NAME="genie-clickhouse-importer.log"
+    PORTAL_NAME="genie-portal"
+    ONCOTREE_VERSION="oncotree_2019_12_01"
+    ;;
   *)
     echo "Unsupported portal database: $PORTAL_DATABASE" >&2
     exit 1

@@ -54,10 +54,10 @@ fi
 
 # Attempt to download the derived table SQL files from github
 clickhouse_schema_branch_name="master" # default
-if [ "$PORTAL_DATABASE" == "public" ] ; then
+if [ "$PORTAL_DATABASE" == "public" -o "$PORTAL_DATABASE" == "public-clickhouse" ] ; then
     clickhouse_schema_branch_name="public-portal-db-clickhouse-sql-for-import"
 fi
-if [ "$PORTAL_DATABASE" == "genie" ] ; then
+if [ "$PORTAL_DATABASE" == "genie" -o "$PORTAL_DATABASE" == "genie-clickhouse" ] ; then
     clickhouse_schema_branch_name="genie-portal-db-clickhouse-sql-for-import"
 fi
 if [ "$PORTAL_DATABASE" == "triage-clickhouse" ]; then
