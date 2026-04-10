@@ -58,7 +58,8 @@ _PUBLIC_CLICKHOUSE_CONFIG = ClickhouseImporterConfig(
         "set_import_abandoned",
     ),
     db_properties_filename="manage_public_clickhouse_database_update_tools.properties",
-    color_swap_config_filename=None,
+    # disabled on pipelines5 machine during testing phase
+    color_swap_config_filename="public-db-color-swap-config.yaml",
     params={
         "data_repos": Param(
             ["datahub"],
