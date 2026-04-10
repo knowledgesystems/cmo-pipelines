@@ -58,7 +58,8 @@ _GENIE_CLICKHOUSE_CONFIG = ClickhouseImporterConfig(
         "set_import_abandoned",
     ),
     db_properties_filename="manage_genie_clickhouse_database_update_tools.properties",
-    color_swap_config_filename=None,
+    # disabled on pipelines5 machine during testing phase
+    color_swap_config_filename="genie-db-color-swap-config.yaml",
     params={
         "data_repos": Param(
             ["genie"],
