@@ -11,7 +11,6 @@ source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/set_update_process_state.sh"
 VERIFY_MANAGEMENT_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/verify-management-state.sh"
 COLOR_SWAP_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/msk-db-color-swap-config.yaml"
-MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_msk_database_update_tools.properties"
 MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties"
 CLONE_DB_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/clone-clickhouse-db.out"
 
@@ -26,12 +25,12 @@ CLONE_DB_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/clone-clickho
     day_of_week_at_process_start=$(date +%u)
     update_status_is_valid="no"
     databases_are_prepared_for_import="no"
-    if $VERIFY_MANAGEMENT_SCRIPT_FILEPATH "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" "$COLOR_SWAP_CONFIG_FILEPATH" ; then
+    if $VERIFY_MANAGEMENT_SCRIPT_FILEPATH "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" "$COLOR_SWAP_CONFIG_FILEPATH" ; then
         update_status_is_valid="yes"
     fi
     if [ $update_status_is_valid == "yes" ] ; then
         # Attempt to abandon any prior incomplete import attempt. Detect if already running.
-        if ! "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" running ; then 
+        if ! "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" running ; then 
             echo "Warning : the update management database showed that a prior update attempt seemed to be running." 2>&1
             echo "    Since this script is the only script which should be used to update the msk portal database," 2>&1
             echo "    and because this script will not run if a run is in progress, we are inferring that the prior run" 2>&1
@@ -39,7 +38,7 @@ CLONE_DB_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/clone-clickho
             echo "    no longer be valid if we introduce any other processes which might independently run an update" 2>&1
             echo "    into the msk portal database. The update management database has been reset by abandoning the attempt." 2>&1
         fi
-        "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned > /dev/null 2>&1
+        "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned > /dev/null 2>&1
         # Clone the ClickHouse DB in the background — runs in parallel with data fetch
         mkdir -p "$(dirname "$CLONE_DB_OUTPUT_FILEPATH")"
         nohup "$PORTAL_HOME/scripts/airflow-clone-db.sh" msk-clickhouse "$PORTAL_HOME/scripts" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" > "$CLONE_DB_OUTPUT_FILEPATH" 2>&1 &
