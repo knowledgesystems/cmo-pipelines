@@ -55,6 +55,13 @@ case "$PORTAL_DATABASE" in
     PORTAL_NAME="genie-portal"
     ONCOTREE_VERSION="oncotree_2019_12_01"
     ;;
+  msk-clickhouse)
+    TMP_DIR_NAME="import-cron-msk-clickhouse"
+    IMPORTER_NAME="msk-clickhouse"
+    LOG_FILE_NAME="msk-clickhouse-importer.log"
+    PORTAL_NAME="msk-automation-portal"
+    ONCOTREE_VERSION="oncotree_candidate_release"
+    ;;
   *)
     echo "Unsupported portal database: $PORTAL_DATABASE" >&2
     exit 1
