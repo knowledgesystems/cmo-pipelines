@@ -1,55 +1,8 @@
 #!/bin/bash
 
 #######################
-# helper functions
-#######################
-
-function autodetect_and_export_java_home() {
-    # to locate JAVA_HOME, we can trace the path using the readlink program
-    # as an example, a recently deployed node had java installed here:
-    #    /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.342.b07-1.amzn2.0.1.x86_64
-    # and the /usr/bin/java symlink pointed (through two links) to:
-    #    /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.342.b07-1.amzn2.0.1.x86_64/jre/bin/java
-    # This function determines the (canonical) installation path from the java executable link
-    java_exec_path=$(which java)
-    if [ -z $java_exec_path ] ; then
-        echo "failed to set JAVA_HOME because no java executable can be found in PATH" >&2
-        return
-    fi
-    java_canonical_path=$(readlink -f $java_exec_path)
-    java_canonical_path_len=${#java_canonical_path}
-    RELATIVE_SUBPATH_CANIDATES="/jre/bin/java /bin/java"
-    unset matching_relative_subpath
-    for relative_subpath in $RELATIVE_SUBPATH_CANIDATES; do
-        suffix_regex="${relative_subpath}$"
-        if [[ $java_canonical_path =~ $suffix_regex ]]; then
-            matching_relative_subpath="$relative_subpath"
-            relative_subpath_len=${#relative_subpath}
-            break
-        fi
-    done
-    if [ -z $matching_relative_subpath ] ; then
-        echo "failed to set JAVA_HOME because the java executable $java_canonical_path did not end with a recognized subpath"
-        return
-    fi
-    stripped_java_path_len=$(($java_canonical_path_len - $relative_subpath_len))
-    stripped_java_path=${java_canonical_path:0:$stripped_java_path_len}
-    export JAVA_HOME="$stripped_java_path"
-}
-
-function export_java_home() {
-    if [[ -z $1 || "$1" == "AUTODETECT" ]] ; then
-        autodetect_and_export_java_home
-        return
-    fi
-    export JAVA_HOME="$1"
-}
-
-#######################
 # general paths/options for system executables
 #######################
-# JAVA_HOME / JAVA_BINARY are set below explicitly now (rather than adjusting PATH)
-#export_java_home "AUTODETECT"
 export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
 export JAVA_HOME="/usr/lib/jdk-21.0.2"
 export JAVA_BINARY="$JAVA_HOME/bin/java"
@@ -58,8 +11,8 @@ export PYTHON3_BINARY=/usr/bin/python3
 export MAVEN_BINARY=/opt/apache-maven-3.8.3/bin/mvn
 export HG_BINARY=/usr/bin/hg
 export GIT_BINARY=/usr/bin/git
-export YQ_BINARY=/usr/local/bin/yq
-export PATH=$(bash --login -c 'echo $PATH')
+export YQ_BINARY=/home/cbioportal_importer/bin/yq
+export PATH="/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/bin:/opt/apache-maven-3.8.3/bin:/usr/local/go/bin:/home/cbioportal_importer/.local/bin:/home/cbioportal_importer/bin:/home/cbioportal_importer/tools/go/bin:/home/cbioportal_importer/tools/sling-cli:/home/cbioportal_importer/tools/clickhouse/bin"
 
 #######################
 # environment variables for top-level data repositories / code bases
@@ -85,10 +38,10 @@ export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSs
 export GMAIL_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/gmail.credentials
 export MAIL_SMTP_SERVER=$PORTAL_HOME/pipelines-credentials/mail.smtp.server
 export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-eks-config
-#export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-kubeconfig
-#export PUBLICARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/publicargocd-cluster-kubeconfig
+export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-kubeconfig
+export PUBLICARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/publicargocd-cluster-kubeconfig
 export EKS_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eks-cluster-kubeconfig
-#export EKSARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eksargocd-cluster-kubeconfig
+export EKSARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eksargocd-cluster-kubeconfig
 export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
 
 #######################
@@ -210,3 +163,9 @@ export ONCOKB_TOKEN_FILE=$PORTAL_HOME/pipelines-credentials/oncokb.token
 export AZ_SFTP_USER_FILE=$PORTAL_HOME/pipelines-credentials/astrazeneca_sftp.user
 export AZ_SERVICE_ENDPOINT_FILE=$PORTAL_HOME/pipelines-credentials/astrazeneca_sftp.service_endpoint
 export DATABRICKS_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/databricks.credentials
+
+#######################
+# environment variables needed for openssl certificate verification with self-signed certificate
+#######################
+export SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt" # needed to use the clickhouse CLI
+export GIT_SSL_CAINFO="/etc/pki/tls/certs/ca-bundle.crt" # needed to use git
