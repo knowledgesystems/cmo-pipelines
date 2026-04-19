@@ -25,8 +25,8 @@ source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
 SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process_state.sh"
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
-DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_mysql_database.sh"
-CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/clone_mysql_database.sh"
+DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
+CLONE_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/clone_clickhouse_database.sh"
 
 function output_fail_status_and_exit() {
     local output_status_filepath="$1"
@@ -77,23 +77,23 @@ function output_destination_database_color () {
     fi
 }
 
-function drop_tables_in_destination_mysql_database() {
+function drop_tables_in_destination_clickhouse_database() {
     destination_database_color="$1"
-    echo "dropping tables from mysql database $destination_database_color"
-    if ! $DROP_TABLES_FROM_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
-        message="Error during dropping of tables from mysql database $destination_database_color"
+    echo "dropping tables from clickhouse database $destination_database_color"
+    if ! $DROP_TABLES_FROM_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color ; then
+        message="Error during dropping of tables from clickhouse database $destination_database_color"
         echo $message >&2
         return 1
     fi
     return 0
 }
 
-function clone_production_mysql_database_to_non_production_mysql_database() {
+function clone_production_clickhouse_database_to_non_production_clickhouse_database() {
     source_database_color="$1"
     destination_database_color="$2"
-    echo "copying tables from mysql database $source_database_color to $destination_database_color"
-    if ! $CLONE_MYSQL_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $source_database_color $destination_database_color ; then
-        message="Error during cloning the mysql database (from $source_database_color to $destination_database_color)"
+    echo "copying tables from clickhouse database $source_database_color to $destination_database_color"
+    if ! $CLONE_CLICKHOUSE_DATABASE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $source_database_color $destination_database_color ; then
+        message="Error during cloning the clickhouse database (from $source_database_color to $destination_database_color)"
         echo $message >&2
         return 1
     fi
@@ -110,10 +110,10 @@ function main() {
     destination_database_color=$(output_destination_database_color $source_database_color)
     echo "Source DB color: $source_database_color"
     echo "Destination DB color: $destination_database_color"
-    if ! drop_tables_in_destination_mysql_database $destination_database_color ; then
+    if ! drop_tables_in_destination_clickhouse_database $destination_database_color ; then
         output_fail_status_and_exit "$output_status_filepath"
     fi
-    if ! clone_production_mysql_database_to_non_production_mysql_database $source_database_color $destination_database_color ; then
+    if ! clone_production_clickhouse_database_to_non_production_clickhouse_database $source_database_color $destination_database_color ; then
         output_fail_status_and_exit "$output_status_filepath"
     fi
     output_success_status_and_exit "$output_status_filepath"
