@@ -43,7 +43,7 @@ _PUBLIC_CLICKHOUSE_CONFIG = ClickhouseImporterConfig(
     importer="public",
     tags=["public-clickhouse"],
     target_nodes=("pipelines5_ssh",),
-    data_nodes=("pipelines5_ssh"),
+    data_nodes=("pipelines5_ssh",),
     task_names=(
         "data_repos",
         "verify_management_state",
