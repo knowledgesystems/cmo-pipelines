@@ -11,8 +11,34 @@ source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/set_update_process_state.sh"
 VERIFY_MANAGEMENT_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/verify-management-state.sh"
 COLOR_SWAP_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/msk-db-color-swap-config.yaml"
-MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties"
-CLONE_DB_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/clone-clickhouse-db.out"
+MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_msk_database_update_tools.properties"
+MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/import-msk-preimport-steps-for-clickhouse.sh"
+MSK_PREIMPORT_STEPS_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/preimport-steps-for-clickhouse.out"
+MSK_PREIMPORT_STEPS_STATUS_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/preimport-steps-for-clickhouse-result"
+
+function output_whether_preimport_steps_successfully_completed() {
+    local MAX_WAIT_FOR_COMPLETION_OF_PREIMPORT_STEPS=$((3*60*60))
+    local NUMBER_OF_CHECKS=$((3*12))
+    local seconds_between_checks=$((MAX_WAIT_FOR_COMPLETION_OF_PREIMPORT_STEPS/$NUMBER_OF_CHECKS))
+    local remaining_checks=$NUMBER_OF_CHECKS
+    while [ $remaining_checks -gt 0 ] ; do
+        if [ -r "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH" ] ; then
+            local status="$(head -n 1 $MSK_PREIMPORT_STEPS_STATUS_FILEPATH)"
+            if [ "$status" == "yes" ] ; then
+                echo "yes"
+            else
+                echo "no"
+            fi
+            return 0
+        fi
+        $remaining_checks=$(($remaining_checks-1))
+        if [ $remaining_checks -gt 0 ] ; then
+            sleep $seconds_between_checks
+        fi
+    done
+    echo "no"
+    return 0
+}
 
 (
     date
@@ -25,12 +51,12 @@ CLONE_DB_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/clone-clickho
     day_of_week_at_process_start=$(date +%u)
     update_status_is_valid="no"
     databases_are_prepared_for_import="no"
-    if $VERIFY_MANAGEMENT_SCRIPT_FILEPATH "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" "$COLOR_SWAP_CONFIG_FILEPATH" ; then
+    if $VERIFY_MANAGEMENT_SCRIPT_FILEPATH "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" "$COLOR_SWAP_CONFIG_FILEPATH" ; then
         update_status_is_valid="yes"
     fi
     if [ $update_status_is_valid == "yes" ] ; then
         # Attempt to abandon any prior incomplete import attempt. Detect if already running.
-        if ! "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" running ; then 
+        if ! "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" running ; then 
             echo "Warning : the update management database showed that a prior update attempt seemed to be running." 2>&1
             echo "    Since this script is the only script which should be used to update the msk portal database," 2>&1
             echo "    and because this script will not run if a run is in progress, we are inferring that the prior run" 2>&1
@@ -38,36 +64,28 @@ CLONE_DB_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/clone-clickho
             echo "    no longer be valid if we introduce any other processes which might independently run an update" 2>&1
             echo "    into the msk portal database. The update management database has been reset by abandoning the attempt." 2>&1
         fi
-        "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned > /dev/null 2>&1
-        # Clone the ClickHouse DB in the background — runs in parallel with data fetch
-        mkdir -p "$(dirname "$CLONE_DB_OUTPUT_FILEPATH")"
-        nohup "$PORTAL_HOME/scripts/airflow-clone-db.sh" msk-clickhouse "$PORTAL_HOME/scripts" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" > "$CLONE_DB_OUTPUT_FILEPATH" 2>&1 &
-        CLONE_DB_PID=$!
+        "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned > /dev/null 2>&1
+        # Launch the preimport setup script as a background process. This runs for about 2 hours and can run in parallel with fetches.
+        rm "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH"
+        nohup "$MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH" "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH" > $MSK_PREIMPORT_STEPS_OUTPUT_FILEPATH 2>&1 &
         if [[ -z "$SKIP_OVER_ALL_DMP_COHORT_PROCESSING" || "$SKIP_OVER_ALL_DMP_COHORT_PROCESSING" == 0 ]] ; then
             date
             echo executing fetch-dmp-data-for-import.sh
             oldwd=$(pwd)
             cd /data/portal-cron/tmp/separate_working_directory_for_dmp
             /data/portal-cron/scripts/fetch-dmp-data-for-import.sh
+            databases_are_prepared_for_import=$(output_whether_preimport_steps_successfully_completed)
+            if [ "$databases_are_prepared_for_import" == "yes" ] ; then
+                echo "executing import-dmp-impact-data.sh"
+                /data/portal-cron/scripts/import-dmp-impact-data.sh
+            fi
             cd ${oldwd}
-        fi
-        # Wait for ClickHouse DB clone to finish
-        if wait $CLONE_DB_PID ; then
-            databases_are_prepared_for_import="yes"
-        else
-            echo "airflow-clone-db.sh msk-clickhouse failed — see $CLONE_DB_OUTPUT_FILEPATH" >&2
-            databases_are_prepared_for_import="no"
         fi
         date
         if [ "$databases_are_prepared_for_import" == "yes" ] ; then
-            echo "executing airflow-setup-import.sh msk-clickhouse"
-            "$PORTAL_HOME/scripts/airflow-setup-import.sh" msk-clickhouse "$PORTAL_HOME/scripts" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH"
-            echo "executing airflow-import-sql.sh msk-clickhouse"
-            "$PORTAL_HOME/scripts/airflow-import-sql.sh" msk-clickhouse "$PORTAL_HOME/scripts" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH"
-            echo "executing airflow-create-derived-tables.sh msk-clickhouse"
-            "$PORTAL_HOME/scripts/airflow-create-derived-tables.sh" msk-clickhouse "$PORTAL_HOME/scripts" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH"
-            echo "executing airflow-transfer-deployment.sh msk-clickhouse"
-            "$PORTAL_HOME/scripts/airflow-transfer-deployment.sh" "$PORTAL_HOME/scripts" "$MSK_CLICKHOUSE_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" "$COLOR_SWAP_CONFIG_FILEPATH"
+            # cmo data msk imports now start after dmp imports are done
+            echo "executing import-cmo-data-msk.sh"
+            /data/portal-cron/scripts/import-cmo-data-msk.sh
             # Only run pdx updates on Friday->Saturday
             if [ "$day_of_week_at_process_start" -eq 5 ] ; then
                 date
@@ -82,8 +100,10 @@ CLONE_DB_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/clone-clickho
             /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
             echo "executing import-msk-extract-projects.sh"
             /data/portal-cron/scripts/import-msk-extract-projects.sh
+            #complete clickhouse update steps
+            $PORTAL_HOME/scripts/import-msk-postimport-steps-for-clickhouse.sh
         else
-            echo "skipping all imports because airflow-clone-db.sh msk-clickhouse failed to prepare the database"
+            echo "skipping all imports into cgds_gdac database because $MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH failed to prepare the database"
         fi
     else
         echo "skipping all imports into cgds_gdac database because update state is not valid"
