@@ -40,7 +40,7 @@ def _wire(tasks: dict[str, object]) -> None:
 _GENIE_CLICKHOUSE_CONFIG = ClickhouseImporterConfig(
     dag_id="import_genie_clickhouse_dag",
     description="Imports Genie study to ClickHouse database",
-    importer="genie",
+    importer="genie-clickhouse",
     tags=["genie-clickhouse"],
     target_nodes=("pipelines5_ssh",),
     data_nodes=("pipelines5_ssh",),

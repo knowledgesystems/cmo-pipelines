@@ -40,7 +40,7 @@ def _wire(tasks: dict[str, object]) -> None:
 _PUBLIC_CLICKHOUSE_CONFIG = ClickhouseImporterConfig(
     dag_id="import_public_clickhouse_dag",
     description="Imports to Public cBioPortal ClickHouse database",
-    importer="public",
+    importer="public-clickhouse",
     tags=["public-clickhouse"],
     target_nodes=("pipelines5_ssh",),
     data_nodes=("pipelines5_ssh",),
