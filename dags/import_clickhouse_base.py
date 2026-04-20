@@ -86,10 +86,13 @@ class ClickhouseImporterConfig:
     schedule_interval: Optional[str] = None
 
 
-def _script(scripts_dir: str, script_name: str, *args: object) -> str:
+def _script(scripts_dir: str, script_name: str, *args: object, source_automation_env: bool = False) -> str:
     parts = [f"{scripts_dir}/{script_name}"]
     parts.extend(str(arg) for arg in args)
-    return " ".join(parts)
+    cmd = " ".join(parts)
+    if source_automation_env:
+        return f"source {scripts_dir}/automation-environment.sh && {cmd}"
+    return cmd
 
 
 def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
@@ -208,6 +211,7 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 "set_update_process_state.sh",
                 db_properties_filepath,
                 "complete",
+                source_automation_env=True,
             ),
             "fetch_data": _script(
                 scripts_dir,
@@ -216,6 +220,7 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 "pull",
                 importer,
                 data_repos,
+                source_automation_env=True,
             ),
             "setup_import": _script(
                 scripts_dir,
@@ -245,12 +250,14 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 "set_update_process_state.sh",
                 db_properties_filepath,
                 "running",
+                source_automation_env=True,
             ),
             "set_import_abandoned": _script(
                 scripts_dir,
                 "set_update_process_state.sh",
                 db_properties_filepath,
                 "abandoned",
+                source_automation_env=True,
             ),
             "cleanup_data": _script(
                 scripts_dir,
@@ -259,6 +266,7 @@ def build_import_dag(config: ClickhouseImporterConfig) -> DAG:
                 "cleanup",
                 importer,
                 data_repos,
+                source_automation_env=True,
             ),
         }
 
