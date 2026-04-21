@@ -49,13 +49,13 @@ function fetch_updates_in_data_source {
     email_recipient=$7
 
     echo $start_log_msg
-    $JAVA_BINARY $MSK_JAVA_IMPORTER_ARGS --fetch-data --data-source $data_source --run-date latest $extra_importer_args
-    if [ $? -ne 0 ]; then
-        echo $failure_log_msg
-        echo -e "Sending email $email_body"
-        echo -e "$email_body" | mail -s "$email_subject" $email_recipient
-        return 1
-    fi
+    #$JAVA_BINARY $MSK_JAVA_IMPORTER_ARGS --fetch-data --data-source $data_source --run-date latest $extra_importer_args
+    # if [ $? -ne 0 ]; then
+    #     echo $failure_log_msg
+    #     echo -e "Sending email $email_body"
+    #     echo -e "$email_body" | mail -s "$email_subject" $email_recipient
+    #     return 1
+    # fi
     return 0
 }
 
