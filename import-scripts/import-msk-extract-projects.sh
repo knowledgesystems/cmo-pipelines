@@ -44,8 +44,8 @@ fi
 
 DATA_SOURCE_MANAGER_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/data_source_repo_clone_manager.sh"
 DATA_SOURCE_MANAGER_CONFIG_FILEPATH="$PORTAL_HOME/pipelines-credentials/importer-data-source-manager-config.yaml"
-MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-dmp-$destination_database_color-importer.jar"
-MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
+MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-dmp-clickhouse-importer.log -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 # ROB : TODO : refactor the next line so that repo fetching and cleaning is independent of the importer jar (which requires the embedded database name to exist in order to function)
 IMPORT_FAIL=0
 ONCOTREE_VERSION_TO_USE="oncotree_candidate_release"

@@ -41,8 +41,8 @@ if [ "$destination_database_color" == "unset" ] ; then
     exit 1
 fi
 
-MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-dmp-$destination_database_color-importer.jar"
-MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
+MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-dmp-clickhouse-importer.log -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
 IMPORT_FAIL=0
 mskspectrum_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskspectrum-portal-update-notification.$now.XXXXXX)
