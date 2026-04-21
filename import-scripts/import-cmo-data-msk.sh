@@ -62,7 +62,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     DATA_SOURCE_MANAGER_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/data_source_repo_clone_manager.sh"
     DATA_SOURCE_MANAGER_CONFIG_FILEPATH="$PORTAL_HOME/pipelines-credentials/importer-data-source-manager-config.yaml"
     CMO_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
-    CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-cmo-clickhouse-importer.log -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
     DATA_SOURCE_REPO_FETCH_FAIL=0
     if ! $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull msk $DATA_SOURCES_TO_BE_FETCHED ; then
