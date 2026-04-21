@@ -79,4 +79,4 @@ fi
 
 # clean up msk-spectrum repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub_shahlab
-$JAVA_BINARY $MSK_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-spectrum-portal --notification-file "$mskspectrum_notification_file"
+# $JAVA_BINARY $MSK_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-spectrum-portal --notification-file "$mskspectrum_notification_file"

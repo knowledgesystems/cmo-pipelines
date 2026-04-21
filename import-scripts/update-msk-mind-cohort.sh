@@ -96,4 +96,4 @@ fi
 
 # clean up msk-mind repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/msk-mind
-$JAVA_BINARY $MSK_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-mind-portal --notification-file "$mskextract_notification_file"
+# $JAVA_BINARY $MSK_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-mind-portal --notification-file "$mskextract_notification_file"
