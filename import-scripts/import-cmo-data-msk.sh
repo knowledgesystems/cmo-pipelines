@@ -78,12 +78,12 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         DB_VERSION_FAIL=1
     fi
 
+    IMPORT_FAIL=0
     if [[ $DB_VERSION_FAIL -eq 0 && $DATA_SOURCE_REPO_FETCH_FAIL -eq 0 ]] ; then
         # import vetted studies into MSK portal
         echo "importing cancer type updates into msk portal database..."
         $JAVA_BINARY -Xmx16g $CMO_JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
         echo "importing study data into msk portal database..."
-        IMPORT_FAIL=0
         $JAVA_BINARY -Xmx64g $CMO_JAVA_IMPORTER_ARGS --update-study-data --portal msk-automation-portal --update-worksheet --notification-file "$msk_automation_notification_file" --use-never-import --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -gt 0 ]; then
             echo "MSK CMO import failed!"
@@ -94,6 +94,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         fi
 
         num_studies_updated=`cat $tmp/num_studies_updated.txt`
+    else
+        IMPORT_FAIL=1
     fi
 
     EMAIL_BODY="The GDAC database version is incompatible. Imports will be skipped until database is updated."
