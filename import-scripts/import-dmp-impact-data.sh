@@ -96,6 +96,21 @@ fi
 
 MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
 MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-dmp-clickhouse-importer.log -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+VALIDATE_BLUE_GREEN_STUDY_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/validate_blue_green_study.py"
+
+# Runs --update-study-data for a portal, then validates the named study against
+# the baseline (production) DB. Returns nonzero if either step fails.
+function import_and_validate() {
+    local study_id="$1"
+    local portal_name="$2"
+    local notification_file="$3"
+    $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal "$portal_name" --notification-file "$notification_file" --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
+    if [ $? -ne 0 ] ; then
+        return 1
+    fi
+    $PYTHON_BINARY $VALIDATE_BLUE_GREEN_STUDY_SCRIPT_FILEPATH --properties-file "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" --study-id "$study_id" --current-color "$destination_database_color"
+    return $?
+}
 
 DB_VERSION_FAIL=0
 
@@ -136,8 +151,7 @@ CLEAR_CACHES_AFTER_IMPACT_IMPORT=0
 # IMPORT: MSKSOLIDHEME
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SOLID_HEME_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import of MSKSOLIDHEME (will be renamed MSKIMPACT) study"
-    $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-solid-heme-portal --notification-file $msk_solid_heme_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-    if [ $? -eq 0 ] ; then
+    if import_and_validate "mskimpact" "msk-solid-heme-portal" "$msk_solid_heme_notification_file" ; then
         consumeSamplesAfterSolidHemeImport
         CLEAR_CACHES_AFTER_IMPACT_IMPORT=1
     else
@@ -174,8 +188,7 @@ fi
 # IMPORT: MSKARCHER
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_ARCHER_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for mskarcher"
-    $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal mskarcher-portal --notification-file $mskarcher_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-    if [ $? -eq 0 ] ; then
+    if import_and_validate "mskarcher" "mskarcher-portal" "$mskarcher_notification_file" ; then
         consumeSamplesAfterArcherImport
 ####        CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT=1
     else
@@ -215,8 +228,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: KINGSCOUNTY
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_KINGS_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_kingscounty"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-kingscounty-portal --notification-file $kingscounty_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "msk_kingscounty" "msk-kingscounty-portal" "$kingscounty_notification_file" ; then
             IMPORT_FAIL_KINGS=1
         fi
         rm $MSK_KINGS_IMPORT_TRIGGER
@@ -236,8 +248,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: LEHIGHVALLEY
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_LEHIGH_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_lehighvalley"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-lehighvalley-portal --notification-file $lehighvalley_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "msk_lehighvalley" "msk-lehighvalley-portal" "$lehighvalley_notification_file" ; then
             IMPORT_FAIL_LEHIGH=1
         fi
         rm $MSK_LEHIGH_IMPORT_TRIGGER
@@ -257,8 +268,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: QUEENSCANCERCENTER
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_QUEENS_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_queenscancercenter"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-queenscancercenter-portal --notification-file $queenscancercenter_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "msk_queenscancercenter" "msk-queenscancercenter-portal" "$queenscancercenter_notification_file" ; then
             IMPORT_FAIL_QUEENS=1
         fi
         rm $MSK_QUEENS_IMPORT_TRIGGER
@@ -278,8 +288,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: MIAMICANCERINSTITUTE
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_MCI_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_miamicancerinstitute"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-mci-portal --notification-file $miamicancerinstitute_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "msk_miamicancerinstitute" "msk-mci-portal" "$miamicancerinstitute_notification_file" ; then
             IMPORT_FAIL_MCI=1
         fi
         rm $MSK_MCI_IMPORT_TRIGGER
@@ -299,8 +308,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: HARTFORDHEALTHCARE
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_HARTFORD_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_hartfordhealthcare"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-hartford-portal --notification-file $hartfordhealthcare_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "msk_hartfordhealthcare" "msk-hartford-portal" "$hartfordhealthcare_notification_file" ; then
             IMPORT_FAIL_HARTFORD=1
         fi
         rm $MSK_HARTFORD_IMPORT_TRIGGER
@@ -320,8 +328,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: RALPHLAUREN
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RALPHLAUREN_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_ralphlauren"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-ralphlauren-portal --notification-file $ralphlauren_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "msk_ralphlauren" "msk-ralphlauren-portal" "$ralphlauren_notification_file" ; then
             IMPORT_FAIL_RALPHLAUREN=1
         fi
         rm $MSK_RALPHLAUREN_IMPORT_TRIGGER
@@ -341,8 +348,7 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: RIKENGENESISJAPAN
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_rikengenesisjapan"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-tailormedjapan-portal --notification-file $rikengenesisjapan_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "msk_rikengenesisjapan" "msk-tailormedjapan-portal" "$rikengenesisjapan_notification_file" ; then
             IMPORT_FAIL_RIKENGENESISJAPAN=1
         fi
         rm $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER
@@ -369,8 +375,7 @@ if ! [[ $SKIP_SCLC_MSKIMPACT_IMPORT == '1' ]] ; then
     # IMPORT: SCLCMSKIMPACT
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SCLC_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for sclc_mskimpact_2017 study"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-sclc-portal --notification-file $sclc_mskimpact_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "sclc_mskimpact_2017" "msk-sclc-portal" "$sclc_mskimpact_notification_file" ; then
             IMPORT_FAIL_SCLC_MSKIMPACT=1
         fi
         rm $MSK_SCLC_IMPORT_TRIGGER
@@ -394,8 +399,7 @@ if ! [[ $SKIP_LYMPHOMA_IMPORT == '1' ]] ; then
     # IMPORT: LYMPHOMASUPERCOHORT
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for lymphoma_super_cohort_fmi_msk study"
-        $JAVA_BINARY -Xmx64g $MSK_JAVA_IMPORTER_ARGS --update-study-data --portal msk-fmi-lymphoma-portal --notification-file $lymphoma_super_cohort_notification_file --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc --disable-redcap-export
-        if [ $? -ne 0 ] ; then
+        if ! import_and_validate "lymphoma_super_cohort_fmi_msk" "msk-fmi-lymphoma-portal" "$lymphoma_super_cohort_notification_file" ; then
             IMPORT_FAIL_LYMPHOMA=1
         fi
         rm $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER
