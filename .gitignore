@@ -26,3 +26,5 @@ deploy*.sh
 k8s-deployment
 k8s-ingress
 k8s-secrets/
+
+import-scripts/test/resources/msk_import_scripts/
