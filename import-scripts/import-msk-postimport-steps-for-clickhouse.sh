@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts" # TODO : change this to get through main()
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_database_update_tools.properties" # TODO : change this to get through main()
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties" # TODO : change this to get through main()
 
 AUTOMATION_ENV_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh"
 if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
