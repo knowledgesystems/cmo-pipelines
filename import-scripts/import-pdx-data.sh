@@ -368,4 +368,4 @@ cat "$EMAIL_MESSAGE_FILE" | mailx -s "$EMAIL_SUBJECT" $validation_report_attachm
 echo "Cleaning up any untracked files from MSK-PDX import..."
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/bic-mskcc-legacy $PORTAL_DATA_HOME/cmo-argos $PORTAL_DATA_HOME/private $PORTAL_DATA_HOME/datahub $PORTAL_DATA_HOME/crdb_pdx
 
-exit 0
+exit $(( 1 - IMPORT_SUCCESS ))
