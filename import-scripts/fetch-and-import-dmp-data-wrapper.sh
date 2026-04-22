@@ -75,9 +75,11 @@ function output_whether_preimport_steps_successfully_completed() {
             cd /data/portal-cron/tmp/separate_working_directory_for_dmp
             /data/portal-cron/scripts/fetch-dmp-data-for-import.sh
             databases_are_prepared_for_import=$(output_whether_preimport_steps_successfully_completed)
+            IMPORT_FAIL=0
             if [ "$databases_are_prepared_for_import" == "yes" ] ; then
                 echo "executing import-dmp-impact-data.sh"
                 /data/portal-cron/scripts/import-dmp-impact-data.sh
+                if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             fi
             cd ${oldwd}
         fi
@@ -86,11 +88,13 @@ function output_whether_preimport_steps_successfully_completed() {
             # cmo data msk imports now start after dmp imports are done
             echo "executing import-cmo-data-msk.sh"
             /data/portal-cron/scripts/import-cmo-data-msk.sh
+            if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             # Only run pdx updates on Friday->Saturday
             if [ "$day_of_week_at_process_start" -eq 5 ] ; then
                 date
                 echo "executing import-pdx-data.sh"
                 /data/portal-cron/scripts/import-pdx-data.sh
+                if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             fi
             #date
             #echo "executing update-msk-mind-cohort.sh"
@@ -98,12 +102,20 @@ function output_whether_preimport_steps_successfully_completed() {
             date
             echo "executing update-msk-spectrum-cohort.sh"
             /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
+            if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             echo "executing import-msk-extract-projects.sh"
             /data/portal-cron/scripts/import-msk-extract-projects.sh
-            #complete clickhouse update steps
-            $PORTAL_HOME/scripts/import-msk-postimport-steps-for-clickhouse.sh
+            if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
+            if [ $IMPORT_FAIL -eq 0 ] ; then
+                #complete clickhouse update steps
+                $PORTAL_HOME/scripts/import-msk-postimport-steps-for-clickhouse.sh
+            else
+                echo "one or more imports failed, marking import as abandoned"
+                "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned
+            fi
         else
-            echo "skipping all imports into cgds_gdac database because $MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH failed to prepare the database"
+            echo "skipping all imports because $MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH failed to prepare the database"
+            "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned
         fi
     else
         echo "skipping all imports into cgds_gdac database because update state is not valid"
