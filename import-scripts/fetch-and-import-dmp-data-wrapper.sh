@@ -72,13 +72,13 @@ function output_whether_preimport_steps_successfully_completed() {
             date
             echo executing fetch-dmp-data-for-import.sh
             oldwd=$(pwd)
-            cd /data/portal-cron/tmp/separate_working_directory_for_dmp
-            /data/portal-cron/scripts/fetch-dmp-data-for-import.sh
+            cd $PORTAL_HOME/tmp/separate_working_directory_for_dmp
+            $PORTAL_HOME/scripts/fetch-dmp-data-for-import.sh
             databases_are_prepared_for_import=$(output_whether_preimport_steps_successfully_completed)
             IMPORT_FAIL=0
             if [ "$databases_are_prepared_for_import" == "yes" ] ; then
                 echo "executing import-dmp-impact-data.sh"
-                /data/portal-cron/scripts/import-dmp-impact-data.sh
+                $PORTAL_HOME/scripts/import-dmp-impact-data.sh
                 if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             fi
             cd ${oldwd}
@@ -87,24 +87,24 @@ function output_whether_preimport_steps_successfully_completed() {
         if [ "$databases_are_prepared_for_import" == "yes" ] ; then
             # cmo data msk imports now start after dmp imports are done
             echo "executing import-cmo-data-msk.sh"
-            /data/portal-cron/scripts/import-cmo-data-msk.sh
+            $PORTAL_HOME/scripts/import-cmo-data-msk.sh
             if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             # Only run pdx updates on Friday->Saturday
             # if [ "$day_of_week_at_process_start" -eq 5 ] ; then
             #     date
             #     echo "executing import-pdx-data.sh"
-            #     /data/portal-cron/scripts/import-pdx-data.sh
+            #     $PORTAL_HOME/scripts/import-pdx-data.sh
             #     if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             # fi
             #date
             #echo "executing update-msk-mind-cohort.sh"
-            #/data/portal-cron/scripts/update-msk-mind-cohort.sh
+            #$PORTAL_HOME/scripts/update-msk-mind-cohort.sh
             date
             echo "executing update-msk-spectrum-cohort.sh"
-            /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
+            $PORTAL_HOME/scripts/update-msk-spectrum-cohort.sh
             if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             echo "executing import-msk-extract-projects.sh"
-            /data/portal-cron/scripts/import-msk-extract-projects.sh
+            $PORTAL_HOME/scripts/import-msk-extract-projects.sh
             if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             if [ $IMPORT_FAIL -eq 0 ] ; then
                 #complete clickhouse update steps
@@ -124,7 +124,7 @@ function output_whether_preimport_steps_successfully_completed() {
     if [ "$day_of_week_at_process_start" -eq 7 ] ; then
         date
         echo "executing update-az-mskimpact.sh"
-        /data/portal-cron/scripts/update-az-mskimpact.sh
+        $PORTAL_HOME/scripts/update-az-mskimpact.sh
     fi
     date
     echo "wrapper complete"
