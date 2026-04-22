@@ -54,31 +54,31 @@ def get_genetic_profile_id(client, db, internal_id, alteration_type, datatype=No
     return rows[0][0] if len(rows) == 1 else None
 
 
-def dropped_too_much(current, baseline):
-    if baseline == 0:
+def dropped_too_much(dest, source):
+    if source == 0:
         return False
-    return current < baseline * DROP_THRESHOLD
+    return dest < source * DROP_THRESHOLD
 
 
-def report(label, current, baseline=None, failed=False):
-    if baseline is None:
+def report(label, dest, source=None, failed=False):
+    if source is None:
         status = "FAIL" if failed else "OK"
-        print(f"  {label + ':':<28} {current}  [{status}]")
+        print(f"  {label + ':':<28} {dest}  [{status}]")
     else:
-        arrow = f"{baseline} → {current}"
+        arrow = f"{source} → {dest}"
         status = "FAIL" if failed else "OK"
         print(f"  {label + ':':<28} {arrow}  [{status}]")
 
 
-def run_checks(client, current_db, baseline_db, study_id, current_id, baseline_id):
+def run_checks(client, dest_db, source_db, study_id, dest_id, source_id):
     failures = []
 
     # 1. Sample list exists
-    current_sl_count = scalar(client, f"SELECT count(*) FROM {current_db}.sample_list WHERE cancer_study_id = {current_id}")
-    failed = current_sl_count == 0
-    report("sample lists", current_sl_count, failed=failed)
+    dest_sl_count = scalar(client, f"SELECT count(*) FROM {dest_db}.sample_list WHERE cancer_study_id = {dest_id}")
+    failed = dest_sl_count == 0
+    report("sample lists", dest_sl_count, failed=failed)
     if failed:
-        failures.append(f"sample list count is 0 for current study '{study_id}'")
+        failures.append(f"sample list count is 0 for dest study '{study_id}'")
 
     # 2. _all sample list size
     def all_list_count(db, sid):
@@ -87,27 +87,27 @@ def run_checks(client, current_db, baseline_db, study_id, current_id, baseline_i
             f"INNER JOIN {db}.sample_list s ON s.list_id = sl.list_id "
             f"WHERE s.stable_id = '{sid}_all'")
 
-    current_all = all_list_count(current_db, study_id)
-    baseline_all = all_list_count(baseline_db, study_id)
-    failed = dropped_too_much(current_all, baseline_all)
-    report("_all list size", current_all, baseline_all, failed=failed)
+    dest_all = all_list_count(dest_db, study_id)
+    source_all = all_list_count(source_db, study_id)
+    failed = dropped_too_much(dest_all, source_all)
+    report("_all list size", dest_all, source_all, failed=failed)
     if failed:
         failures.append(
-            f"_all sample list dropped from {baseline_all} to {current_all} "
+            f"_all sample list dropped from {source_all} to {dest_all} "
             f"(>{int((1-DROP_THRESHOLD)*100)}% drop)"
         )
 
     # 3. All sample lists non-empty
     stable_ids = [
         row[0] for row in client.query(
-            f"SELECT stable_id FROM {current_db}.sample_list WHERE cancer_study_id = {current_id}"
+            f"SELECT stable_id FROM {dest_db}.sample_list WHERE cancer_study_id = {dest_id}"
         ).result_rows
     ]
     empty_lists = []
     for sid in stable_ids:
         count = scalar(client,
-            f"SELECT count(*) FROM {current_db}.sample_list_list sl "
-            f"INNER JOIN {current_db}.sample_list s ON s.list_id = sl.list_id "
+            f"SELECT count(*) FROM {dest_db}.sample_list_list sl "
+            f"INNER JOIN {dest_db}.sample_list s ON s.list_id = sl.list_id "
             f"WHERE s.stable_id = '{sid}'")
         if count == 0:
             empty_lists.append(sid)
@@ -115,20 +115,20 @@ def run_checks(client, current_db, baseline_db, study_id, current_id, baseline_i
     report("empty sample lists", len(empty_lists), failed=bool(empty_lists))
 
     # 4. Genetic profile count (strict: must not decrease at all)
-    current_gp = scalar(client, f"SELECT count(*) FROM {current_db}.genetic_profile WHERE cancer_study_id = {current_id}")
-    baseline_gp = scalar(client, f"SELECT count(*) FROM {baseline_db}.genetic_profile WHERE cancer_study_id = {baseline_id}")
-    failed = current_gp < baseline_gp
-    report("genetic profiles", current_gp, baseline_gp, failed=failed)
+    dest_gp = scalar(client, f"SELECT count(*) FROM {dest_db}.genetic_profile WHERE cancer_study_id = {dest_id}")
+    source_gp = scalar(client, f"SELECT count(*) FROM {source_db}.genetic_profile WHERE cancer_study_id = {source_id}")
+    failed = dest_gp < source_gp
+    report("genetic profiles", dest_gp, source_gp, failed=failed)
     if failed:
-        failures.append(f"genetic profile count dropped from {baseline_gp} to {current_gp}")
+        failures.append(f"genetic profile count dropped from {source_gp} to {dest_gp}")
 
     # 5. Patient count
-    current_pt = scalar(client, f"SELECT count(*) FROM {current_db}.patient WHERE cancer_study_id = {current_id}")
-    baseline_pt = scalar(client, f"SELECT count(*) FROM {baseline_db}.patient WHERE cancer_study_id = {baseline_id}")
-    failed = dropped_too_much(current_pt, baseline_pt)
-    report("patients", current_pt, baseline_pt, failed=failed)
+    dest_pt = scalar(client, f"SELECT count(*) FROM {dest_db}.patient WHERE cancer_study_id = {dest_id}")
+    source_pt = scalar(client, f"SELECT count(*) FROM {source_db}.patient WHERE cancer_study_id = {source_id}")
+    failed = dropped_too_much(dest_pt, source_pt)
+    report("patients", dest_pt, source_pt, failed=failed)
     if failed:
-        failures.append(f"patient count dropped from {baseline_pt} to {current_pt}")
+        failures.append(f"patient count dropped from {source_pt} to {dest_pt}")
 
     # 6. Sample count
     def sample_count(db, internal_id):
@@ -137,64 +137,64 @@ def run_checks(client, current_db, baseline_db, study_id, current_id, baseline_i
             f"LEFT JOIN {db}.patient p ON s.patient_id = p.internal_id "
             f"WHERE p.cancer_study_id = {internal_id}")
 
-    current_s = sample_count(current_db, current_id)
-    baseline_s = sample_count(baseline_db, baseline_id)
-    failed = dropped_too_much(current_s, baseline_s)
-    report("samples", current_s, baseline_s, failed=failed)
+    dest_s = sample_count(dest_db, dest_id)
+    source_s = sample_count(source_db, source_id)
+    failed = dropped_too_much(dest_s, source_s)
+    report("samples", dest_s, source_s, failed=failed)
     if failed:
-        failures.append(f"sample count dropped from {baseline_s} to {current_s}")
+        failures.append(f"sample count dropped from {source_s} to {dest_s}")
 
     # 7. Mutation count
-    current_mut_gp = get_genetic_profile_id(client, current_db, current_id, 'MUTATION_EXTENDED')
-    baseline_mut_gp = get_genetic_profile_id(client, baseline_db, baseline_id, 'MUTATION_EXTENDED')
-    if current_mut_gp is not None and baseline_mut_gp is not None:
-        current_mut = scalar(client, f"SELECT count(*) FROM {current_db}.mutation WHERE genetic_profile_id = {current_mut_gp}")
-        baseline_mut = scalar(client, f"SELECT count(*) FROM {baseline_db}.mutation WHERE genetic_profile_id = {baseline_mut_gp}")
-        failed = dropped_too_much(current_mut, baseline_mut)
-        report("mutations", current_mut, baseline_mut, failed=failed)
+    dest_mut_gp = get_genetic_profile_id(client, dest_db, dest_id, 'MUTATION_EXTENDED')
+    source_mut_gp = get_genetic_profile_id(client, source_db, source_id, 'MUTATION_EXTENDED')
+    if dest_mut_gp is not None and source_mut_gp is not None:
+        dest_mut = scalar(client, f"SELECT count(*) FROM {dest_db}.mutation WHERE genetic_profile_id = {dest_mut_gp}")
+        source_mut = scalar(client, f"SELECT count(*) FROM {source_db}.mutation WHERE genetic_profile_id = {source_mut_gp}")
+        failed = dropped_too_much(dest_mut, source_mut)
+        report("mutations", dest_mut, source_mut, failed=failed)
         if failed:
-            failures.append(f"mutation count dropped from {baseline_mut} to {current_mut}")
+            failures.append(f"mutation count dropped from {source_mut} to {dest_mut}")
     else:
         print(f"  {'mutations:':<28} skipped (profile absent in one DB)")
 
     # 8. Structural variant count
-    current_sv_gp = get_genetic_profile_id(client, current_db, current_id, 'STRUCTURAL_VARIANT')
-    baseline_sv_gp = get_genetic_profile_id(client, baseline_db, baseline_id, 'STRUCTURAL_VARIANT')
-    if current_sv_gp is not None and baseline_sv_gp is not None:
-        current_sv = scalar(client, f"SELECT count(*) FROM {current_db}.structural_variant WHERE genetic_profile_id = {current_sv_gp}")
-        baseline_sv = scalar(client, f"SELECT count(*) FROM {baseline_db}.structural_variant WHERE genetic_profile_id = {baseline_sv_gp}")
-        failed = dropped_too_much(current_sv, baseline_sv)
-        report("structural variants", current_sv, baseline_sv, failed=failed)
+    dest_sv_gp = get_genetic_profile_id(client, dest_db, dest_id, 'STRUCTURAL_VARIANT')
+    source_sv_gp = get_genetic_profile_id(client, source_db, source_id, 'STRUCTURAL_VARIANT')
+    if dest_sv_gp is not None and source_sv_gp is not None:
+        dest_sv = scalar(client, f"SELECT count(*) FROM {dest_db}.structural_variant WHERE genetic_profile_id = {dest_sv_gp}")
+        source_sv = scalar(client, f"SELECT count(*) FROM {source_db}.structural_variant WHERE genetic_profile_id = {source_sv_gp}")
+        failed = dropped_too_much(dest_sv, source_sv)
+        report("structural variants", dest_sv, source_sv, failed=failed)
         if failed:
-            failures.append(f"structural variant count dropped from {baseline_sv} to {current_sv}")
+            failures.append(f"structural variant count dropped from {source_sv} to {dest_sv}")
     else:
         print(f"  {'structural variants:':<28} skipped (profile absent in one DB)")
 
     # 9. CNA event count
-    current_cna_gp = get_genetic_profile_id(client, current_db, current_id, 'COPY_NUMBER_ALTERATION', 'DISCRETE')
-    baseline_cna_gp = get_genetic_profile_id(client, baseline_db, baseline_id, 'COPY_NUMBER_ALTERATION', 'DISCRETE')
-    if current_cna_gp is not None and baseline_cna_gp is not None:
+    dest_cna_gp = get_genetic_profile_id(client, dest_db, dest_id, 'COPY_NUMBER_ALTERATION', 'DISCRETE')
+    source_cna_gp = get_genetic_profile_id(client, source_db, source_id, 'COPY_NUMBER_ALTERATION', 'DISCRETE')
+    if dest_cna_gp is not None and source_cna_gp is not None:
         def cna_event_count(db, gpid):
             return scalar(client,
                 f"SELECT countIf(val != '0') FROM ("
                 f"SELECT arrayJoin(splitByChar(',', `values`)) AS val "
                 f"FROM {db}.genetic_alteration WHERE genetic_profile_id = {gpid})")
-        current_cna = cna_event_count(current_db, current_cna_gp)
-        baseline_cna = cna_event_count(baseline_db, baseline_cna_gp)
-        failed = dropped_too_much(current_cna, baseline_cna)
-        report("CNA events", current_cna, baseline_cna, failed=failed)
+        dest_cna = cna_event_count(dest_db, dest_cna_gp)
+        source_cna = cna_event_count(source_db, source_cna_gp)
+        failed = dropped_too_much(dest_cna, source_cna)
+        report("CNA events", dest_cna, source_cna, failed=failed)
         if failed:
-            failures.append(f"CNA event count dropped from {baseline_cna} to {current_cna}")
+            failures.append(f"CNA event count dropped from {source_cna} to {dest_cna}")
     else:
         print(f"  {'CNA events:':<28} skipped (profile absent in one DB)")
 
     # 10. Segment count
-    current_seg = scalar(client, f"SELECT count(*) FROM {current_db}.copy_number_seg WHERE cancer_study_id = {current_id}")
-    baseline_seg = scalar(client, f"SELECT count(*) FROM {baseline_db}.copy_number_seg WHERE cancer_study_id = {baseline_id}")
-    failed = dropped_too_much(current_seg, baseline_seg)
-    report("segments", current_seg, baseline_seg, failed=failed)
+    dest_seg = scalar(client, f"SELECT count(*) FROM {dest_db}.copy_number_seg WHERE cancer_study_id = {dest_id}")
+    source_seg = scalar(client, f"SELECT count(*) FROM {source_db}.copy_number_seg WHERE cancer_study_id = {source_id}")
+    failed = dropped_too_much(dest_seg, source_seg)
+    report("segments", dest_seg, source_seg, failed=failed)
     if failed:
-        failures.append(f"copy number segment count dropped from {baseline_seg} to {current_seg}")
+        failures.append(f"copy number segment count dropped from {source_seg} to {dest_seg}")
 
     return failures
 
@@ -203,28 +203,28 @@ def main():
     parser = argparse.ArgumentParser(description='Validate blue/green ClickHouse study counts.')
     parser.add_argument('--properties-file', required=True)
     parser.add_argument('--study-id', required=True)
-    parser.add_argument('--current-color', required=True, choices=['blue', 'green'])
+    parser.add_argument('--dest-color', required=True, choices=['blue', 'green'])
     args = parser.parse_args()
 
     props = parse_properties(args.properties_file)
-    opposite_color = 'green' if args.current_color == 'blue' else 'blue'
-    current_db = props[f'clickhouse_{args.current_color}_database_name']
-    baseline_db = props[f'clickhouse_{opposite_color}_database_name']
+    source_color = 'green' if args.dest_color == 'blue' else 'blue'
+    dest_db = props[f'clickhouse_{args.dest_color}_database_name']
+    source_db = props[f'clickhouse_{source_color}_database_name']
 
     client = get_client(props)
 
-    current_id = get_internal_id(client, current_db, args.study_id)
-    if current_id is None:
-        print(f"ERROR: study '{args.study_id}' not found in current ({args.current_color}) database '{current_db}'")
+    dest_id = get_internal_id(client, dest_db, args.study_id)
+    if dest_id is None:
+        print(f"ERROR: study '{args.study_id}' not found in dest ({args.dest_color}) database '{dest_db}'")
         sys.exit(1)
 
-    baseline_id = get_internal_id(client, baseline_db, args.study_id)
-    if baseline_id is None:
-        print(f"Study '{args.study_id}' not found in baseline ({opposite_color}) database '{baseline_db}' -- new study, skipping validation")
+    source_id = get_internal_id(client, source_db, args.study_id)
+    if source_id is None:
+        print(f"Study '{args.study_id}' not found in source ({source_color}) database '{source_db}' -- new study, skipping validation")
         sys.exit(0)
 
-    print(f"Validating '{args.study_id}': {args.current_color} (current) vs {opposite_color} (baseline)")
-    failures = run_checks(client, current_db, baseline_db, args.study_id, current_id, baseline_id)
+    print(f"Validating '{args.study_id}': {args.dest_color} (dest) vs {source_color} (source)")
+    failures = run_checks(client, dest_db, source_db, args.study_id, dest_id, source_id)
 
     if failures:
         print(f"VALIDATION FAILED ({len(failures)} issue(s)):")

@@ -108,7 +108,7 @@ function import_and_validate() {
     if [ $? -ne 0 ] ; then
         return 1
     fi
-    $PYTHON3_BINARY $VALIDATE_BLUE_GREEN_STUDY_SCRIPT_FILEPATH --properties-file "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" --study-id "$study_id" --current-color "$destination_database_color"
+    $PYTHON3_BINARY $VALIDATE_BLUE_GREEN_STUDY_SCRIPT_FILEPATH --properties-file "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" --study-id "$study_id" --dest-color "$destination_database_color"
     return $?
 }
 
