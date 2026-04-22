@@ -152,6 +152,7 @@ CLEAR_CACHES_AFTER_IMPACT_IMPORT=0
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SOLID_HEME_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import of MSKSOLIDHEME (will be renamed MSKIMPACT) study"
     if import_and_validate "mskimpact" "msk-solid-heme-portal" "$msk_solid_heme_notification_file" ; then
+        IMPORT_FAIL_MSKSOLIDHEME=0
         consumeSamplesAfterSolidHemeImport
         CLEAR_CACHES_AFTER_IMPACT_IMPORT=1
     else
@@ -189,6 +190,7 @@ fi
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_ARCHER_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for mskarcher"
     if import_and_validate "mskarcher" "mskarcher-portal" "$mskarcher_notification_file" ; then
+        IMPORT_FAIL_ARCHER=0
         consumeSamplesAfterArcherImport
 ####        CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT=1
     else
@@ -228,7 +230,9 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: KINGSCOUNTY
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_KINGS_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_kingscounty"
-        if ! import_and_validate "msk_kingscounty" "msk-kingscounty-portal" "$kingscounty_notification_file" ; then
+        if import_and_validate "msk_kingscounty" "msk-kingscounty-portal" "$kingscounty_notification_file" ; then
+            IMPORT_FAIL_KINGS=0
+        else
             IMPORT_FAIL_KINGS=1
         fi
         rm $MSK_KINGS_IMPORT_TRIGGER
@@ -248,7 +252,9 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: LEHIGHVALLEY
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_LEHIGH_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_lehighvalley"
-        if ! import_and_validate "msk_lehighvalley" "msk-lehighvalley-portal" "$lehighvalley_notification_file" ; then
+        if import_and_validate "msk_lehighvalley" "msk-lehighvalley-portal" "$lehighvalley_notification_file" ; then
+            IMPORT_FAIL_LEHIGH=0
+        else
             IMPORT_FAIL_LEHIGH=1
         fi
         rm $MSK_LEHIGH_IMPORT_TRIGGER
@@ -268,7 +274,9 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: QUEENSCANCERCENTER
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_QUEENS_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_queenscancercenter"
-        if ! import_and_validate "msk_queenscancercenter" "msk-queenscancercenter-portal" "$queenscancercenter_notification_file" ; then
+        if import_and_validate "msk_queenscancercenter" "msk-queenscancercenter-portal" "$queenscancercenter_notification_file" ; then
+            IMPORT_FAIL_QUEENS=0
+        else
             IMPORT_FAIL_QUEENS=1
         fi
         rm $MSK_QUEENS_IMPORT_TRIGGER
@@ -288,7 +296,9 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: MIAMICANCERINSTITUTE
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_MCI_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_miamicancerinstitute"
-        if ! import_and_validate "msk_miamicancerinstitute" "msk-mci-portal" "$miamicancerinstitute_notification_file" ; then
+        if import_and_validate "msk_miamicancerinstitute" "msk-mci-portal" "$miamicancerinstitute_notification_file" ; then
+            IMPORT_FAIL_MCI=0
+        else
             IMPORT_FAIL_MCI=1
         fi
         rm $MSK_MCI_IMPORT_TRIGGER
@@ -308,7 +318,9 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: HARTFORDHEALTHCARE
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_HARTFORD_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_hartfordhealthcare"
-        if ! import_and_validate "msk_hartfordhealthcare" "msk-hartford-portal" "$hartfordhealthcare_notification_file" ; then
+        if import_and_validate "msk_hartfordhealthcare" "msk-hartford-portal" "$hartfordhealthcare_notification_file" ; then
+            IMPORT_FAIL_HARTFORD=0
+        else
             IMPORT_FAIL_HARTFORD=1
         fi
         rm $MSK_HARTFORD_IMPORT_TRIGGER
@@ -328,7 +340,9 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: RALPHLAUREN
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RALPHLAUREN_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_ralphlauren"
-        if ! import_and_validate "msk_ralphlauren" "msk-ralphlauren-portal" "$ralphlauren_notification_file" ; then
+        if import_and_validate "msk_ralphlauren" "msk-ralphlauren-portal" "$ralphlauren_notification_file" ; then
+            IMPORT_FAIL_RALPHLAUREN=0
+        else
             IMPORT_FAIL_RALPHLAUREN=1
         fi
         rm $MSK_RALPHLAUREN_IMPORT_TRIGGER
@@ -348,7 +362,9 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: RIKENGENESISJAPAN
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for msk_rikengenesisjapan"
-        if ! import_and_validate "msk_rikengenesisjapan" "msk-tailormedjapan-portal" "$rikengenesisjapan_notification_file" ; then
+        if import_and_validate "msk_rikengenesisjapan" "msk-tailormedjapan-portal" "$rikengenesisjapan_notification_file" ; then
+            IMPORT_FAIL_RIKENGENESISJAPAN=0
+        else
             IMPORT_FAIL_RIKENGENESISJAPAN=1
         fi
         rm $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER
@@ -375,7 +391,9 @@ if ! [[ $SKIP_SCLC_MSKIMPACT_IMPORT == '1' ]] ; then
     # IMPORT: SCLCMSKIMPACT
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SCLC_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for sclc_mskimpact_2017 study"
-        if ! import_and_validate "sclc_mskimpact_2017" "msk-sclc-portal" "$sclc_mskimpact_notification_file" ; then
+        if import_and_validate "sclc_mskimpact_2017" "msk-sclc-portal" "$sclc_mskimpact_notification_file" ; then
+            IMPORT_FAIL_SCLC_MSKIMPACT=0
+        else
             IMPORT_FAIL_SCLC_MSKIMPACT=1
         fi
         rm $MSK_SCLC_IMPORT_TRIGGER
@@ -399,7 +417,9 @@ if ! [[ $SKIP_LYMPHOMA_IMPORT == '1' ]] ; then
     # IMPORT: LYMPHOMASUPERCOHORT
     if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER ] ; then
         printTimeStampedDataProcessingStepMessage "import for lymphoma_super_cohort_fmi_msk study"
-        if ! import_and_validate "lymphoma_super_cohort_fmi_msk" "msk-fmi-lymphoma-portal" "$lymphoma_super_cohort_notification_file" ; then
+        if import_and_validate "lymphoma_super_cohort_fmi_msk" "msk-fmi-lymphoma-portal" "$lymphoma_super_cohort_notification_file" ; then
+            IMPORT_FAIL_LYMPHOMA=0
+        else
             IMPORT_FAIL_LYMPHOMA=1
         fi
         rm $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER
