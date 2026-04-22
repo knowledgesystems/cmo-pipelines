@@ -2,7 +2,7 @@
 
 # set necessary env variables with automation-environment.sh
 
-FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
+FLOCK_FILEPATH="${FLOCK_FILEPATH:-/data/portal-cron/cron-lock/import-cmo-data-msk.lock}"
 (
     echo $(date)
 

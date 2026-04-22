@@ -90,13 +90,15 @@ function main() {
     destination_database_color=$(output_destination_database_color $source_database_color)
     echo "Source DB color: $source_database_color"
     echo "Destination DB color: $destination_database_color"
-    if create_derived_tables_in_target_clickhouse_database $destination_database_color ; then
-        if transfer_color_to_new_database $destination_database_color ; then
-            return 0
-        else
-            echo "Error : failed to transfer color to $destination_database_color --- manual adjustment needed"
-        fi
+    if ! create_derived_tables_in_target_clickhouse_database $destination_database_color ; then
+        return 1
     fi
+    if ! transfer_color_to_new_database $destination_database_color ; then
+        echo "Error : failed to transfer color to $destination_database_color --- manual adjustment needed"
+        return 1
+    fi
+    return 0
 }
 
 main $@
+exit $?

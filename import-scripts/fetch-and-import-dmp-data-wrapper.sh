@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-and-import-dmp-data-wrapper.lock"
+MY_FLOCK_FILEPATH="${MY_FLOCK_FILEPATH:-/data/portal-cron/cron-lock/fetch-and-import-dmp-data-wrapper.lock}"
 
 SKIP_OVER_ALL_DMP_COHORT_PROCESSING=0
 
