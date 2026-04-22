@@ -90,12 +90,12 @@ function output_whether_preimport_steps_successfully_completed() {
             /data/portal-cron/scripts/import-cmo-data-msk.sh
             if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             # Only run pdx updates on Friday->Saturday
-            if [ "$day_of_week_at_process_start" -eq 5 ] ; then
-                date
-                echo "executing import-pdx-data.sh"
-                /data/portal-cron/scripts/import-pdx-data.sh
-                if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
-            fi
+            # if [ "$day_of_week_at_process_start" -eq 5 ] ; then
+            #     date
+            #     echo "executing import-pdx-data.sh"
+            #     /data/portal-cron/scripts/import-pdx-data.sh
+            #     if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
+            # fi
             #date
             #echo "executing update-msk-mind-cohort.sh"
             #/data/portal-cron/scripts/update-msk-mind-cohort.sh
