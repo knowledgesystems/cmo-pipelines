@@ -111,14 +111,14 @@ trap 'kill "$TAIL_PID" 2>/dev/null; wait "$TAIL_PID" 2>/dev/null' EXIT INT TERM
 
 echo "Destination DB color: $destination_database_color"
 echo "Importing with $IMPORTER_JAR_FILENAME"
-echo "Importing cancer type updates into $destination_database_color mysql database"
+echo "Importing cancer type updates into $destination_database_color clickhouse database"
 $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version $ONCOTREE_VERSION
 if [ $? -gt 0 ]; then
     echo "Error: Cancer type import failed!" >&2
     exit 1
 fi
 
-echo "Importing $PORTAL_DATABASE study data into $destination_database_color mysql database"
+echo "Importing $PORTAL_DATABASE study data into $destination_database_color clickhouse database"
 $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export --notification-file="$notification_file"
 exitcode=$?
 
@@ -126,6 +126,10 @@ if [ -f "$notification_file" ]; then
     echo "========= BEGIN NOTIFICATION FILE ========="
     cat "$notification_file"
     echo "========== END NOTIFICATION FILE =========="
+    if grep -q "The following studies had errors during import" "$notification_file"; then
+        echo "Error: one or more studies had errors during import" >&2
+        exit 1
+    fi
 else
     echo "Warning: notification file not found at '$notification_file'" >&2
 fi
