@@ -81,3 +81,5 @@ fi
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub_shahlab
 EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
 # $EMAIL_NOTIFICATION_SCRIPT_FILEPATH msk-spectrum-portal "$mskspectrum_notification_file"
+
+exit $IMPORT_FAIL
