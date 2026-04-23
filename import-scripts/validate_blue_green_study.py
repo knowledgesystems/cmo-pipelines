@@ -223,7 +223,7 @@ def main():
         print(f"Study '{args.study_id}' not found in source ({source_color}) database '{source_db}' -- new study, skipping validation")
         sys.exit(0)
 
-    print(f"Validating '{args.study_id}': {args.dest_color} (dest) vs {source_color} (source)")
+    print(f"Validating '{args.study_id}': {source_color} (source) → {args.dest_color} (dest)")
     failures = run_checks(client, dest_db, source_db, args.study_id, dest_id, source_id)
 
     if failures:
