@@ -43,7 +43,6 @@ fi
 
 MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-dmp-$destination_database_color-importer.jar"
 MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
-JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$MSK_JAVA_IMPORTER_ARGS"
 
 IMPORT_FAIL=0
 mskspectrum_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskspectrum-portal-update-notification.$now.XXXXXX)
@@ -80,4 +79,5 @@ fi
 
 # clean up msk-spectrum repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/datahub_shahlab
-$JAVA_BINARY $JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY --send-update-notification --portal msk-spectrum-portal --notification-file "$mskspectrum_notification_file"
+EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
+# $EMAIL_NOTIFICATION_SCRIPT_FILEPATH msk-spectrum-portal "$mskspectrum_notification_file"

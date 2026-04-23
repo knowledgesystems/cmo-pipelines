@@ -193,7 +193,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     # import ran and either failed or succeeded
     echo "sending notification email.."
     ####TODO we cannot rebuild importer currently, so use the mskimpact-portal which causes an email to be sent to our own group email only
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal mskimpact-portal --notification-file "$cmo_access_notification_file"
+    EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
+    $EMAIL_NOTIFICATION_SCRIPT_FILEPATH mskimpact-portal "$cmo_access_notification_file"
 
     echo "committing ddp data"
     cd $CMO_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "update of ddp timeline data"

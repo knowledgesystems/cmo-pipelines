@@ -106,11 +106,11 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     echo "Cleaning up any untracked files from MSK-CMO import..."
     $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH cleanup msk $DATA_SOURCES_TO_BE_FETCHED
 
-    $JAVA_BINARY $CMO_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-automation-portal --notification-file "$msk_automation_notification_file"
+    EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
+    $EMAIL_NOTIFICATION_SCRIPT_FILEPATH msk-automation-portal "$msk_automation_notification_file"
 
     echo "### Starting import" >> "$CANCERSTUDIESLOGFILENAME"
 
     date >> "$CANCERSTUDIESLOGFILENAME"
     $PYTHON_BINARY $PORTAL_HOME/scripts/updateCancerStudies.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD >> "$CANCERSTUDIESLOGFILENAME" 2>&1
-
 ) {flock_fd}>$FLOCK_FILEPATH
