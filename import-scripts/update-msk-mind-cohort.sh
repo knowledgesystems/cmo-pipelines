@@ -42,7 +42,7 @@ if [ "$destination_database_color" == "unset" ] ; then
 fi
 MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-dmp-$destination_database_color-importer.jar"
 MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
-JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$MSK_JAVA_IMPORTER_ARGS"
+EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
 
 IMPORT_FAIL=0
 mskextract_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskextract-portal-update-notification.$now.XXXXXX)
@@ -97,4 +97,4 @@ fi
 
 # clean up msk-mind repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/msk-mind
-$JAVA_BINARY $JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY --send-update-notification --portal msk-mind-portal --notification-file "$mskextract_notification_file"
+$EMAIL_NOTIFICATION_SCRIPT_FILEPATH msk-mind-portal "$mskextract_notification_file"

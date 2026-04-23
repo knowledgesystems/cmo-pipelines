@@ -241,7 +241,8 @@ fi
 # we only want to send the email on import failure
 # or if everything succeeds
 if [[ $IMPORT_FAIL -ne 0 || ($VALIDATION_FAIL -eq 0 && $DELETE_FAIL -eq 0 && $RENAME_BACKUP_FAIL -eq 0 && $RENAME_FAIL -eq 0) ]]; then
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal $PORTAL_NAME --notification-file $NOTIFICATION_FILE
+    EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
+    $EMAIL_NOTIFICATION_SCRIPT_FILEPATH $PORTAL_NAME "$NOTIFICATION_FILE"
 fi
 
 # determine if we need to exit with error code

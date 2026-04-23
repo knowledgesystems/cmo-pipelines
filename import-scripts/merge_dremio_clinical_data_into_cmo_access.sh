@@ -367,7 +367,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
         # import ran and either failed or succeeded
         echo "sending notification email.."
         #TODO we cannot rebuild importer currently, so use the mskimpact-portal which causes an email to be sent to our own group email only
-        $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal mskimpact-portal --notification-file "$cmo_access_notification_file"
+        EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
+        $EMAIL_NOTIFICATION_SCRIPT_FILEPATH mskimpact-portal "$cmo_access_notification_file"
     }
 
     function remove_tempdirs() {
