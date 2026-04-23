@@ -34,7 +34,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-portal-users.lock"
 
     echo "### Starting import" >> "$USERSGENIELOGFILENAME"
     date >> "$USERSGENIELOGFILENAME"
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/importUsersClickhouse.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/${GENIE_PRODUCTION_DATABASE_PROPERTIES_FILENAME} --send-email-confirm true --sender GENIE --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD --smtp-server $SMTP_SERVER >> "$USERSGENIELOGFILENAME" 2>&1
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/importUsers.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/${GENIE_PRODUCTION_DATABASE_PROPERTIES_FILENAME} --send-email-confirm true --sender GENIE --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD --smtp-server $SMTP_SERVER >> "$USERSGENIELOGFILENAME" 2>&1
     CGDS_GENIE_IMPORT_STATUS=$?
 
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
