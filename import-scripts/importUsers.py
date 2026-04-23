@@ -600,7 +600,7 @@ def establish_clickhouse_client(portal_properties):
 # displays program usage (invalid args)
 
 def usage():
-    print('importUsersClickhouse.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --sender [sender identifier - optional] --smtp-server [smtp server hostname - required when send-email-confirm is true]', file=OUTPUT_FILE)
+    print('importUsers.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --sender [sender identifier - optional] --smtp-server [smtp server hostname - required when send-email-confirm is true]', file=OUTPUT_FILE)
 
 # ------------------------------------------------------------------------------
 # the big deal main.
