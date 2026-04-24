@@ -2,7 +2,7 @@
 
 # set necessary env variables with automation-environment.sh
 
-FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
+FLOCK_FILEPATH="${FLOCK_FILEPATH:-/data/portal-cron/cron-lock/import-cmo-data-msk.lock}"
 (
     echo $(date)
 
@@ -46,7 +46,7 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
 
     # Get the current production database color
     GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
-    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_database_update_tools.properties"
+    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties"
     current_production_database_color=$($GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
     destination_database_color="unset"
     if [ ${current_production_database_color:0:4} == "blue" ] ; then
@@ -61,8 +61,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     fi
     DATA_SOURCE_MANAGER_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/data_source_repo_clone_manager.sh"
     DATA_SOURCE_MANAGER_CONFIG_FILEPATH="$PORTAL_HOME/pipelines-credentials/importer-data-source-manager-config.yaml"
-    CMO_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-cmo-$destination_database_color-importer.jar"
-    CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    CMO_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
+    CMO_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-cmo-clickhouse-importer.log -ea -cp $CMO_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
     DATA_SOURCE_REPO_FETCH_FAIL=0
     if ! $DATA_SOURCE_MANAGER_SCRIPT_FILEPATH $DATA_SOURCE_MANAGER_CONFIG_FILEPATH pull msk $DATA_SOURCES_TO_BE_FETCHED ; then
@@ -78,12 +78,12 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         DB_VERSION_FAIL=1
     fi
 
+    IMPORT_FAIL=0
     if [[ $DB_VERSION_FAIL -eq 0 && $DATA_SOURCE_REPO_FETCH_FAIL -eq 0 ]] ; then
         # import vetted studies into MSK portal
         echo "importing cancer type updates into msk portal database..."
         $JAVA_BINARY -Xmx16g $CMO_JAVA_IMPORTER_ARGS --import-types-of-cancer --oncotree-version ${ONCOTREE_VERSION_TO_USE}
         echo "importing study data into msk portal database..."
-        IMPORT_FAIL=0
         $JAVA_BINARY -Xmx64g $CMO_JAVA_IMPORTER_ARGS --update-study-data --portal msk-automation-portal --update-worksheet --notification-file "$msk_automation_notification_file" --use-never-import --oncotree-version ${ONCOTREE_VERSION_TO_USE} --transcript-overrides-source mskcc
         if [ $? -gt 0 ]; then
             echo "MSK CMO import failed!"
@@ -94,6 +94,8 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
         fi
 
         num_studies_updated=`cat $tmp/num_studies_updated.txt`
+    else
+        IMPORT_FAIL=1
     fi
 
     EMAIL_BODY="The GDAC database version is incompatible. Imports will be skipped until database is updated."
@@ -113,4 +115,5 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-cmo-data-msk.lock"
     date >> "$CANCERSTUDIESLOGFILENAME"
     $PYTHON_BINARY $PORTAL_HOME/scripts/updateCancerStudies.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD >> "$CANCERSTUDIESLOGFILENAME" 2>&1
 
+    exit $IMPORT_FAIL
 ) {flock_fd}>$FLOCK_FILEPATH

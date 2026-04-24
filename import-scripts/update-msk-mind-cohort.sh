@@ -27,7 +27,7 @@ source $PORTAL_HOME/scripts/clear-persistence-cache-shell-functions.sh
 
 # Get the current production database color
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
-MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_database_update_tools.properties"
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties"
 current_production_database_color=$($GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
 destination_database_color="unset"
 if [ ${current_production_database_color:0:4} == "blue" ] ; then
@@ -40,9 +40,8 @@ if [ "$destination_database_color" == "unset" ] ; then
     echo "Error during determination of the destination database color" >&2
     exit 1
 fi
-MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-dmp-$destination_database_color-importer.jar"
-MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
-JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$MSK_JAVA_IMPORTER_ARGS"
+MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
+MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-dmp-clickhouse-importer.log -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
 IMPORT_FAIL=0
 mskextract_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskextract-portal-update-notification.$now.XXXXXX)
@@ -97,4 +96,4 @@ fi
 
 # clean up msk-mind repo and send notification file
 bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $PORTAL_DATA_HOME/msk-mind
-$JAVA_BINARY $JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY --send-update-notification --portal msk-mind-portal --notification-file "$mskextract_notification_file"
+# $JAVA_BINARY $MSK_JAVA_IMPORTER_ARGS --send-update-notification --portal msk-mind-portal --notification-file "$mskextract_notification_file"

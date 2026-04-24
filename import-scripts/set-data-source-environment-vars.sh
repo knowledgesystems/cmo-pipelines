@@ -40,18 +40,19 @@ DATA_SOURCE_NAME_TO_EMAIL_BODY[knowledge-systems-curated-studies]="The cbio-port
 DATA_SOURCE_NAME_TO_EMAIL_SUBJECT[knowledge-systems-curated-studies]="Data fetch failure: cbio-portal-data"
 
 function fetch_updates_in_data_source {
-    data_source=$1
-    start_log_msg=$2
-    extra_importer_args=$3
-    failure_log_msg=$4
-    email_body=$5
-    email_subject=$6
-    email_recipient=$7
+    local data_source="$1"
+    local start_log_msg="$2"
+    local failure_log_msg="$4"
+    local email_body="$5"
+    local email_subject="$6"
+    local email_recipient="$7"
+    # forward to new data source manager script for backwards compatibility
+    local manager_script="${DATA_SOURCE_MANAGER_SCRIPT_FILEPATH:-$PORTAL_HOME/scripts/data_source_repo_clone_manager.sh}"
+    local manager_config="${DATA_SOURCE_MANAGER_CONFIG_FILEPATH:-$PORTAL_HOME/pipelines-credentials/importer-data-source-manager-config.yaml}"
 
-    echo $start_log_msg
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY --fetch-data --data-source $data_source --run-date latest $extra_importer_args
-    if [ $? -ne 0 ]; then
-        echo $failure_log_msg
+    echo "$start_log_msg"
+    if ! $manager_script $manager_config pull msk "$data_source" ; then
+        echo "$failure_log_msg"
         echo -e "Sending email $email_body"
         echo -e "$email_body" | mail -s "$email_subject" $email_recipient
         return 1

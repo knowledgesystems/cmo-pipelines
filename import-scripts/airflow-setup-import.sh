@@ -41,6 +41,20 @@ case "$PORTAL_DATABASE" in
     PORTAL_NAME="triage-portal"
     ONCOTREE_VERSION="oncotree_candidate_release"
     ;;
+  public-clickhouse)
+    TMP_DIR_NAME="import-cron-public-clickhouse"
+    IMPORTER_NAME="public-clickhouse"
+    LOG_FILE_NAME="public-clickhouse-importer.log"
+    PORTAL_NAME="public-portal"
+    ONCOTREE_VERSION="oncotree_latest_stable"
+    ;;
+  genie-clickhouse)
+    TMP_DIR_NAME="import-cron-genie-clickhouse"
+    IMPORTER_NAME="genie-clickhouse"
+    LOG_FILE_NAME="genie-clickhouse-importer.log"
+    PORTAL_NAME="genie-portal"
+    ONCOTREE_VERSION="oncotree_2019_12_01"
+    ;;
   *)
     echo "Unsupported portal database: $PORTAL_DATABASE" >&2
     exit 1
@@ -78,7 +92,7 @@ echo "Destination DB color: $destination_database_color"
 echo "Using importer JAR: $IMPORTER_JAR_FILENAME"
 
 # Database check
-echo "Checking if mysql database version is compatible"
+echo "Checking if clickhouse database version is compatible"
 "$JAVA_BINARY" $JAVA_IMPORTER_ARGS --check-db-version
 if [ $? -gt 0 ]; then
     echo "Error: Database version expected by portal does not match version in database!" >&2
