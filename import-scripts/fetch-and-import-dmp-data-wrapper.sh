@@ -103,9 +103,9 @@ function output_whether_preimport_steps_successfully_completed() {
             # echo "executing update-msk-spectrum-cohort.sh"
             # $PORTAL_HOME/scripts/update-msk-spectrum-cohort.sh
             # if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
-            echo "executing import-msk-extract-projects.sh"
-            $PORTAL_HOME/scripts/import-msk-extract-projects.sh
-            if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
+            # echo "executing import-msk-extract-projects.sh"
+            # $PORTAL_HOME/scripts/import-msk-extract-projects.sh
+            # if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             if [ $IMPORT_FAIL -eq 0 ] ; then
                 #complete clickhouse update steps
                 $PORTAL_HOME/scripts/import-msk-postimport-steps-for-clickhouse.sh
