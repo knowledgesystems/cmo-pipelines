@@ -1203,10 +1203,34 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # GIT PUSH
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to git repository"
     # check updated data back into git
-    GIT_PUSH_FAIL=0
-    cd $DMP_DATA_HOME ; $GIT_BINARY add ./*; git commit --amend --no-edit; $GIT_BINARY push origin --force
-    if [ $? -gt 0 ] ; then
-        GIT_PUSH_FAIL=1
+    GIT_PUSH_FAIL=1
+    cd $DMP_DATA_HOME
+    MAX_PUSH_ATTEMPT_COUNT=13
+    remaining_push_try_count=$MAX_PUSH_ATTEMPT_COUNT
+    git_commit_message="DMP Fetch and Cohort Updates $(date +%Y_%m_%d)"
+    if $GIT_BINARY add ./* && $GIT_BINARY commit -m "$git_commit_message" ; then
+        wait_seconds=10
+        while [ "$remaining_push_try_count" -gt 0 ] ; do
+            if $GIT_BINARY push origin ; then
+                GIT_PUSH_FAIL=0 # success
+                break
+            fi
+            sleep $wait_seconds
+            remaining_push_try_count=$(($remaining_push_try_count-1))
+            wait_seconds=$((wait_seconds*7/5))
+        done
+    else
+        sendPreImportFailureMessageMskPipelineLogsSlack "GIT COMMIT (dmp)!"
+    fi
+    if [ "$remaining_push_try_count" -ne "$MAX_PUSH_ATTEMPT_COUNT" ] ; then
+        push_tries=$(($MAX_PUSH_ATTEMPT_COUNT-$remaining_push_try_count+1))
+        if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH was attempted $push_tries times before failing"
+        else
+            sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH was attempted $push_tries times before succeeding"
+        fi
+    fi
+    if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (dmp) :fire: - address ASAP!"
     fi
 
