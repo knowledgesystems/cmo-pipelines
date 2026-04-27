@@ -1,0 +1,15 @@
+portal_to_email_map:
+    name1-portal: email_public
+    name2-portal: email_msk
+    name3-portal: email_msk
+
+email_public:
+    sender: "cbioportal-pipelines@cbioportal.org"
+    recipient: "cbioportal-pipelines@cbioportal.org"
+    subject: "Updates to the Public cBioPortal"
+    body: "The following studies were added or updated in the Public cBioPortal:"
+email_msk:
+    sender: "cbioportal-pipelines@cbioportal.org"
+    recipient: "cbioportal-pipelines@cbioportal.org"
+    subject: "Updates to MSK cBioPortal"
+    body: "The following studies were added or updated in the MSK cBioPortal:"
