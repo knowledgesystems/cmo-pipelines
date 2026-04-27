@@ -138,6 +138,8 @@ public class CVRMutationDataProcessor implements ItemProcessor<AnnotatedRecord, 
             case "T_ALT_COUNT": return record.getT_ALT_COUNT();
             case "N_REF_COUNT": return record.getN_REF_COUNT();
             case "N_ALT_COUNT": return record.getN_ALT_COUNT();
+            // COMMENTS: sensitive free-text may arrive from the API; emit empty for staging TSV output.
+            case "COMMENTS": return "";
             default:
                 return record.getAdditionalProperties().getOrDefault(field, "");
         }

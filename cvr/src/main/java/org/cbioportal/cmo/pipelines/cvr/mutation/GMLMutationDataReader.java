@@ -116,6 +116,8 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
                 throw new ItemStreamException(e);
             }
         }
+        // filter out non-uppercase COMMENTS variants; keep only uppercase COMMENTS if present
+        header.removeIf(field -> field.equalsIgnoreCase("COMMENTS") && !field.equals("COMMENTS"));
         // add header and filename to write to for writer
         ec.put("mutationHeader", new ArrayList(header));
         ec.put("mafFilename", CVRUtilities.MUTATION_FILE);
