@@ -76,6 +76,43 @@ function standardizeGenePanelMatrix {
     $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_gene_matrix_file.py --gene-panel-matrix-filename $GENE_PANEL_MATRIX_FILE
 }
 
+function addDataTypeCaseLists {
+    STUDY_DATA_DIRECTORY=$1
+    STUDY_ID=$2
+
+    GENERATE_CASE_LISTS_SCRIPT="$PORTAL_HOME/scripts/generate_case_lists.py"
+    CASE_LIST_CONFIG_FILEPATH="$PORTAL_HOME/scripts/case_list_config.tsv"
+    CASE_LISTS_DIRECTORY="$STUDY_DATA_DIRECTORY/case_lists"
+
+    if ! [ -d "$STUDY_DATA_DIRECTORY" ] ; then
+        echo "Error in addDataTypeCaseLists : argument for STUDY_DATA_DIRECTORY '$STUDY_DATA_DIRECTORY' is not a directory" >&2
+        return 1
+    fi
+    if ! [ -f "$GENERATE_CASE_LISTS_SCRIPT" ] ; then
+        echo "Error in addDataTypeCaseLists : generate_case_lists script not found at '$GENERATE_CASE_LISTS_SCRIPT'" >&2
+        return 1
+    fi
+    if ! [ -f "$CASE_LIST_CONFIG_FILEPATH" ] ; then
+        echo "Error in addDataTypeCaseLists : case list config file not found at '$CASE_LIST_CONFIG_FILEPATH'" >&2
+        return 1
+    fi
+    if ! [ -d "$CASE_LISTS_DIRECTORY" ] ; then
+        mkdir -p "$CASE_LISTS_DIRECTORY"
+        if [ $? -ne 0 ] ; then
+            echo "Error in addDataTypeCaseLists : could not create missing case_lists directory '$CASE_LISTS_DIRECTORY'" >&2
+            return 1
+        fi
+    fi
+
+    $PYTHON_BINARY $GENERATE_CASE_LISTS_SCRIPT \
+        --case-list-config-file $CASE_LIST_CONFIG_FILEPATH \
+        --case-list-dir $CASE_LISTS_DIRECTORY \
+        --study-dir $STUDY_DATA_DIRECTORY \
+        --study-id $STUDY_ID \
+        --overwrite \
+        --verbose
+}
+
 # Function to generate case lists by cancer type
 function addCancerTypeCaseLists {
     STUDY_DATA_DIRECTORY=$1
