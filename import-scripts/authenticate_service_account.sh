@@ -185,7 +185,7 @@ function authenticate_with_saml2aws() {
         exit 2
     fi
     set -euo pipefail
-    docker run --rm -i \
+    docker run --rm \
         -u "$(id -u):$(id -g)" \
         -v "$HOME/.saml2aws:/saml2aws/.saml2aws" \
         -v "$HOME/.aws:/saml2aws/.aws" \
@@ -202,7 +202,7 @@ function authenticate_with_saml2aws() {
         return 0
     fi
     # FOR TEMPORARY BACKWARDS COMPATIBILITY .. reauthenticate under the default profile
-    docker run --rm -i \
+    docker run --rm \
         -u "$(id -u):$(id -g)" \
         -v "$HOME/.saml2aws:/saml2aws/.saml2aws" \
         -v "$HOME/.aws:/saml2aws/.aws" \
