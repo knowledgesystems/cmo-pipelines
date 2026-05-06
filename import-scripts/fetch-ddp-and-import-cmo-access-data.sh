@@ -47,9 +47,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
         echo "Error during determination of the destination database color" >&2
         exit 1
     fi
-    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
+    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-importer-$destination_database_color.jar"
     ENABLE_DEBUGGING=0
-    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CMO_ACCESS_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-cmo-clickhouse-importer.log -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CMO_ACCESS_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-cmo-importer.log -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     cmo_access_notification_file=$(mktemp $CMO_ACCESS_TMPDIR/cmo-access-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE="oncotree_candidate_release"
     cmo_access_dmp_pids_filepath=$CMO_ACCESS_TMPDIR/cmo_access_patient_list.txt

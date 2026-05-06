@@ -21,38 +21,24 @@ source "$AUTOMATION_ENV_SCRIPT_FILEPATH"
 
 # Set needed paths/filenames for import
 case "$PORTAL_DATABASE" in
-  genie)
-    TMP_DIR_NAME="import-cron-genie"
-    IMPORTER_NAME="genie-aws"
-    LOG_FILE_NAME="genie-aws-importer.log"
-    PORTAL_NAME="genie-portal"
-    ONCOTREE_VERSION="oncotree_2019_12_01"
-    ;;
-  public)
-    TMP_DIR_NAME="import-cron-public-data"
-    IMPORTER_NAME="public"
-    LOG_FILE_NAME="public-data-importer.log"
-    PORTAL_NAME="public-portal"
-    ONCOTREE_VERSION="oncotree_latest_stable"
-    ;;
-  triage-clickhouse)
-    TMP_DIR_NAME="import-cron-triage-clickhouse"
-    IMPORTER_NAME="triage-clickhouse"
-    LOG_FILE_NAME="triage-clickhouse-importer.log"
+  triage)
+    TMP_DIR_NAME="import-cron-triage"
+    IMPORTER_NAME="triage"
+    LOG_FILE_NAME="triage-importer.log"
     PORTAL_NAME="triage-portal"
     ONCOTREE_VERSION="oncotree_candidate_release"
     ;;
-  public-clickhouse)
-    TMP_DIR_NAME="import-cron-public-clickhouse"
-    IMPORTER_NAME="public-clickhouse"
-    LOG_FILE_NAME="public-clickhouse-importer.log"
+  public)
+    TMP_DIR_NAME="import-cron-public"
+    IMPORTER_NAME="public"
+    LOG_FILE_NAME="public-importer.log"
     PORTAL_NAME="public-portal"
     ONCOTREE_VERSION="oncotree_latest_stable"
     ;;
-  genie-clickhouse)
-    TMP_DIR_NAME="import-cron-genie-clickhouse"
-    IMPORTER_NAME="genie-clickhouse"
-    LOG_FILE_NAME="genie-clickhouse-importer.log"
+  genie)
+    TMP_DIR_NAME="import-cron-genie"
+    IMPORTER_NAME="genie"
+    LOG_FILE_NAME="genie-importer.log"
     PORTAL_NAME="genie-portal"
     ONCOTREE_VERSION="oncotree_2019_12_01"
     ;;
@@ -81,7 +67,7 @@ fi
 IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer-${destination_database_color}.jar"
 
 tmp="${PORTAL_HOME}/tmp/${TMP_DIR_NAME}"
-JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+JAVA_IMPORTER_ARGS="$JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -Dlog4j.appender.a.File=/data/portal-cron/logs/$LOG_FILE_NAME -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 
 # Set up a temp notification file
 # After the importer runs with --notification-file, it will write to this file describing the number of studies updated / removed / had import errors

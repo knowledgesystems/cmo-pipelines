@@ -8,7 +8,7 @@ import sys
 from airflow.models.param import Param
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dags.import_clickhouse_base import ClickhouseImporterConfig, build_import_dag
+from dags.import_base import ImporterConfig, build_import_dag
 
 def _wire(tasks: dict[str, object]) -> None:
     
@@ -37,7 +37,7 @@ def _wire(tasks: dict[str, object]) -> None:
     
     # for now, all the 'finally' handlers are taken care of by the parent class
 
-_TRIAGE_CONFIG = ClickhouseImporterConfig(
+_TRIAGE_CONFIG = ImporterConfig(
     dag_id="import_triage_clickhouse_dag",
     description="Imports Triage study to Clickhouse database",
     importer="triage-clickhouse",

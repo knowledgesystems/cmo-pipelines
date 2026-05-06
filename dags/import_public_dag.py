@@ -1,6 +1,6 @@
 """
-import_public_dag.py
-Imports to Public cBioPortal MySQL and ClickHouse databases using blue/green deployment strategy.
+import_public_clickhouse_dag.py
+Imports to Public cBioPortal ClickHouse database.
 """
 import os
 import sys
@@ -12,33 +12,53 @@ from dags.import_base import ImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> tasks["verify_management_state"] >> [tasks["fetch_data"], tasks["scale_up_rds_node"]]
-    tasks["scale_up_rds_node"] >> tasks["clone_database"]
-    [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["scale_down_rds_node"] >> tasks["send_update_notification"] >> tasks["cleanup_data"]
+
+    tasks["data_repos"] >> tasks["verify_management_state"]
+
+    tasks["verify_management_state"] >> [
+        tasks["fetch_data"],
+        tasks["clone_database"]
+    ]
+
+    [
+        tasks["fetch_data"],
+        tasks["clone_database"]
+    ] >> tasks["setup_import"]
+
+    tasks["setup_import"] >> tasks["import_direct_to_clickhouse"]
+
+    tasks["import_direct_to_clickhouse"] >> tasks["create_derived_tables"]
+
+    tasks["create_derived_tables"] >> tasks["transfer_deployment"]
+
+    tasks["transfer_deployment"] >> [
+        tasks["cleanup_data"],
+        tasks["send_update_notification"]
+    ]
+
 
 _PUBLIC_CONFIG = ImporterConfig(
     dag_id="import_public_dag",
-    description="Imports to Public cBioPortal MySQL and ClickHouse databases using blue/green deployment strategy",
+    description="Imports to Public cBioPortal ClickHouse database",
     importer="public",
     tags=["public"],
-    target_nodes=("importer_ssh",),
-    data_nodes=("importer_ssh", "pipelines3_ssh"),
+    target_nodes=("pipelines5_ssh",),
+    data_nodes=("pipelines5_ssh",),
     task_names=(
+        "data_repos",
         "verify_management_state",
-        "scale_up_rds_node",
-        "clone_database",
         "fetch_data",
+        "clone_database",
         "setup_import",
-        "import_sql",
-        "import_clickhouse",
+        "import_direct_to_clickhouse",
+        "create_derived_tables",
         "transfer_deployment",
-        "scale_down_rds_node",
         "send_update_notification",
         "cleanup_data",
         "set_import_abandoned",
     ),
-    db_properties_filename="manage_public_database_update_tools.properties",
+    db_properties_filename="manage_public_clickhouse_database_update_tools.properties",
+    # disabled on pipelines5 machine during testing phase
     color_swap_config_filename="public-db-color-swap-config.yaml",
     params={
         "data_repos": Param(
