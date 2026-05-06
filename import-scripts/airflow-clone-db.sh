@@ -34,7 +34,7 @@ fi
 SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process_state.sh"
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
 
-if [[ "$PORTAL_DATABASE" == "triage-clickhouse" ]] ; then
+if [[ "$PORTAL_DATABASE" == "triage-clickhouse" || "$PORTAL_DATABASE" == "public-clickhouse" || "$PORTAL_DATABASE" == "genie-clickhouse" ]] ; then
     DB_TYPE=clickhouse
     DROP_TABLES_FROM_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/drop_tables_in_clickhouse_database.sh"
     CLONE_DATABASE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/clone_clickhouse_database.sh"

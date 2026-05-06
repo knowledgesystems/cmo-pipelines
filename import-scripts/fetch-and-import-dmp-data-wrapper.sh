@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-and-import-dmp-data-wrapper.lock"
+MY_FLOCK_FILEPATH="${MY_FLOCK_FILEPATH:-/data/portal-cron/cron-lock/fetch-and-import-dmp-data-wrapper.lock}"
 
 SKIP_OVER_ALL_DMP_COHORT_PROCESSING=0
 
@@ -11,7 +11,7 @@ source "$PORTAL_HOME/scripts/slack-message-functions.sh"
 SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/set_update_process_state.sh"
 VERIFY_MANAGEMENT_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/verify-management-state.sh"
 COLOR_SWAP_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/msk-db-color-swap-config.yaml"
-MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_msk_database_update_tools.properties"
+MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties"
 MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/import-msk-preimport-steps-for-clickhouse.sh"
 MSK_PREIMPORT_STEPS_OUTPUT_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/preimport-steps-for-clickhouse.out"
 MSK_PREIMPORT_STEPS_STATUS_FILEPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/preimport-steps-for-clickhouse-result"
@@ -72,12 +72,14 @@ function output_whether_preimport_steps_successfully_completed() {
             date
             echo executing fetch-dmp-data-for-import.sh
             oldwd=$(pwd)
-            cd /data/portal-cron/tmp/separate_working_directory_for_dmp
-            /data/portal-cron/scripts/fetch-dmp-data-for-import.sh
+            cd $PORTAL_HOME/tmp/separate_working_directory_for_dmp
+            $PORTAL_HOME/scripts/fetch-dmp-data-for-import.sh
             databases_are_prepared_for_import=$(output_whether_preimport_steps_successfully_completed)
+            IMPORT_FAIL=0
             if [ "$databases_are_prepared_for_import" == "yes" ] ; then
                 echo "executing import-dmp-impact-data.sh"
-                /data/portal-cron/scripts/import-dmp-impact-data.sh
+                $PORTAL_HOME/scripts/import-dmp-impact-data.sh
+                if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             fi
             cd ${oldwd}
         fi
@@ -85,25 +87,35 @@ function output_whether_preimport_steps_successfully_completed() {
         if [ "$databases_are_prepared_for_import" == "yes" ] ; then
             # cmo data msk imports now start after dmp imports are done
             echo "executing import-cmo-data-msk.sh"
-            /data/portal-cron/scripts/import-cmo-data-msk.sh
+            $PORTAL_HOME/scripts/import-cmo-data-msk.sh
+            if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
             # Only run pdx updates on Friday->Saturday
-            if [ "$day_of_week_at_process_start" -eq 5 ] ; then
-                date
-                echo "executing import-pdx-data.sh"
-                /data/portal-cron/scripts/import-pdx-data.sh
-            fi
+            # if [ "$day_of_week_at_process_start" -eq 5 ] ; then
+            #     date
+            #     echo "executing import-pdx-data.sh"
+            #     $PORTAL_HOME/scripts/import-pdx-data.sh
+            #     if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
+            # fi
             #date
             #echo "executing update-msk-mind-cohort.sh"
-            #/data/portal-cron/scripts/update-msk-mind-cohort.sh
+            #$PORTAL_HOME/scripts/update-msk-mind-cohort.sh
             date
-            echo "executing update-msk-spectrum-cohort.sh"
-            /data/portal-cron/scripts/update-msk-spectrum-cohort.sh
-            echo "executing import-msk-extract-projects.sh"
-            /data/portal-cron/scripts/import-msk-extract-projects.sh
-            #complete clickhouse update steps
-            $PORTAL_HOME/scripts/import-msk-postimport-steps-for-clickhouse.sh
+            # echo "executing update-msk-spectrum-cohort.sh"
+            # $PORTAL_HOME/scripts/update-msk-spectrum-cohort.sh
+            # if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
+            # echo "executing import-msk-extract-projects.sh"
+            # $PORTAL_HOME/scripts/import-msk-extract-projects.sh
+            # if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
+            if [ $IMPORT_FAIL -eq 0 ] ; then
+                #complete clickhouse update steps
+                $PORTAL_HOME/scripts/import-msk-postimport-steps-for-clickhouse.sh
+            else
+                echo "one or more imports failed, marking import as abandoned"
+                "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned
+            fi
         else
-            echo "skipping all imports into cgds_gdac database because $MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH failed to prepare the database"
+            echo "skipping all imports because $MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH failed to prepare the database"
+            "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned
         fi
     else
         echo "skipping all imports into cgds_gdac database because update state is not valid"
@@ -112,7 +124,7 @@ function output_whether_preimport_steps_successfully_completed() {
     if [ "$day_of_week_at_process_start" -eq 7 ] ; then
         date
         echo "executing update-az-mskimpact.sh"
-        /data/portal-cron/scripts/update-az-mskimpact.sh
+        $PORTAL_HOME/scripts/update-az-mskimpact.sh
     fi
     date
     echo "wrapper complete"
