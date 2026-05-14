@@ -82,6 +82,7 @@ CLINICAL_SAMPLE_META_PATTERN = 'meta_clinical_sample.txt'
 # Cleared on every merge row so REDCap/other cohort files cannot repopulate free-text after CVR emits blanks.
 CLINICAL_SAMPLE_SENSITIVE_TEXT_COLUMNS = frozenset(['SO_COMMENTS', 'MSI_COMMENT'])
 SV_SENSITIVE_TEXT_COLUMNS = frozenset(['Comments'])
+MAF_SENSITIVE_TEXT_COLUMNS = frozenset(['COMMENTS'])
 
 GENE_MATRIX_FILE_PATTERN = 'data_gene_matrix.txt'
 GENE_MATRIX_META_PATTERN = 'meta_gene_matrix.txt'
@@ -524,6 +525,10 @@ def normal_row(line, header, file_type=None):
     elif file_type == SV_META_PATTERN:
         for index, attribute in enumerate(header):
             if attribute in SV_SENSITIVE_TEXT_COLUMNS:
+                row[index] = ''
+    elif file_type == MUTATION_META_PATTERN:
+        for index, attribute in enumerate(header):
+            if attribute in MAF_SENSITIVE_TEXT_COLUMNS:
                 row[index] = ''
 
     return row
