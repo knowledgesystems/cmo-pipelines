@@ -245,7 +245,10 @@ public class CVRClinicalRecord {
     }
 
     public String getSAMPLE_COVERAGE() {
-        return this.sampleCoverage != null ? this.sampleCoverage : "";
+        if (Strings.isNullOrEmpty(this.sampleCoverage) || "null".equals(this.sampleCoverage)) {
+            return "NA";
+        }
+        return this.sampleCoverage;
     }
 
     public void setSAMPLE_COVERAGE(String sampleCoverage) {
@@ -253,7 +256,10 @@ public class CVRClinicalRecord {
     }
 
     public String getCYCLE_THRESHOLD() {
-        return this.cycleThreshold != null ? this.cycleThreshold : "";
+        if (Strings.isNullOrEmpty(this.cycleThreshold) || "null".equals(this.cycleThreshold)) {
+            return "NA";
+        }
+        return this.cycleThreshold;
     }
 
     public void setCYCLE_THRESHOLD(String cycleThreshold) {
@@ -301,7 +307,10 @@ public class CVRClinicalRecord {
     }
 
     public String getMSI_SCORE() {
-        return this.msiScore != null ? this.msiScore : "";
+        if (Strings.isNullOrEmpty(this.msiScore) || "Not Available".equals(this.msiScore)) {
+            return "NA";
+        }
+        return this.msiScore;
     }
 
     public void setMSI_SCORE(String msiScore) {
