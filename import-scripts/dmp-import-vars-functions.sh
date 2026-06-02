@@ -358,3 +358,55 @@ function uploadToS3OrSendFailureMessage() {
         sendImportFailureMessageMskPipelineLogsSlack "$message"
     fi
 }
+
+function downloadFromS3AllStudies() {
+    download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+    status_code=$?
+    if [ $status_code -ne 0 ] ; then
+        sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch failure: DMP repository update"
+        return $status_code
+    fi
+    # purge split parts of nonsignedout_mutations (if left over from last cycle or just pulled)
+    find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
+    return 0
+}
+
+function backupNonsignedoutMutationFilesForDMP() {
+    NONSIGNEDOUT_BACKUP_DIRPATH="/data/portal-cron/nonsignedout_holding"
+    unset nonsignedout_filepaths
+    declare -a nonsignedout_filepaths
+    while IFS= read -r line ; do
+        nonsignedout_filepaths+=("$line")
+    done < <(find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt")
+    pos=0
+    while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
+        nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
+        relative_filepath=${nonsignedout_filepath:${#DMP_DATA_HOME}}
+        backup_filepath=${NONSIGNEDOUT_BACKUP_DIRPATH}${relative_filepath}
+        echo "copying $nonsignedout_filepath to $backup_filepath"
+        if ! cp -a $nonsignedout_filepath $backup_filepath ; then
+            echo "Error during nonsignedout backup!" >&2
+        fi
+        pos=$(($pos+1))
+    done
+}
+
+function restoreNonsignedoutMutationFilesForDMP() {
+    NONSIGNEDOUT_BACKUP_DIRPATH="/data/portal-cron/nonsignedout_holding"
+    unset nonsignedout_filepaths
+    declare -a nonsignedout_filepaths
+    while IFS= read -r line ; do
+        nonsignedout_filepaths+=("$line")
+    done < <(find -L "$NONSIGNEDOUT_BACKUP_DIRPATH" -name "data_nonsignedout_mutations.txt")
+    pos=0
+    while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
+        nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
+        relative_filepath=${nonsignedout_filepath:${#NONSIGNEDOUT_BACKUP_DIRPATH}}
+        restore_filepath=${DMP_DATA_HOME}${relative_filepath}
+        echo "copying $nonsignedout_filepath to $restore_filepath"
+        if ! cp -a $nonsignedout_filepath $restore_filepath ; then
+            echo "Error during nonsignedout restore!" >&2
+        fi
+        pos=$(($pos+1))
+    done
+}
