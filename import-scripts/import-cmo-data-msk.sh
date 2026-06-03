@@ -111,10 +111,5 @@ FLOCK_FILEPATH="${FLOCK_FILEPATH:-/data/portal-cron/cron-lock/import-cmo-data-ms
     EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
     $EMAIL_NOTIFICATION_SCRIPT_FILEPATH msk-automation-portal "$msk_automation_notification_file"
 
-    echo "### Starting import" >> "$CANCERSTUDIESLOGFILENAME"
-
-    date >> "$CANCERSTUDIESLOGFILENAME"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/updateCancerStudies.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/portal.properties.dashi.gdac --send-email-confirm true --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD >> "$CANCERSTUDIESLOGFILENAME" 2>&1
-
     exit $IMPORT_FAIL
 ) {flock_fd}>$FLOCK_FILEPATH
