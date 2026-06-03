@@ -40,7 +40,7 @@ FLOCK_FILEPATH="${FLOCK_FILEPATH:-/data/portal-cron/cron-lock/import-cmo-data-ms
     msk_automation_notification_file=$(mktemp $tmp/msk-automation-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE=oncotree_candidate_release
     CANCERSTUDIESLOGFILENAME="$PORTAL_HOME/logs/update-studies-dashi-gdac.log"
-    DATA_SOURCES_TO_BE_FETCHED="bic-mskcc-legacy cmo-argos private impact datahub_shahlab msk-mind-datahub"
+    DATA_SOURCES_TO_BE_FETCHED="bic-mskcc-legacy cmo-argos private impact datahub_shahlab msk-mind-datahub datahub"
     GMAIL_USERNAME=`grep gmail_username $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
     GMAIL_PASSWORD=`grep gmail_password $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
 
