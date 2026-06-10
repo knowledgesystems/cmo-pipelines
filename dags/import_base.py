@@ -1,21 +1,27 @@
 """Shared builder for ClickHouse import DAGs."""
 from __future__ import annotations
 
+import configparser
+import os
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Callable, Mapping, Optional, Sequence
 import logging
 import shlex
 
-from airflow import DAG
+from airflow import DAG, settings
 from airflow.decorators import task
 from airflow.exceptions import AirflowException, AirflowSkipException
+from airflow.models import Connection, DagRun
 from airflow.models.param import Param
+from airflow.operators.python import PythonOperator, get_current_context
+from airflow.providers.amazon.aws.operators.ec2 import EC2StartInstanceOperator, EC2StopInstanceOperator
 from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.providers.ssh.hooks.ssh import SSHHook
+from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.utils.state import State
-from airflow.operators.python import get_current_context
+from airflow.utils.state import DagRunState, State
 from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
 from airflow.providers.slack.hooks.slack_webhook import SlackWebhookHook
 from jinja2 import Template
@@ -75,6 +81,9 @@ class ImporterConfig:
     target_nodes: Sequence[str]
     data_nodes: Sequence[str]
     task_names: Sequence[str]
+    ec2_instance_id: str
+    sibling_dag_ids: Sequence[str] = ()
+    aws_profile: str = "automation_public"
     scripts_dir: str = "/data/portal-cron/scripts"
     creds_dir: str = "/data/portal-cron/pipelines-credentials"
     db_properties_filename: str
@@ -181,6 +190,85 @@ def build_import_dag(config: ImporterConfig) -> DAG:
 
         data_repos = get_data_repos("{{ params.get('data_repos', []) }}")
 
+        def _build_ec2_task_group(action: str) -> TaskGroup:
+            group_id = "turn_ec2_on" if action == "start" else "turn_ec2_off"
+            conn_id = f"aws_ec2_dynamic_{group_id}"
+            instance_id = config.ec2_instance_id
+            aws_profile = config.aws_profile
+            pool_kwargs = {"pool": config.pool} if config.pool is not None else {}
+
+            def _refresh_aws_creds():
+                subprocess.run(["saml2aws", "login", "--skip-prompt"], check=True)
+                cfg = configparser.ConfigParser()
+                cfg.read(os.path.expanduser("~/.aws/credentials"))
+                profile = cfg[aws_profile]
+                conn = Connection(
+                    conn_id=conn_id,
+                    conn_type="aws",
+                    extra={
+                        "aws_access_key_id": profile["aws_access_key_id"],
+                        "aws_secret_access_key": profile["aws_secret_access_key"],
+                        "aws_session_token": profile["aws_session_token"],
+                        "region_name": "us-east-1",
+                    },
+                )
+                session = settings.Session()
+                existing = session.query(Connection).filter_by(conn_id=conn_id).first()
+                if existing:
+                    session.delete(existing)
+                session.add(conn)
+                session.commit()
+
+            with TaskGroup(group_id=group_id) as group:
+                if action == "start":
+                    refresh = PythonOperator(
+                        task_id="refresh_aws_creds",
+                        python_callable=_refresh_aws_creds,
+                        **pool_kwargs,
+                    )
+                    ec2_op = EC2StartInstanceOperator(
+                        task_id="start_instance",
+                        instance_id=instance_id,
+                        aws_conn_id=conn_id,
+                        region_name="us-east-1",
+                        **pool_kwargs,
+                    )
+                    refresh >> ec2_op
+                else:
+                    sibling_dag_ids = config.sibling_dag_ids
+
+                    def _guard_ec2_stop():
+                        running = [
+                            sid for sid in sibling_dag_ids
+                            if DagRun.find(dag_id=sid, state=DagRunState.RUNNING)
+                        ]
+                        if running:
+                            raise AirflowException(
+                                f"Skipping EC2 stop: sibling DAG(s) still running: {running}"
+                            )
+
+                    guard = PythonOperator(
+                        task_id="guard_ec2_stop",
+                        python_callable=_guard_ec2_stop,
+                        # run even if this DAG's import tasks failed
+                        trigger_rule=TriggerRule.ALL_DONE,
+                        **pool_kwargs,
+                    )
+                    refresh = PythonOperator(
+                        task_id="refresh_aws_creds",
+                        python_callable=_refresh_aws_creds,
+                        **pool_kwargs,
+                    )
+                    ec2_op = EC2StopInstanceOperator(
+                        task_id="stop_instance",
+                        instance_id=instance_id,
+                        aws_conn_id=conn_id,
+                        region_name="us-east-1",
+                        **pool_kwargs,
+                    )
+                    guard >> refresh >> ec2_op
+            return group
+
         command_map = {
             "verify_management_state": _script(
                 scripts_dir,
@@ -282,6 +370,9 @@ def build_import_dag(config: ImporterConfig) -> DAG:
         }
 
         def _build_task(name: str) -> object:
+            if name in ("turn_ec2_on", "turn_ec2_off"):
+                return _build_ec2_task_group("start" if name == "turn_ec2_on" else "stop")
+
             if name not in command_map:
                 raise ValueError(f"Unsupported task '{name}' for importer '{importer}'.")
 
