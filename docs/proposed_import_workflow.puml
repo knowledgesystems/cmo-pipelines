@@ -1,0 +1,56 @@
+@startuml proposed_import_workflow
+title Proposed Import Workflow
+
+skinparam DefaultFontName Helvetica
+skinparam ActivityBackgroundColor #EEF2FF
+skinparam ActivityBorderColor #5563A8
+skinparam ActivityFontSize 13
+skinparam ArrowColor #5563A8
+skinparam PartitionBackgroundColor #F4F6FF
+skinparam PartitionBorderColor #9AA5CC
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #C8A200
+
+start
+
+:verify_cluster_state;
+:verify_import_not_in_progress;
+:set_import_running;
+
+fork
+  :wipe_standby_database;
+  :clone_live_database_into_standby;
+fork again
+  :fetch_studies_from_s3;
+end fork
+
+:validate_studies;
+:import_into_standby_database;
+
+partition "run_data_integrity_checks" {
+  fork
+    :check_referential_integrity;
+  fork again
+    :check_foreign_key_integrity;
+  end fork
+}
+
+partition "transfer_deployment_color" {
+  :check_cluster_matches_github_deployment;
+  :scale_replicas_pre;
+  :switch_ingress_rules;
+  :scale_replicas_post;
+  :clear_persistence_caches;
+}
+
+:set_import_complete;
+
+fork
+  :send_slack_notifications;
+fork again
+  :cleanup_data;
+end fork
+
+stop
+
+@enduml
