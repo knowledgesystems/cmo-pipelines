@@ -42,8 +42,8 @@ _CMO_MSK_CONFIG = ImporterConfig(
     description="Imports CMO MSK study to ClickHouse database using blue/green deployment strategy",
     importer="msk-cmo",
     tags=["cmo"],
-    target_nodes=("pipelines5_ssh",),
-    data_nodes=("pipelines5_ssh",),
+    target_nodes=("pipelines3_ssh",),
+    data_nodes=("pipelines3_ssh",),
     task_names=(
         "data_repos",
         "verify_management_state",
@@ -57,8 +57,8 @@ _CMO_MSK_CONFIG = ImporterConfig(
         "cleanup_data",
         "set_import_abandoned",
     ),
-    db_properties_filename="manage_cmo_database_update_tools.properties",
-    color_swap_config_filename="cmo-db-color-swap-config.yaml",
+    db_properties_filename="manage_msk_clickhouse_database_update_tools.properties",
+    color_swap_config_filename="msk-db-color-swap-config.yaml",
     params={
         "data_repos": Param(
             ["datahub", "private", "impact"],
