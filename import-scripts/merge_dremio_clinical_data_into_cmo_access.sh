@@ -74,9 +74,9 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/merge_dremio_clinical_data_into_cmo_
         echo "Error during determination of the destination database color" >&2
         exit 1
     fi
-    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
+    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-importer-$destination_database_color.jar"
     ENABLE_DEBUGGING=0
-    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CMO_ACCESS_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-cmo-clickhouse-importer.log -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CMO_ACCESS_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-cmo-importer.log -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     ONCOTREE_VERSION_TO_USE="oncotree_candidate_release"
     RUNMODE_PROD="runmode_prod"
     RUNMODE_DEV="runmode_dev"
