@@ -43,6 +43,13 @@ case "$PORTAL_DATABASE" in
     PORTAL_NAME="genie-portal"
     ONCOTREE_VERSION="oncotree_2019_12_01"
     ;;
+  msk-cmo)
+    TMP_DIR_NAME="import-cron-msk-cmo"
+    IMPORTER_NAME="msk-cmo"
+    LOG_FILE_NAME="msk-cmo-importer.log"
+    PORTAL_NAME="cmo-portal"
+    ONCOTREE_VERSION="oncotree_latest_stable"
+    ;;
   *)
     echo "Unsupported portal database: $PORTAL_DATABASE" >&2
     exit 1
