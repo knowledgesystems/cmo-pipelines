@@ -347,12 +347,45 @@ FLOCK_FILEPATH="/data/portal-cron/cron-lock/oncokb-annotator.sh"
             echo "Failed to generate README, exiting..."
             ONCOKB_ANNOTATION_SUCCESS=0
         else
-            echo '# MSK Clinical Sequencing Cohort (MSKCC)' > $GITHUB_README_FILE
-            echo >> $GITHUB_README_FILE
-            echo 'Please follow the [publication guidelines](https://cmo.mskcc.org/index.php/msk-impact/) when using these data in abstracts or journal articles. Manuscripts involving pan-cancer and other large analyses will undergo a biostatistical review prior to submission. If you would like assistance identifying a collaborator in Biostatistics, please contact [Mithat Gonen (gonenm@mskcc.org)](mailto:Mithat%20Gonen%3cgonenm@mskcc.org%3e). For questions regarding the results shown here, please contact [Mike Berger (bergerm1@mskcc.org)](mailto:Mike%20Berger%3cbergerm1@mskcc.org%3e), [Ahmet Zehir (zehira@mskcc.org)](mailto:Ahmet%20Zehir%3czehira@mskcc.org%3e), or [Nikolaus Schultz (schultzn@mskcc.org)](mailto:Nikolaus%20Schultz%3cschultzn@mskcc.org%3e").' >> $GITHUB_README_FILE
-            echo >> $GITHUB_README_FILE
-            echo '### :warning: These data are available to MSK investigators only and are not to be published or shared with anyone outside of MSK without permission.' >> $GITHUB_README_FILE
-            echo >> $GITHUB_README_FILE
+            cat <<'GITHUB_README_HEADER' > $GITHUB_README_FILE
+# MSK Clinical Sequencing Cohort (MSKCC)
+
+## :rotating_light: Repository Archival Notice
+
+This repository will no longer be updated after August 29, 2026, and will be archived on December 4, 2026. Users should transition to the new data locations.
+
+The MSK-IMPACT Data Product is currently available on the Research Technology Services (RTS) IRIS cluster and in MODE-Databricks system. See the [Repository Migration Guide](#repository-migration-guide) below for details on accessing the data.
+
+Please follow the [publication guidelines](https://cmo.mskcc.org/index.php/msk-impact/) when using these data in abstracts or journal articles. Manuscripts involving pan-cancer and other large analyses will undergo a biostatistical review prior to submission. If you would like assistance identifying a collaborator in Biostatistics, please contact [Mithat Gonen (gonenm@mskcc.org)](mailto:Mithat%20Gonen%3cgonenm@mskcc.org%3e). For questions regarding the results shown here, please contact [Mike Berger (bergerm1@mskcc.org)](mailto:Mike%20Berger%3cbergerm1@mskcc.org%3e), [Ahmet Zehir (zehira@mskcc.org)](mailto:Ahmet%20Zehir%3czehira@mskcc.org%3e), or [Nikolaus Schultz (schultzn@mskcc.org)](mailto:Nikolaus%20Schultz%3cschultzn@mskcc.org%3e").
+
+### :warning: These data are available to MSK investigators only and are not to be published or shared with anyone outside of MSK without permission.
+
+---
+
+### Repository Migration Guide
+
+The following **[migration guide](docs/repository-migration-guide.md)** covers a full description of changes between this repository and the replacement data product, including:
+
+- File-level equivalents and new files available in the replacement data product
+- Column renames, removals, and additions across mutations, CNA, SV, and clinical files
+- Python/pandas migration recipes
+
+Machine-readable mappings are also available:
+- [`file-mapping.tsv`](docs/file-mapping.tsv) — old filename → new filename
+- [`column-mapping.tsv`](docs/column-mapping.tsv) — old column name → new column name, per file type
+
+#### 1. Accessing the data on the RTS IRIS Cluster
+
+The MSK-IMPACT dataset can be found on the IRIS cluster at: **`/data1/core006/cdsi/cdsi-public-data-products/msk_impact/`**. Access to the cluster can be granted through RTS by completing the following [Spot Form](https://thespot.mskcc.org/esc?id=sc_cat_item&sys_id=f1662b5d1ba071103af72f876e4bcbdb&table=sc_cat_item&searchTerm=hpc).
+
+#### 2. Accessing the data on MODE-Databricks
+
+MODE-Databricks is available at [https://msk-mode-prod.cloud.databricks.com](https://msk-mode-prod.cloud.databricks.com). The MSK-IMPACT dataset can be found in MODE-Databricks at the following path: `product_cdsi.msk_impact`. If you do not already have access to MODE-Databricks, please email [cdsi@mskcc.org](mailto:cdsi@mskcc.org) to request access.  
+Databricks can be overwhelming for new users, so we recommend completing the free self-paced training available through Databricks Academy. For additional information, see the MODE Confluence page: [Onboarding to MODE-Databricks](https://mskconfluence.mskcc.org/spaces/MODE/pages/142228221/Onboarding+to+MODE-Databricks#OnboardingtoMODEDatabricks-Training).
+
+---
+
+GITHUB_README_HEADER
             cat $ONCOKB_ANNOTATOR_README_FILE >> $GITHUB_README_FILE
             echo >> $GITHUB_README_FILE
             rm $ONCOKB_ANNOTATOR_README_FILE
