@@ -1,6 +1,6 @@
 """
-import_public_clickhouse_dag.py
-Imports to Public cBioPortal ClickHouse database.
+import_public_dag.py
+Imports to Public cBioPortal database.
 """
 import os
 import sys
