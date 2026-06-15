@@ -68,15 +68,18 @@ function output_whether_preimport_steps_successfully_completed() {
         # Launch the preimport setup script as a background process. This runs for about 2 hours and can run in parallel with fetches.
         rm "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH"
         nohup "$MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH" "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH" > $MSK_PREIMPORT_STEPS_OUTPUT_FILEPATH 2>&1 &
+        fetch_dmp_data_fail=0
         if [[ -z "$SKIP_OVER_ALL_DMP_COHORT_PROCESSING" || "$SKIP_OVER_ALL_DMP_COHORT_PROCESSING" == 0 ]] ; then
             date
             echo executing fetch-dmp-data-for-import.sh
             oldwd=$(pwd)
             cd $PORTAL_HOME/tmp/separate_working_directory_for_dmp
-            $PORTAL_HOME/scripts/fetch-dmp-data-for-import.sh
+            if ! $PORTAL_HOME/scripts/fetch-dmp-data-for-import.sh ; then
+                fetch_dmp_data_fail=1
+            fi
             databases_are_prepared_for_import=$(output_whether_preimport_steps_successfully_completed)
             IMPORT_FAIL=0
-            if [ "$databases_are_prepared_for_import" == "yes" ] ; then
+            if [ "$fetch_dmp_data_fail" -eq 0 ] && [ "$databases_are_prepared_for_import" == "yes" ] ; then
                 echo "executing import-dmp-impact-data.sh"
                 $PORTAL_HOME/scripts/import-dmp-impact-data.sh
                 if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi

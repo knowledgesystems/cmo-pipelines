@@ -1386,4 +1386,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "LYMPHOMASUPERCOHORT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
     fi
+    if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
+        exit $GIT_PUSH_FAIL
+    else
+        exit 0
+    fi
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH
