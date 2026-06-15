@@ -59,7 +59,15 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     DROP_DEAD_INSTANT_END_TO_END=$(date --date="+18hours" -Iseconds)
 
     # -----------------------------------------------------------------------------------------------------------
+    # RESET DMP CLONE TO HEAD OF ORIGIN
+
+    echo $(date)
+    echo "resetting repository $PORTAL_DATA_HOME/dmp to discard any unpushed changesets from clone"
+    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $DMP_DATA_HOME
+
+    # -----------------------------------------------------------------------------------------------------------
     # START DMP DATA FETCHING
+
     echo $(date)
 
     if [[ -d "$MSK_DMP_TMPDIR" && "$MSK_DMP_TMPDIR" != "/" ]] ; then
@@ -1385,5 +1393,15 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "LYMPHOMASUPERCOHORT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
+    fi
+    if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
+        # a failure status is sent to the wrapper script here, so:
+        #     * the import-dmp-impact-data.sh script will not be executed
+        #     * changes were pushed to the s3 bucket today, but will not be "used" today .. and new samples will be re-fetched tomorrow
+        #     * only one git changeset is pushed each day, and push failed, so we have added one unpushed changeset to the head of our local clone
+        #         so we will (tomorrow) discard that changeset at the start of the execution of this script by calling datasource-repo-cleanup.sh
+        exit $GIT_PUSH_FAIL
+    else
+        exit 0
     fi
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH
