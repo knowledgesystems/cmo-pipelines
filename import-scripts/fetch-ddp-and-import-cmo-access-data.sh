@@ -33,9 +33,23 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     now=$(date "+%Y-%m-%d-%H-%M-%S")
     DATA_SOURCE_MANAGER_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/data_source_repo_clone_manager.sh"
     DATA_SOURCE_MANAGER_CONFIG_FILEPATH="$PORTAL_HOME/pipelines-credentials/importer-data-source-manager-config.yaml"
-    IMPORTER_JAR_FILENAME="$PORTAL_HOME/lib/msk-cmo-blue-importer.jar"
+    GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
+    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="/data/portal-cron/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties"
+    current_production_database_color=$($GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+    destination_database_color="unset"
+    if [ ${current_production_database_color:0:4} == "blue" ] ; then
+        destination_database_color="green"
+    fi
+    if [ ${current_production_database_color:0:5} == "green" ] ; then
+        destination_database_color="blue"
+    fi
+    if [ "$destination_database_color" == "unset" ] ; then
+        echo "Error during determination of the destination database color" >&2
+        exit 1
+    fi
+    IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-clickhouse-importer-$destination_database_color.jar"
     ENABLE_DEBUGGING=0
-    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CMO_ACCESS_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$CMO_ACCESS_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-cmo-clickhouse-importer.log -ea -cp $IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
     cmo_access_notification_file=$(mktemp $CMO_ACCESS_TMPDIR/cmo-access-portal-update-notification.$now.XXXXXX)
     ONCOTREE_VERSION_TO_USE="oncotree_candidate_release"
     cmo_access_dmp_pids_filepath=$CMO_ACCESS_TMPDIR/cmo_access_patient_list.txt
@@ -193,7 +207,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-ddp-and-import-cmo-access-d
     # import ran and either failed or succeeded
     echo "sending notification email.."
     ####TODO we cannot rebuild importer currently, so use the mskimpact-portal which causes an email to be sent to our own group email only
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --send-update-notification --portal mskimpact-portal --notification-file "$cmo_access_notification_file"
+    EMAIL_NOTIFICATION_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/email-import-notification-after-import.sh"
+    $EMAIL_NOTIFICATION_SCRIPT_FILEPATH mskimpact-portal "$cmo_access_notification_file"
 
     echo "committing ddp data"
     cd $CMO_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "update of ddp timeline data"

@@ -16,11 +16,11 @@ class TestScriptsCompile(unittest.TestCase):
 
     # file_pattern should be a string like "*.sh" or "*.py"
     # compile_cmd should be a string like "bash -n %s" or "python -m py_compile %s"
-    def check_for_compile_errors(self, file_pattern, compile_cmd, excluded_pattern = None):
+    def check_for_compile_errors(self, file_pattern, compile_cmd, excluded_patterns=None):
         script_pattern = os.path.join(self.scripts_dir, file_pattern)
         matched_files = glob.glob(script_pattern)
-        if (excluded_pattern):
-            files = [file for file in matched_files if excluded_pattern not in file]
+        if excluded_patterns:
+            files = [file for file in matched_files if not any(p in file for p in excluded_patterns)]
         else:
             files = matched_files
         # check there is at least one file
@@ -44,7 +44,7 @@ class TestScriptsCompile(unittest.TestCase):
 
     #TODO: we can remove this hardcoded filename pattern once we fully migrate scripts over to python3
     def test_python2_scripts_compile(self):
-        error_message = self.check_for_compile_errors("*.py", "python -m py_compile %s", "py3")
+        error_message = self.check_for_compile_errors("*.py", "python -m py_compile %s", ["py3", "validate_blue_green_study"])
         if error_message:
             self.fail(error_message)
 

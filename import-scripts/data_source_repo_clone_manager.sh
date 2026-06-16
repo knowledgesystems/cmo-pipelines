@@ -665,7 +665,7 @@ function switch_clone_to_default_branch_and_pull_updates() {
         echo "Error: could not execute 'git pull origin $default_branch' in clone at $repository_dirpath" >&2
         return 1
     fi
-    if ! git -C "$repository_dirpath" lfs pull origin $default_branch; then
+    if ! git -C "$repository_dirpath" -c lfs.fetchexclude="" lfs pull origin $default_branch; then
         echo "Error: could not execute 'git lfs pull origin $default_branch' in clone at $repository_dirpath" >&2
         return 1
     fi
@@ -685,7 +685,7 @@ function rsync_clone_data_to_remote_host() {
 
 function prune_repository_clone_on_current_branch() {
     local repository_dirpath=$1
-    if ! git -C "$repository_dirpath" lfs prune ; then
+    if ! git -C "$repository_dirpath" -c lfs.fetchexclude="" lfs prune ; then
         echo "Error: could not execute 'git lfs prune' in clone at $repository_dirpath" >&2
         return 1
     fi

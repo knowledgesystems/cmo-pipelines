@@ -49,16 +49,6 @@ function clearPersistenceCachesForMskGreenPortals() {
     fi
 }
 
-function clearPersistenceCachesForTriagePortals() {
-    all_triage_portals="triage"
-    clearPersistenceCachesForPortals "$all_triage_portals"
-}
-
-function clearPersistenceCachesForHgncPortals() {
-    all_hgnc_portals="hgnc"
-    clearPersistenceCachesForPortals "$all_hgnc_portals"
-}
-
 function clearPersistenceCachesForPublicPortals() {
     all_public_portals="public"
     clearPersistenceCachesForPortals "$all_public_portals"
@@ -84,7 +74,12 @@ function clearPersistenceCachesForGenieGreenPortals() {
     clearPersistenceCachesForPortals "$all_genie_portals"
 }
 
-function clearPersistenceCachesForCrdcPortals() {
-    all_crdc_portals="crdc"
-    clearPersistenceCachesForPortals "$all_crdc_portals"
+function clearPersistenceCachesForTriageBluePortals() {
+    all_triage_portals="triage-blue"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}
+
+function clearPersistenceCachesForTriageGreenPortals() {
+    all_triage_portals="triage-green"
+    clearPersistenceCachesForPortals "$all_triage_portals"
 }

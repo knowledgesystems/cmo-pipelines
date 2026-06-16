@@ -95,7 +95,6 @@ DEFAULT_AUTHORITIES = "PUBLIC;EXTENDED;MSKPUB"
 # consts used in email
 MSKCC_EMAIL_SUFFIX = "@mskcc.org"
 SKI_EMAIL_SUFFIX = "@sloankettering.edu"
-SMTP_SERVER = "smtp.gmail.com"
 MESSAGE_FROM_CMO = "cbioportal-access@cbioportal.org"
 MESSAGE_BCC_CMO = ["cbioportal-access@cbioportal.org"]
 
@@ -139,7 +138,11 @@ class User(object):
 #
 # Uses smtplib to send email.
 #
-def send_mail(to, subject, body, gmail_username, gmail_password, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, server=SMTP_SERVER):
+def send_mail(to, subject, body, gmail_username, gmail_password, sender=MESSAGE_FROM_CMO, bcc=MESSAGE_BCC_CMO, server=None):
+
+    if server is None:
+        print >> ERROR_FILE, 'smtp server must be specified'
+        sys.exit(2)
 
     assert type(to)==list
     assert type(bcc)==list
@@ -159,8 +162,13 @@ def send_mail(to, subject, body, gmail_username, gmail_password, sender=MESSAGE_
     for bcc_name in bcc:
         combined_to_list.append(bcc_name)
 
-    smtp = smtplib.SMTP_SSL(server, 465)
-    smtp.login(gmail_username, gmail_password)
+    # Gmail blocks unauthenticated relay, so SMTP_SSL with login is required.
+    # The MSK internal relay allows plain SMTP on port 25 from trusted hosts.
+    if 'gmail' in server:
+        smtp = smtplib.SMTP_SSL(server, 465)
+        smtp.login(gmail_username, gmail_password)
+    else:
+        smtp = smtplib.SMTP(server, 25)
     smtp.sendmail(sender, combined_to_list, msg.as_string() )
     smtp.close()
 
@@ -576,7 +584,7 @@ def add_rejected_users_to_worksheet(rejected_user_map, google_spreadsheet, clien
 # ------------------------------------------------------------------------------
 # sends emails to users from a user map
 
-def send_emails(user_map, google_spreadsheet, client, worksheet, gmail_username, gmail_password, sender, emails_to_remove=None):
+def send_emails(user_map, google_spreadsheet, client, worksheet, gmail_username, gmail_password, sender, smtp_server, emails_to_remove=None):
     if user_map is None:
         return
 
@@ -596,9 +604,9 @@ def send_emails(user_map, google_spreadsheet, client, worksheet, gmail_username,
         if emails_to_remove is None or user_key not in emails_to_remove:
             print >> OUTPUT_FILE, ('Sending confirmation or rejection email to user: %s at %s' %
                                    (user.name, user.inst_email))
-            send_mail([user.inst_email], subject, body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field)
+            send_mail([user.inst_email], subject, body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field, server=smtp_server)
         else:
-            send_mail([user_key], error_subject, error_body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field)
+            send_mail([user_key], error_subject, error_body, gmail_username, gmail_password, sender=from_field, bcc=bcc_field, server=smtp_server)
 
 # ------------------------------------------------------------------------------
 # gets email parameters from google spreadsheet
@@ -640,7 +648,7 @@ def establish_new_db_connection(portal_properties, port, ssl_ca_filename):
 # displays program usage (invalid args)
 
 def usage():
-    print >> OUTPUT_FILE, 'importUsers.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --port [mysql port number] --sender [sender identifier - optional] --ssl-ca [ssl certificate file - optional]'
+    print >> OUTPUT_FILE, 'importUsers.py --secrets-file [google secrets.json] --creds-file [oauth creds filename] --properties-file [properties file] --send-email-confirm [true or false] --use-institutional-id [true or false] --port [mysql port number] --sender [sender identifier - optional] --ssl-ca [ssl certificate file - optional] --smtp-server [smtp server hostname - required when send-email-confirm is true]'
 
 # ------------------------------------------------------------------------------
 # the big deal main.
@@ -649,7 +657,7 @@ def main():
 
     # parse command line options
     try:
-        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'ssl-ca=', 'send-email-confirm=', 'use-institutional-id=', 'port=', 'sender=', 'gmail-username=', 'gmail-password='])
+        opts, args = getopt.getopt(sys.argv[1:], '', ['secrets-file=', 'creds-file=', 'properties-file=', 'ssl-ca=', 'send-email-confirm=', 'use-institutional-id=', 'port=', 'sender=', 'gmail-username=', 'gmail-password=', 'smtp-server='])
     except getopt.error, msg:
         print >> ERROR_FILE, msg
         usage()
@@ -665,6 +673,7 @@ def main():
     ssl_ca_filename = '' # not required
     gmail_username = ''
     gmail_password = ''
+    smtp_server = ''
 
     for o, a in opts:
         if o == '--secrets-file':
@@ -685,10 +694,12 @@ def main():
             sender = a
         elif o == '--port':
             port = a
+        elif o == '--smtp-server':
+            smtp_server = a
 
     if (secrets_filename == '' or creds_filename == '' or properties_filename == '' or send_email_confirm == '' or port == '' or
-        (send_email_confirm != 'true' and send_email_confirm != 'false') or 
-        (send_email_confirm == 'true' and (gmail_username == '' or gmail_password == ''))):
+        (send_email_confirm != 'true' and send_email_confirm != 'false') or
+        (send_email_confirm == 'true' and (gmail_username == '' or gmail_password == '' or smtp_server == ''))):
         usage()
         sys.exit(2)
 
@@ -743,9 +754,9 @@ def main():
             # sending emails
             if send_email_confirm == 'true':
                 print >> OUTPUT_FILE, "Sending confirmation emails to new users"
-                send_emails(new_user_map, google_spreadsheet, client, IMPORT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, emails_to_remove)
+                send_emails(new_user_map, google_spreadsheet, client, IMPORT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, smtp_server, emails_to_remove)
                 print >> OUTPUT_FILE, "Sending rejection emails to newly rejected users"
-                send_emails(rejected_user_map, google_spreadsheet, client, REJECT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender)
+                send_emails(rejected_user_map, google_spreadsheet, client, REJECT_EMAIL_WORKSHEET, gmail_username, gmail_password, sender, smtp_server)
 
 # ------------------------------------------------------------------------------
 # ready to roll

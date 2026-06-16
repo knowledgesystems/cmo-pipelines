@@ -9,7 +9,6 @@ CRDB_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/crdb_fetcher.jar"
 CVR_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/cvr_fetcher.jar"
 DDP_FETCHER_JAR_FILENAME="$PORTAL_HOME/lib/ddp_fetcher.jar"
 REDCAP_PIPELINE_JAR_FILENAME="$PORTAL_HOME/lib/redcap_pipeline.jar"
-IMPORTER_JAR_FILENAME_FOR_GIT_AND_MAIL_ONLY="$PORTAL_HOME/lib/msk-dmp-importer-for-git-and-mail-only.jar"
 JAVA_DD_AGENT_ARGS="-javaagent:/opt/datadog/apm/library/java/dd-java-agent.jar -Ddd.profiling.enabled=true -Ddd.profiling.directallocation.enabled=true -Ddd.profiling.allocation.enabled=true -Ddd.profiling.ddprof.liveheap.enabled=true -Ddd.service=msk-impact-cvr-fetcher -Ddd.env=dev -Ddd.version=3.0"
 JAVA_JPROFILER_AGENT_ARGS="-agentpath:/data/portal-cron/bin/jprofiler12.0.4/bin/linux-x64/libjprofilerti.so=port=2718"
 JAVA_CRDB_FETCHER_ARGS="--add-opens java.base/java.lang=ALL-UNNAMED -jar $CRDB_FETCHER_JAR_FILENAME"
@@ -28,7 +27,6 @@ ENABLE_DEBUGGING=0
 if [ $ENABLE_DEBUGGING != "0" ] ; then
     java_debug_args="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27182"
 fi
-JAVA_IMPORTER_ARGS_FOR_GIT_AND_MAIL_ONLY="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -ea -cp $IMPORTER_JAR_FILENAME_FOR_GIT_AND_MAIL_ONLY org.mskcc.cbio.importer.Admin"
 PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
 
 DEFAULT_DDP_DEMOGRAPHICS_ROW_COUNT=2
@@ -359,4 +357,56 @@ function uploadToS3OrSendFailureMessage() {
         echo -e "$message" | mail -s "Failed to upload $DIR_TO_UPLOAD to s3" $PIPELINES_EMAIL_LIST
         sendImportFailureMessageMskPipelineLogsSlack "$message"
     fi
+}
+
+function downloadFromS3AllStudies() {
+    download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+    status_code=$?
+    if [ $status_code -ne 0 ] ; then
+        sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch failure: DMP repository update"
+        return $status_code
+    fi
+    # purge split parts of nonsignedout_mutations (if left over from last cycle or just pulled)
+    find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
+    return 0
+}
+
+function backupNonsignedoutMutationFilesForDMP() {
+    NONSIGNEDOUT_BACKUP_DIRPATH="/data/portal-cron/nonsignedout_holding"
+    unset nonsignedout_filepaths
+    declare -a nonsignedout_filepaths
+    while IFS= read -r line ; do
+        nonsignedout_filepaths+=("$line")
+    done < <(find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt")
+    pos=0
+    while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
+        nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
+        relative_filepath=${nonsignedout_filepath:${#DMP_DATA_HOME}}
+        backup_filepath=${NONSIGNEDOUT_BACKUP_DIRPATH}${relative_filepath}
+        echo "copying $nonsignedout_filepath to $backup_filepath"
+        if ! cp -a $nonsignedout_filepath $backup_filepath ; then
+            echo "Error during nonsignedout backup!" >&2
+        fi
+        pos=$(($pos+1))
+    done
+}
+
+function restoreNonsignedoutMutationFilesForDMP() {
+    NONSIGNEDOUT_BACKUP_DIRPATH="/data/portal-cron/nonsignedout_holding"
+    unset nonsignedout_filepaths
+    declare -a nonsignedout_filepaths
+    while IFS= read -r line ; do
+        nonsignedout_filepaths+=("$line")
+    done < <(find -L "$NONSIGNEDOUT_BACKUP_DIRPATH" -name "data_nonsignedout_mutations.txt")
+    pos=0
+    while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
+        nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
+        relative_filepath=${nonsignedout_filepath:${#NONSIGNEDOUT_BACKUP_DIRPATH}}
+        restore_filepath=${DMP_DATA_HOME}${relative_filepath}
+        echo "copying $nonsignedout_filepath to $restore_filepath"
+        if ! cp -a $nonsignedout_filepath $restore_filepath ; then
+            echo "Error during nonsignedout restore!" >&2
+        fi
+        pos=$(($pos+1))
+    done
 }

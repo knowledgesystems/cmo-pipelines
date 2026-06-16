@@ -59,7 +59,15 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     DROP_DEAD_INSTANT_END_TO_END=$(date --date="+18hours" -Iseconds)
 
     # -----------------------------------------------------------------------------------------------------------
+    # RESET DMP CLONE TO HEAD OF ORIGIN
+
+    echo $(date)
+    echo "resetting repository $PORTAL_DATA_HOME/dmp to discard any unpushed changesets from clone"
+    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $DMP_DATA_HOME
+
+    # -----------------------------------------------------------------------------------------------------------
     # START DMP DATA FETCHING
+
     echo $(date)
 
     if [[ -d "$MSK_DMP_TMPDIR" && "$MSK_DMP_TMPDIR" != "/" ]] ; then
@@ -80,12 +88,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo -e "$message" |  mail -s "fetch-dmp-data-for-import failed to run." $PIPELINES_EMAIL_LIST
         sendPreImportFailureMessageMskPipelineLogsSlack "$message"
         exit 2
-    fi 
+    fi
 
-    # fetch clinical data from data repository
-    echo "fetching updates from dmp repository..."
-    download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
-    if [ $? -gt 0 ] ; then
+    # fetch clinical data and full nonsignedout mutation files from data repository
+    echo "downloading full content from s3 bucket mskimpact-databricks to $DMP_DATA_HOME"
+    if ! downloadFromS3AllStudies ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch failure: DMP repository update"
         exit 2
     fi
@@ -171,7 +178,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR fetch failed!"
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Fetch"
             IMPORT_STATUS_IMPACT=1
         else
@@ -179,7 +186,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             bash $PORTAL_HOME/scripts/test_if_impact_has_lost_allele_count.sh
             if [ $? -gt 0 ] ; then
                 echo "Empty allele count sanity check failed! MSK-IMPACT will not be imported!"
-                download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+                downloadFromS3AllStudies
                 sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT empty allele count sanity check"
                 IMPORT_STATUS_IMPACT=1
             else
@@ -187,7 +194,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_data.json
                 if [ $? -gt 0 ] ; then
                     echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_data.json! MSK-IMPACT will not be imported!"
-                    download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+                    downloadFromS3AllStudies
                     sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_data.json"
                     IMPORT_STATUS_IMPACT=1
                 else
@@ -207,7 +214,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR Germline fetch failed!"
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Germline Fetch"
             IMPORT_STATUS_IMPACT=1
             #override the success of the tumor sample cvr fetch with a failed status
@@ -217,7 +224,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_gml_data.json
             if [ $? -gt 0 ] ; then
                 echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_gml_data.json! MSK-IMPACT will not be imported!"
-                download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+                downloadFromS3AllStudies
                 sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_gml_data.json"
                 IMPORT_STATUS_IMPACT=1
                 #override the success of the tumor sample cvr fetch with a failed status
@@ -252,7 +259,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             echo "CVR heme fetch failed!"
             echo "This will not affect importing of mskimpact"
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Fetch"
             IMPORT_STATUS_HEME=1
         else
@@ -260,7 +267,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_DATA_HOME/cvr_data.json
             if [ $? -gt 0 ] ; then
                 echo "PHI attributes found in $MSK_HEMEPACT_DATA_HOME/cvr_data.json! HEMEPACT will not be imported!"
-                download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+                downloadFromS3AllStudies
                 sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_DATA_HOME/cvr_data.json"
                 IMPORT_STATUS_HEME=1
             else
@@ -276,7 +283,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR Germline fetch failed!"
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Germline Fetch"
             IMPORT_STATUS_HEME=1
             #override the success of the tumor sample cvr fetch with a failed status
@@ -286,7 +293,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json
             if [ $? -gt 0 ] ; then
                 echo "PHI attributes found in $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json! HEMEPACT will not be imported!"
-                download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+                downloadFromS3AllStudies
                 sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json"
                 IMPORT_STATUS_HEME=1
                 #override the success of the tumor sample cvr fetch with a failed status
@@ -321,7 +328,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             echo "CVR Archer fetch failed!"
             echo "This will not affect importing of mskimpact"
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED CVR Fetch"
             IMPORT_STATUS_ARCHER=1
         else
@@ -329,7 +336,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json
             if [ $? -gt 0 ] ; then
                 echo "PHI attributes found in $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json! UNLINKED_ARCHER will not be imported!"
-                download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+                downloadFromS3AllStudies
                 sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER PHI attributes scan failed on $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json"
                 IMPORT_STATUS_ARCHER=1
             else
@@ -364,7 +371,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
             echo "CVR ACCESS fetch failed!"
             echo "This will not affect importing of mskimpact"
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS CVR Fetch"
             IMPORT_STATUS_ACCESS=1
         else
@@ -372,7 +379,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ACCESS_DATA_HOME/cvr_data.json
             if [ $? -gt 0 ] ; then
                 echo "PHI attributes found in $MSK_ACCESS_DATA_HOME/cvr_data.json! ACCESS will not be imported!"
-                download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+                downloadFromS3AllStudies
                 sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS PHI attributes scan failed on $MSK_ACCESS_DATA_HOME/cvr_data.json"
                 IMPORT_STATUS_ACCESS=1
             else
@@ -406,7 +413,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             addDateAddedData $MSK_IMPACT_DATA_HOME "data_clinical_mskimpact_data_clinical_cvr.txt" "data_clinical_mskimpact_supp_date_cbioportal_added.txt"
             upload_to_s3 "$MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_supp_date_cbioportal_added.txt" "mskimpact/data_clinical_mskimpact_supp_date_cbioportal_added.txt" "mskimpact-databricks"
         fi
-        download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+        downloadFromS3AllStudies
     fi
 
     # add "DATE ADDED" info to clinical data for HEMEPACT
@@ -417,7 +424,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             addDateAddedData $MSK_HEMEPACT_DATA_HOME "data_clinical_hemepact_data_clinical.txt" "data_clinical_hemepact_data_clinical_supp_date.txt"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical_supp_date.txt" "mskimpact_heme/data_clinical_hemepact_data_clinical_supp_date.txt" "mskimpact-databricks"
         fi
-        download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+        downloadFromS3AllStudies
     fi
 
     # add "DATE ADDED" info to clinical data for ARCHER
@@ -428,7 +435,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             addDateAddedData $MSK_ARCHER_UNFILTERED_DATA_HOME "data_clinical_mskarcher_data_clinical.txt" "data_clinical_mskarcher_data_clinical_supp_date.txt"
             upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical_supp_date.txt" "mskarcher_unfiltered/data_clinical_mskarcher_data_clinical_supp_date.txt" "mskimpact-databricks"
         fi
-        download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+        downloadFromS3AllStudies
     fi
 
     # generate case lists by cancer type and add "DATE ADDED" info to clinical data for ACCESS
@@ -439,7 +446,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             addDateAddedData $MSK_ACCESS_DATA_HOME "data_clinical_mskaccess_data_clinical.txt" "data_clinical_mskaccess_data_clinical_supp_date.txt"
             upload_to_s3 "$MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical_supp_date.txt" "mskaccess/data_clinical_mskaccess_data_clinical_supp_date.txt" "mskimpact-databricks"
         fi
-        download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+        downloadFromS3AllStudies
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -456,7 +463,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         $PYTHON_BINARY $PORTAL_HOME/scripts/merge_archer_structural_variants.py --archer-structural-variants $MSK_ARCHER_UNFILTERED_DATA_HOME/data_sv.txt --linked-cases-filename $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/linked_cases.txt --structural-variants-filename $MSK_IMPACT_DATA_HOME/data_sv.txt --clinical-filename $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt --mapped-archer-samples-filename $MAPPED_ARCHER_SAMPLES_FILE --study-id "mskimpact" --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD
         if [ $? -gt 0 ] ; then
             ARCHER_MERGE_IMPACT_FAIL=1
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+            downloadFromS3AllStudies
         else
             upload_to_s3 "$MAPPED_ARCHER_SAMPLES_FILE" "mskarcher_unfiltered/cvr/mapped_archer_samples.txt" "mskimpact-databricks"
             upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
@@ -469,7 +476,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         $PYTHON_BINARY $PORTAL_HOME/scripts/merge_archer_structural_variants.py --archer-structural-variants $MSK_ARCHER_UNFILTERED_DATA_HOME/data_sv.txt --linked-cases-filename $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/linked_cases.txt --structural-variants-filename $MSK_HEMEPACT_DATA_HOME/data_sv.txt --clinical-filename $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt --mapped-archer-samples-filename $MAPPED_ARCHER_SAMPLES_FILE --study-id "mskimpact_heme" --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD
         if [ $? -gt 0 ] ; then
             ARCHER_MERGE_HEME_FAIL=1
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
+            downloadFromS3AllStudies
         else
             upload_to_s3 "$MAPPED_ARCHER_SAMPLES_FILE" "mskarcher_unfiltered/cvr/mapped_archer_samples.txt" "mskimpact-databricks"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
@@ -595,13 +602,13 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_IMPACT=1
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Redcap Export"
         else
             if [ $GENERATE_MASTERLIST_FAIL -eq 0 ] ; then
                 $PYTHON_BINARY $PORTAL_HOME/scripts/filter_dropped_samples_patients.py -s $MSK_IMPACT_DATA_HOME/data_clinical_sample.txt -p $MSK_IMPACT_DATA_HOME/data_clinical_patient.txt -f $MSK_DMP_TMPDIR/sample_masterlist_for_filtering.txt -u $GMAIL_USERNAME -g $GMAIL_PASSWORD
                 if [ $? -gt 0 ] ; then
-                    download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+                    downloadFromS3AllStudies
                 else
                     upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
                 fi
@@ -617,7 +624,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         export_stable_id_from_redcap mskimpact_heme $MSK_HEMEPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_HEME=1
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT Redcap Export"
         else
             touch $MSK_HEMEPACT_CONSUME_TRIGGER
@@ -632,7 +639,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         export_stable_id_from_redcap mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_ARCHER=1
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED Redcap Export"
         else
             # we want to remove MSI_COMMENT, MSI_SCORE, and MSI_TYPE from the data clinical file
@@ -654,7 +661,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         export_stable_id_from_redcap mskaccess $MSK_ACCESS_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_ACCESS=1
-            download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap Export"
         else
             touch $MSK_ACCESS_CONSUME_TRIGGER
@@ -704,7 +711,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
     fi
 
-    download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+    downloadFromS3AllStudies
 
     # -------------------------------------------------------------
     # UNLINKED ARCHER DATA PROCESSING
@@ -720,7 +727,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 echo "UNLINKED_ARCHER subset failed! Study will not be updated in the portal."
                 sendPreImportFailureMessageMskPipelineLogsSlack "UNLINKED_ARCHER subset"
                 echo $(date)
-                download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+                downloadFromS3AllStudies
                 UNLINKED_ARCHER_SUBSET_FAIL=1
                 IMPORT_STATUS_ARCHER=1
             else
@@ -748,7 +755,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical* -i $PORTAL_HOME/scripts/cdm_metadata.json
                 if [ $? -gt 0 ] ; then
                     echo "Error: Adding metadata headers for UNLINKED_ARCHER failed! Study will not be updated in portal."
-                    download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+                    downloadFromS3AllStudies
                     IMPORT_STATUS_ARCHER=1
                 else
                     # Add CDM timeline files
@@ -760,7 +767,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                     upload_to_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher" "mskimpact-databricks"
                     addCancerTypeCaseLists $MSK_ARCHER_DATA_HOME "mskarcher" "data_clinical_sample.txt" "data_clinical_patient.txt"
                     upload_to_s3 "$MSK_ARCHER_DATA_HOME/case_lists" "mskarcher/case_lists" "mskimpact-databricks"
-                    download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks" 
+                    downloadFromS3AllStudies
                 fi
             fi
         fi
@@ -869,7 +876,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MIXEDPACT_MERGE_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "MIXEDPACT merge"
         echo "MIXEDPACT merge failed! Reverting data to last commit."
-        download_from_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks" 
+        download_from_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks"
+        # purge split parts of nonsignedout_mutations (these might be present in mixedpact, if incorrectly pushed to s3)
+        find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
     else
         echo "Committing MIXEDPACT data"
         upload_to_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks"
@@ -879,10 +888,12 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_SOLID_HEME_MERGE_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKSOLIDHEME merge"
         echo "MSKSOLIDHEME merge and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks" 
+        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
+        # purge split parts of nonsignedout_mutations (these might be present in msk_solid_heme, if incorrectly pushed to s3)
+        find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
     else
         echo "Committing MSKSOLIDHEME data"
-        upload_to_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
     fi
 
     #--------------------------------------------------------------
@@ -915,10 +926,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_KINGS_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "KINGSCOUNTY subset"
         echo "KINGSCOUNTY subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_KINGS_DATA_HOME" "msk_kingscounty" "mskimpact-databricks" 
+        download_from_s3 "$MSK_KINGS_DATA_HOME" "msk_kingscounty" "mskimpact-databricks"
     else
         echo "Committing KINGSCOUNTY data"
-        upload_to_s3 "$MSK_KINGS_DATA_HOME" "msk_kingscounty" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_KINGS_DATA_HOME" "msk_kingscounty" "mskimpact-databricks"
     fi
 
     # LEHIGHVALLEY subset
@@ -943,10 +954,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_LEHIGH_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "LEHIGHVALLEY subset"
         echo "LEHIGHVALLEY subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_LEHIGH_DATA_HOME" "msk_lehighvalley" "mskimpact-databricks" 
+        download_from_s3 "$MSK_LEHIGH_DATA_HOME" "msk_lehighvalley" "mskimpact-databricks"
     else
         echo "Committing LEHIGHVALLEY data"
-        upload_to_s3 "$MSK_LEHIGH_DATA_HOME" "msk_lehighvalley" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_LEHIGH_DATA_HOME" "msk_lehighvalley" "mskimpact-databricks"
     fi
 
     # QUEENSCANCERCENTER subset
@@ -971,10 +982,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_QUEENS_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "QUEENSCANCERCENTER subset"
         echo "QUEENSCANCERCENTER subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_QUEENS_DATA_HOME" "msk_queenscancercenter" "mskimpact-databricks" 
+        download_from_s3 "$MSK_QUEENS_DATA_HOME" "msk_queenscancercenter" "mskimpact-databricks"
     else
         echo "Committing QUEENSCANCERCENTER data"
-        upload_to_s3 "$MSK_QUEENS_DATA_HOME" "msk_queenscancercenter" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_QUEENS_DATA_HOME" "msk_queenscancercenter" "mskimpact-databricks"
     fi
 
     # MIAMICANCERINSTITUTE subset
@@ -999,10 +1010,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_MCI_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "MIAMICANCERINSTITUTE subset"
         echo "MIAMICANCERINSTITUTE subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_MCI_DATA_HOME" "msk_miamicancerinstitute" "mskimpact-databricks" 
+        download_from_s3 "$MSK_MCI_DATA_HOME" "msk_miamicancerinstitute" "mskimpact-databricks"
     else
         echo "Committing MIAMICANCERINSTITUTE data"
-        upload_to_s3 "$MSK_MCI_DATA_HOME" "msk_miamicancerinstitute" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_MCI_DATA_HOME" "msk_miamicancerinstitute" "mskimpact-databricks"
     fi
 
     # HARTFORDHEALTHCARE subset
@@ -1027,10 +1038,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_HARTFORD_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "HARTFORDHEALTHCARE subset"
         echo "HARTFORDHEALTHCARE subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_HARTFORD_DATA_HOME" "msk_hartfordhealthcare" "mskimpact-databricks" 
+        download_from_s3 "$MSK_HARTFORD_DATA_HOME" "msk_hartfordhealthcare" "mskimpact-databricks"
     else
         echo "Committing HARTFORDHEALTHCARE data"
-        upload_to_s3 "$MSK_HARTFORD_DATA_HOME" "msk_hartfordhealthcare" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_HARTFORD_DATA_HOME" "msk_hartfordhealthcare" "mskimpact-databricks"
     fi
 
     # RALPHLAUREN subset
@@ -1055,10 +1066,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_RALPHLAUREN_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "RALPHLAUREN subset"
         echo "RALPHLAUREN subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_RALPHLAUREN_DATA_HOME" "msk_ralphlauren" "mskimpact-databricks" 
+        download_from_s3 "$MSK_RALPHLAUREN_DATA_HOME" "msk_ralphlauren" "mskimpact-databricks"
     else
         echo "Committing RALPHLAUREN data"
-        upload_to_s3 "$MSK_RALPHLAUREN_DATA_HOME" "msk_ralphlauren" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_RALPHLAUREN_DATA_HOME" "msk_ralphlauren" "mskimpact-databricks"
     fi
 
     # RIKENGENESISJAPAN subset
@@ -1083,10 +1094,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_RIKENGENESISJAPAN_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "RIKENGENESISJAPAN subset"
         echo "RIKENGENESISJAPAN subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$MSK_RIKENGENESISJAPAN_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks" 
+        download_from_s3 "$MSK_RIKENGENESISJAPAN_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks"
     else
         echo "Committing RIKENGENESISJAPAN data"
-        upload_to_s3 "$MSK_RIKENGENESISJAPAN_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks" 
+        upload_to_s3 "$MSK_RIKENGENESISJAPAN_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks"
     fi
 
     #--------------------------------------------------------------
@@ -1218,33 +1229,78 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT merge"
         echo "Lymphoma super cohort subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks" 
+        download_from_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks"
+        # purge split parts of nonsignedout_mutations (these might be present in lymphoma super cohort, if incorrectly pushed to s3)
+        find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
     else
         echo "Committing Lymphoma super cohort data"
-        upload_to_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks" 
+        upload_to_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks"
     fi
 
     #--------------------------------------------------------------
     # S3 PUSH
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to s3 bucket"
+    echo "pushing data from $DMP_DATA_HOME to s3 bucket mskimpact-databricks"
     # push all data into s3
     S3_BUCKET_PUSH_FAIL=0
     upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
     if [ $? -gt 0 ] ; then
         S3_BUCKET_PUSH_FAIL=1
+        echo "s3 push failed"
         sendPreImportFailureMessageMskPipelineLogsSlack "S3 PUSH (dmp) :fire: - address ASAP!"
     fi
 
     #--------------------------------------------------------------
+    # backup and split up data_nonsignedout_mutations.txt files for git push
+    # backup (this allows us to restore these files to the clone after the git reset / cleaning at the end of imports)
+    backupNonsignedoutMutationFilesForDMP
+    # split up (for git push only)
+    unset nonsignedout_filepaths
+    declare -a nonsignedout_filepaths
+    while IFS= read -r line ; do
+        nonsignedout_filepaths+=("$line")
+    done < <(find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt")
+    pos=0
+    while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
+        nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
+        full_linecount=$(cat $nonsignedout_filepath | wc -l )
+        part1_linecount=$(($full_linecount/2))
+        part2_linecount=$(($full_linecount-$part1_linecount))
+        echo "creating ${nonsignedout_filepath}_part1forcat"
+        head -n $part1_linecount "$nonsignedout_filepath" > "${nonsignedout_filepath}_part1forcat"
+        echo "creating ${nonsignedout_filepath}_part2forcat"
+        tail -n $part2_linecount "$nonsignedout_filepath" > "${nonsignedout_filepath}_part2forcat"
+        pos=$(($pos+1))
+    done
+
+    #--------------------------------------------------------------
     # GIT PUSH
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to git repository"
+    echo "pushing data (with split nonsignedout mutations) back into github repository"
     # check updated data back into git
-    GIT_PUSH_FAIL=0
-    cd $DMP_DATA_HOME ; $GIT_BINARY add ./*; $GIT_BINARY commit --amend --no-edit; $GIT_BINARY push origin --force
-    if [ $? -gt 0 ] ; then
-        GIT_PUSH_FAIL=1
+    GIT_PUSH_FAIL=1 # assume fail if we don't succeed below
+    cd $DMP_DATA_HOME
+    if $GIT_BINARY add ./* ; then
+        pos=0
+        while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
+            nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
+            $GIT_BINARY reset "$nonsignedout_filepath"
+            pos=$(($pos+1))
+        done
+        git_commit_message="DMP Fetch and Cohort Updates $(date +%Y_%m_%d)"
+        if $GIT_BINARY commit -m "$git_commit_message" && $GIT_BINARY push origin --force; then
+            GIT_PUSH_FAIL=0 # success
+        fi
+    else
+        sendPreImportFailureMessageMskPipelineLogsSlack "GIT ADD (dmp)!"
+    fi
+    if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (dmp) :fire: - address ASAP!"
     fi
+
+    # purge split parts of nonsignedout_mutations
+    echo "removing all files from $DMP_DATA_HOME matching pattern 'data_nonsignedout_mutations.txt_part[12]forcat"
+    find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
 
     #--------------------------------------------------------------
     # Emails for failed processes
@@ -1373,5 +1429,15 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "LYMPHOMASUPERCOHORT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
+    fi
+    if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
+        # a failure status is sent to the wrapper script here, so:
+        #     * the import-dmp-impact-data.sh script will not be executed
+        #     * changes were pushed to the s3 bucket today, but will not be "used" today .. and new samples will be re-fetched tomorrow
+        #     * only one git changeset is pushed each day, and push failed, so we have added one unpushed changeset to the head of our local clone
+        #         so we will (tomorrow) discard that changeset at the start of the execution of this script by calling datasource-repo-cleanup.sh
+        exit $GIT_PUSH_FAIL
+    else
+        exit 0
     fi
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH
