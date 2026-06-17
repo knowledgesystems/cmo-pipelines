@@ -376,7 +376,7 @@ Machine-readable mappings are also available:
 
 #### 1. Accessing the data on the RTS IRIS Cluster
 
-The MSK-IMPACT dataset can be found on the IRIS cluster at: **`/data1/core006/cdsi/cdsi-public-data-products/msk_impact/`**. Access to the cluster can be granted through RTS by completing the following [Spot Form](https://thespot.mskcc.org/esc?id=sc_cat_item&sys_id=f1662b5d1ba071103af72f876e4bcbdb&table=sc_cat_item&searchTerm=hpc).
+The MSK-IMPACT dataset can be found on the IRIS cluster at: **`/data1/core006/cdsi/cdsi-public-data-products/msk_impact/`**. Access to the cluster can be granted through RTS by completing the following [Spot Form](https://thespot.mskcc.org/esc?id=sc_cat_item&sys_id=f1662b5d1ba071103af72f876e4bcbdb&table=sc_cat_item&searchTerm=hpc). Note that if your lab is not already onboarded to IRIS, the onboarding process, which is a prerequisite for obtaining an individual account, may take four weeks or longer.
 
 #### 2. Accessing the data on MODE-Databricks
 
