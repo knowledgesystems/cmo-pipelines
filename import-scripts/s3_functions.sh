@@ -7,8 +7,14 @@ fi
 
 # Uploads a file or directory to an S3 bucket (from local to S3).
 # If a directory is provided, files removed locally will be deleted from S3.
-# PATH_TO_UPLOAD must end in the same path as PATH_IN_S3, or the script exits with an error.
 # Returns 0 on success, 1 on failure (does not exit the shell).
+#
+# Args:
+#   $1 PATH_TO_UPLOAD  Local file or directory to upload (must exist).
+#   $2 PATH_IN_S3      S3 key prefix within the bucket (no s3:// prefix). Must match
+#                      the trailing path of PATH_TO_UPLOAD, unless empty to sync the
+#                      bucket root (e.g. upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks").
+#   $3 BUCKET_NAME     S3 bucket name (e.g. mskimpact-databricks).
 function try_upload_to_s3() {
     PATH_TO_UPLOAD="$1"
     PATH_IN_S3="$2"
@@ -66,9 +72,16 @@ function try_upload_to_s3() {
     fi
 }
 
-# Uploads a file or directory to an S3 bucket (from local to S3)
-# If a directory is provided, files removed locally will be deleted from S3
-# PATH_TO_UPLOAD must end in the same path as PATH_IN_S3, or the script exits with an error
+# Uploads a file or directory to an S3 bucket (from local to S3).
+# If a directory is provided, files removed locally will be deleted from S3.
+# Exits 1 on failure.
+#
+# Args:
+#   $1 PATH_TO_UPLOAD  Local file or directory to upload (must exist).
+#   $2 PATH_IN_S3      S3 key prefix within the bucket (no s3:// prefix). Must match
+#                      the trailing path of PATH_TO_UPLOAD, unless empty to sync the
+#                      bucket root (e.g. upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks").
+#   $3 BUCKET_NAME     S3 bucket name (e.g. mskimpact-databricks).
 function upload_to_s3() {
     if ! try_upload_to_s3 "$1" "$2" "$3"; then
         exit 1
@@ -77,8 +90,14 @@ function upload_to_s3() {
 
 # Syncs a file or directory from S3 to a local path.
 # Files not in S3 will be removed from the local destination (for directories).
-# PATH_TO_OVERWRITE must end in PATH_IN_S3 (if provided), and cannot be "/".
 # Returns 0 on success, 1 on failure (does not exit the shell).
+#
+# Args:
+#   $1 PATH_TO_OVERWRITE  Local file or directory to sync into (must already exist; cannot be "/").
+#   $2 PATH_IN_S3         S3 key prefix within the bucket (no s3:// prefix). Must match
+#                         the trailing path of PATH_TO_OVERWRITE, unless empty to sync the
+#                         bucket root (e.g. download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks").
+#   $3 BUCKET_NAME        S3 bucket name (e.g. mskimpact-databricks).
 function try_download_from_s3() {
     PATH_TO_OVERWRITE="$1"
     PATH_IN_S3="$2"
@@ -149,9 +168,16 @@ function try_download_from_s3() {
     fi
 }
 
-# Syncs a file or directory from S3 to a local path
-# Files not in S3 will be removed from the local destination (for directories)
-# PATH_TO_OVERWRITE must end in PATH_IN_S3 (if provided), and cannot be "/"
+# Syncs a file or directory from S3 to a local path.
+# Files not in S3 will be removed from the local destination (for directories).
+# Exits 1 on failure.
+#
+# Args:
+#   $1 PATH_TO_OVERWRITE  Local file or directory to sync into (must already exist; cannot be "/").
+#   $2 PATH_IN_S3         S3 key prefix within the bucket (no s3:// prefix). Must match
+#                         the trailing path of PATH_TO_OVERWRITE, unless empty to sync the
+#                         bucket root (e.g. download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks").
+#   $3 BUCKET_NAME        S3 bucket name (e.g. mskimpact-databricks).
 function download_from_s3() {
     if ! try_download_from_s3 "$1" "$2" "$3"; then
         exit 1
