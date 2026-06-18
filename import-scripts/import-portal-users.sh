@@ -19,7 +19,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-portal-users.lock"
     CLICKHOUSE_COMMANDS_COMPLETED_DIRPATH="/data/portal-cron/tmp/import-users-genie/completed_clickhouse_commands"
     CLICKHOUSE_BINARY_FILEPATH="/home/cbioportal_importer/tools/clickhouse/bin/clickhouse"
     GET_DATABASE_CURRENTLY_IN_PRODUCTION_SCRIPT="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
-    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_genie_database_update_tools.properties"
+    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_genie_clickhouse_database_update_tools.properties"
     CURRENT_DATABASE_OUTPUT_FILEPATH=$(mktemp $PORTAL_HOME/tmp/import-portal-users/get_current_database_output.txt.XXXXXX)
     rm -f $CURRENT_DATABASE_OUTPUT_FILEPATH
     if ! $GET_DATABASE_CURRENTLY_IN_PRODUCTION_SCRIPT $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH > $CURRENT_DATABASE_OUTPUT_FILEPATH; then
