@@ -13,47 +13,33 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # localize global variables / jar names and functions
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
-    # Download biobank patient clinical and timeline data from S3 and merge into the study.
-    # On download or clinical merge failure, skip biobank for this import without failing the pipeline.
+    # Merge biobank patient clinical data when present (already synced via downloadFromS3AllStudies).
+    # Clinical merge failure is non-fatal; an existing biobank timeline file is kept for CDM timeline merge.
     function merge_biobank_clinical_data() {
         local study_data_home="$1"
-        local s3_study_prefix="$2"
-        local bucket_name="${3:-mskimpact-databricks}"
 
         local input_clinical_file="$study_data_home/data_clinical_patient.txt"
         local biobank_clinical_file="$study_data_home/data_clinical_patient_biobank.txt"
         local biobank_timeline_file="$study_data_home/data_timeline_biobank_specimen.txt"
         local merged_clinical_file="$study_data_home/data_clinical_patient_merged.txt"
 
-        # Remove stale biobank files so a failed or skipped run does not leave old timeline data
-        # for merge-cdm-timeline-files.sh. try_download_from_s3 requires the local file to exist;
-        # touch a placeholder before each download.
-        rm -f "$biobank_clinical_file" "$biobank_timeline_file" "$merged_clinical_file"
-        touch "$biobank_clinical_file"
-
-        if ! try_download_from_s3 "$biobank_clinical_file" "${s3_study_prefix}/data_clinical_patient_biobank.txt" "$bucket_name"; then
-            echo "`date`: Warning: failed to download biobank patient clinical data from S3 for ${s3_study_prefix}; skipping biobank clinical and timeline for this import."
-            return 0
+        if [ -f "$biobank_clinical_file" ]; then
+            $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$input_clinical_file" "$biobank_clinical_file" -o "$merged_clinical_file" -c "PATIENT_ID" -m left
+            if [ $? -gt 0 ]; then
+                echo "`date`: Warning: failed to merge biobank patient clinical data for ${study_data_home}; skipping biobank clinical merge for this import."
+                rm -f "$merged_clinical_file"
+            else
+                mv "$merged_clinical_file" "$input_clinical_file"
+                rm -f "$biobank_clinical_file"
+            fi
+        else
+            echo "`date`: Warning: biobank patient clinical file not found in ${study_data_home}; skipping biobank clinical merge for this import."
         fi
 
-        $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$input_clinical_file" "$biobank_clinical_file" -o "$merged_clinical_file" -c "PATIENT_ID" -m left
-        if [ $? -gt 0 ]; then
-            echo "`date`: Warning: failed to merge biobank patient clinical data for ${s3_study_prefix}; skipping biobank clinical and timeline for this import."
-            rm -f "$biobank_clinical_file" "$biobank_timeline_file" "$merged_clinical_file"
-            return 0
+        if [ -f "$biobank_timeline_file" ]; then
+            echo "`date`: Biobank timeline data present in ${study_data_home}."
         fi
 
-        mv "$merged_clinical_file" "$input_clinical_file"
-        rm -f "$biobank_clinical_file"
-
-        touch "$biobank_timeline_file"
-        if ! try_download_from_s3 "$biobank_timeline_file" "${s3_study_prefix}/data_timeline_biobank_specimen.txt" "$bucket_name"; then
-            echo "`date`: Warning: failed to download biobank timeline data from S3 for ${s3_study_prefix}; skipping biobank timeline for this import."
-            rm -f "$biobank_timeline_file"
-            return 0
-        fi
-
-        echo "`date`: Biobank patient clinical and timeline data ready for ${s3_study_prefix}."
         return 0
     }
 
@@ -778,7 +764,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 echo "UNLINKED_ARCHER subset successful! Creating cancer type case lists..."
                 echo $(date)
 
-                merge_biobank_clinical_data "$MSK_ARCHER_DATA_HOME" "mskarcher" "mskimpact-databricks"
+                merge_biobank_clinical_data "$MSK_ARCHER_DATA_HOME"
 
                 # add metadata headers and overrides before importing
                 $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical* -i $PORTAL_HOME/scripts/cdm_metadata.json
@@ -854,7 +840,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo "MSKSOLIDHEME merge successful! Creating cancer type case lists..."
         echo $(date)
 
-        merge_biobank_clinical_data "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
+        merge_biobank_clinical_data "$MSK_SOLID_HEME_DATA_HOME"
 
         # add metadata headers and overrides before importing
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
