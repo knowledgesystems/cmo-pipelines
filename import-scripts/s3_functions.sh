@@ -5,10 +5,17 @@ if ! [ -n "$PORTAL_HOME" ] ; then
     exit 1
 fi
 
-# Uploads a file or directory to an S3 bucket (from local to S3)
-# If a directory is provided, files removed locally will be deleted from S3
-# PATH_TO_UPLOAD must end in the same path as PATH_IN_S3, or the script exits with an error
-function upload_to_s3() {
+# Uploads a file or directory to an S3 bucket (from local to S3).
+# If a directory is provided, files removed locally will be deleted from S3.
+# Returns 0 on success, 1 on failure (does not exit the shell).
+#
+# Args:
+#   $1 PATH_TO_UPLOAD  Local file or directory to upload (must exist).
+#   $2 PATH_IN_S3      S3 key prefix within the bucket (no s3:// prefix). Must match
+#                      the trailing path of PATH_TO_UPLOAD, unless empty to sync the
+#                      bucket root (e.g. upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks").
+#   $3 BUCKET_NAME     S3 bucket name (e.g. mskimpact-databricks).
+function try_upload_to_s3() {
     PATH_TO_UPLOAD="$1"
     PATH_IN_S3="$2"
     BUCKET_NAME="$3"
@@ -16,7 +23,7 @@ function upload_to_s3() {
     # Check if path exists
     if [ ! -e "$PATH_TO_UPLOAD" ]; then
         echo "`date`: Path '$PATH_TO_UPLOAD' does not exist, exiting..."
-        exit 1
+        return 1
     fi
 
     # Normalize paths
@@ -28,7 +35,7 @@ function upload_to_s3() {
     if [ -n "$PATH_IN_S3_CLEAN" ]; then
         if [[ "$PATH_TO_UPLOAD_ABS" != *"/$PATH_IN_S3_CLEAN" && "$PATH_TO_UPLOAD_ABS" != "$PATH_IN_S3_CLEAN" ]]; then
             echo "`date`: ERROR – PATH_IN_S3 ('$PATH_IN_S3') must exactly match the trailing path of '$PATH_TO_UPLOAD_ABS'. Exiting..."
-            exit 1
+            return 1
         fi
     fi
 
@@ -56,19 +63,42 @@ function upload_to_s3() {
             --profile saml
     else
         echo "`date`: '$PATH_TO_UPLOAD' is neither a file nor a directory, exiting..."
-        exit 1
+        return 1
     fi
 
     if [ $? -ne 0 ]; then
         echo "`date`: Failed to upload '$PATH_TO_UPLOAD' to S3, exiting..."
+        return 1
+    fi
+}
+
+# Uploads a file or directory to an S3 bucket (from local to S3).
+# If a directory is provided, files removed locally will be deleted from S3.
+# Exits 1 on failure.
+#
+# Args:
+#   $1 PATH_TO_UPLOAD  Local file or directory to upload (must exist).
+#   $2 PATH_IN_S3      S3 key prefix within the bucket (no s3:// prefix). Must match
+#                      the trailing path of PATH_TO_UPLOAD, unless empty to sync the
+#                      bucket root (e.g. upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks").
+#   $3 BUCKET_NAME     S3 bucket name (e.g. mskimpact-databricks).
+function upload_to_s3() {
+    if ! try_upload_to_s3 "$1" "$2" "$3"; then
         exit 1
     fi
 }
 
-# Syncs a file or directory from S3 to a local path
-# Files not in S3 will be removed from the local destination (for directories)
-# PATH_TO_OVERWRITE must end in PATH_IN_S3 (if provided), and cannot be "/"
-function download_from_s3() {
+# Syncs a file or directory from S3 to a local path.
+# Files not in S3 will be removed from the local destination (for directories).
+# Returns 0 on success, 1 on failure (does not exit the shell).
+#
+# Args:
+#   $1 PATH_TO_OVERWRITE  Local file or directory to sync into (must already exist; cannot be "/").
+#   $2 PATH_IN_S3         S3 key prefix within the bucket (no s3:// prefix). Must match
+#                         the trailing path of PATH_TO_OVERWRITE, unless empty to sync the
+#                         bucket root (e.g. download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks").
+#   $3 BUCKET_NAME        S3 bucket name (e.g. mskimpact-databricks).
+function try_download_from_s3() {
     PATH_TO_OVERWRITE="$1"
     PATH_IN_S3="$2"
     BUCKET_NAME="$3"
@@ -76,18 +106,18 @@ function download_from_s3() {
     # Normalize local path
     if [ -z "$PATH_TO_OVERWRITE" ]; then
         echo "`date`: PATH_TO_OVERWRITE is empty, exiting..."
-        exit 1
+        return 1
     fi
 
     PATH_TO_OVERWRITE_ABS=$(realpath "$PATH_TO_OVERWRITE" 2>/dev/null)
     if [ $? -ne 0 ]; then
         echo "`date`: '$PATH_TO_OVERWRITE' does not exist, exiting..."
-        exit 1
+        return 1
     fi
 
     if [ "$PATH_TO_OVERWRITE_ABS" == "/" ]; then
         echo "`date`: Refusing to sync to root directory '/', exiting..."
-        exit 1
+        return 1
     fi
 
     # Clean PATH_IN_S3
@@ -97,7 +127,7 @@ function download_from_s3() {
     if [ -n "$PATH_IN_S3_CLEAN" ]; then
         if [[ "$PATH_TO_OVERWRITE_ABS" != *"/$PATH_IN_S3_CLEAN" && "$PATH_TO_OVERWRITE_ABS" != "$PATH_IN_S3_CLEAN" ]]; then
             echo "`date`: ERROR – PATH_IN_S3 ('$PATH_IN_S3') must exactly match the trailing path of '$PATH_TO_OVERWRITE_ABS'. Exiting..."
-            exit 1
+            return 1
         fi
     fi
 
@@ -129,11 +159,27 @@ function download_from_s3() {
 
     else
         echo "`date`: '$PATH_TO_OVERWRITE_ABS' is neither a file nor a directory, exiting..."
-        exit 1
+        return 1
     fi
 
     if [ $? -ne 0 ]; then
         echo "`date`: Failed to download from '$S3_SOURCE', exiting..."
+        return 1
+    fi
+}
+
+# Syncs a file or directory from S3 to a local path.
+# Files not in S3 will be removed from the local destination (for directories).
+# Exits 1 on failure.
+#
+# Args:
+#   $1 PATH_TO_OVERWRITE  Local file or directory to sync into (must already exist; cannot be "/").
+#   $2 PATH_IN_S3         S3 key prefix within the bucket (no s3:// prefix). Must match
+#                         the trailing path of PATH_TO_OVERWRITE, unless empty to sync the
+#                         bucket root (e.g. download_from_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks").
+#   $3 BUCKET_NAME        S3 bucket name (e.g. mskimpact-databricks).
+function download_from_s3() {
+    if ! try_download_from_s3 "$1" "$2" "$3"; then
         exit 1
     fi
 }
