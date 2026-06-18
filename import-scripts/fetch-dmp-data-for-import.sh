@@ -19,9 +19,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         local bucket_name="$3"
 
         mkdir -p "$(dirname "$local_path")"
-        $PORTAL_HOME/scripts/authenticate_service_account.sh eks
-        aws s3 cp "s3://${bucket_name}/${s3_key}" "$local_path" --profile saml
-        return $?
+        touch "$local_path"
+        try_download_from_s3 "$local_path" "$s3_key" "$bucket_name"
     }
 
     # Download biobank patient clinical and timeline data from S3 and merge into the study.
