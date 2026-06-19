@@ -75,33 +75,45 @@ class TestCombineFiles(unittest.TestCase):
             prefer_right_columns=True,
         )
 
-    def test_biobank_merge_both_have_aliquot_status_without_prefer_right_uses_suffixes(self):
-        sub_dir = os.path.join(TestCombineFiles.base_dir, 'biobank_clinical/both_overlap')
-        output_file = os.path.join(sub_dir, 'merged_without_prefer_right.txt')
-
-        combine_files(
-            [
-                os.path.join(sub_dir, 'clinical_patient.txt'),
-                os.path.join(sub_dir, 'biobank_clinical.txt'),
-            ],
-            output_file,
-            merge_type='left',
-            columns=['PATIENT_ID'],
+    def test_biobank_merge_both_have_aliquot_status_without_prefer_right(self):
+        """Legacy pandas behavior when both files have ALIQUOT_STATUS (no -p)."""
+        self._assert_biobank_merge_matches_expected(
+            'biobank_clinical/both_overlap',
             prefer_right_columns=False,
+            expected_filename='expected_without_prefer_right.txt',
         )
 
-        with open(output_file, 'r') as actual_out:
-            header = actual_out.readline().strip().split('\t')
-            self.assertIn('ALIQUOT_STATUS_x', header)
-            self.assertIn('ALIQUOT_STATUS_y', header)
-            self.assertNotIn('ALIQUOT_STATUS', header)
+    def test_biobank_merge_right_only_without_prefer_right_matches_with_prefer_right(self):
+        """No overlapping non-key columns; -p should not change output."""
+        self._assert_biobank_merge_matches_expected(
+            'biobank_clinical/right_only',
+            prefer_right_columns=False,
+        )
+        self._assert_biobank_merge_matches_expected(
+            'biobank_clinical/right_only',
+            prefer_right_columns=True,
+        )
 
-        os.remove(output_file)
+    def test_biobank_merge_left_only_without_prefer_right_matches_with_prefer_right(self):
+        """Biobank file has no ALIQUOT_STATUS column; -p should not change output."""
+        self._assert_biobank_merge_matches_expected(
+            'biobank_clinical/left_only',
+            prefer_right_columns=False,
+        )
+        self._assert_biobank_merge_matches_expected(
+            'biobank_clinical/left_only',
+            prefer_right_columns=True,
+        )
 
-    def _assert_biobank_merge_matches_expected(self, fixture_subdir, prefer_right_columns):
+    def _assert_biobank_merge_matches_expected(
+        self,
+        fixture_subdir,
+        prefer_right_columns,
+        expected_filename='expected.txt',
+    ):
         sub_dir = os.path.join(TestCombineFiles.base_dir, fixture_subdir)
         output_file = os.path.join(sub_dir, 'merged.txt')
-        expected_file = os.path.join(sub_dir, 'expected.txt')
+        expected_file = os.path.join(sub_dir, expected_filename)
 
         combine_files(
             [
