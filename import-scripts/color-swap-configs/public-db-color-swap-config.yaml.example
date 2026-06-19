@@ -1,5 +1,10 @@
 service_account: public
 cluster_cfg: /data/portal-cron/pipelines-credentials/publicargocd-cluster-kubeconfig
+# ArgoCD apps whose auto-sync/self-heal are disabled during the deployment transfer and
+# re-enabled afterward. Omit this key for portals not yet managed by ArgoCD auto-sync.
+argocd_app_list:
+  - cbioportal
+  - cbioportal-api
 blue_deployment_list:
   - cbioportal-backend-public-blue
   - cbioportal-backend-public-api-blue
