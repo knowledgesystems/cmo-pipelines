@@ -57,6 +57,69 @@ class TestCombineFiles(unittest.TestCase):
         merge_type='outer'
         self.compare_expected_output_to_actual(sub_dir, ddp_files, merge_type)
 
+    def test_biobank_merge_both_have_aliquot_status_with_prefer_right(self):
+        self._assert_biobank_merge_matches_expected(
+            'biobank_clinical/both_overlap',
+            prefer_right_columns=True,
+        )
+
+    def test_biobank_merge_aliquot_status_only_on_right_with_prefer_right(self):
+        self._assert_biobank_merge_matches_expected(
+            'biobank_clinical/right_only',
+            prefer_right_columns=True,
+        )
+
+    def test_biobank_merge_aliquot_status_only_on_left_with_prefer_right(self):
+        self._assert_biobank_merge_matches_expected(
+            'biobank_clinical/left_only',
+            prefer_right_columns=True,
+        )
+
+    def test_biobank_merge_both_have_aliquot_status_without_prefer_right_uses_suffixes(self):
+        sub_dir = os.path.join(TestCombineFiles.base_dir, 'biobank_clinical/both_overlap')
+        output_file = os.path.join(sub_dir, 'merged_without_prefer_right.txt')
+
+        combine_files(
+            [
+                os.path.join(sub_dir, 'clinical_patient.txt'),
+                os.path.join(sub_dir, 'biobank_clinical.txt'),
+            ],
+            output_file,
+            merge_type='left',
+            columns=['PATIENT_ID'],
+            prefer_right_columns=False,
+        )
+
+        with open(output_file, 'r') as actual_out:
+            header = actual_out.readline().strip().split('\t')
+            self.assertIn('ALIQUOT_STATUS_x', header)
+            self.assertIn('ALIQUOT_STATUS_y', header)
+            self.assertNotIn('ALIQUOT_STATUS', header)
+
+        os.remove(output_file)
+
+    def _assert_biobank_merge_matches_expected(self, fixture_subdir, prefer_right_columns):
+        sub_dir = os.path.join(TestCombineFiles.base_dir, fixture_subdir)
+        output_file = os.path.join(sub_dir, 'merged.txt')
+        expected_file = os.path.join(sub_dir, 'expected.txt')
+
+        combine_files(
+            [
+                os.path.join(sub_dir, 'clinical_patient.txt'),
+                os.path.join(sub_dir, 'biobank_clinical.txt'),
+            ],
+            output_file,
+            merge_type='left',
+            columns=['PATIENT_ID'],
+            prefer_right_columns=prefer_right_columns,
+        )
+
+        with open(expected_file, 'r') as expected_out:
+            with open(output_file, 'r') as actual_out:
+                self.assertEqual(expected_out.read(), actual_out.read())
+
+        os.remove(output_file)
+
     def compare_expected_output_to_actual(self, sub_dir, ddp_files, merge_type='inner', columns=None):
         output_file = os.path.join(TestCombineFiles.base_dir, sub_dir, 'merged.txt')
         expected_file = os.path.join(TestCombineFiles.base_dir, sub_dir, 'expected.txt')
