@@ -12,6 +12,7 @@ export MAVEN_BINARY=/opt/apache-maven-3.8.3/bin/mvn
 export HG_BINARY=/usr/bin/hg
 export GIT_BINARY=/usr/bin/git
 export YQ_BINARY=/home/cbioportal_importer/bin/yq
+export ARGOCD_BINARY=/usr/local/bin/argocd
 export PATH="/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/bin:/opt/apache-maven-3.8.3/bin:/usr/local/go/bin:/home/cbioportal_importer/.local/bin:/home/cbioportal_importer/bin:/home/cbioportal_importer/tools/go/bin:/home/cbioportal_importer/tools/sling-cli:/home/cbioportal_importer/tools/clickhouse/bin"
 
 #######################
