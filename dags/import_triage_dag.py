@@ -38,10 +38,10 @@ def _wire(tasks: dict[str, object]) -> None:
     # for now, all the 'finally' handlers are taken care of by the parent class
 
 _TRIAGE_CONFIG = ImporterConfig(
-    dag_id="import_triage_clickhouse_dag",
+    dag_id="import_triage_dag",
     description="Imports Triage study to Clickhouse database",
-    importer="triage-clickhouse",
-    tags=["triage-clickhouse"],
+    importer="triage",
+    tags=["triage"],
     target_nodes=("pipelines3_ssh",),
     data_nodes=("pipelines3_ssh",),
     task_names=(

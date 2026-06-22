@@ -29,11 +29,11 @@ def _wire(tasks: dict[str, object]) -> None:
         tasks["send_update_notification"],
     ]
 
-_GENIE_CLICKHOUSE_CONFIG = ImporterConfig(
-    dag_id="import_genie_clickhouse_dag",
+_GENIE_CONFIG = ImporterConfig(
+    dag_id="import_genie_dag",
     description="Imports Genie study to ClickHouse database",
-    importer="genie-clickhouse",
-    tags=["genie-clickhouse"],
+    importer="genie",
+    tags=["genie"],
     target_nodes=("pipelines5_ssh",),
     data_nodes=("pipelines5_ssh",),
     task_names=(
@@ -63,4 +63,4 @@ _GENIE_CLICKHOUSE_CONFIG = ImporterConfig(
     wire_dependencies=_wire,
 )
 
-globals()[_GENIE_CLICKHOUSE_CONFIG.dag_id] = build_import_dag(_GENIE_CLICKHOUSE_CONFIG)
+globals()[_GENIE_CONFIG.dag_id] = build_import_dag(_GENIE_CONFIG)
