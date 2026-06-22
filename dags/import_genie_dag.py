@@ -1,9 +1,10 @@
 """
 import_genie_dag.py
-Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy.
+Imports Genie study.
 """
 import os
 import sys
+
 from airflow.models.param import Param
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,40 +12,51 @@ from dags.import_base import ImporterConfig, build_import_dag
 
 
 def _wire(tasks: dict[str, object]) -> None:
-    tasks["data_repos"] >> tasks["verify_management_state"] >> [tasks["fetch_data"], tasks["scale_up_rds_node"]]
-    tasks["scale_up_rds_node"] >> tasks["clone_database"]
-    [tasks["fetch_data"], tasks["clone_database"]] >> tasks["setup_import"]
-    tasks["setup_import"] >> tasks["import_sql"] >> tasks["import_clickhouse"] >> tasks["transfer_deployment"] >> tasks["scale_down_rds_node"] >> tasks["send_update_notification"] >> tasks["cleanup_data"]
+    tasks["data_repos"] >> tasks["verify_management_state"]
+    tasks["verify_management_state"] >> [
+        tasks["fetch_data"],
+        tasks["clone_database"],
+    ]
+    [
+        tasks["fetch_data"],
+        tasks["clone_database"],
+    ] >> tasks["setup_import"]
+    tasks["setup_import"] >> tasks["import_direct_to_clickhouse"]
+    tasks["import_direct_to_clickhouse"] >> tasks["create_derived_tables"]
+    tasks["create_derived_tables"] >> tasks["transfer_deployment"]
+    tasks["transfer_deployment"] >> [
+        tasks["cleanup_data"],
+        tasks["send_update_notification"],
+    ]
 
 _GENIE_CONFIG = ImporterConfig(
     dag_id="import_genie_dag",
-    description="Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy",
+    description="Imports Genie study to ClickHouse database",
     importer="genie",
     tags=["genie"],
-    target_nodes=("importer_ssh",),
-    data_nodes=("importer_ssh",),
+    target_nodes=("pipelines5_ssh",),
+    data_nodes=("pipelines5_ssh",),
     task_names=(
+        "data_repos",
         "verify_management_state",
-        "scale_up_rds_node",
-        "clone_database",
         "fetch_data",
+        "clone_database",
         "setup_import",
-        "import_sql",
-        "import_clickhouse",
+        "import_direct_to_clickhouse",
+        "create_derived_tables",
         "transfer_deployment",
-        "scale_down_rds_node",
         "send_update_notification",
         "cleanup_data",
         "set_import_abandoned",
     ),
-    db_properties_filename="manage_genie_database_update_tools.properties",
+    db_properties_filename="manage_genie_clickhouse_database_update_tools.properties",
     color_swap_config_filename="genie-db-color-swap-config.yaml",
     params={
         "data_repos": Param(
             ["genie"],
             type="array",
+            description="Comma-separated list of data repositories to pull updates from/cleanup.",
             title="Data Repositories",
-            description="List of GENIE data repositories to clean up after import.",
             examples=["genie"],
         ),
     },

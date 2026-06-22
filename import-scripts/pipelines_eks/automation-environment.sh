@@ -169,3 +169,7 @@ export DATABRICKS_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/databricks.crede
 #######################
 export SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt" # needed to use the clickhouse CLI
 export GIT_SSL_CAINFO="/etc/pki/tls/certs/ca-bundle.crt" # needed to use git
+
+
+###### needed for clickhouse derived table construction
+export CLICKHOUSE_OPTIMIZE_BACKOFF_SECS=90
