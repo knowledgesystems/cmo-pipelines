@@ -16,7 +16,7 @@ from airflow.utils.trigger_rule import TriggerRule
 from kubernetes.client import models as k8s
 
 S3_BUCKET            = "hackathon-databricks"
-K8S_IMAGE            = "python:3.11-slim"
+K8S_IMAGE            = "apache/airflow:2.10.5"
 VALIDATE_SCRIPT_PATH = "/scripts/validate_study.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer.py"
 
