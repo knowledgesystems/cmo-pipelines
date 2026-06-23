@@ -14,7 +14,7 @@ from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 
 S3_BUCKET            = "hackathon-databricks"
-K8S_IMAGE            = "your-custom-image:latest"
+K8S_IMAGE            = "python:3.11-slim"
 VALIDATE_SCRIPT_PATH = "/scripts/validate_study.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer.py"
 
@@ -48,6 +48,8 @@ _DEFAULT_ARGS = {
 def import_public_hackathon():
     @task(executor_config=K8S_EXECUTOR_CONFIG)
     def verify_studies_exist(study_ids_str: str) -> list[str]:
+        import subprocess, sys
+        subprocess.run([sys.executable, "-m", "pip", "install", "boto3", "-q"], check=True)
         import boto3
         from botocore import UNSIGNED
         from botocore.config import Config
@@ -93,7 +95,8 @@ def import_public_hackathon():
 
     @task(executor_config=K8S_EXECUTOR_CONFIG)
     def pull_and_validate_study(study_id: str, s3_bucket: str) -> str | None:
-        import pathlib
+        import subprocess, sys, pathlib
+        subprocess.run([sys.executable, "-m", "pip", "install", "boto3", "-q"], check=True)
         import boto3
         from botocore import UNSIGNED
         from botocore.config import Config
