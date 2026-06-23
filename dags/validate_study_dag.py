@@ -7,6 +7,7 @@ Missing studies warn in check_studies; failed validations are excluded from impo
 """
 import logging
 from datetime import timedelta
+import sys
 
 from airflow import DAG
 from airflow.decorators import task
