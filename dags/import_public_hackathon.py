@@ -11,14 +11,26 @@ from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
 from airflow.models.param import Param
+from airflow.operators.bash import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
+from kubernetes.client import models as k8s
 
 S3_BUCKET            = "hackathon-databricks"
 K8S_IMAGE            = "your-custom-image:latest"
 VALIDATE_SCRIPT_PATH = "/scripts/validate_study.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer.py"
 
-K8S_EXECUTOR_CONFIG = {"KubernetesExecutor": {"image": K8S_IMAGE}}
+
+_POD_OVERRIDE = {
+    "pod_override": k8s.V1Pod(
+        spec=k8s.V1PodSpec(
+            containers=[k8s.V1Container(
+                name="base",
+                image=K8S_IMAGE,
+            )]
+        )
+    )
+}
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -46,7 +58,8 @@ _DEFAULT_ARGS = {
     },
 )
 def import_public_hackathon():
-    @task(executor_config=K8S_EXECUTOR_CONFIG)
+    # ── 1 ──────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
     def verify_studies_exist(study_ids_str: str) -> list[str]:
         import boto3
         from botocore import UNSIGNED
@@ -71,27 +84,45 @@ def import_public_hackathon():
 
         return found
 
-    @task
+    # ── 2 ──────────────────────────────────────────────────────────────
     def verify_cluster_state():
-        pass
+        return BashOperator(
+            task_id="verify_cluster_state",
+            bash_command='echo "verify_cluster_state"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 3 ──────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
     def verify_import_not_in_progress():
         pass
 
-    @task
+    # ── 4 ──────────────────────────────────────────────────────────────
     def set_import_running():
-        pass
+        return BashOperator(
+            task_id="set_import_running",
+            bash_command='echo "set_import_running"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 5 ──────────────────────────────────────────────────────────────
     def wipe_standby_database():
-        pass
+        return BashOperator(
+            task_id="wipe_standby_database",
+            bash_command='echo "wipe_standby_database"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 6 ──────────────────────────────────────────────────────────────
     def clone_live_database_into_standby():
-        pass
+        return BashOperator(
+            task_id="clone_live_database_into_standby",
+            bash_command='echo "clone_live_database_into_standby"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task(executor_config=K8S_EXECUTOR_CONFIG)
+    # ── 7 ──────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
     def pull_and_validate_study(study_id: str, s3_bucket: str) -> str | None:
         import pathlib
         import boto3
@@ -120,7 +151,8 @@ def import_public_hackathon():
             logging.error("Validation failed for %s: %s", study_id, e)
             return None
 
-    @task(trigger_rule=TriggerRule.ALL_DONE)
+    # ── 8 ──────────────────────────────────────────────────────────────
+    @task(trigger_rule=TriggerRule.ALL_DONE, executor_config=_POD_OVERRIDE)
     def collect_valid_studies(results: list) -> list[str]:
         valid = [sid for sid in (results or []) if sid is not None]
         if not valid:
@@ -128,7 +160,8 @@ def import_public_hackathon():
         logging.info("Studies passing validation: %s", valid)
         return valid
 
-    @task(executor_config=K8S_EXECUTOR_CONFIG)
+    # ── 9 ──────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
     def import_into_standby_database(valid_studies: list[str]):
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
@@ -136,43 +169,40 @@ def import_public_hackathon():
         logging.info("Importing %d studies: %s", len(valid_studies), valid_studies)
         logging.info("[STUB] Would run: %s %s %s", sys.executable, IMPORT_SCRIPT_PATH, " ".join(valid_studies))
 
-    @task
+    # ── 10 ─────────────────────────────────────────────────────────────
     def transfer_deployment_color():
-        pass
+        return BashOperator(
+            task_id="transfer_deployment_color",
+            bash_command='echo "transfer_deployment_color"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 11 ─────────────────────────────────────────────────────────────
     def set_import_complete():
-        pass
+        return BashOperator(
+            task_id="set_import_complete",
+            bash_command='echo "set_import_complete"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 12 ─────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
     def send_slack_notifications():
         pass
 
-    @task
-    def cleanup_data():
-        pass
-
-    # Gate tasks run sequentially
+    # ── Instantiate tasks in execution order ─────────────────────────
     t_found_studies                  = verify_studies_exist("{{ params.cancer_study_ids }}")
     t_verify_cluster_state           = verify_cluster_state()
     t_verify_import_not_in_progress  = verify_import_not_in_progress()
     t_set_import_running             = set_import_running()
-
-    # DB branch
-    t_wipe_standby_database  = wipe_standby_database()
-    t_clone_live_database    = clone_live_database_into_standby()
-
-    # Validation branch: data dep on found_studies, sequencing dep on set_import_running
-    t_pull_and_validate = pull_and_validate_study.partial(s3_bucket=S3_BUCKET).expand(study_id=t_found_studies)
-    t_collect_valid     = collect_valid_studies(t_pull_and_validate)
-
-    # Diamond join: import waits for validated studies (data) and cloned DB (sequencing)
-    t_import = import_into_standby_database(t_collect_valid)
-
-    t_transfer_deployment_color = transfer_deployment_color()
-    t_set_import_complete       = set_import_complete()
-    t_send_slack_notifications  = send_slack_notifications()
-    t_cleanup_data              = cleanup_data()
+    t_wipe_standby_database          = wipe_standby_database()
+    t_clone_live_database            = clone_live_database_into_standby()
+    t_pull_and_validate              = pull_and_validate_study.partial(s3_bucket=S3_BUCKET).expand(study_id=t_found_studies)
+    t_collect_valid                  = collect_valid_studies(t_pull_and_validate)
+    t_import                         = import_into_standby_database(t_collect_valid)
+    t_transfer_deployment_color      = transfer_deployment_color()
+    t_set_import_complete            = set_import_complete()
+    t_send_slack_notifications       = send_slack_notifications()
 
     # Sequential gate chain
     (
@@ -194,7 +224,7 @@ def import_public_hackathon():
         t_import
         >> t_transfer_deployment_color
         >> t_set_import_complete
-        >> [t_send_slack_notifications, t_cleanup_data]
+        >> t_send_slack_notifications
     )
 
 
