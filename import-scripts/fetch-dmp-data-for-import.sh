@@ -24,7 +24,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         local merged_clinical_file="$study_data_home/data_clinical_patient_merged.txt"
 
         if [ -f "$biobank_clinical_file" ]; then
-            $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$input_clinical_file" "$biobank_clinical_file" -o "$merged_clinical_file" -c "PATIENT_ID" -m left
+            # -p / --prefer-right-columns: data_clinical_patient.txt may already
+            # contain ALIQUOT_STATUS from a prior S3 round-trip. Without -p,
+            # pandas emits ALIQUOT_STATUS_x and ALIQUOT_STATUS_y instead of one
+            # column with fresh biobank values.
+            # TODO: prefer-right-columns may be right for all combine_files_py3
+            # callers, but other merges have never had overlapping column names
+            # before biobank; audit before making -p the default.
+            $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$input_clinical_file" "$biobank_clinical_file" -o "$merged_clinical_file" -c "PATIENT_ID" -m left -p
             if [ $? -gt 0 ]; then
                 echo "`date`: Warning: failed to merge biobank patient clinical data for ${study_data_home}; skipping biobank clinical merge for this import."
                 rm -f "$merged_clinical_file"
