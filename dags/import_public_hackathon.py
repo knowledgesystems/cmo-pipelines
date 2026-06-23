@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
 from airflow.models.param import Param
+from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from airflow.utils.trigger_rule import TriggerRule
 
 S3_BUCKET            = "hackathon-databricks"
@@ -18,7 +19,50 @@ K8S_IMAGE            = "python:3.11-slim"
 VALIDATE_SCRIPT_PATH = "/scripts/validate_study.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer.py"
 
+def _current_namespace() -> str:
+    try:
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "default"
+
+K8S_NAMESPACE       = _current_namespace()
+K8S_SERVICE_ACCOUNT = None
 K8S_EXECUTOR_CONFIG = {"KubernetesExecutor": {"image": K8S_IMAGE}}
+
+_VERIFY_STUDIES_SCRIPT = """\
+import subprocess, sys
+subprocess.run([sys.executable, "-m", "pip", "install", "boto3", "-q"], check=True)
+import boto3, json, os
+from botocore import UNSIGNED
+from botocore.config import Config
+
+study_ids_str = os.environ["CANCER_STUDY_IDS"]
+s3_bucket     = os.environ["S3_BUCKET"]
+study_ids     = [s.strip() for s in study_ids_str.split(",") if s.strip()]
+
+if not study_ids:
+    print("No study IDs provided", file=sys.stderr)
+    sys.exit(1)
+
+s3    = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+found = []
+for study_id in study_ids:
+    resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=f"{study_id}/", MaxKeys=1)
+    if resp.get("KeyCount", 0) > 0:
+        found.append(study_id)
+        print(f"Study '{study_id}' found in s3://{s3_bucket}")
+    else:
+        print(f"Study '{study_id}' NOT found in s3://{s3_bucket} — skipping", file=sys.stderr)
+
+os.makedirs("/airflow/xcom", exist_ok=True)
+with open("/airflow/xcom/return.json", "w") as f:
+    json.dump(found, f)
+
+if not found:
+    print("None of the requested studies exist in S3", file=sys.stderr)
+    sys.exit(1)
+"""
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -46,33 +90,6 @@ _DEFAULT_ARGS = {
     },
 )
 def import_public_hackathon():
-    @task(executor_config=K8S_EXECUTOR_CONFIG)
-    def verify_studies_exist(study_ids_str: str) -> list[str]:
-        import subprocess, sys
-        subprocess.run([sys.executable, "-m", "pip", "install", "boto3", "-q"], check=True)
-        import boto3
-        from botocore import UNSIGNED
-        from botocore.config import Config
-
-        study_ids = [s.strip() for s in study_ids_str.split(",") if s.strip()]
-        if not study_ids:
-            raise AirflowSkipException("No study IDs provided")
-
-        s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
-        found = []
-        for study_id in study_ids:
-            resp = s3.list_objects_v2(Bucket=S3_BUCKET, Prefix=f"{study_id}/", MaxKeys=1)
-            if resp.get("KeyCount", 0) > 0:
-                found.append(study_id)
-                logging.info("Study '%s' found in s3://%s", study_id, S3_BUCKET)
-            else:
-                logging.warning("Study '%s' NOT found in s3://%s — will be skipped", study_id, S3_BUCKET)
-
-        if not found:
-            raise AirflowSkipException("None of the requested studies exist in S3")
-
-        return found
-
     @task
     def verify_cluster_state():
         pass
@@ -156,7 +173,22 @@ def import_public_hackathon():
         pass
 
     # Gate tasks run sequentially
-    t_found_studies                  = verify_studies_exist("{{ params.cancer_study_ids }}")
+    t_found_studies = KubernetesPodOperator(
+        task_id="verify_studies_exist",
+        namespace=K8S_NAMESPACE,
+        image=K8S_IMAGE,
+        name="verify-studies-exist",
+        service_account_name=K8S_SERVICE_ACCOUNT,
+        cmds=["python", "-c"],
+        arguments=[_VERIFY_STUDIES_SCRIPT],
+        env_vars={
+            "CANCER_STUDY_IDS": "{{ params.cancer_study_ids }}",
+            "S3_BUCKET": S3_BUCKET,
+        },
+        do_xcom_push=True,
+        get_logs=True,
+        is_delete_operator_pod=True,
+    )
     t_verify_cluster_state           = verify_cluster_state()
     t_verify_import_not_in_progress  = verify_import_not_in_progress()
     t_set_import_running             = set_import_running()
