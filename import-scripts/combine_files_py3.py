@@ -40,7 +40,24 @@ def write_tsv(df, path, **opts):
     )
 
 
-def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="inner", drop_na=False):
+def combine_files(
+    input_files,
+    output_file,
+    sep="\t",
+    columns=None,
+    merge_type="inner",
+    drop_na=False,
+    prefer_right_columns=False,
+):
+    """Merge tabular files. When prefer_right_columns is True and join keys are
+    given (-c), overlapping non-key columns use values from later files instead
+    of pandas ALIQUOT_STATUS_x / ALIQUOT_STATUS_y suffix columns.
+
+    TODO: prefer_right_columns may be the right default for all callers, but
+    other uses of this script (timeline merges, age-at-seq, Sophia) have never
+    hit overlapping column names before biobank. Audit those call sites before
+    making this the default behavior.
+    """
     data_frames = []
     for file in input_files:
         # Determine which line to start reading from
@@ -63,9 +80,15 @@ def combine_files(input_files, output_file, sep="\t", columns=None, merge_type="
         )
         data_frames.append(df)
 
-    df_merged = reduce(
-        lambda left, right: pd.merge(left, right, on=columns, how=merge_type), data_frames
-    )
+    def merge_pair(left, right):
+        if prefer_right_columns and columns is not None:
+            join_cols = columns if isinstance(columns, list) else [columns]
+            overlap = (set(left.columns) & set(right.columns)) - set(join_cols)
+            if overlap:
+                left = left.drop(columns=list(overlap))
+        return pd.merge(left, right, on=columns, how=merge_type)
+
+    df_merged = reduce(merge_pair, data_frames)
 
     # Drop rows with blank/NA values if specified
     if drop_na:
@@ -136,6 +159,18 @@ def main():
         default=False,
         help="Whether to drop rows with empty/NA values",
     )
+    parser.add_argument(
+        "-p",
+        "--prefer-right-columns",
+        dest="prefer_right_columns",
+        action="store_true",
+        default=False,
+        help=(
+            "When joining on -c keys, overlapping non-key columns keep values "
+            "from later input files (avoids pandas _x/_y suffix columns). "
+            "Opt-in only; see combine_files() TODO before changing the default."
+        ),
+    )
 
     args = parser.parse_args()
     input_files = args.input_files
@@ -144,6 +179,7 @@ def main():
     columns = args.columns
     merge_type = args.merge_type
     drop_na = args.drop_na
+    prefer_right_columns = args.prefer_right_columns
 
     # Check that the input files exist
     for file in input_files:
@@ -152,7 +188,15 @@ def main():
             parser.print_help()
 
     # Combine the files
-    combine_files(input_files, output_file, sep=sep, columns=columns, merge_type=merge_type, drop_na=drop_na)
+    combine_files(
+        input_files,
+        output_file,
+        sep=sep,
+        columns=columns,
+        merge_type=merge_type,
+        drop_na=drop_na,
+        prefer_right_columns=prefer_right_columns,
+    )
 
 
 if __name__ == "__main__":
