@@ -1,6 +1,7 @@
 """
 import_public_hackathon.py
 """
+import json
 import logging
 import os
 import sys
@@ -10,16 +11,26 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
+from airflow.models import Variable
 from airflow.models.param import Param
 from airflow.operators.bash import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
 from kubernetes.client import models as k8s
 
-S3_BUCKET            = "hackathon-databricks"
-K8S_IMAGE            = "apache/airflow:2.10.5"
-K8S_IMAGE_VALIDATE   = "averyniceday/hackathon-import:latest"
-VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
-IMPORT_SCRIPT_PATH   = "/scripts/importer.py"
+S3_BUCKET               = "hackathon-databricks"
+K8S_IMAGE               = "apache/airflow:2.10.5"
+K8S_IMAGE_VALIDATE      = "averyniceday/hackathon-import:latest"
+VALIDATE_SCRIPT_PATH    = "/scripts/importer/validateStudies.py"
+IMPORT_SCRIPT_PATH      = "/scripts/importer.py"
+STUDY_LIST_VARIABLE_KEY = "hackathon_available_study_ids"
+
+
+def _available_study_ids() -> list[str]:
+    """Read the study-list Variable at parse time to populate the Param enum."""
+    try:
+        return json.loads(Variable.get(STUDY_LIST_VARIABLE_KEY, default_var="[]"))
+    except Exception:
+        return []
 
 
 _POD_OVERRIDE = {
@@ -62,9 +73,13 @@ _DEFAULT_ARGS = {
     catchup=False,
     params={
         "cancer_study_ids": Param(
-            "",
-            type="string",
-            description="Comma-separated cancer study IDs to import (e.g. msk_impact_2017,brca_tcga)",
+            [],
+            schema={
+                "type": "array",
+                "items": {"type": "string", "enum": _available_study_ids()},
+                "uniqueItems": True,
+            },
+            description="Select one or more cancer study IDs to import. Run refresh_hackathon_study_list to update the list.",
             title="Cancer Study IDs",
         ),
     },
@@ -72,12 +87,11 @@ _DEFAULT_ARGS = {
 def import_public_hackathon():
     # ── 1 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
-    def verify_studies_exist(study_ids_str: str) -> list[str]:
+    def verify_studies_exist(study_ids: list[str]) -> list[str]:
         import boto3
         from botocore import UNSIGNED
         from botocore.config import Config
 
-        study_ids = [s.strip() for s in study_ids_str.split(",") if s.strip()]
         if not study_ids:
             raise AirflowSkipException("No study IDs provided")
 
