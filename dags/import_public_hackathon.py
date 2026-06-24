@@ -74,11 +74,8 @@ _DEFAULT_ARGS = {
     params={
         "cancer_study_ids": Param(
             [],
-            schema={
-                "type": "array",
-                "items": {"type": "string", "enum": _available_study_ids()},
-                "uniqueItems": True,
-            },
+            type="array",
+            examples=_available_study_ids(),
             description="Select one or more cancer study IDs to import. Run refresh_hackathon_study_list to update the list.",
             title="Cancer Study IDs",
         ),
