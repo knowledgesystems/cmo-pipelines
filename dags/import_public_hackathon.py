@@ -11,58 +11,38 @@ from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
 from airflow.models.param import Param
-from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
+from airflow.operators.bash import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
+from kubernetes.client import models as k8s
 
 S3_BUCKET            = "hackathon-databricks"
-K8S_IMAGE            = "python:3.11-slim"
-VALIDATE_SCRIPT_PATH = "/scripts/validate_study.py"
+K8S_IMAGE            = "apache/airflow:2.10.5"
+K8S_IMAGE_VALIDATE   = "averyniceday/hackathon-import:latest"
+VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer.py"
 
-def _current_namespace() -> str:
-    try:
-        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return "default"
 
-K8S_NAMESPACE       = _current_namespace()
-K8S_SERVICE_ACCOUNT = None
-K8S_EXECUTOR_CONFIG = {"KubernetesExecutor": {"image": K8S_IMAGE}}
+_POD_OVERRIDE = {
+    "pod_override": k8s.V1Pod(
+        spec=k8s.V1PodSpec(
+            containers=[k8s.V1Container(
+                name="base",
+                image=K8S_IMAGE,
+            )]
+        )
+    )
+}
 
-_VERIFY_STUDIES_SCRIPT = """\
-import subprocess, sys
-subprocess.run([sys.executable, "-m", "pip", "install", "boto3", "-q"], check=True)
-import boto3, json, os
-from botocore import UNSIGNED
-from botocore.config import Config
-
-study_ids_str = os.environ["CANCER_STUDY_IDS"]
-s3_bucket     = os.environ["S3_BUCKET"]
-study_ids     = [s.strip() for s in study_ids_str.split(",") if s.strip()]
-
-if not study_ids:
-    print("No study IDs provided", file=sys.stderr)
-    sys.exit(1)
-
-s3    = boto3.client("s3", config=Config(signature_version=UNSIGNED))
-found = []
-for study_id in study_ids:
-    resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=f"{study_id}/", MaxKeys=1)
-    if resp.get("KeyCount", 0) > 0:
-        found.append(study_id)
-        print(f"Study '{study_id}' found in s3://{s3_bucket}")
-    else:
-        print(f"Study '{study_id}' NOT found in s3://{s3_bucket} — skipping", file=sys.stderr)
-
-os.makedirs("/airflow/xcom", exist_ok=True)
-with open("/airflow/xcom/return.json", "w") as f:
-    json.dump(found, f)
-
-if not found:
-    print("None of the requested studies exist in S3", file=sys.stderr)
-    sys.exit(1)
-"""
+_POD_OVERRIDE_VALIDATE = {
+    "pod_override": k8s.V1Pod(
+        spec=k8s.V1PodSpec(
+            containers=[k8s.V1Container(
+                name="base",
+                image=K8S_IMAGE_VALIDATE,
+            )]
+        )
+    )
+}
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -90,30 +70,76 @@ _DEFAULT_ARGS = {
     },
 )
 def import_public_hackathon():
-    @task
-    def verify_cluster_state():
-        pass
+    # ── 1 ──────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
+    def verify_studies_exist(study_ids_str: str) -> list[str]:
+        import boto3
+        from botocore import UNSIGNED
+        from botocore.config import Config
 
-    @task
+        study_ids = [s.strip() for s in study_ids_str.split(",") if s.strip()]
+        if not study_ids:
+            raise AirflowSkipException("No study IDs provided")
+
+        s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+        found = []
+        for study_id in study_ids:
+            tar_resp = s3.list_objects_v2(Bucket=S3_BUCKET, Prefix=f"{study_id}.tar", MaxKeys=1)
+            dir_resp = s3.list_objects_v2(Bucket=S3_BUCKET, Prefix=f"{study_id}/", MaxKeys=1)
+            if tar_resp.get("KeyCount", 0) > 0 or dir_resp.get("KeyCount", 0) > 0:
+                found.append(study_id)
+                logging.info("Study '%s' found in s3://%s", study_id, S3_BUCKET)
+            else:
+                logging.warning("Study '%s' NOT found in s3://%s — will be skipped", study_id, S3_BUCKET)
+
+        if not found:
+            raise AirflowSkipException("None of the requested studies exist in S3")
+
+        return found
+
+    # ── 2 ──────────────────────────────────────────────────────────────
+    def verify_cluster_state():
+        return BashOperator(
+            task_id="verify_cluster_state",
+            bash_command='echo "verify_cluster_state"',
+            executor_config=_POD_OVERRIDE,
+        )
+
+    # ── 3 ──────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
     def verify_import_not_in_progress():
         pass
 
-    @task
+    # ── 4 ──────────────────────────────────────────────────────────────
     def set_import_running():
-        pass
+        return BashOperator(
+            task_id="set_import_running",
+            bash_command='echo "set_import_running"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 5 ──────────────────────────────────────────────────────────────
     def wipe_standby_database():
-        pass
+        return BashOperator(
+            task_id="wipe_standby_database",
+            bash_command='echo "wipe_standby_database"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 6 ──────────────────────────────────────────────────────────────
     def clone_live_database_into_standby():
-        pass
+        return BashOperator(
+            task_id="clone_live_database_into_standby",
+            bash_command='echo "clone_live_database_into_standby"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task(executor_config=K8S_EXECUTOR_CONFIG)
+    # ── 7 ──────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE_VALIDATE)
     def pull_and_validate_study(study_id: str, s3_bucket: str) -> str | None:
-        import subprocess, sys, pathlib
-        subprocess.run([sys.executable, "-m", "pip", "install", "boto3", "-q"], check=True)
+        import pathlib
+        import subprocess
+        import tarfile
         import boto3
         from botocore import UNSIGNED
         from botocore.config import Config
@@ -123,24 +149,41 @@ def import_public_hackathon():
 
         try:
             s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
-            prefix = f"{study_id}/"
-            paginator = s3.get_paginator("list_objects_v2")
-            for page in paginator.paginate(Bucket=s3_bucket, Prefix=prefix):
-                for obj in page.get("Contents", []):
-                    key = obj["Key"]
-                    rel_path = key[len(prefix):]
-                    if not rel_path:
-                        continue
-                    dest = os.path.join(local_dir, rel_path)
-                    os.makedirs(os.path.dirname(dest), exist_ok=True)
-                    s3.download_file(s3_bucket, key, dest)
-            logging.info("[STUB] Would run: %s %s %s", sys.executable, VALIDATE_SCRIPT_PATH, local_dir)
+            tar_key = f"{study_id}.tar"
+            tar_resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=tar_key, MaxKeys=1)
+            if tar_resp.get("KeyCount", 0) > 0:
+                tar_path = f"/tmp/{study_id}.tar"
+                s3.download_file(s3_bucket, tar_key, tar_path)
+                with tarfile.open(tar_path) as tf:
+                    tf.extractall(local_dir)
+            else:
+                prefix = f"{study_id}/"
+                paginator = s3.get_paginator("list_objects_v2")
+                for page in paginator.paginate(Bucket=s3_bucket, Prefix=prefix):
+                    for obj in page.get("Contents", []):
+                        key = obj["Key"]
+                        rel_path = key[len(prefix):]
+                        if not rel_path:
+                            continue
+                        dest = os.path.join(local_dir, rel_path)
+                        os.makedirs(os.path.dirname(dest), exist_ok=True)
+                        s3.download_file(s3_bucket, key, dest)
+            result = subprocess.run(
+                [sys.executable, VALIDATE_SCRIPT_PATH, "-l", local_dir, "-n"],
+                capture_output=True,
+                text=True,
+            )
+            logging.info(result.stdout)
+            if result.returncode not in (0, 3):
+                logging.error("Validation failed for %s (exit %d):\n%s", study_id, result.returncode, result.stderr)
+                return None
             return study_id
         except Exception as e:
             logging.error("Validation failed for %s: %s", study_id, e)
             return None
 
-    @task(trigger_rule=TriggerRule.ALL_DONE)
+    # ── 8 ──────────────────────────────────────────────────────────────
+    @task(trigger_rule=TriggerRule.ALL_DONE, executor_config=_POD_OVERRIDE)
     def collect_valid_studies(results: list) -> list[str]:
         valid = [sid for sid in (results or []) if sid is not None]
         if not valid:
@@ -148,7 +191,8 @@ def import_public_hackathon():
         logging.info("Studies passing validation: %s", valid)
         return valid
 
-    @task(executor_config=K8S_EXECUTOR_CONFIG)
+    # ── 9 ──────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
     def import_into_standby_database(valid_studies: list[str]):
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
@@ -156,58 +200,40 @@ def import_public_hackathon():
         logging.info("Importing %d studies: %s", len(valid_studies), valid_studies)
         logging.info("[STUB] Would run: %s %s %s", sys.executable, IMPORT_SCRIPT_PATH, " ".join(valid_studies))
 
-    @task
+    # ── 10 ─────────────────────────────────────────────────────────────
     def transfer_deployment_color():
-        pass
+        return BashOperator(
+            task_id="transfer_deployment_color",
+            bash_command='echo "transfer_deployment_color"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 11 ─────────────────────────────────────────────────────────────
     def set_import_complete():
-        pass
+        return BashOperator(
+            task_id="set_import_complete",
+            bash_command='echo "set_import_complete"',
+            executor_config=_POD_OVERRIDE,
+        )
 
-    @task
+    # ── 12 ─────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE)
     def send_slack_notifications():
         pass
 
-    @task
-    def cleanup_data():
-        pass
-
-    # Gate tasks run sequentially
-    t_found_studies = KubernetesPodOperator(
-        task_id="verify_studies_exist",
-        namespace=K8S_NAMESPACE,
-        image=K8S_IMAGE,
-        name="verify-studies-exist",
-        service_account_name=K8S_SERVICE_ACCOUNT,
-        cmds=["python", "-c"],
-        arguments=[_VERIFY_STUDIES_SCRIPT],
-        env_vars={
-            "CANCER_STUDY_IDS": "{{ params.cancer_study_ids }}",
-            "S3_BUCKET": S3_BUCKET,
-        },
-        do_xcom_push=True,
-        get_logs=True,
-        is_delete_operator_pod=True,
-    )
+    # ── Instantiate tasks in execution order ─────────────────────────
+    t_found_studies                  = verify_studies_exist("{{ params.cancer_study_ids }}")
     t_verify_cluster_state           = verify_cluster_state()
     t_verify_import_not_in_progress  = verify_import_not_in_progress()
     t_set_import_running             = set_import_running()
-
-    # DB branch
-    t_wipe_standby_database  = wipe_standby_database()
-    t_clone_live_database    = clone_live_database_into_standby()
-
-    # Validation branch: data dep on found_studies, sequencing dep on set_import_running
-    t_pull_and_validate = pull_and_validate_study.partial(s3_bucket=S3_BUCKET).expand(study_id=t_found_studies)
-    t_collect_valid     = collect_valid_studies(t_pull_and_validate)
-
-    # Diamond join: import waits for validated studies (data) and cloned DB (sequencing)
-    t_import = import_into_standby_database(t_collect_valid)
-
-    t_transfer_deployment_color = transfer_deployment_color()
-    t_set_import_complete       = set_import_complete()
-    t_send_slack_notifications  = send_slack_notifications()
-    t_cleanup_data              = cleanup_data()
+    t_wipe_standby_database          = wipe_standby_database()
+    t_clone_live_database            = clone_live_database_into_standby()
+    t_pull_and_validate              = pull_and_validate_study.partial(s3_bucket=S3_BUCKET).expand(study_id=t_found_studies)
+    t_collect_valid                  = collect_valid_studies(t_pull_and_validate)
+    t_import                         = import_into_standby_database(t_collect_valid)
+    t_transfer_deployment_color      = transfer_deployment_color()
+    t_set_import_complete            = set_import_complete()
+    t_send_slack_notifications       = send_slack_notifications()
 
     # Sequential gate chain
     (
@@ -229,7 +255,7 @@ def import_public_hackathon():
         t_import
         >> t_transfer_deployment_color
         >> t_set_import_complete
-        >> [t_send_slack_notifications, t_cleanup_data]
+        >> t_send_slack_notifications
     )
 
 
