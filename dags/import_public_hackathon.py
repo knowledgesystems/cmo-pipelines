@@ -156,6 +156,12 @@ def import_public_hackathon():
                 s3.download_file(s3_bucket, tar_key, tar_path)
                 with tarfile.open(tar_path) as tf:
                     tf.extractall(local_dir)
+                # unwrap single top-level directory if the tar was packaged that way
+                entries = list(pathlib.Path(local_dir).iterdir())
+                if len(entries) == 1 and entries[0].is_dir():
+                    for child in entries[0].iterdir():
+                        child.rename(pathlib.Path(local_dir) / child.name)
+                    entries[0].rmdir()
             else:
                 prefix = f"{study_id}/"
                 paginator = s3.get_paginator("list_objects_v2")
@@ -168,12 +174,16 @@ def import_public_hackathon():
                         dest = os.path.join(local_dir, rel_path)
                         os.makedirs(os.path.dirname(dest), exist_ok=True)
                         s3.download_file(s3_bucket, key, dest)
+            log_dir = f"/tmp/validate_logs/{study_id}"
+            os.makedirs(log_dir, exist_ok=True)
             result = subprocess.run(
-                [sys.executable, VALIDATE_SCRIPT_PATH, "-l", local_dir, "-n"],
+                [sys.executable, VALIDATE_SCRIPT_PATH, "-l", local_dir, "-n", "-html", log_dir],
                 capture_output=True,
                 text=True,
             )
             logging.info(result.stdout)
+            for log_file in pathlib.Path(log_dir).glob("log-validate-studies-*.txt"):
+                logging.info("=== Validation log: %s ===\n%s", log_file.name, log_file.read_text())
             if result.returncode not in (0, 3):
                 logging.error("Validation failed for %s (exit %d):\n%s", study_id, result.returncode, result.stderr)
                 return None
