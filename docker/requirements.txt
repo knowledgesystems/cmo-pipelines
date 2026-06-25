@@ -1,0 +1,20 @@
+# Python dependencies for the CMO import image.
+#
+# Installed under the Airflow 2.10.5 / py3.12 constraints file (see Dockerfile),
+# which pins exact versions. Only modern Python-3 packages are listed here; the
+# Python-2-era Google stack (gdata, oauth2client, google-api-python-client,
+# httplib2) is intentionally excluded.
+
+# ── DAG runtime: dags/import_public_hackathon.py + dags/utils/ ──
+clickhouse-connect
+boto3
+PyYAML
+kubernetes
+apache-airflow-providers-amazon
+apache-airflow-providers-slack
+
+# ── import-scripts/ (modern py3 scripts only) ──
+pandas
+requests
+GitPython
+python-json-logger
