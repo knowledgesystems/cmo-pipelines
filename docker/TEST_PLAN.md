@@ -3,43 +3,98 @@
 **Goal:** the image built from [docker/Dockerfile](Dockerfile) must successfully run
 every Airflow task in [dags/import_public_hackathon.py](../dags/import_public_hackathon.py).
 
-Work top-to-bottom. Each item is either **succeeded** or **failed**. On failure,
-fill in the **reason for failure:** line and stop blocking downstream items that
-depend on it.
+Items are ordered by **effort / dependency**, ascending: each tier needs only the
+image (Tier 1), then the public S3 bucket (Tiers 2–3), then a live cluster +
+mounted Secret + the still-missing scripts (Tier 4), then everything at once
+(Tier 5). Work top-to-bottom and stop blocking downstream items on a failure.
+
+Each item is either **succeeded** or **failed**. On failure, fill in the
+**reason for failure:** line.
+
+Run task-level tests in the container, e.g.:
+
+```bash
+docker run --rm cmo-import:dev \
+  airflow tasks test import_public_hackathon <task_id> 2026-06-25 \
+  --task-params '{"cancer_study_ids": ["..."]}'   # only where the param is read
+```
+
+When testing the locally built image, ensure the run actually uses `cmo-import:dev`
+(all tasks set `executor_config=_POD_OVERRIDE` pinning `apache/airflow:2.10.5`).
 
 ---
 
-## Phase 0 — Image build & smoke
+## Tier 1 — Image build & smoke (no network, no creds, no cluster)
 
-- [ ] **Image builds** — `docker build -f docker/Dockerfile -t cmo-import:dev .` (from repo root) — succeeded / failed
+The fastest feedback loop — validates the image itself. Nothing here touches S3,
+the Secret, or ClickHouse.
+
+```bash
+docker build -f docker/Dockerfile -t cmo-import:dev .
+docker run --rm cmo-import:dev python -c "import boto3, clickhouse_connect, yaml, kubernetes, pandas, requests, git; print('deps ok')"
+docker run --rm cmo-import:dev bash -c "command -v clickhouse-client aws kubectl yq saml2aws git curl"
+docker run --rm cmo-import:dev python -c "import dags.import_public_hackathon; print('DAG imports')"
+docker run --rm cmo-import:dev airflow dags list 2>&1 | grep import_public_hackathon
+```
+
+- [x] **Image builds** — **succeeded** (native arm64), *after* excluding `clickhouse-connect` from requirements.txt. ⚠️ With `clickhouse-connect` in, the native arm64 build fails: it pulls `lz4`, the Airflow constraints pin `lz4==4.4.3`, and that version has **no linux/aarch64 cp312 wheel**, so `--only-binary=:all:` can't resolve it.
+  - **reason for failure:** n/a (resolved by exclusion; see requirements.txt note)
+- [x] **Build for cluster arch** — **succeeded** — `docker build --platform linux/amd64 ...` resolves `lz4==4.4.3` (x86_64 wheel exists), so `clickhouse-connect` can be restored for amd64-only builds.
   - **reason for failure:**
-- [ ] **Build for cluster arch** — `docker build --platform linux/amd64 -f docker/Dockerfile -t cmo-import:dev .` — succeeded / failed
+- [x] **CLI binaries present** — **succeeded** — `clickhouse-client`, `aws`, `kubectl`, `yq`, `saml2aws`, `git`, `curl` all on PATH
   - **reason for failure:**
-- [ ] **CLI binaries present** — `clickhouse-client`, `aws`, `kubectl`, `yq`, `saml2aws`, `git`, `curl` all on PATH inside the container — succeeded / failed
+- [x] **Python deps importable** — **succeeded** — `import boto3, yaml, kubernetes, pandas, requests, git` ok. ⚠️ `clickhouse_connect` currently excluded (see build note above).
   - **reason for failure:**
-- [ ] **Python deps importable** — `python -c "import boto3, clickhouse_connect, yaml, kubernetes, pandas, requests, git"` — succeeded / failed
+- [x] **Airflow providers present** — **succeeded** — `import airflow.providers.amazon, airflow.providers.slack` ok
   - **reason for failure:**
-- [ ] **Airflow providers present** — `python -c "import airflow.providers.amazon, airflow.providers.slack"` — succeeded / failed
+- [x] **PORTAL_HOME tree exists & owned by airflow** — **succeeded** — all 7 dirs present, owned `airflow:root`
   - **reason for failure:**
-- [ ] **PORTAL_HOME tree exists & owned by airflow** — `/data/portal-cron/{scripts,lib,logs,tmp,cbio-portal-data,git-repos,pipelines-credentials}` — succeeded / failed
+- [x] **Scripts overlaid** — **succeeded** — `import-scripts/` at `/data/portal-cron/scripts/`
   - **reason for failure:**
-- [ ] **Scripts overlaid** — `import-scripts/` copied to `/data/portal-cron/scripts/`, and `automation-environment.sh` is the patched docker/ copy — succeeded / failed
+- [x] **DAG code present** — **succeeded** — `/opt/airflow/dags/import_public_hackathon.py` and `dags/utils/` exist
   - **reason for failure:**
-- [ ] **DAG code present** — `/opt/airflow/dags/import_public_hackathon.py` and `/opt/airflow/dags/utils/` exist — succeeded / failed
+- [x] **DAG imports cleanly** — **succeeded** — `import dags.import_public_hackathon` ok
   - **reason for failure:**
-- [ ] **DAG imports cleanly** — `python -c "import dags.import_public_hackathon"` (no parse/import errors, no missing modules) — succeeded / failed
-  - **reason for failure:**
-- [ ] **DAG registered with Airflow** — `airflow dags list | grep import_public_hackathon` shows no import errors — succeeded / failed
+- [x] **DAG registered with Airflow** — **succeeded** — after `airflow db migrate`, `airflow dags list` shows `import_public_hackathon` with no import errors (exercises the `_POD_OVERRIDE` Secret-volume edit)
   - **reason for failure:**
 
-## Phase 1 — Runtime prerequisites (mounts & config)
+## Tier 2 — Trivial stub tasks (run, log, exit 0; no creds/cluster)
 
-These are runtime mounts the image intentionally leaves empty. Each task that
-touches ClickHouse / color-swap config needs them present.
+Pure-Python stubs that only log. "Passing" means "runs without error," not "does
+the real work." Cheapest way to prove `airflow tasks test` works in-container.
 
-- [ ] **`pipelines-credentials/` mounted** — `manage_public_clickhouse_database_update_tools.properties` present — succeeded / failed
+- [x] **`verify_import_not_in_progress`** (Python, STUB) — **succeeded** — `airflow tasks test` marks SUCCESS, logs the stub line
   - **reason for failure:**
-- [ ] **Color-swap config mounted** — `public-db-color-swap-config.yaml` present — succeeded / failed
+- [x] **`send_slack_notifications`** (Python, STUB) — **succeeded** — `airflow tasks test` marks SUCCESS, logs the stub line
+  - **reason for failure:**
+
+## Tier 3 — Real S3 tasks (need network → public unsigned bucket; no Secret)
+
+Both use the **unsigned** S3 client ([secret_manager.py](../dags/utils/secret_manager.py)),
+so they need **no Secret and no AWS creds** — only egress to `s3://hackathon-databricks`.
+Test fixtures in the bucket: `testa/` and `testb/` are the directory-style prefixes
+the `{study_id}/` check matches (the real `*_*.tar` studies sit at the top level).
+
+- [x] **`verify_studies_exist`** (Python) — **succeeded** — `airflow tasks test ... --task-params '{"cancer_study_ids":["testa","testb"]}'`; both found via unsigned client, returned `['testa','testb']`
+  - **reason for failure:**
+- [x] **`validate_studies`** (Python) — **succeeded** — exercised via the task's `python_callable` (isolated `airflow tasks test` can't supply the upstream XCom); downloaded `testa/clinicala` + `testb/clinicalb` to `/tmp`, returned the passing list. Full XCom-wired run is covered by Tier 5.
+  - **reason for failure:**
+
+## Tier 4 — Cluster / Secret / missing-script tasks
+
+Everything here needs a live ClickHouse cluster, the mounted `pipelines-credentials`
+Secret, and (for two tasks) scripts that are **not yet in `import-scripts/`**.
+
+### Prerequisites (mounts & config)
+
+The image leaves the creds dir empty on purpose; at run time a Kubernetes Secret
+is mounted over it (see `_POD_OVERRIDE` in the DAG). Create/update the Secret with
+[create-pipelines-credentials-secret.sh](create-pipelines-credentials-secret.sh).
+For local `docker run`, bind-mount a host dir over `/data/portal-cron/pipelines-credentials`.
+
+- [ ] **`pipelines-credentials` Secret mounted** — `manage_public_clickhouse_database_update_tools.properties` present at the mount path — succeeded / failed
+  - **reason for failure:**
+- [ ] **Color-swap config mounted** — `public-db-color-swap-config.yaml` present (same Secret) — succeeded / failed
   - **reason for failure:**
 - [ ] **ClickHouse reachable** — host/port/creds in the properties file connect — succeeded / failed
   - **reason for failure:**
@@ -48,33 +103,22 @@ touches ClickHouse / color-swap config needs them present.
 - [ ] **`get_database_currently_in_production.sh` exists** — color-resolution helper the bash scripts call internally; also **missing from `import-scripts/`** — succeeded / failed
   - **reason for failure:**
 
-## Phase 2 — Per-task execution (DAG order)
+### Bash tasks (call the production import-scripts, in DAG order)
 
-Run each via `airflow tasks test import_public_hackathon <task_id> <logical_date>`
-(pass `--task-params '{"cancer_study_ids": ["..."]}'` where the param is read).
-
-- [ ] **1. `verify_studies_exist`** (Python) — lists S3 objects via unsigned client; all requested studies found in `s3://hackathon-databricks` — succeeded / failed
+- [ ] **`verify_cluster_state`** (Bash → `airflow-verify-management.sh`) — cluster health + management/ingress color consistency check passes — succeeded / failed
   - **reason for failure:**
-- [ ] **2. `verify_cluster_state`** (Bash → `airflow-verify-management.sh`) — cluster health + management/ingress color consistency check passes — succeeded / failed
+- [ ] **`set_import_running`** (Bash → `set_update_process_state.sh running`) — sources `automation-environment.sh`, marks state `running` — succeeded / failed
   - **reason for failure:**
-- [ ] **3. `verify_import_not_in_progress`** (Python, STUB) — runs and logs; no import-in-progress gate yet — succeeded / failed
+- [ ] **`clone_live_database_into_standby`** (Bash → `airflow-clone-db.sh`) — wipes + clones live DB into standby color — succeeded / failed
   - **reason for failure:**
-- [ ] **4. `set_import_running`** (Bash → `set_update_process_state.sh running`) — sources `automation-environment.sh`, marks state `running` — succeeded / failed
+- [ ] **`import_into_standby_database`** (Bash → `airflow-import-direct-to-clickhouse.sh`) — imports studies into standby color; writes notification file. ⚠️ Also needs Java + the MSK importer jar (or the metaImport rework — see [METAIMPORT_PLAN.md](METAIMPORT_PLAN.md)) — succeeded / failed
   - **reason for failure:**
-- [ ] **5. `clone_live_database_into_standby`** (Bash → `airflow-clone-db.sh`) — wipes + clones live DB into standby color — succeeded / failed
+- [ ] **`transfer_deployment_color`** (Bash → `airflow-transfer-deployment.sh`) — swaps production traffic to freshly imported standby — succeeded / failed
   - **reason for failure:**
-- [ ] **6. `validate_studies`** (Python) — downloads each study from S3 to `/tmp/<study>` and validates (STUB validator); returns passing list — succeeded / failed
-  - **reason for failure:**
-- [ ] **7. `import_into_standby_database`** (Bash → `airflow-import-direct-to-clickhouse.sh`) — imports studies into standby color; writes notification file — succeeded / failed
-  - **reason for failure:**
-- [ ] **8. `transfer_deployment_color`** (Bash → `airflow-transfer-deployment.sh`) — swaps production traffic to freshly imported standby — succeeded / failed
-  - **reason for failure:**
-- [ ] **9. `set_import_complete`** (Bash → `set_update_process_state.sh complete`) — marks state `complete` — succeeded / failed
-  - **reason for failure:**
-- [ ] **10. `send_slack_notifications`** (Python, STUB) — runs and logs; no real Slack post yet — succeeded / failed
+- [ ] **`set_import_complete`** (Bash → `set_update_process_state.sh complete`) — marks state `complete` — succeeded / failed
   - **reason for failure:**
 
-## Phase 3 — Full DAG run
+## Tier 5 — Full DAG run
 
 - [ ] **End-to-end run** — full DAG run (`airflow dags test import_public_hackathon <date>` or triggered run) completes with all tasks green, respecting the fork/diamond graph (`set_import_running >> [clone, validate] >> import >> transfer >> complete >> slack`) — succeeded / failed
   - **reason for failure:**
@@ -82,9 +126,10 @@ Run each via `airflow tasks test import_public_hackathon <task_id> <logical_date
 ---
 
 ### Notes
-- Tasks 3, 6 (validator), and 10 are **stubs** in the current DAG — passing means
-  "runs without error," not "does the real work."
-- Tasks 4 and 9 will fail at Phase 2 until `set_update_process_state.sh` is added to
-  `import-scripts/` (flagged in Phase 1).
-- All tasks set `executor_config=_POD_OVERRIDE` pinning `apache/airflow:2.10.5`; when
-  testing the locally built image, ensure the run actually uses `cmo-import:dev`.
+- Tasks `verify_import_not_in_progress`, `validate_studies` (validator), and
+  `send_slack_notifications` are **stubs** — passing means "runs without error,"
+  not "does the real work."
+- `set_import_running` / `set_import_complete` will fail until
+  `set_update_process_state.sh` is added to `import-scripts/` (flagged in Tier 4).
+- Only Tier 3 needs network; nothing in Tiers 1–3 needs the Secret or a cluster, so
+  a lot can go green before any infra is wired up.

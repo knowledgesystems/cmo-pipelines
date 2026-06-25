@@ -6,7 +6,11 @@
 # httplib2) is intentionally excluded.
 
 # ── DAG runtime: dags/import_public_hackathon.py + dags/utils/ ──
-clickhouse-connect
+# clickhouse-connect  # TEMP-EXCLUDED: pulls lz4, and the Airflow constraints pin
+#   lz4==4.4.3 which has no linux/aarch64 cp312 wheel, so --only-binary builds
+#   fail on arm64 (Apple Silicon). Re-add once building for linux/amd64 only, or
+#   loosen the lz4 pin. Imported lazily in dags/utils/secret_manager.py, so the
+#   DAG and all non-ClickHouse tasks still work without it.
 boto3
 PyYAML
 kubernetes
