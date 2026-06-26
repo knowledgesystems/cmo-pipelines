@@ -72,10 +72,45 @@ COPY docker/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements.txt \
         --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
 
+# ── clickhouse import-support scripts the DAG's bash tasks call but that don't
+#    live in this repo (fetched from cbioportal-core). They source each other via
+#    $this_script_dir, so all 7 must land together in the scripts dir. Fetched
+#    before the content COPY so this layer caches independently of local edits
+#    (re-runs only when CBIOPORTAL_CORE_REF changes); pin to a commit SHA later. ──
+ARG CBIOPORTAL_CORE_REF=main
+RUN set -eux; \
+    base="https://raw.githubusercontent.com/cBioPortal/cbioportal-core/${CBIOPORTAL_CORE_REF}/scripts/clickhouse_import_support"; \
+    for f in \
+        set_update_process_state.sh \
+        get_database_currently_in_production.sh \
+        drop_tables_in_clickhouse_database.sh \
+        clone_clickhouse_database.sh \
+        synchronize_user_tables_between_databases.sh \
+        parse_property_file_functions.sh \
+        clickhouse_client_command_line_functions.sh \
+    ; do \
+        curl -fsSL "$base/$f" -o "/data/portal-cron/scripts/$f"; \
+    done; \
+    chmod +x /data/portal-cron/scripts/*.sh
+
 # ── Content (changes most frequently; copied last for cache efficiency) ──
-# Whole import-scripts tree as-is, then overlay the safety-patched env file at
+# Only the import-scripts the import_public_hackathon DAG executes, plus their
+# transitively sourced/called dependencies. The rest of import-scripts/ (~660
+# files) is not needed at runtime. Then overlay the safety-patched env file at
 # the path the scripts source ($PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh).
-COPY --chown=airflow:0 import-scripts/ /data/portal-cron/scripts/
+COPY --chown=airflow:0 \
+    import-scripts/airflow-verify-management.sh \
+    import-scripts/airflow-clone-db.sh \
+    import-scripts/airflow-import-direct-to-clickhouse.sh \
+    import-scripts/airflow-transfer-deployment.sh \
+    import-scripts/verify-management-state.sh \
+    import-scripts/transfer-deployment-color.sh \
+    import-scripts/color-config-parsing-functions.sh \
+    import-scripts/clear-persistence-cache-shell-functions.sh \
+    import-scripts/clear_cbioportal_persistence_cache.sh \
+    import-scripts/slack-message-functions.sh \
+    import-scripts/authenticate_service_account.sh \
+    /data/portal-cron/scripts/
 COPY --chown=airflow:0 docker/automation-environment.sh /data/portal-cron/scripts/automation-environment.sh
 # DAG code so the task pod can `from dags.utils... import` (DAG appends its parent
 # dir to sys.path; dags/utils/__init__.py already exists).
