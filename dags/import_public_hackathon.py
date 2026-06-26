@@ -80,8 +80,13 @@ _POD_OVERRIDE_VALIDATE = {
                 name="base",
                 image=K8S_IMAGE_VALIDATE,
                 image_pull_policy="Always",
+                resources=k8s.V1ResourceRequirements(
+                    requests={"memory": "6Gi", "cpu": "1"},
+                    limits={"memory": "7Gi"},
+                ),
                 env=[
                     k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
+                    k8s.V1EnvVar(name="JAVA_OPTS", value="-Xmx4g"),
                     k8s.V1EnvVar(
                         name="CLICKHOUSE_HOST",
                         value_from=k8s.V1EnvVarSource(
