@@ -313,13 +313,13 @@ def import_public_hackathon_calla():
     t_found_studies >> t_verify_cluster >> t_verify_not_in_progress >> t_set_running
 
     # Fork after gate: DB clone and study validation run in parallel
-    t_set_running >> [t_clone, t_valid]
+    #t_set_running >> [t_clone, t_valid]
 
     # Diamond join: import waits for the cloned standby DB and the validated studies
-    [t_clone, t_valid] >> t_import
+    #[t_clone, t_valid] >> t_import
 
     # Tail chain
-    t_import >> t_transfer >> t_complete >> t_slack
+    #t_import >> t_transfer >> t_complete >> t_slack
 
 
 import_public_hackathon_calla()
