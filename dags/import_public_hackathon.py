@@ -17,13 +17,12 @@ from airflow.operators.bash import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
 from kubernetes.client import models as k8s
 
-S3_BUCKET               = "hackathon-databricks"
-K8S_IMAGE               = "apache/airflow:2.10.5"
-K8S_IMAGE_VALIDATE      = "averyniceday/hackathon-import:latest"
-VALIDATE_SCRIPT_PATH    = "/scripts/importer/validateStudies.py"
-IMPORT_SCRIPT_PATH      = "/scripts/importer.py"
+S3_BUCKET            = "hackathon-databricks"
+K8S_IMAGE            = "apache/airflow:2.10.5"
+K8S_IMAGE_VALIDATE   = "averyniceday/hackathon-import:latest"
+VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
+IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
 STUDY_LIST_VARIABLE_KEY = "hackathon_available_study_ids"
-
 
 def _available_study_ids() -> list[str]:
     """Read the study-list Variable at parse time to populate the Param enum."""
@@ -31,6 +30,36 @@ def _available_study_ids() -> list[str]:
         return json.loads(Variable.get(STUDY_LIST_VARIABLE_KEY, default_var="[]"))
     except Exception:
         return []
+
+
+def _download_study_from_s3(s3_client, s3_bucket: str, study_id: str, local_dir: str) -> None:
+    import pathlib
+    import tarfile
+
+    tar_key = f"{study_id}.tar"
+    tar_resp = s3_client.list_objects_v2(Bucket=s3_bucket, Prefix=tar_key, MaxKeys=1)
+    if tar_resp.get("KeyCount", 0) > 0:
+        tar_path = f"/tmp/{study_id}.tar"
+        s3_client.download_file(s3_bucket, tar_key, tar_path)
+        with tarfile.open(tar_path) as tf:
+            tf.extractall(local_dir)
+        entries = list(pathlib.Path(local_dir).iterdir())
+        if len(entries) == 1 and entries[0].is_dir():
+            for child in entries[0].iterdir():
+                child.rename(pathlib.Path(local_dir) / child.name)
+            entries[0].rmdir()
+    else:
+        prefix = f"{study_id}/"
+        paginator = s3_client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=s3_bucket, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                key = obj["Key"]
+                rel_path = key[len(prefix):]
+                if not rel_path:
+                    continue
+                dest = os.path.join(local_dir, rel_path)
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                s3_client.download_file(s3_bucket, key, dest)
 
 
 _POD_OVERRIDE = {
@@ -50,7 +79,64 @@ _POD_OVERRIDE_VALIDATE = {
             containers=[k8s.V1Container(
                 name="base",
                 image=K8S_IMAGE_VALIDATE,
-            )]
+                env=[
+                    k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
+                    k8s.V1EnvVar(
+                        name="CLICKHOUSE_HOST",
+                        value_from=k8s.V1EnvVarSource(
+                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="host")
+                        ),
+                    ),
+                    k8s.V1EnvVar(
+                        name="CLICKHOUSE_NATIVE_PORT",
+                        value_from=k8s.V1EnvVarSource(
+                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="native_port")
+                        ),
+                    ),
+                    k8s.V1EnvVar(
+                        name="CLICKHOUSE_USER",
+                        value_from=k8s.V1EnvVarSource(
+                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="user")
+                        ),
+                    ),
+                    k8s.V1EnvVar(
+                        name="CLICKHOUSE_PASSWORD",
+                        value_from=k8s.V1EnvVarSource(
+                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="password")
+                        ),
+                    ),
+                    k8s.V1EnvVar(
+                        name="CLICKHOUSE_DB",
+                        value_from=k8s.V1EnvVarSource(
+                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="database")
+                        ),
+                    ),
+                ],
+                volume_mounts=[
+                    k8s.V1VolumeMount(
+                        name="app-properties",
+                        mount_path="/application.properties",
+                        sub_path="application.properties",
+                        read_only=True,
+                    ),
+                    k8s.V1VolumeMount(
+                        name="clickhouse-sql",
+                        mount_path="/clickhouse.sql",
+                        sub_path="clickhouse.sql",
+                        read_only=True,
+                    ),
+                ],
+            )],
+            volumes=[
+                k8s.V1Volume(
+                    name="app-properties",
+                    secret=k8s.V1SecretVolumeSource(secret_name="hackathon-app-properties"),
+                ),
+                k8s.V1Volume(
+                    name="clickhouse-sql",
+                    secret=k8s.V1SecretVolumeSource(secret_name="hackathon-clickhouse-sql"),
+                ),
+            ],
         )
     )
 }
@@ -160,7 +246,6 @@ def import_public_hackathon():
     def pull_and_validate_study(study_id: str, s3_bucket: str) -> str | None:
         import pathlib
         import subprocess
-        import tarfile
         import boto3
         from botocore import UNSIGNED
         from botocore.config import Config
@@ -170,31 +255,7 @@ def import_public_hackathon():
 
         try:
             s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
-            tar_key = f"{study_id}.tar"
-            tar_resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=tar_key, MaxKeys=1)
-            if tar_resp.get("KeyCount", 0) > 0:
-                tar_path = f"/tmp/{study_id}.tar"
-                s3.download_file(s3_bucket, tar_key, tar_path)
-                with tarfile.open(tar_path) as tf:
-                    tf.extractall(local_dir)
-                # unwrap single top-level directory if the tar was packaged that way
-                entries = list(pathlib.Path(local_dir).iterdir())
-                if len(entries) == 1 and entries[0].is_dir():
-                    for child in entries[0].iterdir():
-                        child.rename(pathlib.Path(local_dir) / child.name)
-                    entries[0].rmdir()
-            else:
-                prefix = f"{study_id}/"
-                paginator = s3.get_paginator("list_objects_v2")
-                for page in paginator.paginate(Bucket=s3_bucket, Prefix=prefix):
-                    for obj in page.get("Contents", []):
-                        key = obj["Key"]
-                        rel_path = key[len(prefix):]
-                        if not rel_path:
-                            continue
-                        dest = os.path.join(local_dir, rel_path)
-                        os.makedirs(os.path.dirname(dest), exist_ok=True)
-                        s3.download_file(s3_bucket, key, dest)
+            _download_study_from_s3(s3, s3_bucket, study_id, local_dir)
             log_dir = f"/tmp/validate_logs/{study_id}"
             os.makedirs(log_dir, exist_ok=True)
             result = subprocess.run(
@@ -223,13 +284,60 @@ def import_public_hackathon():
         return valid
 
     # ── 9 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE)
+    @task(executor_config=_POD_OVERRIDE_VALIDATE)
     def import_into_standby_database(valid_studies: list[str]):
+        import pathlib
+        import subprocess
+        import boto3
+        from botocore import UNSIGNED
+        from botocore.config import Config
+
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
             return
-        logging.info("Importing %d studies: %s", len(valid_studies), valid_studies)
-        logging.info("[STUB] Would run: %s %s %s", sys.executable, IMPORT_SCRIPT_PATH, " ".join(valid_studies))
+
+        s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+        failed = []
+
+        for study_id in valid_studies:
+            local_dir = f"/tmp/{study_id}"
+            pathlib.Path(local_dir).mkdir(parents=True, exist_ok=True)
+
+            try:
+                _download_study_from_s3(s3, S3_BUCKET, study_id, local_dir)
+            except Exception as e:
+                logging.error("Download failed for %s: %s", study_id, e)
+                failed.append(study_id)
+                continue
+
+            result = subprocess.run(
+                [sys.executable, IMPORT_SCRIPT_PATH,
+                 "-s", local_dir,
+                 "-n",
+                 "-o",
+                 "--no-derive-tables"],
+                capture_output=True, text=True,
+            )
+            logging.info(result.stdout)
+            if result.stderr:
+                logging.info(result.stderr)
+            if result.returncode != 0:
+                logging.error("Import failed for %s (exit %d)", study_id, result.returncode)
+                failed.append(study_id)
+
+        # Rebuild derived tables once after all studies are loaded
+        rebuild = subprocess.run(
+            [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables"],
+            capture_output=True, text=True,
+        )
+        logging.info(rebuild.stdout)
+        if rebuild.stderr:
+            logging.info(rebuild.stderr)
+        if rebuild.returncode != 0:
+            raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode}):\n{rebuild.stderr}")
+
+        if failed:
+            raise Exception(f"Import failed for {len(failed)} study/studies: {failed}")
 
     # ── 10 ─────────────────────────────────────────────────────────────
     def transfer_deployment_color():
