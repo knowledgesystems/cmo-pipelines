@@ -20,10 +20,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         unzip \
         ca-certificates \
+        gnupg \
+    && curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' \
+        | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg \
+    && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main' \
+        > /etc/apt/sources.list.d/clickhouse.list \
+    && apt-get update && apt-get install -y --no-install-recommends clickhouse-client \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Standalone CLI binaries the import-scripts/*.sh scripts shell out to ──
-# clickhouse, aws v2, kubectl, yq, saml2aws.
+# aws v2, kubectl, yq, saml2aws (clickhouse-client installed via apt above).
 # Arch is derived from the running image (uname -m) so the binaries always match
 # the build platform; build for the cluster with `docker build --platform linux/amd64`.
 RUN set -eux; \
@@ -32,9 +38,6 @@ RUN set -eux; \
         aarch64|arm64) AWS_ARCH=aarch64; GO_ARCH=arm64 ;; \
         *) echo "unsupported arch $(uname -m)" >&2; exit 1 ;; \
     esac; \
-    # clickhouse: fetch the binary then run its self-installer (drops symlinks
-    # clickhouse-client / clickhouse-local into /usr/bin).
-    cd /tmp && curl -fsSL https://clickhouse.com/ | sh && ./clickhouse install --noninteractive && rm -f /tmp/clickhouse; \
     # aws cli v2
     curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}.zip" -o /tmp/awscliv2.zip; \
     unzip -q /tmp/awscliv2.zip -d /tmp; \
@@ -46,11 +49,12 @@ RUN set -eux; \
     # yq
     curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${GO_ARCH}" -o /usr/local/bin/yq; \
     chmod +x /usr/local/bin/yq; \
-    # saml2aws (release tarball contains the single saml2aws binary)
+    # saml2aws (extract all then find the binary — tarball layout varies by version)
     curl -fsSL "https://github.com/Versent/saml2aws/releases/download/v${SAML2AWS_VERSION}/saml2aws_${SAML2AWS_VERSION}_linux_${GO_ARCH}.tar.gz" -o /tmp/saml2aws.tar.gz; \
-    tar -xzf /tmp/saml2aws.tar.gz -C /usr/local/bin saml2aws; \
-    chmod +x /usr/local/bin/saml2aws; \
-    rm -f /tmp/saml2aws.tar.gz
+    mkdir -p /tmp/saml2aws-extract; \
+    tar -xzf /tmp/saml2aws.tar.gz -C /tmp/saml2aws-extract; \
+    find /tmp/saml2aws-extract -type f -name 'saml2aws' -exec install -m 0755 {} /usr/local/bin/saml2aws \;; \
+    rm -rf /tmp/saml2aws.tar.gz /tmp/saml2aws-extract
 
 # ── On-disk layout the import-scripts assume (PORTAL_HOME tree) ──
 # pipelines-credentials/ is a runtime mount point and is left empty here.
