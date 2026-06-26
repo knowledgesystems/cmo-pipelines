@@ -73,79 +73,87 @@ _POD_OVERRIDE = {
     )
 }
 
-_POD_OVERRIDE_VALIDATE = {
-    "pod_override": k8s.V1Pod(
-        spec=k8s.V1PodSpec(
-            containers=[k8s.V1Container(
-                name="base",
-                image=K8S_IMAGE_VALIDATE,
-                image_pull_policy="Always",
-                resources=k8s.V1ResourceRequirements(
-                    requests={"memory": "6Gi", "cpu": "1"},
-                    limits={"memory": "7Gi"},
-                ),
-                env=[
-                    k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
-                    k8s.V1EnvVar(name="JAVA_OPTS", value="-Xmx4g"),
-                    k8s.V1EnvVar(
-                        name="CLICKHOUSE_HOST",
-                        value_from=k8s.V1EnvVarSource(
-                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="host")
-                        ),
+def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: str = "2Gi", memory_limit: str = "3Gi") -> dict:
+    env = [
+        k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
+        k8s.V1EnvVar(
+            name="CLICKHOUSE_HOST",
+            value_from=k8s.V1EnvVarSource(
+                secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="host")
+            ),
+        ),
+        k8s.V1EnvVar(
+            name="CLICKHOUSE_NATIVE_PORT",
+            value_from=k8s.V1EnvVarSource(
+                secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="native_port")
+            ),
+        ),
+        k8s.V1EnvVar(
+            name="CLICKHOUSE_USER",
+            value_from=k8s.V1EnvVarSource(
+                secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="user")
+            ),
+        ),
+        k8s.V1EnvVar(
+            name="CLICKHOUSE_PASSWORD",
+            value_from=k8s.V1EnvVarSource(
+                secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="password")
+            ),
+        ),
+        k8s.V1EnvVar(
+            name="CLICKHOUSE_DB",
+            value_from=k8s.V1EnvVarSource(
+                secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="database")
+            ),
+        ),
+    ]
+    if java_opts:
+        env.append(k8s.V1EnvVar(name="JAVA_OPTS", value=java_opts))
+
+    return {
+        "pod_override": k8s.V1Pod(
+            spec=k8s.V1PodSpec(
+                containers=[k8s.V1Container(
+                    name="base",
+                    image=K8S_IMAGE_VALIDATE,
+                    image_pull_policy="Always",
+                    resources=k8s.V1ResourceRequirements(
+                        requests={"memory": memory_request, "cpu": "1"},
+                        limits={"memory": memory_limit},
                     ),
-                    k8s.V1EnvVar(
-                        name="CLICKHOUSE_NATIVE_PORT",
-                        value_from=k8s.V1EnvVarSource(
-                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="native_port")
+                    env=env,
+                    volume_mounts=[
+                        k8s.V1VolumeMount(
+                            name="app-properties",
+                            mount_path="/application.properties",
+                            sub_path="application.properties",
+                            read_only=True,
                         ),
-                    ),
-                    k8s.V1EnvVar(
-                        name="CLICKHOUSE_USER",
-                        value_from=k8s.V1EnvVarSource(
-                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="user")
+                        k8s.V1VolumeMount(
+                            name="clickhouse-sql",
+                            mount_path="/clickhouse.sql",
+                            sub_path="clickhouse.sql",
+                            read_only=True,
                         ),
-                    ),
-                    k8s.V1EnvVar(
-                        name="CLICKHOUSE_PASSWORD",
-                        value_from=k8s.V1EnvVarSource(
-                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="password")
-                        ),
-                    ),
-                    k8s.V1EnvVar(
-                        name="CLICKHOUSE_DB",
-                        value_from=k8s.V1EnvVarSource(
-                            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="database")
-                        ),
-                    ),
-                ],
-                volume_mounts=[
-                    k8s.V1VolumeMount(
+                    ],
+                )],
+                volumes=[
+                    k8s.V1Volume(
                         name="app-properties",
-                        mount_path="/application.properties",
-                        sub_path="application.properties",
-                        read_only=True,
+                        secret=k8s.V1SecretVolumeSource(secret_name="hackathon-app-properties"),
                     ),
-                    k8s.V1VolumeMount(
+                    k8s.V1Volume(
                         name="clickhouse-sql",
-                        mount_path="/clickhouse.sql",
-                        sub_path="clickhouse.sql",
-                        read_only=True,
+                        secret=k8s.V1SecretVolumeSource(secret_name="hackathon-clickhouse-sql"),
                     ),
                 ],
-            )],
-            volumes=[
-                k8s.V1Volume(
-                    name="app-properties",
-                    secret=k8s.V1SecretVolumeSource(secret_name="hackathon-app-properties"),
-                ),
-                k8s.V1Volume(
-                    name="clickhouse-sql",
-                    secret=k8s.V1SecretVolumeSource(secret_name="hackathon-clickhouse-sql"),
-                ),
-            ],
+            )
         )
-    )
-}
+    }
+
+
+_POD_OVERRIDE_VALIDATE = _make_cbioportal_pod_override(memory_request="2Gi", memory_limit="3Gi")
+_POD_OVERRIDE_IMPORT   = _make_cbioportal_pod_override(java_opts="-Xmx3g", memory_request="4Gi", memory_limit="5Gi")
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -290,7 +298,7 @@ def import_public_hackathon():
         return valid
 
     # ── 9 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE_VALIDATE)
+    @task(executor_config=_POD_OVERRIDE_IMPORT)
     def import_into_standby_database(valid_studies: list[str]):
         import pathlib
         import subprocess
