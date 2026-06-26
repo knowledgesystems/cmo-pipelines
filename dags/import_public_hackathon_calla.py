@@ -310,7 +310,8 @@ def import_public_hackathon_calla():
 
     # ── Wire the graph ────────────────────────────────────────────────
     # Sequential gate chain
-    t_found_studies >> t_verify_cluster >> t_verify_not_in_progress >> t_set_running
+    t_found_studies >> t_verify_cluster
+    #t_verify_cluster >> t_verify_not_in_progress >> t_set_running
 
     # Fork after gate: DB clone and study validation run in parallel
     #t_set_running >> [t_clone, t_valid]
