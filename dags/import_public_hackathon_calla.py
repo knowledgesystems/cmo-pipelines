@@ -149,8 +149,11 @@ def import_public_hackathon_calla():
         s3 = SecretManager.s3_client()
         missing = []
         for study_id in study_ids:
-            resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=f"{study_id}/", MaxKeys=1)
-            if resp.get("KeyCount", 0) > 0:
+            # Studies may be stored as a directory prefix (study_id/) or a tarball
+            # (study_id.tar). Check both; either form is acceptable.
+            dir_resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=f"{study_id}/", MaxKeys=1)
+            tar_resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=f"{study_id}.tar", MaxKeys=1)
+            if dir_resp.get("KeyCount", 0) > 0 or tar_resp.get("KeyCount", 0) > 0:
                 logger.info("Study '%s' found in s3://%s", study_id, s3_bucket)
             else:
                 logger.error("Study '%s' NOT found in s3://%s", study_id, s3_bucket)
