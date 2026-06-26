@@ -68,10 +68,16 @@ _POD_OVERRIDE = {
                 image=K8S_IMAGE,
                 image_pull_policy="Always",
                 # Point saml2aws at the mounted config file without touching the shared script.
-                env=[k8s.V1EnvVar(
-                    name="SAML2AWS_CONFIGFILE",
-                    value=f"{CREDS_DIR}/.saml2aws",
-                )],
+                env=[
+                    k8s.V1EnvVar(
+                        name="SAML2AWS_CONFIGFILE",
+                        value=f"{CREDS_DIR}/.saml2aws",
+                    ),
+                    # Airflow injects KUBECONFIG pointing at the Airflow cluster kubeconfig
+                    # (namespace: airflow). Unset it so kubectl --kubeconfig uses only the
+                    # file we specify and defaults namespace to 'default'.
+                    k8s.V1EnvVar(name="KUBECONFIG", value=""),
+                ],
                 # Mount the credentials Secret over the (empty) creds dir baked
                 # into the image. Each Secret key surfaces as a file here, so the
                 # hardcoded *_CONFIG_FILE paths above resolve unchanged.
