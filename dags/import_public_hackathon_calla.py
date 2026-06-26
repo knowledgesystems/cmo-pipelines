@@ -129,7 +129,6 @@ def _script(script_name: str, *args: object, source_automation_env: bool = False
 def import_public_hackathon_calla():
     # ── Python tasks (S3 / ClickHouse / Slack via SecretManager) ───────
 
-    # ── 1 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
     def verify_studies_exist(study_ids: list[str], s3_bucket: str) -> list[str]:
         """All-or-nothing: every requested study must exist in S3, else fail the DAG."""
@@ -163,7 +162,6 @@ def import_public_hackathon_calla():
             raise AirflowException(f"Studies not found in s3://{s3_bucket}: {missing}")
         return study_ids
 
-    # ── 3 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
     def verify_import_not_in_progress(clickhouse_config_file: str) -> None:
         """Gate: fail if the management DB reports an import already running.
@@ -175,7 +173,6 @@ def import_public_hackathon_calla():
         #       query the management DB for the current update-process state; raise if 'running'.
         logger.info("[STUB] verify_import_not_in_progress via %s", clickhouse_config_file)
 
-    # ── 6 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
     def validate_studies(study_ids: list[str], s3_bucket: str) -> list[str]:
         """Downloads and validates each study; returns the ones that pass."""
@@ -209,7 +206,6 @@ def import_public_hackathon_calla():
         logger.info("Studies passing validation: %s", valid)
         return valid
 
-    # ── 10 ─────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
     def send_slack_notifications() -> None:
         """Posts the import result to Slack."""
@@ -219,7 +215,7 @@ def import_public_hackathon_calla():
 
     # ── BashOperator tasks (call the production import-scripts) ────────
 
-    # ── 2 ── verify cluster health + management/ingress color consistency
+    # verify cluster health + management/ingress color consistency
     t_verify_cluster = BashOperator(
         task_id="verify_cluster_state",
         bash_command=_script(
@@ -231,7 +227,7 @@ def import_public_hackathon_calla():
         executor_config=_POD_OVERRIDE,
     )
 
-    # ── 4 ── mark the import as running in the management DB
+    # mark the import as running in the management DB
     t_set_running = BashOperator(
         task_id="set_import_running",
         bash_command=_script(
@@ -243,7 +239,7 @@ def import_public_hackathon_calla():
         executor_config=_POD_OVERRIDE,
     )
 
-    # ── 5 ── wipe + clone live DB into standby (airflow-clone-db.sh does both)
+    # wipe + clone live DB into standby (airflow-clone-db.sh does both)
     t_clone = BashOperator(
         task_id="clone_live_database_into_standby",
         bash_command=_script(
@@ -255,7 +251,7 @@ def import_public_hackathon_calla():
         executor_config=_POD_OVERRIDE,
     )
 
-    # ── 7 ── import studies into the standby color DB
+    # import studies into the standby color DB
     t_import = BashOperator(
         task_id="import_into_standby_database",
         bash_command=_script(
@@ -268,7 +264,7 @@ def import_public_hackathon_calla():
         executor_config=_POD_OVERRIDE,
     )
 
-    # ── 8 ── swap production traffic to the freshly imported standby color
+    # swap production traffic to the freshly imported standby color
     t_transfer = BashOperator(
         task_id="transfer_deployment_color",
         bash_command=_script(
@@ -280,7 +276,7 @@ def import_public_hackathon_calla():
         executor_config=_POD_OVERRIDE,
     )
 
-    # ── 9 ── mark the import as complete in the management DB
+    # mark the import as complete in the management DB
     t_complete = BashOperator(
         task_id="set_import_complete",
         bash_command=_script(
