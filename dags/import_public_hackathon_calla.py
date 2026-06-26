@@ -240,87 +240,80 @@ def import_public_hackathon_calla():
     )
 
     # mark the import as running in the management DB
-    t_set_running = BashOperator(
-        task_id="set_import_running",
-        bash_command=_script(
-            "set_update_process_state.sh",
-            CLICKHOUSE_CONFIG_FILE,
-            "running",
-            source_automation_env=True,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    # t_set_running = BashOperator(
+    #     task_id="set_import_running",
+    #     bash_command=_script(
+    #         "set_update_process_state.sh",
+    #         CLICKHOUSE_CONFIG_FILE,
+    #         "running",
+    #         source_automation_env=True,
+    #     ),
+    #     executor_config=_POD_OVERRIDE,
+    # )
 
     # wipe + clone live DB into standby (airflow-clone-db.sh does both)
-    t_clone = BashOperator(
-        task_id="clone_live_database_into_standby",
-        bash_command=_script(
-            "airflow-clone-db.sh",
-            IMPORTER,
-            SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    # t_clone = BashOperator(
+    #     task_id="clone_live_database_into_standby",
+    #     bash_command=_script(
+    #         "airflow-clone-db.sh",
+    #         IMPORTER,
+    #         SCRIPTS_DIR,
+    #         CLICKHOUSE_CONFIG_FILE,
+    #     ),
+    #     executor_config=_POD_OVERRIDE,
+    # )
 
     # import studies into the standby color DB
-    t_import = BashOperator(
-        task_id="import_into_standby_database",
-        bash_command=_script(
-            "airflow-import-direct-to-clickhouse.sh",
-            IMPORTER,
-            SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-            NOTIFICATION_FILE,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    # t_import = BashOperator(
+    #     task_id="import_into_standby_database",
+    #     bash_command=_script(
+    #         "airflow-import-direct-to-clickhouse.sh",
+    #         IMPORTER,
+    #         SCRIPTS_DIR,
+    #         CLICKHOUSE_CONFIG_FILE,
+    #         NOTIFICATION_FILE,
+    #     ),
+    #     executor_config=_POD_OVERRIDE,
+    # )
 
     # swap production traffic to the freshly imported standby color
-    t_transfer = BashOperator(
-        task_id="transfer_deployment_color",
-        bash_command=_script(
-            "airflow-transfer-deployment.sh",
-            SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-            COLOR_SWAP_CONFIG_FILE,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    # t_transfer = BashOperator(
+    #     task_id="transfer_deployment_color",
+    #     bash_command=_script(
+    #         "airflow-transfer-deployment.sh",
+    #         SCRIPTS_DIR,
+    #         CLICKHOUSE_CONFIG_FILE,
+    #         COLOR_SWAP_CONFIG_FILE,
+    #     ),
+    #     executor_config=_POD_OVERRIDE,
+    # )
 
     # mark the import as complete in the management DB
-    t_complete = BashOperator(
-        task_id="set_import_complete",
-        bash_command=_script(
-            "set_update_process_state.sh",
-            CLICKHOUSE_CONFIG_FILE,
-            "complete",
-            source_automation_env=True,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    # t_complete = BashOperator(
+    #     task_id="set_import_complete",
+    #     bash_command=_script(
+    #         "set_update_process_state.sh",
+    #         CLICKHOUSE_CONFIG_FILE,
+    #         "complete",
+    #         source_automation_env=True,
+    #     ),
+    #     executor_config=_POD_OVERRIDE,
+    # )
 
     # ── Instantiate Python tasks ──────────────────────────────────────
     cancer_study_ids = "{{ params.cancer_study_ids }}"
 
     t_found_studies          = verify_studies_exist(cancer_study_ids, S3_BUCKET_NAME)
-    t_verify_not_in_progress = verify_import_not_in_progress(CLICKHOUSE_CONFIG_FILE)
-    t_valid                  = validate_studies(t_found_studies, S3_BUCKET_NAME)
-    t_slack                  = send_slack_notifications()
+    # t_verify_not_in_progress = verify_import_not_in_progress(CLICKHOUSE_CONFIG_FILE)
+    # t_valid                  = validate_studies(t_found_studies, S3_BUCKET_NAME)
+    # t_slack                  = send_slack_notifications()
 
     # ── Wire the graph ────────────────────────────────────────────────
-    # Sequential gate chain
     t_found_studies >> t_verify_cluster
-    #t_verify_cluster >> t_verify_not_in_progress >> t_set_running
-
-    # Fork after gate: DB clone and study validation run in parallel
-    #t_set_running >> [t_clone, t_valid]
-
-    # Diamond join: import waits for the cloned standby DB and the validated studies
-    #[t_clone, t_valid] >> t_import
-
-    # Tail chain
-    #t_import >> t_transfer >> t_complete >> t_slack
+    # t_verify_cluster >> t_verify_not_in_progress >> t_set_running
+    # t_set_running >> [t_clone, t_valid]
+    # [t_clone, t_valid] >> t_import
+    # t_import >> t_transfer >> t_complete >> t_slack
 
 
 import_public_hackathon_calla()
