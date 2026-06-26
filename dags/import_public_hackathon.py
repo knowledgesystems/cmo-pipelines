@@ -79,6 +79,7 @@ _POD_OVERRIDE_VALIDATE = {
             containers=[k8s.V1Container(
                 name="base",
                 image=K8S_IMAGE_VALIDATE,
+                image_pull_policy="Always",
                 env=[
                     k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
                     k8s.V1EnvVar(
