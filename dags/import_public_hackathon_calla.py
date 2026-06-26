@@ -43,7 +43,7 @@ def _available_study_ids() -> list[str]:
         return []
 
 
-K8S_IMAGE = "apache/airflow:2.10.5"
+K8S_IMAGE = "callachennault/cmo-import:dev"
 
 # Hardcoded for now; promote to DAG params later if they need to vary per run.
 S3_BUCKET_NAME = "hackathon-databricks"
