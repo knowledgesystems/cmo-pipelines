@@ -339,6 +339,14 @@ def import_public_hackathon():
                 logging.error("Import failed for %s (exit %d)", study_id, result.returncode)
                 failed.append(study_id)
 
+        if failed:
+            raise Exception(f"Import failed for {len(failed)} study/studies: {failed}")
+
+    # ── 10 ─────────────────────────────────────────────────────────────
+    @task(executor_config=_POD_OVERRIDE_IMPORT)
+    def create_derived_tables_in_standby_database():
+        import subprocess
+
         # Rebuild derived tables once after all studies are loaded
         rebuild = subprocess.run(
             [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables"],
@@ -350,10 +358,7 @@ def import_public_hackathon():
         if rebuild.returncode != 0:
             raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode}):\n{rebuild.stderr}")
 
-        if failed:
-            raise Exception(f"Import failed for {len(failed)} study/studies: {failed}")
-
-    # ── 10 ─────────────────────────────────────────────────────────────
+    # ── 11 ─────────────────────────────────────────────────────────────
     def transfer_deployment_color():
         return BashOperator(
             task_id="transfer_deployment_color",
@@ -361,7 +366,7 @@ def import_public_hackathon():
             executor_config=_POD_OVERRIDE,
         )
 
-    # ── 11 ─────────────────────────────────────────────────────────────
+    # ── 12 ─────────────────────────────────────────────────────────────
     def set_import_complete():
         return BashOperator(
             task_id="set_import_complete",
@@ -369,7 +374,7 @@ def import_public_hackathon():
             executor_config=_POD_OVERRIDE,
         )
 
-    # ── 12 ─────────────────────────────────────────────────────────────
+    # ── 13 ─────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
     def send_slack_notifications():
         pass
@@ -384,6 +389,7 @@ def import_public_hackathon():
     t_pull_and_validate              = pull_and_validate_study.partial(s3_bucket=S3_BUCKET).expand(study_id=t_found_studies)
     t_collect_valid                  = collect_valid_studies(t_pull_and_validate)
     t_import                         = import_into_standby_database(t_collect_valid)
+    t_create_derived_tables          = create_derived_tables_in_standby_database()
     t_transfer_deployment_color      = transfer_deployment_color()
     t_set_import_complete            = set_import_complete()
     t_send_slack_notifications       = send_slack_notifications()
@@ -406,6 +412,7 @@ def import_public_hackathon():
     # Tail chain
     (
         t_import
+        >> t_create_derived_tables
         >> t_transfer_deployment_color
         >> t_set_import_complete
         >> t_send_slack_notifications
