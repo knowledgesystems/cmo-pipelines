@@ -119,6 +119,15 @@ def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE)
     def verify_studies_exist(study_ids: list[str], s3_bucket: str) -> list[str]:
         """All-or-nothing: every requested study must exist in S3, else fail the DAG."""
+        # Params with type="array" should arrive as a list, but render_template_as_native_obj
+        # may render them as a string repr (e.g. "['study1', 'study2']"). Parse defensively.
+        if isinstance(study_ids, str):
+            import ast
+            import json
+            try:
+                study_ids = json.loads(study_ids)
+            except (json.JSONDecodeError, ValueError):
+                study_ids = ast.literal_eval(study_ids)
         study_ids = [s.strip() for s in (study_ids or []) if s and s.strip()]
         if not study_ids:
             raise AirflowException("No study IDs provided")
