@@ -89,6 +89,16 @@ def import_public_hackathon():
         from botocore import UNSIGNED
         from botocore.config import Config
 
+        # Params with type="array" should arrive as a list, but render_template_as_native_obj
+        # may render them as a string repr (e.g. "['study1', 'study2']"). Parse defensively.
+        if isinstance(study_ids, str):
+            import ast
+            import json
+            try:
+                study_ids = json.loads(study_ids)
+            except (json.JSONDecodeError, ValueError):
+                study_ids = ast.literal_eval(study_ids)
+
         if not study_ids:
             raise AirflowSkipException("No study IDs provided")
 
