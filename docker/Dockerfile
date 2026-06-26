@@ -85,5 +85,17 @@ COPY --chown=airflow:0 docker/automation-environment.sh /data/portal-cron/script
 # dir to sys.path; dags/utils/__init__.py already exists).
 COPY --chown=airflow:0 dags/ /opt/airflow/dags/
 
+# ── Supplementary scripts from cbioportal-core (not in cmo-pipelines) ──
+# get_database_currently_in_production.sh and related ClickHouse helpers are
+# maintained in cbioportal-core. Sparse-clone just that subdirectory.
+USER root
+RUN git clone --depth 1 --filter=blob:none --sparse \
+        https://github.com/cBioPortal/cbioportal-core.git /tmp/cbioportal-core \
+    && git -C /tmp/cbioportal-core sparse-checkout set scripts/clickhouse_import_support \
+    && cp /tmp/cbioportal-core/scripts/clickhouse_import_support/*.sh /data/portal-cron/scripts/ \
+    && chown airflow:0 /data/portal-cron/scripts/*.sh \
+    && rm -rf /tmp/cbioportal-core
+USER airflow
+
 ENV PORTAL_HOME=/data/portal-cron \
     PORTAL_SCRIPTS_DIRECTORY=/data/portal-cron/scripts
