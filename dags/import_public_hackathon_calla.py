@@ -22,6 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowException
+from airflow.models import Variable
 from airflow.models.param import Param
 from airflow.operators.bash import BashOperator
 from kubernetes.client import models as k8s
@@ -29,6 +30,18 @@ from kubernetes.client import models as k8s
 from dags.utils.secret_manager import SecretManager
 
 logger = logging.getLogger(__name__)
+
+STUDY_LIST_VARIABLE_KEY = "hackathon_available_study_ids"
+
+
+def _available_study_ids() -> list[str]:
+    """Read the study-list Variable at parse time to populate the Param enum."""
+    try:
+        import json
+        return json.loads(Variable.get(STUDY_LIST_VARIABLE_KEY, default_var="[]"))
+    except Exception:
+        return []
+
 
 K8S_IMAGE = "apache/airflow:2.10.5"
 
@@ -107,7 +120,8 @@ def _script(script_name: str, *args: object, source_automation_env: bool = False
         "cancer_study_ids": Param(
             [],
             type="array",
-            description="Cancer study IDs to import (e.g. msk_impact_2017, brca_tcga)",
+            examples=_available_study_ids(),
+            description="Select one or more cancer study IDs to import. Run refresh_hackathon_study_list to update the list.",
             title="Cancer Study IDs",
         ),
     },
