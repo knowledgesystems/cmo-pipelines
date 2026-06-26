@@ -1,0 +1,198 @@
+#!/bin/bash
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Container-baked copy of import-scripts/pipelines_eks/automation-environment.sh.
+#
+# Kept faithful to the EKS original (all PORTAL_*/data-home/credential vars are
+# preserved verbatim so other portals can use this image) with three safety
+# patches so it sources cleanly inside the container even when no credential
+# files are mounted:
+#   1. JAVA_SSL_ARGS no longer unconditionally `cat`s the truststore password
+#      file (which aborts sourcing when the file is absent).
+#   2. SSL_CERT_FILE / GIT_SSL_CAINFO repointed from the RHEL ca-bundle path to
+#      the Debian path used by the apache/airflow base image.
+#   3. Tool-path vars (PYTHON*, YQ_BINARY, PATH) repointed at the image's actual
+#      binaries; the host-specific Maven/Go/home-dir paths are dropped.
+# JAVA_* vars are left as-is — they are only read by the JAR importer scripts,
+# which are being replaced and are not installed in this image.
+# ──────────────────────────────────────────────────────────────────────────────
+
+#######################
+# general paths/options for system executables
+#######################
+export JAVA_PROXY_ARGS="-Dhttp.proxyHost=jxi2.mskcc.org -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=draco.mskcc.org|pidvudb1.mskcc.org|phcrdbd2.mskcc.org|dashi-dev.cbio.mskcc.org|pipelines.cbioportal.mskcc.org|localhost"
+export JAVA_HOME="/usr/lib/jdk-21.0.2"
+export JAVA_BINARY="$JAVA_HOME/bin/java"
+export PYTHON_BINARY=/usr/local/bin/python
+export PYTHON3_BINARY=/usr/local/bin/python3
+export HG_BINARY=/usr/bin/hg
+export GIT_BINARY=/usr/bin/git
+export YQ_BINARY=/usr/local/bin/yq
+export PATH="/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/bin"
+
+#######################
+# environment variables for top-level data repositories / code bases
+#######################
+export PORTAL_HOME=/data/portal-cron
+export PORTAL_DATA_HOME=$PORTAL_HOME/cbio-portal-data
+
+#######################
+# environment variables for our git code bases
+#######################
+export PORTAL_GIT_HOME=$PORTAL_HOME/git-repos
+export CMO_PIPELINES_HOME=$PORTAL_GIT_HOME/cmo-pipelines
+export PIPELINES_HOME=$PORTAL_GIT_HOME/pipelines
+export CBIOPORTAL_HOME=$PORTAL_GIT_HOME/cbioportal
+export GENOME_NEXUS_ANNOTATOR_HOME=$PORTAL_GIT_HOME/genome-nexus-annotation-pipeline
+export ANNOTATOR_JAR=$PORTAL_HOME/lib/annotationPipeline.jar
+export ONCO_HOME=$PORTAL_GIT_HOME/oncotree
+export ONCOKB_ANNOTATOR_HOME=$PORTAL_GIT_HOME/oncokb-annotator
+export CDD_HOME=$PORTAL_GIT_HOME/clinical-data-dictionary
+export DDP_CREDENTIALS_FILE=$PORTAL_HOME/pipelines-credentials/application-secure.properties
+export AWS_SSL_TRUSTSTORE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore
+export AWS_SSL_TRUSTSTORE_PASSWORD_FILE=$PORTAL_HOME/pipelines-credentials/AwsSsl.truststore.password
+export GMAIL_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/gmail.credentials
+export MAIL_SMTP_SERVER=$PORTAL_HOME/pipelines-credentials/mail.smtp.server
+export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-eks-config
+export PUBLIC_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/public-cluster-kubeconfig
+export PUBLICARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/publicargocd-cluster-kubeconfig
+export EKS_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eks-cluster-kubeconfig
+export EKSARGOCD_CLUSTER_KUBECONFIG=$PORTAL_HOME/pipelines-credentials/eksargocd-cluster-kubeconfig
+export SLACK_URL_FILE=$PORTAL_HOME/pipelines-credentials/slack.url
+
+#######################
+# SSL args (for AWS + redcap)
+#######################
+# Patched: only read the truststore password when the file is actually present,
+# so sourcing this file does not fail when credentials are not mounted.
+_aws_ssl_truststore_password=""
+if [ -f "$AWS_SSL_TRUSTSTORE_PASSWORD_FILE" ]; then
+    _aws_ssl_truststore_password=$(cat "$AWS_SSL_TRUSTSTORE_PASSWORD_FILE")
+fi
+export JAVA_SSL_ARGS="-Djavax.net.ssl.trustStore=$AWS_SSL_TRUSTSTORE -Djavax.net.ssl.trustStorePassword=$_aws_ssl_truststore_password"
+
+#######################
+# environment variables for configuration / properties files
+#######################
+export PORTAL_CONFIG_HOME=$PORTAL_GIT_HOME/portal-configuration
+export PIPELINES_CONFIG_HOME=$PORTAL_GIT_HOME/pipelines-configuration
+export GITHUB_CRONTAB_URL="https://api.github.com/repos/knowledgesystems/cmo-pipelines/contents/import-scripts/pipelines_eks/mycrontab"
+
+#######################
+# environment variables for top level data repositories
+#######################
+export BIC_LEGACY_DATA_HOME=$PORTAL_DATA_HOME/bic-mskcc-legacy
+export CMO_ARGOS_DATA_HOME="$PORTAL_DATA_HOME/cmo-argos"
+export PDX_DATA_HOME=$PORTAL_DATA_HOME/crdb_pdx
+export PRIVATE_DATA_HOME=$PORTAL_DATA_HOME/private
+export DMP_DATA_HOME=$PORTAL_DATA_HOME/dmp
+export DMP_PRIVATE_DATA_HOME=$PORTAL_DATA_HOME/dmp-private
+export FOUNDATION_DATA_HOME=$PORTAL_DATA_HOME/foundation
+export IMPACT_DATA_HOME=$PORTAL_DATA_HOME/impact
+export DATAHUB_DATA_HOME=$PORTAL_DATA_HOME/datahub/public
+export MSK_MIND_DATA_HOME=$PORTAL_DATA_HOME/msk-mind
+export MSK_SHAHLAB_DATA_HOME=$PORTAL_DATA_HOME/datahub_shahlab
+export CDSI_DATA_HOME=$PORTAL_DATA_HOME/cdm
+export AZ_DATA_HOME=$PORTAL_DATA_HOME/az-data
+export SOPHIA_DATA_HOME=$PORTAL_DATA_HOME/sophia-data
+
+#######################
+# environment variables used across import scripts
+#######################
+#export INHIBIT_RECACHING_FROM_TOPBRAID=true
+export CASE_LIST_CONFIG_FILE=$PIPELINES_CONFIG_HOME/resources/case_list_config.tsv
+export SKIP_VERIFICATION_OF_GENETIC_ALTERATION_COPIES="yes"
+export SLING_GENETIC_ALTERATION_DATA_IN_CHUNKS="yes"
+
+#######################
+# environment variables used in the fetch-and-import-dmp-impact-data script
+#######################
+# trigger files to communicate between fetch-dmp-data and import-dmp-data
+export MSK_DMP_TMPDIR=$PORTAL_HOME/tmp/import-cron-dmp-msk
+export MSK_IMPACT_CONSUME_TRIGGER=$MSK_DMP_TMPDIR/mskimpact_consume_trigger.txt
+export MSK_HEMEPACT_CONSUME_TRIGGER=$MSK_DMP_TMPDIR/mskimpact_heme_consume_trigger.txt
+export MSK_ARCHER_CONSUME_TRIGGER=$MSK_DMP_TMPDIR/mskarcher_consume_trigger.txt
+export MSK_ACCESS_CONSUME_TRIGGER=$MSK_DMP_TMPDIR/mskaccess_consume_trigger.txt
+export MSK_ARCHER_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/mskarcher_import_trigger.txt
+export MSK_SOLID_HEME_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/msk_solid_heme_import_trigger.txt
+export MSK_KINGS_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/kingscounty_import_trigger.txt
+export MSK_LEHIGH_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/lehighvalley_import_trigger.txt
+export MSK_QUEENS_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/queenscancercenter_import_trigger.txt
+export MSK_MCI_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/miamicancerinstitute_import_trigger.txt
+export MSK_HARTFORD_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/hartfordhealthcare_import_trigger.txt
+export MSK_RALPHLAUREN_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/ralphlauren_import_trigger.txt
+export MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/msk_rikengenesisjapan_import_trigger.txt
+export MSK_SCLC_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/sclc_mskimpact_import_trigger.txt
+export MSKIMPACT_PED_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/mskimpact_ped_import_trigger.txt
+export LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/lymphoma_super_cohort_fmi_msk_import_trigger.txt
+# data directories
+export MSK_IMPACT_DATA_HOME=$DMP_DATA_HOME/mskimpact
+export MSK_RAINDANCE_DATA_HOME=$DMP_DATA_HOME/mskraindance
+export MSK_HEMEPACT_DATA_HOME=$DMP_DATA_HOME/mskimpact_heme
+export MSK_ARCHER_DATA_HOME=$DMP_DATA_HOME/mskarcher
+export MSK_ARCHER_UNFILTERED_DATA_HOME=$DMP_DATA_HOME/mskarcher_unfiltered
+export MSK_ACCESS_DATA_HOME=$DMP_DATA_HOME/mskaccess
+export MSK_IMPACT_PRIVATE_DATA_HOME=$DMP_PRIVATE_DATA_HOME/mskimpact_private
+export MSK_RAINDANCE_PRIVATE_DATA_HOME=$DMP_PRIVATE_DATA_HOME/mskraindance_private
+export MSK_HEMEPACT_PRIVATE_DATA_HOME=$DMP_PRIVATE_DATA_HOME/mskimpact_heme_private
+export MSK_ARCHER_PRIVATE_DATA_HOME=$DMP_PRIVATE_DATA_HOME/mskarcher_private
+export MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME=$DMP_PRIVATE_DATA_HOME/mskarcher_unfiltered_private
+export MSK_ACCESS_PRIVATE_DATA_HOME=$DMP_PRIVATE_DATA_HOME/mskaccess_private
+export MSK_MIXEDPACT_DATA_HOME=$DMP_DATA_HOME/mixedpact
+export MSK_SOLID_HEME_DATA_HOME=$DMP_DATA_HOME/msk_solid_heme
+export MSK_KINGS_DATA_HOME=$DMP_DATA_HOME/msk_kingscounty
+export MSK_LEHIGH_DATA_HOME=$DMP_DATA_HOME/msk_lehighvalley
+export MSK_QUEENS_DATA_HOME=$DMP_DATA_HOME/msk_queenscancercenter
+export MSK_MCI_DATA_HOME=$DMP_DATA_HOME/msk_miamicancerinstitute
+export MSK_HARTFORD_DATA_HOME=$DMP_DATA_HOME/msk_hartfordhealthcare
+export MSK_RALPHLAUREN_DATA_HOME=$DMP_DATA_HOME/msk_ralphlauren
+export MSK_RIKENGENESISJAPAN_DATA_HOME=$DMP_DATA_HOME/msk_rikengenesisjapan
+export MSK_SCLC_DATA_HOME=$DMP_DATA_HOME/sclc_mskimpact_2017
+export MSKIMPACT_PED_DATA_HOME=$DMP_DATA_HOME/mskimpact_ped
+export LYMPHOMA_SUPER_COHORT_DATA_HOME=$DMP_DATA_HOME/lymphoma_super_cohort_fmi_msk
+export MSK_EXTRACT_COHORT_DATA_HOME=$MSK_MIND_DATA_HOME/datahub/msk_extract_cohort2_2019
+export MSK_SPECTRUM_COHORT_DATA_HOME=$MSK_SHAHLAB_DATA_HOME/msk_spectrum
+export MSK_CHORD_DATA_HOME=$CDSI_DATA_HOME/msk-chord
+export AZ_MSK_IMPACT_DATA_HOME=$AZ_DATA_HOME/az_mskimpact
+# read-only data directories
+export FMI_BATLEVI_DATA_HOME=$FOUNDATION_DATA_HOME/mixed/lymphoma/mskcc/foundation/lymph_landscape_fmi_201611
+# other data directories
+export CMO_ACCESS_TMPDIR=$PORTAL_HOME/tmp/import-cron-cmo-access
+export CMO_ACCESS_DATA_HOME=$PORTAL_DATA_HOME/cmo-access/mixed_MSK_cfDNA_RESEARCH_ACCESS
+
+#######################
+# environment variables used in the backup-redcap-data.sh script
+#######################
+export REDCAP_BACKUP_DATA_HOME=$PORTAL_DATA_HOME/redcap-snapshot
+export MSKIMPACT_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskimpact
+export HEMEPACT_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskimpact_heme
+export ARCHER_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskarcher
+export ACCESS_REDCAP_BACKUP=$REDCAP_BACKUP_DATA_HOME/mskaccess
+
+#######################
+# environment variables used in the import-pdx-data script
+#######################
+export CRDB_FETCHER_PDX_HOME=$PDX_DATA_HOME/crdb_pdx_raw_data
+
+#######################
+# environment variables used for oncokb annotator script
+#######################
+export ONCOKB_TOKEN_FILE=$PORTAL_HOME/pipelines-credentials/oncokb.token
+
+#######################
+# environment variables used for AstraZeneca and Sophia cohort generation
+#######################
+export AZ_SFTP_USER_FILE=$PORTAL_HOME/pipelines-credentials/astrazeneca_sftp.user
+export AZ_SERVICE_ENDPOINT_FILE=$PORTAL_HOME/pipelines-credentials/astrazeneca_sftp.service_endpoint
+export DATABRICKS_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/databricks.credentials
+
+#######################
+# environment variables needed for openssl certificate verification with self-signed certificate
+#######################
+# Patched: Debian (apache/airflow base) CA bundle path, not the RHEL path.
+export SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt" # needed to use the clickhouse CLI
+export GIT_SSL_CAINFO="/etc/ssl/certs/ca-certificates.crt" # needed to use git
+
+
+###### needed for clickhouse derived table construction
+export CLICKHOUSE_OPTIMIZE_BACKOFF_SECS=90

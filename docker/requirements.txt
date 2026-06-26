@@ -1,0 +1,24 @@
+# Python dependencies for the CMO import image.
+#
+# Installed under the Airflow 2.10.5 / py3.12 constraints file (see Dockerfile),
+# which pins exact versions. Only modern Python-3 packages are listed here; the
+# Python-2-era Google stack (gdata, oauth2client, google-api-python-client,
+# httplib2) is intentionally excluded.
+
+# ── DAG runtime: dags/import_public_hackathon.py + dags/utils/ ──
+# clickhouse-connect  # TEMP-EXCLUDED: pulls lz4, and the Airflow constraints pin
+#   lz4==4.4.3 which has no linux/aarch64 cp312 wheel, so --only-binary builds
+#   fail on arm64 (Apple Silicon). Re-add once building for linux/amd64 only, or
+#   loosen the lz4 pin. Imported lazily in dags/utils/secret_manager.py, so the
+#   DAG and all non-ClickHouse tasks still work without it.
+boto3
+PyYAML
+kubernetes
+apache-airflow-providers-amazon
+apache-airflow-providers-slack
+
+# ── import-scripts/ (modern py3 scripts only) ──
+pandas
+requests
+GitPython
+python-json-logger

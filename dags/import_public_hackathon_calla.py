@@ -1,5 +1,5 @@
 """
-import_public_hackathon.py
+import_public_hackathon_calla.py
 
 Blue/green ClickHouse import pipeline for public cancer studies pulled from S3.
 
@@ -44,7 +44,7 @@ CREDS_VOLUME_NAME = "pipelines-credentials"
 COLOR_SWAP_CONFIG_FILE = f"{CREDS_DIR}/public-db-color-swap-config.yaml"
 CLICKHOUSE_CONFIG_FILE = f"{CREDS_DIR}/manage_public_clickhouse_database_update_tools.properties"
 # Importer writes its per-study success/failure summary here; read it for Slack later.
-NOTIFICATION_FILE = "/tmp/airflow-notifications/import_public_hackathon/{{ ts_nodash }}.txt"
+NOTIFICATION_FILE = "/tmp/airflow-notifications/import_public_hackathon_calla/{{ ts_nodash }}.txt"
 
 
 _POD_OVERRIDE = {
@@ -95,7 +95,7 @@ def _script(script_name: str, *args: object, source_automation_env: bool = False
 
 
 @dag(
-    dag_id="import_public_hackathon",
+    dag_id="import_public_hackathon_calla",
     default_args=_DEFAULT_ARGS,
     start_date=datetime(2026, 1, 1),
     schedule="@daily",
@@ -112,7 +112,7 @@ def _script(script_name: str, *args: object, source_automation_env: bool = False
         ),
     },
 )
-def import_public_hackathon():
+def import_public_hackathon_calla():
     # ── Python tasks (S3 / ClickHouse / Slack via SecretManager) ───────
 
     # ── 1 ──────────────────────────────────────────────────────────────
@@ -297,4 +297,4 @@ def import_public_hackathon():
     t_import >> t_transfer >> t_complete >> t_slack
 
 
-import_public_hackathon()
+import_public_hackathon_calla()
