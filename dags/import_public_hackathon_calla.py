@@ -52,7 +52,7 @@ IMPORTER = "public"
 # Runtime credentials live in a directory the image leaves empty; at run time a
 # Kubernetes Secret is mounted over it (see _POD_OVERRIDE / CREDS_* constants).
 CREDS_DIR = "/data/portal-cron/pipelines-credentials"
-CREDS_SECRET_NAME = "pipelines-credentials"
+CREDS_SECRET_NAME = "import-credentials"
 CREDS_VOLUME_NAME = "pipelines-credentials"
 COLOR_SWAP_CONFIG_FILE = f"{CREDS_DIR}/public-db-color-swap-config.yaml"
 CLICKHOUSE_CONFIG_FILE = f"{CREDS_DIR}/manage_public_clickhouse_database_update_tools.properties"
