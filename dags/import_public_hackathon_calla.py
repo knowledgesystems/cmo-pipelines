@@ -66,6 +66,12 @@ _POD_OVERRIDE = {
             containers=[k8s.V1Container(
                 name="base",
                 image=K8S_IMAGE,
+                image_pull_policy="Always",
+                # Point saml2aws at the mounted config file without touching the shared script.
+                env=[k8s.V1EnvVar(
+                    name="SAML2AWS_CONFIGFILE",
+                    value=f"{CREDS_DIR}/.saml2aws",
+                )],
                 # Mount the credentials Secret over the (empty) creds dir baked
                 # into the image. Each Secret key surfaces as a file here, so the
                 # hardcoded *_CONFIG_FILE paths above resolve unchanged.
