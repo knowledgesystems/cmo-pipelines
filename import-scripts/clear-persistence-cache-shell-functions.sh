@@ -83,3 +83,12 @@ function clearPersistenceCachesForTriageGreenPortals() {
     all_triage_portals="triage-green"
     clearPersistenceCachesForPortals "$all_triage_portals"
 }
+function clearPersistenceCachesForContainerizedBluePortals() {
+    all_triage_portals="containerized-blue"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}
+
+function clearPersistenceCachesForContainerizedGreenPortals() {
+    all_triage_portals="containerized-green"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}
