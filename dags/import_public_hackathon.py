@@ -40,7 +40,8 @@ def skippable(func):
     def wrapper(*args, **kwargs):
         run_tasks = kwargs.pop("run_tasks", None)
         if not _should_run(task_id, run_tasks):
-            raise AirflowSkipException(f"Skipped per run_tasks param: {task_id}")
+            logger.info("Skipped per run_tasks param: %s", task_id)
+            return None
         # Only forward kwargs the original function actually expects.
         filtered = {k: v for k, v in kwargs.items() if k in func_params}
         return func(*args, **filtered)
@@ -327,7 +328,7 @@ def import_public_hackathon():
         return study_ids
 
     # ── 2 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE)
     @skippable
     def verify_cluster_state() -> None:
         """Verify cluster health + management/ingress color consistency."""
@@ -341,7 +342,7 @@ def import_public_hackathon():
         subprocess.run(cmd, shell=True, check=True, executable="/bin/bash")
 
     # ── 3 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE)
     @skippable
     def verify_import_not_in_progress(clickhouse_config_file: str) -> None:
         """Gate: fail if the management DB reports an import already running.
@@ -354,7 +355,7 @@ def import_public_hackathon():
         logger.info("[STUB] verify_import_not_in_progress via %s", clickhouse_config_file)
 
     # ── 4 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE)
     @skippable
     def set_import_running() -> None:
         """Mark the import as running in the management DB."""
@@ -369,7 +370,7 @@ def import_public_hackathon():
 
     # ── 5 ──────────────────────────────────────────────────────────────
     # wipe + clone live DB into standby (airflow-clone-db.sh does both)
-    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE)
     @skippable
     def clone_live_database_into_standby() -> None:
         """Wipe + clone live DB into standby."""
@@ -383,7 +384,7 @@ def import_public_hackathon():
         subprocess.run(cmd, shell=True, check=True, executable="/bin/bash")
 
     # ── 6 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE_VALIDATE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE_VALIDATE)
     @skippable
     def pull_and_validate_study(study_id: str, s3_bucket: str) -> str | None:
         import pathlib
@@ -414,7 +415,7 @@ def import_public_hackathon():
             return None
 
     # ── 8 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE)
     @skippable
     def collect_valid_studies(results: list) -> list[str]:
         valid = [sid for sid in (results or []) if sid is not None]
@@ -424,7 +425,7 @@ def import_public_hackathon():
         return valid
 
     # ── 9 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE_IMPORT)
     @skippable
     def import_into_standby_database(valid_studies: list[str]):
         import pathlib
@@ -467,7 +468,7 @@ def import_public_hackathon():
             raise Exception(f"Import failed for {len(failed)} study/studies: {failed}")
 
     # ── 10 ─────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE_IMPORT)
     @skippable
     def create_derived_tables_in_standby_database():
         import subprocess
@@ -485,7 +486,7 @@ def import_public_hackathon():
 
     # ── 11 ─────────────────────────────────────────────────────────────
     # swap production traffic to the freshly imported standby color
-    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE)
     @skippable
     def transfer_deployment_color() -> None:
         """Swap production traffic to the freshly imported standby color."""
@@ -500,7 +501,7 @@ def import_public_hackathon():
 
     # ── 12 ─────────────────────────────────────────────────────────────
     # mark the import as complete in the management DB
-    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE)
     @skippable
     def set_import_complete() -> None:
         """Mark the import as complete in the management DB."""
@@ -514,7 +515,7 @@ def import_public_hackathon():
         subprocess.run(cmd, shell=True, check=True, executable="/bin/bash")
 
     # ── 13 ─────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    @task(executor_config=_POD_OVERRIDE)
     @skippable
     def send_slack_notifications() -> None:
         """Posts the import result to Slack."""
