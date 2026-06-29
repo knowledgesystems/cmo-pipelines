@@ -23,6 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timedelta
 from inspect import signature
 from airflow.decorators import dag, task
+from airflow.operators.bash import BashOperator
 from airflow.exceptions import AirflowException, AirflowSkipException
 from airflow.models import Variable
 from airflow.models.param import Param
@@ -248,17 +249,12 @@ _DEFAULT_ARGS = {
 
 
 _ALL_TASK_IDS = [
-    "verify_cluster_state",
     "verify_studies_exist",
     "verify_import_not_in_progress",
-    "set_import_running",
-    "clone_live_database_into_standby",
     "pull_and_validate_study",
     "collect_valid_studies",
     "import_into_standby_database",
     "create_derived_tables_in_standby_database",
-    "transfer_deployment_color",
-    "set_import_complete",
     "send_slack_notifications",
 ]
 
@@ -328,18 +324,16 @@ def import_public_hackathon():
         return study_ids
 
     # ── 2 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE)
-    @skippable
-    def verify_cluster_state() -> None:
-        """Verify cluster health + management/ingress color consistency."""
-        import subprocess
-        cmd = _script(
+    t_verify_cluster_state = BashOperator(
+        task_id="verify_cluster_state",
+        bash_command=_script(
             "airflow-verify-management.sh",
             SCRIPTS_DIR,
             CLICKHOUSE_CONFIG_FILE,
             COLOR_SWAP_CONFIG_FILE,
-        )
-        subprocess.run(cmd, shell=True, check=True, executable="/bin/bash")
+        ),
+        executor_config=_POD_OVERRIDE,
+    )
 
     # ── 3 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
@@ -355,33 +349,29 @@ def import_public_hackathon():
         logger.info("[STUB] verify_import_not_in_progress via %s", clickhouse_config_file)
 
     # ── 4 ──────────────────────────────────────────────────────────────
-    @task(executor_config=_POD_OVERRIDE)
-    @skippable
-    def set_import_running() -> None:
-        """Mark the import as running in the management DB."""
-        import subprocess
-        cmd = _script(
+    t_set_import_running = BashOperator(
+        task_id="set_import_running",
+        bash_command=_script(
             "set_update_process_state.sh",
             CLICKHOUSE_CONFIG_FILE,
             "running",
             source_automation_env=True,
-        )
-        subprocess.run(cmd, shell=True, check=True, executable="/bin/bash")
+        ),
+        executor_config=_POD_OVERRIDE,
+    )
 
     # ── 5 ──────────────────────────────────────────────────────────────
     # wipe + clone live DB into standby (airflow-clone-db.sh does both)
-    @task(executor_config=_POD_OVERRIDE)
-    @skippable
-    def clone_live_database_into_standby() -> None:
-        """Wipe + clone live DB into standby."""
-        import subprocess
-        cmd = _script(
+    t_clone_live_database = BashOperator(
+        task_id="clone_live_database_into_standby",
+        bash_command=_script(
             "airflow-clone-db.sh",
             IMPORTER,
             SCRIPTS_DIR,
             CLICKHOUSE_CONFIG_FILE,
-        )
-        subprocess.run(cmd, shell=True, check=True, executable="/bin/bash")
+        ),
+        executor_config=_POD_OVERRIDE,
+    )
 
     # ── 6 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE_VALIDATE)
@@ -486,33 +476,29 @@ def import_public_hackathon():
 
     # ── 11 ─────────────────────────────────────────────────────────────
     # swap production traffic to the freshly imported standby color
-    @task(executor_config=_POD_OVERRIDE)
-    @skippable
-    def transfer_deployment_color() -> None:
-        """Swap production traffic to the freshly imported standby color."""
-        import subprocess
-        cmd = _script(
+    t_transfer_deployment_color = BashOperator(
+        task_id="transfer_deployment_color",
+        bash_command=_script(
             "airflow-transfer-deployment.sh",
             SCRIPTS_DIR,
             CLICKHOUSE_CONFIG_FILE,
             COLOR_SWAP_CONFIG_FILE,
-        )
-        subprocess.run(cmd, shell=True, check=True, executable="/bin/bash")
+        ),
+        executor_config=_POD_OVERRIDE,
+    )
 
     # ── 12 ─────────────────────────────────────────────────────────────
     # mark the import as complete in the management DB
-    @task(executor_config=_POD_OVERRIDE)
-    @skippable
-    def set_import_complete() -> None:
-        """Mark the import as complete in the management DB."""
-        import subprocess
-        cmd = _script(
+    t_set_import_complete = BashOperator(
+        task_id="set_import_complete",
+        bash_command=_script(
             "set_update_process_state.sh",
             CLICKHOUSE_CONFIG_FILE,
             "complete",
             source_automation_env=True,
-        )
-        subprocess.run(cmd, shell=True, check=True, executable="/bin/bash")
+        ),
+        executor_config=_POD_OVERRIDE,
+    )
 
     # ── 13 ─────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
@@ -525,16 +511,11 @@ def import_public_hackathon():
 
     # ── Instantiate tasks in execution order ─────────────────────────
     t_found_studies                  = verify_studies_exist("{{ params.cancer_study_ids }}", S3_BUCKET_NAME, run_tasks="{{ params.run_tasks }}")
-    t_verify_cluster_state           = verify_cluster_state(run_tasks="{{ params.run_tasks }}")
     t_verify_import_not_in_progress  = verify_import_not_in_progress(CLICKHOUSE_CONFIG_FILE, run_tasks="{{ params.run_tasks }}")
-    t_set_import_running             = set_import_running(run_tasks="{{ params.run_tasks }}")
-    t_clone_live_database            = clone_live_database_into_standby(run_tasks="{{ params.run_tasks }}")
     t_pull_and_validate              = pull_and_validate_study.partial(s3_bucket=S3_BUCKET_NAME, run_tasks="{{ params.run_tasks }}").expand(study_id=t_found_studies)
     t_collect_valid                  = collect_valid_studies(t_pull_and_validate, run_tasks="{{ params.run_tasks }}")
     t_import                         = import_into_standby_database(t_collect_valid, run_tasks="{{ params.run_tasks }}")
     t_create_derived_tables          = create_derived_tables_in_standby_database(run_tasks="{{ params.run_tasks }}")
-    t_transfer_deployment_color      = transfer_deployment_color(run_tasks="{{ params.run_tasks }}")
-    t_set_import_complete            = set_import_complete(run_tasks="{{ params.run_tasks }}")
     t_send_slack_notifications       = send_slack_notifications(run_tasks="{{ params.run_tasks }}")
 
     # Sequential gate chain
