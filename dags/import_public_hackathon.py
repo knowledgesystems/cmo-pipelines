@@ -113,6 +113,14 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
     return {
         "pod_override": k8s.V1Pod(
             spec=k8s.V1PodSpec(
+                tolerations=[
+                    k8s.V1Toleration(
+                        key="workload",
+                        operator="Equal",
+                        value="airflow",
+                        effect="NoSchedule",
+                    ),
+                ],
                 containers=[k8s.V1Container(
                     name="base",
                     image=K8S_IMAGE_VALIDATE,
@@ -153,7 +161,7 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
 
 
 _POD_OVERRIDE_VALIDATE = _make_cbioportal_pod_override(memory_request="2Gi", memory_limit="3Gi")
-_POD_OVERRIDE_IMPORT   = _make_cbioportal_pod_override(java_opts="-Xmx3g", memory_request="4Gi", memory_limit="5Gi")
+_POD_OVERRIDE_IMPORT   = _make_cbioportal_pod_override(java_opts="-Xmx4g", memory_request="5Gi", memory_limit="6Gi")
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
