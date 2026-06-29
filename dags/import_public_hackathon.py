@@ -324,16 +324,16 @@ def import_public_hackathon():
         return study_ids
 
     # ── 2 ──────────────────────────────────────────────────────────────
-    t_verify_cluster_state = BashOperator(
-        task_id="verify_cluster_state",
-        bash_command=_script(
-            "airflow-verify-management.sh",
-            SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-            COLOR_SWAP_CONFIG_FILE,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    # t_verify_cluster_state = BashOperator(
+    #     task_id="verify_cluster_state",
+    #     bash_command=_script(
+    #         "airflow-verify-management.sh",
+    #         SCRIPTS_DIR,
+    #         CLICKHOUSE_CONFIG_FILE,
+    #         COLOR_SWAP_CONFIG_FILE,
+    #     ),
+    #     executor_config=_POD_OVERRIDE,
+    # )
 
     # ── 3 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
@@ -476,16 +476,16 @@ def import_public_hackathon():
 
     # ── 11 ─────────────────────────────────────────────────────────────
     # swap production traffic to the freshly imported standby color
-    t_transfer_deployment_color = BashOperator(
-        task_id="transfer_deployment_color",
-        bash_command=_script(
-            "airflow-transfer-deployment.sh",
-            SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-            COLOR_SWAP_CONFIG_FILE,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    # t_transfer_deployment_color = BashOperator(
+    #     task_id="transfer_deployment_color",
+    #     bash_command=_script(
+    #         "airflow-transfer-deployment.sh",
+    #         SCRIPTS_DIR,
+    #         CLICKHOUSE_CONFIG_FILE,
+    #         COLOR_SWAP_CONFIG_FILE,
+    #     ),
+    #     executor_config=_POD_OVERRIDE,
+    # )
 
     # ── 12 ─────────────────────────────────────────────────────────────
     # mark the import as complete in the management DB
@@ -521,7 +521,6 @@ def import_public_hackathon():
     # Sequential gate chain
     (
         t_found_studies
-        >> t_verify_cluster_state
         >> t_verify_import_not_in_progress
         >> t_set_import_running
     )
@@ -536,7 +535,6 @@ def import_public_hackathon():
     (
         t_import
         >> t_create_derived_tables
-        >> t_transfer_deployment_color
         >> t_set_import_complete
         >> t_send_slack_notifications
     )
