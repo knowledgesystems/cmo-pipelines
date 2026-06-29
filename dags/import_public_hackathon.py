@@ -39,6 +39,9 @@ def skippable(func):
         run_tasks = kwargs.pop("run_tasks", None)
         if not _should_run(task_id, run_tasks):
             raise AirflowSkipException(f"Skipped per run_tasks param: {task_id}")
+        # Strip Airflow context kwargs the original function doesn't expect.
+        for key in ("conf", "dag", "dag_run", "task_instance", "ti", "task", "run_id"):
+            kwargs.pop(key, None)
         return func(*args, **kwargs)
 
     wrapper.__name__ = func.__name__
