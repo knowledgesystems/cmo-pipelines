@@ -21,6 +21,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime, timedelta
+from inspect import signature
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowException, AirflowSkipException
 from airflow.models import Variable
@@ -34,15 +35,15 @@ from dags.utils.secret_manager import SecretManager
 def skippable(func):
     """Decorator: skip the task if it's not in the run_tasks param (empty = run all)."""
     task_id = func.__name__
+    func_params = set(signature(func).parameters)
 
     def wrapper(*args, **kwargs):
         run_tasks = kwargs.pop("run_tasks", None)
         if not _should_run(task_id, run_tasks):
             raise AirflowSkipException(f"Skipped per run_tasks param: {task_id}")
-        # Strip Airflow context kwargs the original function doesn't expect.
-        for key in ("conf", "dag", "dag_run", "task_instance", "ti", "task", "run_id"):
-            kwargs.pop(key, None)
-        return func(*args, **kwargs)
+        # Only forward kwargs the original function actually expects.
+        filtered = {k: v for k, v in kwargs.items() if k in func_params}
+        return func(*args, **filtered)
 
     wrapper.__name__ = func.__name__
     wrapper.__qualname__ = func.__qualname__
