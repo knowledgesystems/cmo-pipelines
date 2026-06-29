@@ -501,6 +501,20 @@ def import_public_hackathon():
     )
 
     # ── 13 ─────────────────────────────────────────────────────────────
+    # mark the import as abandoned in the management DB if any task fails
+    t_set_import_abandoned = BashOperator(
+        task_id="set_import_abandoned",
+        bash_command=_script(
+            "set_update_process_state.sh",
+            CLICKHOUSE_CONFIG_FILE,
+            "abandoned",
+            source_automation_env=True,
+        ),
+        executor_config=_POD_OVERRIDE,
+        trigger_rule=TriggerRule.ONE_FAILED,
+    )
+
+    # ── 13 ─────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
     @skippable
     def send_slack_notifications() -> None:
@@ -538,6 +552,20 @@ def import_public_hackathon():
         >> t_set_import_complete
         >> t_send_slack_notifications
     )
+
+    # If any task fails, mark the import as abandoned in the management DB
+    [
+        t_found_studies,
+        t_verify_import_not_in_progress,
+        t_set_import_running,
+        t_clone_live_database,
+        t_pull_and_validate,
+        t_collect_valid,
+        t_import,
+        t_create_derived_tables,
+        t_set_import_complete,
+        t_send_slack_notifications,
+    ] >> t_set_import_abandoned
 
 
 import_public_hackathon()
