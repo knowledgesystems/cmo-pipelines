@@ -1,5 +1,5 @@
 """
-import_public_hackathon.py
+import_public_hackathon_avery.py
 """
 import json
 import logging
@@ -174,7 +174,7 @@ _DEFAULT_ARGS = {
 
 
 @dag(
-    dag_id="import_public_hackathon",
+    dag_id="import_public_hackathon_avery",
     default_args=_DEFAULT_ARGS,
     start_date=datetime(2026, 1, 1),
     schedule="@daily",
@@ -189,7 +189,7 @@ _DEFAULT_ARGS = {
         ),
     },
 )
-def import_public_hackathon():
+def import_public_hackathon_avery():
     # ── 1 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
     def verify_studies_exist(study_ids: list[str]) -> list[str]:
@@ -420,4 +420,4 @@ def import_public_hackathon():
     )
 
 
-import_public_hackathon()
+import_public_hackathon_avery()
