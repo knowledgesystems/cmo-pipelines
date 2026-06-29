@@ -280,9 +280,9 @@ def _should_run(task_id: str, run_tasks: list[str] | None) -> bool:
             title="Cancer Study IDs",
         ),
         "run_tasks": Param(
-            None,
-            type=["array", "null"],
-            items={"type": "string", "enum": _ALL_TASK_IDS},
+            [],
+            type="array",
+            items={"type": "string"},
             examples=_ALL_TASK_IDS,
             description="Leave empty to run all tasks, or select specific tasks to run.",
             title="Run Tasks (empty = all)",
