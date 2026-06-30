@@ -349,16 +349,16 @@ def import_public_hackathon():
         logger.info("[STUB] verify_import_not_in_progress via %s", clickhouse_config_file)
 
     # ── 4 ──────────────────────────────────────────────────────────────
-    t_set_import_running = BashOperator(
-        task_id="set_import_running",
-        bash_command=_script(
-            "set_update_process_state.sh",
-            CLICKHOUSE_CONFIG_FILE,
-            "running",
-            source_automation_env=True,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    # t_set_import_running = BashOperator(
+    #     task_id="set_import_running",
+    #     bash_command=_script(
+    #         "set_update_process_state.sh",
+    #         CLICKHOUSE_CONFIG_FILE,
+    #         "running",
+    #         source_automation_env=True,
+    #     ),
+    #     executor_config=_POD_OVERRIDE,
+    # )
 
     # ── 5 ──────────────────────────────────────────────────────────────
     # wipe + clone live DB into standby (airflow-clone-db.sh does both)
@@ -536,11 +536,10 @@ def import_public_hackathon():
     (
         t_found_studies
         >> t_verify_import_not_in_progress
-        >> t_set_import_running
     )
 
     # Fork after gate: DB prep and validation run in parallel
-    t_set_import_running >> [t_clone_live_database, t_pull_and_validate]
+    t_verify_import_not_in_progress >> [t_clone_live_database, t_pull_and_validate]
 
     # Diamond join: import waits for both branches
     t_clone_live_database >> t_import
@@ -557,7 +556,6 @@ def import_public_hackathon():
     [
         t_found_studies,
         t_verify_import_not_in_progress,
-        t_set_import_running,
         t_clone_live_database,
         t_pull_and_validate,
         t_collect_valid,
