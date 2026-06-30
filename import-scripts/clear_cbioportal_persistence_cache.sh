@@ -40,6 +40,8 @@ portal_to_cluster_map["genie-public-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["genie-public-green"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["genie-private-blue"]="$CLUSTER_ID_PUBLICARGOCD"
 portal_to_cluster_map["genie-private-green"]="$CLUSTER_ID_PUBLICARGOCD"
+portal_to_cluster_map["containerized-blue"]="$CLUSTER_ID_PUBLICARGOCD"
+portal_to_cluster_map["containerized-green"]="$CLUSTER_ID_PUBLICARGOCD"
 
 # pipelines3
 portal_to_cluster_map["triage-blue"]="$CLUSTER_ID_EKSARGOCD"
@@ -68,6 +70,8 @@ portal_to_deployment_map["genie-public-blue"]="cbioportal-backend-genie-public-b
 portal_to_deployment_map["genie-public-green"]="cbioportal-backend-genie-public-green"
 portal_to_deployment_map["genie-private-blue"]="cbioportal-backend-genie-private-blue"
 portal_to_deployment_map["genie-private-green"]="cbioportal-backend-genie-private-green"
+portal_to_deployment_map["containerized-blue"]="cbioportal-backend-containerized-blue"
+portal_to_deployment_map["containerized-green"]="cbioportal-backend-containerized-blue"
 # pipelines3
 portal_to_deployment_map["triage-blue"]="eks-triage-blue"
 portal_to_deployment_map["triage-green"]="eks-triage-green"
@@ -97,6 +101,8 @@ portal_to_cache_service_basename["genie-public-blue"]="cbioportal-genie-persiste
 portal_to_cache_service_basename["genie-public-green"]="cbioportal-genie-persistence-redis"
 portal_to_cache_service_basename["genie-private-blue"]="cbioportal-genie-persistence-redis"
 portal_to_cache_service_basename["genie-private-green"]="cbioportal-genie-persistence-redis"
+portal_to_cache_service_basename["containerized-blue"]="cbioportal-backend-containerized-blue"
+portal_to_cache_service_basename["containerized-green"]="cbioportal-backend-containerized-blue"
 # pipelines3
 portal_to_cache_service_basename["triage-blue"]="triage-cbioportal-persistence-redis"
 portal_to_cache_service_basename["triage-green"]="triage-cbioportal-persistence-redis"
@@ -124,6 +130,8 @@ portal_to_cache_database_number["genie-public-blue"]="1"
 portal_to_cache_database_number["genie-public-green"]="2"
 portal_to_cache_database_number["genie-private-blue"]="3"
 portal_to_cache_database_number["genie-private-green"]="4"
+portal_to_cache_database_number["containerized-blue"]="14"
+portal_to_cache_database_number["containerized-green"]="15"
 # pipelines3
 portal_to_cache_database_number["triage-blue"]="10"
 portal_to_cache_database_number["triage-green"]="11"

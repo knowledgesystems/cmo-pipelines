@@ -81,7 +81,7 @@ RUN pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements.txt \
 #    $this_script_dir, so all 7 must land together in the scripts dir. Fetched
 #    before the content COPY so this layer caches independently of local edits
 #    (re-runs only when CBIOPORTAL_CORE_REF changes); pin to a commit SHA later. ──
-ARG CBIOPORTAL_CORE_REF=main
+ARG CBIOPORTAL_CORE_REF=containerized
 RUN set -eux; \
     base="https://raw.githubusercontent.com/cBioPortal/cbioportal-core/${CBIOPORTAL_CORE_REF}/scripts/clickhouse_import_support"; \
     for f in \
@@ -124,7 +124,7 @@ COPY --chown=airflow:0 dags/ /opt/airflow/dags/
 # get_database_currently_in_production.sh and related ClickHouse helpers are
 # maintained in cbioportal-core. Sparse-clone just that subdirectory.
 USER root
-RUN git clone --depth 1 --filter=blob:none --sparse \
+RUN git clone --depth 1 --filter=blob:none --sparse --branch containerized \
         https://github.com/cBioPortal/cbioportal-core.git /tmp/cbioportal-core \
     && git -C /tmp/cbioportal-core sparse-checkout set scripts/clickhouse_import_support \
     && cp /tmp/cbioportal-core/scripts/clickhouse_import_support/*.sh /data/portal-cron/scripts/ \
