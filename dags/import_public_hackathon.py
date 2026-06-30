@@ -55,7 +55,7 @@ def skippable(func):
 logger = logging.getLogger(__name__)
 
 S3_BUCKET_NAME = "hackathon-databricks"
-K8S_IMAGE            = "callachennault/cmo-import:dev"
+K8S_IMAGE            = "jamesko0/cmo-import:dev"
 K8S_IMAGE_VALIDATE   = "averyniceday/hackathon-import:latest"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
@@ -236,7 +236,7 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
 
 
 _POD_OVERRIDE_VALIDATE = _make_cbioportal_pod_override(memory_request="2Gi", memory_limit="3Gi")
-_POD_OVERRIDE_IMPORT   = _make_cbioportal_pod_override(java_opts="-Xmx4g", memory_request="5Gi", memory_limit="6Gi")
+_POD_OVERRIDE_IMPORT   = _make_cbioportal_pod_override(java_opts="-Xmx22g", memory_request="24Gi", memory_limit="26Gi")
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
