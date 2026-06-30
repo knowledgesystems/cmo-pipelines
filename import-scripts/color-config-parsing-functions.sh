@@ -1,4 +1,3 @@
-set -x
 # bash functions for parsing values from a color swap config file
 #
 # these functions are intended for use in other scripts which require access to values in a color swap config file, which is in a yaml-like format

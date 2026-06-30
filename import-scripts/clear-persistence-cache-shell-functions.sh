@@ -5,8 +5,6 @@ if ! [ -n "$PORTAL_HOME" ] ; then
     exit 1
 fi
 
-source $PORTAL_HOME/scripts/slack-message-functions.sh
-
 # Function for alerting slack channel of clear cache failures
 function sendClearCacheFailureMessage() {
     CACHE_GROUP_NAME="$1"

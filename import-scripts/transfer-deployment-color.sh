@@ -120,6 +120,7 @@ function load_color_swap_config() {
         CACHE_WARMING_PASSWORD=$(read_scalar_from_yaml "$config_path" '.cache_warming_password')
         read_map_from_yaml DEPLOYMENT_TO_CACHE_WARMING_POLICY "$config_path" '.deployment_to_cache_warming_policy'
     fi
+    mkdir -p "$TEMP_DIR_PATH"
 }
 
 function usage() {
@@ -767,9 +768,9 @@ function main() {
         /data/portal-cron/scripts/synchronize_user_tables_between_databases.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" $SOURCE_COLOR $DESTINATION_COLOR
     fi
     if [ "$DESTINATION_COLOR" == "blue" ] ; then
-        "$CLEAR_PERSISTENCE_CACHES_BLUE_FUNCTION" skip-slack
+        "$CLEAR_PERSISTENCE_CACHES_BLUE_FUNCTION"
     else
-        "$CLEAR_PERSISTENCE_CACHES_GREEN_FUNCTION" skip-slack
+        "$CLEAR_PERSISTENCE_CACHES_GREEN_FUNCTION"
     fi
     # TODO program a smart wait for cache clearing to complete
     sleep 10
@@ -779,9 +780,9 @@ function main() {
     switchover_ingress_rules_to_destination_database_deployment $DESTINATION_COLOR
     /data/portal-cron/scripts/set_update_process_state.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" complete
     if [ "$SOURCE_COLOR" == "blue" ] ; then
-        "$CLEAR_PERSISTENCE_CACHES_BLUE_FUNCTION" send-slack
+        "$CLEAR_PERSISTENCE_CACHES_BLUE_FUNCTION"
     else
-        "$CLEAR_PERSISTENCE_CACHES_GREEN_FUNCTION" send-slack
+        "$CLEAR_PERSISTENCE_CACHES_GREEN_FUNCTION"
     fi
 
     # phase : scale the destination color deployments fully up an the source fully down.
