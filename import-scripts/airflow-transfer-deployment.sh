@@ -16,7 +16,7 @@ fi
 source $AUTOMATION_ENV_SCRIPT_FILEPATH
 
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
-current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+current_production_database_color=$(bash $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
 destination_database_color="unset"
 if [ ${current_production_database_color:0:4} == "blue" ] ; then
     destination_database_color="green"
