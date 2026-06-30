@@ -120,6 +120,15 @@ def _script(script_name: str, *args: object, source_automation_env: bool = False
 _POD_OVERRIDE = {
     "pod_override": k8s.V1Pod(
         spec=k8s.V1PodSpec(
+            node_selector={"workload": "airflow-importer-dag"},
+            tolerations=[
+                k8s.V1Toleration(
+                    key="workload",
+                    operator="Equal",
+                    value="airflow-importer-dag",
+                    effect="NoSchedule",
+                ),
+            ],
             containers=[k8s.V1Container(
                 name="base",
                 image=K8S_IMAGE,
@@ -188,11 +197,12 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
     return {
         "pod_override": k8s.V1Pod(
             spec=k8s.V1PodSpec(
+                node_selector={"workload": "airflow-importer-dag"},
                 tolerations=[
                     k8s.V1Toleration(
                         key="workload",
                         operator="Equal",
-                        value="airflow",
+                        value="airflow-importer-dag",
                         effect="NoSchedule",
                     ),
                 ],
