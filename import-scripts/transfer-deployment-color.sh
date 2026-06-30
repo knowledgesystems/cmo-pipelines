@@ -22,12 +22,10 @@ declare -a BLUE_DEPLOYMENT_LIST=() # kubernetes deployment names for all connect
 declare -a GREEN_DEPLOYMENT_LIST=() # kubernetes deployment names for all connected green deployments
 declare -A DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP=() # { cbioportal-backend-public-blue: 2 } means 2 replicas when fully deployed
 declare -A DEPLOYMENT_TO_CACHE_WARMING_POLICY=() # how much to warm the cache (e.g. 'initial', 'studylist') per deployment
-declare -A DEPLOYMENT_TO_YAML_FILEPATH_MAP=() # relative path from KS_K8S_DEPL_REPO_DIRPATH to a yaml file specifying the deployment resource for each named deployment
 declare -A HOST_TO_SERVICE_MAP_BLUE=() # the name of the blue service connected to each deployed host/website
 declare -A HOST_TO_SERVICE_MAP_GREEN=() # see prior comment
 declare -A HOST_TO_INGRESS_NAME_MAP=() # for each host connected to the database, the name of the ingress resource it uses
 declare -A HOST_TO_INGRESS_TYPE_MAP=() # the type of each ingress resource mapped (either 'ingress' or 'ingressroute')
-declare -A HOST_TO_INGRESS_YAML_FILEPATH_MAP=() # relative path from KS_K8S_DEPL_REPO_DIRPATH to a yaml file specifying the primary ingress resource related to the host
 #######################################
 # Other Global Variable List
 #######################################
@@ -102,23 +100,19 @@ function load_color_swap_config() {
     SERVICE_ACCOUNT=$(read_scalar_from_yaml "$config_path" '.service_account')
     CLUSTER_KUBECONFIG=$(read_scalar_from_yaml "$config_path" '.cluster_cfg')
     TEMP_DIR_PATH=$(read_scalar_from_yaml "$config_path" '.temp_dir_path')
-    KS_K8S_DEPL_REPO_DIRPATH=$(read_scalar_from_yaml "$config_path" '.ks_k8s_depl_repo_dirpath')
     REPLICA_READY_CHECK_PAUSE_SECONDS=$(read_scalar_from_yaml "$config_path" '.replica_ready_check_pause_seconds')
     REPLICA_READY_CHECK_MAX_CHECKCOUNT=$(read_scalar_from_yaml "$config_path" '.replica_ready_check_max_checkcount')
     WARM_CACHES=$(read_scalar_from_yaml "$config_path" '.warm_caches')
     SYNCHRONIZE_USER_TABLES=$(read_scalar_from_yaml "$config_path" '.synchronize_user_tables')
     CLEAR_PERSISTENCE_CACHES_BLUE_FUNCTION=$(read_scalar_from_yaml "$config_path" '.clear_persistence_caches_blue_function')
     CLEAR_PERSISTENCE_CACHES_GREEN_FUNCTION=$(read_scalar_from_yaml "$config_path" '.clear_persistence_caches_green_function')
-    GIT_COMMIT_MSG=$(read_scalar_from_yaml "$config_path" '.git_commit_msg')
     read_array_from_yaml BLUE_DEPLOYMENT_LIST "$config_path" '.blue_deployment_list'
     read_array_from_yaml GREEN_DEPLOYMENT_LIST "$config_path" '.green_deployment_list'
     read_map_from_yaml DEPLOYMENT_TO_FULL_REPLICA_COUNT_MAP "$config_path" '.deployment_to_full_replica_count_map'
-    read_map_from_yaml DEPLOYMENT_TO_YAML_FILEPATH_MAP "$config_path" '.deployment_to_yaml_filepath_map'
     read_map_from_yaml HOST_TO_SERVICE_MAP_BLUE "$config_path" '.host_to_service_map.blue'
     read_map_from_yaml HOST_TO_SERVICE_MAP_GREEN "$config_path" '.host_to_service_map.green'
     read_map_from_yaml HOST_TO_INGRESS_NAME_MAP "$config_path" '.host_to_ingress_name_map'
     read_map_from_yaml HOST_TO_INGRESS_TYPE_MAP "$config_path" '.host_to_ingress_type_map'
-    read_map_from_yaml HOST_TO_INGRESS_YAML_FILEPATH_MAP "$config_path" '.host_to_ingress_yaml_filepath_map'
     if [ "$WARM_CACHES" == "true" ]; then
         CACHE_WARMING_POD_LIST_FILEPATH=$(read_scalar_from_yaml "$config_path" '.cache_warming_pod_list_filepath')
         CACHE_WARMING_POD_SUBLIST_FILEPATH=$(read_scalar_from_yaml "$config_path" '.cache_warming_pod_sublist_filepath')
@@ -222,32 +216,7 @@ function check_current_color_is() {
 # Returns:
 #   0 if current, 1 otherwise
 #######################################
-function git_repo_clone_is_current() {
-    # note : the next statement defines a multi-line string
-    expected_up_to_date_status_report="On branch master
-Your branch is up to date with 'origin/master'."
-    $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH checkout master > /dev/null 2>&1
-    $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH pull > /dev/null 2>&1
-    status_report=$($GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH status | head -n 2)
-    if [ "$expected_up_to_date_status_report" == "$status_report" ] ; then
-        return 0
-    else
-        echo "git repository does not appear to be current"
-        echo "expected response from command '$GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH status' was:"
-        echo "$expected_up_to_date_status_report"
-        echo "however, response actually received was:"
-        echo "$status_report"
-        echo nomatch
-        return 1
-    fi
-}
 
-#######################################
-function check_that_git_repo_clone_is_current() {
-    if ! git_repo_clone_is_current ; then
-        exit 1
-    fi
-}
 
 #######################################
 # Detects if one kubernetes yaml file matches what is configured in the cluster
@@ -263,88 +232,6 @@ function check_that_git_repo_clone_is_current() {
 # Returns:
 #   0 if no differences detected, 1 otherwise
 #######################################
-function yaml_file_is_current_with_production() {
-    local yaml_filepath=$1
-    local full_yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/$yaml_filepath"
-    kubectl --kubeconfig $CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath" > /dev/null 2>&1
-    local diff_status=$?
-    if [ $diff_status -eq 1 ] ; then
-        # mismatch
-        echo "when checking for currency of yaml specificiations in file '$full_yaml_filepath', these differences were found:"
-        kubectl --kubeconfig $CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
-        return 1
-    fi
-    if [ $diff_status -gt 1 ] ; then
-        # error
-        echo "an error occurred when checking the currency of yaml specificiations in file '$full_yaml_filepath'. output:"
-        kubectl --kubeconfig $CLUSTER_KUBECONFIG diff -f "$full_yaml_filepath"
-        return 1
-    fi
-    return 0
-}
-
-#######################################
-# Detects if all relevant kubernetes yaml files match what is configured in the cluster
-# Gobals:
-#   BLUE_DEPLOYMENT_LIST
-#   GREEN_DEPLOYMENT_LIST
-#   KS_K8S_DEPL_REPO_DIRPATH
-#   DEPLOYMENT_TO_YAML_FILEPATH_MAP
-#   HOST_TO_INGRESS_YAML_FILEPATH_MAP
-# Arguments:
-#   yaml_filepath (relative to the root directory of the repository clone)
-# Output:
-#   none, except for error messages to stderr
-# Side effects:
-#   none
-# Returns:
-#   0 if no differences detected, 1 otherwise
-#######################################
-function git_repo_clone_matches_cluster_config() {
-    local all_yaml_files_are_current="yes"
-    local pos=0
-    local deployment
-    local yaml_filepath
-    pos=0
-    while [ $pos -lt ${#BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${BLUE_DEPLOYMENT_LIST[$pos]}
-        yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
-        if ! yaml_file_is_current_with_production "$yaml_filepath" ; then
-            echo "mismatch exists in file $KS_K8S_DEPL_REPO_DIRPATH/$yaml_filepath"
-            all_yaml_files_are_current="no"
-        fi
-        pos=$(($pos+1))
-    done
-    pos=0
-    while [ $pos -lt ${#GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${GREEN_DEPLOYMENT_LIST[$pos]}
-        yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
-        if ! yaml_file_is_current_with_production "$yaml_filepath" ; then
-            echo "mismatch exists in file $KS_K8S_DEPL_REPO_DIRPATH/$yaml_filepath"
-            all_yaml_files_are_current="no"
-        fi
-        pos=$(($pos+1))
-    done
-    for yaml_filepath in ${HOST_TO_INGRESS_YAML_FILEPATH_MAP[*]} ; do
-        if ! yaml_file_is_current_with_production "$yaml_filepath" ; then
-            echo "mismatch exists in file $KS_K8S_DEPL_REPO_DIRPATH/$yaml_filepath"
-            all_yaml_files_are_current="no"
-        fi
-    done
-    if ! [ "$all_yaml_files_are_current" == "yes" ] ; then
-        echo "current master branch of kubernetes yaml repo does not match the production environment"
-        return 1
-    fi
-    return 0
-}
-
-#######################################
-function check_that_git_repo_clone_matches_cluster_config() {
-    if ! git_repo_clone_matches_cluster_config ; then
-        exit 1
-    fi
-}
-
 #######################################
 # Detects if all relevant deployments in the kubernetes cluster show all replicas "ready"
 # Gobals:
@@ -776,16 +663,24 @@ function switchover_ingress_rules_to_destination_database_deployment() {
         exit 1
     fi
 
-    local ingress_yaml_filepath_relative
     local ingress_yaml_filepath
     local ingress_type
+    local ingress_name
     local host
     local escaped_host
     local service
     for host in "${host_map_keys[@]}"; do
-        ingress_yaml_filepath_relative="${HOST_TO_INGRESS_YAML_FILEPATH_MAP[$host]}"
-        ingress_yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/$ingress_yaml_filepath_relative"
+        ingress_name="${HOST_TO_INGRESS_NAME_MAP[$host]}"
         ingress_type="${HOST_TO_INGRESS_TYPE_MAP[$host]}"
+        ingress_yaml_filepath="$TEMP_DIR_PATH/${ingress_name}.yaml"
+
+        # Fetch the current ingress resource from the cluster instead of reading from a git repo
+        if [ "$ingress_type" == "ingressroute" ] ; then
+            kubectl --kubeconfig $CLUSTER_KUBECONFIG get ingressroute "$ingress_name" -o yaml > "$ingress_yaml_filepath"
+        else
+            kubectl --kubeconfig $CLUSTER_KUBECONFIG get ingress "$ingress_name" -o yaml > "$ingress_yaml_filepath"
+        fi
+
         if [ "$ingress_type" == "ingressroute" ] ; then
             rewrite_ingressroute_file_for_new_color "$ingress_yaml_filepath" "$DESTINATION_COLOR"
         else
@@ -798,152 +693,17 @@ function switchover_ingress_rules_to_destination_database_deployment() {
     echo "switching traffic over to the updated database deployment"
     unset yaml_files_already_applied
     declare -A yaml_files_already_applied
-    for ingress_yaml_filepath_relative in ${HOST_TO_INGRESS_YAML_FILEPATH_MAP[*]} ; do
-        if [ -z ${yaml_files_already_applied[$ingress_yaml_filepath_relative]} ] ; then
-            ingress_yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/$ingress_yaml_filepath_relative"
+    for host in "${host_map_keys[@]}" ; do
+        ingress_name="${HOST_TO_INGRESS_NAME_MAP[$host]}"
+        if [ -z ${yaml_files_already_applied[$ingress_name]} ] ; then
+            ingress_yaml_filepath="$TEMP_DIR_PATH/${ingress_name}.yaml"
             if ! kubectl --kubeconfig $CLUSTER_KUBECONFIG apply -f "$ingress_yaml_filepath" ; then
                 echo "Warning : received non-zero exit status for command kubectl --kubeconfig $CLUSTER_KUBECONFIG apply -f $ingress_yaml_filepath"
             fi
-            yaml_files_already_applied[$ingress_yaml_filepath_relative]="done"
+            yaml_files_already_applied[$ingress_name]="done"
         fi
     done
     unset yaml_files_already_applied
-}
-
-#######################################
-# modify a deployment yaml file to set the count for replicas
-# Gobals:
-#   YQ_BINARY 
-# Arguments:
-#   yaml filepath to file which should be updated
-#   desired replica count
-# Output:
-#   none if successful, errors to stderr if encountered
-# Side effects:
-#   file at the designated path is modified on the filesystem
-#######################################
-function adjust_replica_count_in_deployment_yaml_file() {
-    local yaml_filepath=$1
-    local replica_count=$2
-    if ! "$YQ_BINARY" --inplace "(select(.kind == \"Deployment\") | .spec.replicas) = $replica_count" "$yaml_filepath" ; then
-        echo "Warning : backend deployment has been scaled in the kubernetes cluster, but corresponding changes have not successfully been made to $yaml_filepath." >&2
-        echo "          Attempt to update replicas with yq failed. The repository is now out of sync and must be manually corrected." >&2
-        return
-    fi
-    local updated_value
-    updated_value=$("$YQ_BINARY" "select(.kind == \"Deployment\") | .spec.replicas" "$yaml_filepath" 2>/dev/null)
-    if [ "$updated_value" != "$replica_count" ]; then
-        echo "Warning : backend deployment has been scaled in the kubernetes cluster, but corresponding changes have not successfully been made to $yaml_filepath." >&2
-        echo "          The repository is now out of sync and must be manually corrected, and the cause of the failure to update must be addressed in code." >&2
-        return
-    fi
-}
-
-#######################################
-# modify all related deployment yaml files to have the appropriate count of replicas based on destination color
-# Gobals:
-#   KS_K8S_DEPL_REPO_DIRPATH
-#   BLUE_DEPLOYMENT_LIST
-#   GREEN_DEPLOYMENT_LIST
-#   DEPLOYMENT_TO_YAML_FILEPATH_MAP
-# Arguments:
-#   destination color ('blue' or 'green')
-# Output:
-#   none
-# Side effects:
-#   all related deployment yaml files are updated on the filesystem
-#######################################
-function adjust_replica_counts_in_deployment_yaml_files() {
-    local DESTINATION_COLOR=$1
-    # the destination color will receive "full" replicas and the other will receive "none" replicas
-    local blue_replica_count="none"
-    local green_replica_count="none"
-    if [ "$DESTINATION_COLOR" == "blue" ] ; then
-        blue_replica_count="full"
-    fi
-    if [ "$DESTINATION_COLOR" == "green" ] ; then
-        green_replica_count="full"
-    fi
-    local pos
-    local deployment
-    local yaml_filepath
-    local replicas_int
-    pos=0
-    while [ $pos -lt ${#BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment="${BLUE_DEPLOYMENT_LIST[$pos]}"
-        yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
-        replica_count_string_to_integer "$deployment" "$blue_replica_count"
-        replicas_int=$?
-        adjust_replica_count_in_deployment_yaml_file "$yaml_filepath" "$replicas_int"
-        pos=$(($pos+1))
-    done
-    pos=0
-    while [ $pos -lt ${#GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment="${GREEN_DEPLOYMENT_LIST[$pos]}"
-        yaml_filepath="$KS_K8S_DEPL_REPO_DIRPATH/${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
-        replica_count_string_to_integer "$deployment" "$green_replica_count"
-        replicas_int=$?
-        adjust_replica_count_in_deployment_yaml_file "$yaml_filepath" "$replicas_int"
-        pos=$(($pos+1))
-    done
-}
-
-#######################################
-# all involved yaml file changes (ingress, deployment, ...) are committed to a git changeset, which is pushed to the remote repo
-# Gobals:
-#   KS_K8S_DEPL_REPO_DIRPATH
-#   BLUE_DEPLOYMENT_LIST
-#   GREEN_DEPLOYMENT_LIST
-#   DEPLOYMENT_TO_YAML_FILEPATH_MAP
-#   HOST_TO_INGRESS_YAML_FILEPATH_MAP
-#   GIT_COMMIT_MSG 
-# Arguments:
-#   destination color ('blue' or 'green')
-# Output:
-#   none if successful, errors to stderr if encountered
-# Side effects:
-#   the local git repository clone is updated with all changes.
-#   the changes are pushed to github.
-#######################################
-function check_in_changes_to_kubernetes_into_github() {
-    local pos
-    local deployment
-    local yaml_filepath
-    pos=0
-    while [ $pos -lt ${#BLUE_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${BLUE_DEPLOYMENT_LIST[$pos]}
-        yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
-        if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$yaml_filepath" >/dev/null 2>&1 ; then
-            echo "warning : failure when adding file $yaml_filepath to changeset" >&2
-        fi
-        pos=$(($pos+1))
-    done
-    pos=0
-    while [ $pos -lt ${#GREEN_DEPLOYMENT_LIST[@]} ] ; do
-        deployment=${GREEN_DEPLOYMENT_LIST[$pos]}
-        yaml_filepath="${DEPLOYMENT_TO_YAML_FILEPATH_MAP[$deployment]}"
-        if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$yaml_filepath" >/dev/null 2>&1 ; then
-            echo "warning : failure when adding file $yaml_filepath to changeset" >&2
-        fi
-        pos=$(($pos+1))
-    done
-    for ingress_yaml_filepath_relative in ${HOST_TO_INGRESS_YAML_FILEPATH_MAP[*]} ; do
-        if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH add "$ingress_yaml_filepath_relative" >/dev/null 2>&1 ; then
-            echo "warning : failure when adding file $ingress_yaml_filepath_relative to changeset" >&2
-        fi
-    done
-    local date_string=$(date +%Y-%m-%d)
-    local commit_message_string="$GIT_COMMIT_MSG $date_string"
-    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH commit -m "$commit_message_string" >/dev/null 2>&1 ; then
-        echo "warning : failure when committing changes to git repository clone" >&2
-    fi
-    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH pull --rebase >/dev/null 2>&1 ; then
-        echo "warning : failure when preparing to push changes (during git pull --rebase)" >&2
-    fi
-    if ! $GIT_BINARY -C $KS_K8S_DEPL_REPO_DIRPATH push >/dev/null 2>&1 ; then
-        echo "warning : failure when pushing changes to git repository" >&2
-    fi
-    return 0
 }
 
 #######################################
@@ -991,9 +751,7 @@ function main() {
         SOURCE_COLOR="green"
     fi
     check_current_color_is $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $SOURCE_COLOR
-    check_that_git_repo_clone_is_current
     /data/portal-cron/scripts/authenticate_service_account.sh "$SERVICE_ACCOUNT"
-    check_that_git_repo_clone_matches_cluster_config
 
     # phase : scale the deployments to get ready to switch traffic
     echo "starting up initial minimal deployment of $DESTINATION_COLOR"
@@ -1026,12 +784,10 @@ function main() {
         "$CLEAR_PERSISTENCE_CACHES_GREEN_FUNCTION" send-slack
     fi
 
-    # phase : scale the destination color deployments fully up an the source fully down. Commit cluster changes to the configuration repo.
+    # phase : scale the destination color deployments fully up an the source fully down.
     echo "fully scaling deployment of $DESTINATION_COLOR"
     scale_deployment_to_N_replicas $SOURCE_COLOR "none"
     scale_deployment_to_N_replicas $DESTINATION_COLOR "full"
-    adjust_replica_counts_in_deployment_yaml_files $DESTINATION_COLOR
-    check_in_changes_to_kubernetes_into_github
 }
 
 main $@
