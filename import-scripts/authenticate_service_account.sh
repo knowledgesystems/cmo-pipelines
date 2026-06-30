@@ -150,9 +150,9 @@ function read_account_credentials() {
     fi
 }
 
-function check_that_docker_image_is_available() {
-    if [ -z "$(docker images -q saml2aws)" ] ; then
-        echo "error: docker image for saml2aws is not available in the local docker image collection. exiting..." >&2
+function check_that_saml2aws_is_available() {
+    if ! command -v saml2aws >/dev/null 2>&1 ; then
+        echo "error: saml2aws binary not found in PATH. exiting..." >&2
         exit 3
     fi
 }
@@ -185,28 +185,20 @@ function authenticate_with_saml2aws() {
         exit 2
     fi
     set -euo pipefail
-    docker run --rm \
-        -u "$(id -u):$(id -g)" \
-        -v "$HOME/.saml2aws:/saml2aws/.saml2aws" \
-        -v "$HOME/.aws:/saml2aws/.aws" \
-        saml2aws login --force --skip-prompt --mfa=Auto --profile=$saml2aws_profile \
+    saml2aws login --force --skip-prompt --mfa=Auto --profile=$saml2aws_profile \
         --role="$saml2aws_role" --username="$saml2aws_username" --password="$saml2aws_password" \
         --session-duration=$SESSION_DURATION_FOR_TOKEN_SECONDS
-    docker_status_code=$?
+    saml2aws_status_code=$?
     set +uo pipefail
-    if [ $docker_status_code -ne 0 ] ; then
-        echo "Warning : aws authentication failed. Returned status code was $docker_status_code" >&2
-        exit $docker_status_code
+    if [ $saml2aws_status_code -ne 0 ] ; then
+        echo "Warning : aws authentication failed. Returned status code was $saml2aws_status_code" >&2
+        exit $saml2aws_status_code
     fi
     if ! [ "$cluster_account_id" == "eks" ] ; then
         return 0
     fi
     # FOR TEMPORARY BACKWARDS COMPATIBILITY .. reauthenticate under the default profile
-    docker run --rm \
-        -u "$(id -u):$(id -g)" \
-        -v "$HOME/.saml2aws:/saml2aws/.saml2aws" \
-        -v "$HOME/.aws:/saml2aws/.aws" \
-        saml2aws login --force --skip-prompt --mfa=Auto \
+    saml2aws login --force --skip-prompt --mfa=Auto \
         --role="$saml2aws_role" --username="$saml2aws_username" --password="$saml2aws_password" \
         --session-duration=$SESSION_DURATION_FOR_TOKEN_SECONDS
 }
@@ -221,7 +213,7 @@ function main() {
     load_automation_environment
     read_config
     validate_args "$cluster_account_id"
-    check_that_docker_image_is_available
+    check_that_saml2aws_is_available
     create_saml2aws_hidden_file_if_needed
     authenticate_with_saml2aws "$cluster_account_id"
 }
