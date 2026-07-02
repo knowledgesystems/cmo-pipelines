@@ -13,15 +13,38 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # localize global variables / jar names and functions
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
-    # Merge biobank patient clinical data when present (already synced via downloadFromS3AllStudies).
+    # Merge biobank patient clinical data when present.
     # Clinical merge failure is non-fatal; an existing biobank timeline file is kept for CDM timeline merge.
+    #
+    # Args:
+    #   $1  study_data_home  Local directory for the study.
+    #   $2  s3_prefix        Optional. If provided, the biobank clinical patient file is fetched
+    #                        fresh from S3 at this prefix (e.g. "msk_solid_heme") before merging.
+    #                        Use this when the file is written by an external process (e.g. Databricks)
+    #                        and deleted locally after each successful merge.
     function merge_biobank_clinical_data() {
         local study_data_home="$1"
+        local s3_prefix="$2"
 
         local input_clinical_file="$study_data_home/data_clinical_patient.txt"
         local biobank_clinical_file="$study_data_home/data_clinical_patient_biobank.txt"
         local biobank_timeline_file="$study_data_home/data_timeline_biobank_specimen.txt"
         local merged_clinical_file="$study_data_home/data_clinical_patient_merged.txt"
+
+        if [ -n "$s3_prefix" ]; then
+            # Re-fetch the biobank clinical patient file fresh from S3 before merging.
+            # The file is deleted locally after each successful merge and must be
+            # retrieved each run rather than relying on it surviving in S3 overnight.
+            # touch creates the file so try_download_from_s3 can accept a file path;
+            # the -s check ensures we clean up if S3 had no file to download.
+            touch "$biobank_clinical_file"
+            if ! try_download_from_s3 "$biobank_clinical_file" \
+                    "${s3_prefix}/data_clinical_patient_biobank.txt" "mskimpact-databricks" \
+                || [ ! -s "$biobank_clinical_file" ] ; then
+                rm -f "$biobank_clinical_file"
+                echo "`date`: Warning: could not fetch biobank clinical patient file from S3 for ${study_data_home}; biobank merge will be skipped."
+            fi
+        fi
 
         if [ -f "$biobank_clinical_file" ]; then
             # -p / --prefer-right-columns: data_clinical_patient.txt may already
@@ -847,7 +870,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo "MSKSOLIDHEME merge successful! Creating cancer type case lists..."
         echo $(date)
 
-        merge_biobank_clinical_data "$MSK_SOLID_HEME_DATA_HOME"
+        merge_biobank_clinical_data "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme"
 
         # add metadata headers and overrides before importing
         $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -i $PORTAL_HOME/scripts/cdm_metadata.json

@@ -60,6 +60,7 @@ function try_upload_to_s3() {
             --exclude ".gitattributes" \
             --exclude ".gitignore" \
             --exclude "*parquet*" \
+            --exclude "*data_clinical_patient_biobank.txt" \
             --profile saml
     else
         echo "`date`: '$PATH_TO_UPLOAD' is neither a file nor a directory, exiting..."
