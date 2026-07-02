@@ -30,9 +30,6 @@ from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 from kubernetes.client import models as k8s
 
-from dags.utils.secret_manager import SecretManager
-
-
 def skippable(func):
     """Decorator: skip the task if it's not in the run_tasks param (empty = run all)."""
     task_id = func.__name__
@@ -54,7 +51,6 @@ def skippable(func):
 
 logger = logging.getLogger(__name__)
 
-S3_BUCKET_NAME = "hackathon-databricks"
 K8S_IMAGE            = "jamesko0/cmo-import:dev"
 K8S_IMAGE_VALIDATE   = "averyniceday/hackathon-import:latest"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
@@ -69,42 +65,54 @@ COLOR_SWAP_CONFIG_FILE = f"{CREDS_DIR}/public-db-color-swap-config.yaml"
 CLICKHOUSE_CONFIG_FILE = f"{CREDS_DIR}/manage_public_clickhouse_database_update_tools.properties"
 NOTIFICATION_FILE = "/tmp/airflow-notifications/import_public_hackathon/{{ ts_nodash }}.txt"
 
+S3_MOUNT_PATH = "/mnt/s3-data"
+
+S3_PVC_CLAIM_NAME = "hackathon-databricks-s3-pvc"
+
+
+def _s3_study_dir(study_id: str) -> str:
+    """Return the local mount path for a study directory in the S3 bucket."""
+    return f"{S3_MOUNT_PATH}/{study_id}"
+
+
+def _study_data_path(study_id: str) -> str | None:
+    """
+    Check the mount path for a study. Returns the local path to use if the study
+    exists, or None if it doesn't.
+
+    Studies can be either a directory (``study_id/``) or a tarball (``study_id.tar``).
+    For tarballs, the extracted content is placed in a temp directory.
+    """
+    import pathlib
+    import tarfile
+    import tempfile
+
+    dir_path = _s3_study_dir(study_id)
+    tar_path = f"{S3_MOUNT_PATH}/{study_id}.tar"
+
+    if pathlib.Path(dir_path).is_dir():
+        return dir_path
+
+    if pathlib.Path(tar_path).is_file():
+        tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
+        with tarfile.open(tar_path) as tf:
+            tf.extractall(tmp)
+        entries = list(pathlib.Path(tmp).iterdir())
+        if len(entries) == 1 and entries[0].is_dir():
+            for child in entries[0].iterdir():
+                child.rename(pathlib.Path(tmp) / child.name)
+            entries[0].rmdir()
+        return tmp
+
+    return None
+
+
 def _available_study_ids() -> list[str]:
     """Read the study-list Variable at parse time to populate the Param enum."""
     try:
         return json.loads(Variable.get(STUDY_LIST_VARIABLE_KEY, default_var="[]"))
     except Exception:
         return []
-
-
-def _download_study_from_s3(s3_client, s3_bucket: str, study_id: str, local_dir: str) -> None:
-    import pathlib
-    import tarfile
-
-    tar_key = f"{study_id}.tar"
-    tar_resp = s3_client.list_objects_v2(Bucket=s3_bucket, Prefix=tar_key, MaxKeys=1)
-    if tar_resp.get("KeyCount", 0) > 0:
-        tar_path = f"/tmp/{study_id}.tar"
-        s3_client.download_file(s3_bucket, tar_key, tar_path)
-        with tarfile.open(tar_path) as tf:
-            tf.extractall(local_dir)
-        entries = list(pathlib.Path(local_dir).iterdir())
-        if len(entries) == 1 and entries[0].is_dir():
-            for child in entries[0].iterdir():
-                child.rename(pathlib.Path(local_dir) / child.name)
-            entries[0].rmdir()
-    else:
-        prefix = f"{study_id}/"
-        paginator = s3_client.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=s3_bucket, Prefix=prefix):
-            for obj in page.get("Contents", []):
-                key = obj["Key"]
-                rel_path = key[len(prefix):]
-                if not rel_path:
-                    continue
-                dest = os.path.join(local_dir, rel_path)
-                os.makedirs(os.path.dirname(dest), exist_ok=True)
-                s3_client.download_file(s3_bucket, key, dest)
 
 
 def _script(script_name: str, *args: object, source_automation_env: bool = False) -> str:
@@ -140,19 +148,33 @@ _POD_OVERRIDE = {
                     ),
                     k8s.V1EnvVar(name="KUBECONFIG", value=""),
                 ],
-                volume_mounts=[k8s.V1VolumeMount(
+                volume_mounts=[
+                    k8s.V1VolumeMount(
+                        name=CREDS_VOLUME_NAME,
+                        mount_path=CREDS_DIR,
+                        read_only=True,
+                    ),
+                    k8s.V1VolumeMount(
+                        name="s3-data",
+                        mount_path=S3_MOUNT_PATH,
+                    ),
+                ],
+            )],
+            volumes=[
+                k8s.V1Volume(
                     name=CREDS_VOLUME_NAME,
-                    mount_path=CREDS_DIR,
-                    read_only=True,
-                )],
-            )],
-            volumes=[k8s.V1Volume(
-                name=CREDS_VOLUME_NAME,
-                secret=k8s.V1SecretVolumeSource(
-                    secret_name=CREDS_SECRET_NAME,
-                    default_mode=0o400,
+                    secret=k8s.V1SecretVolumeSource(
+                        secret_name=CREDS_SECRET_NAME,
+                        default_mode=0o400,
+                    ),
                 ),
-            )],
+                k8s.V1Volume(
+                    name="s3-data",
+                    persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(
+                        claim_name=S3_PVC_CLAIM_NAME,
+                    ),
+                ),
+            ],
         )
     )
 }
@@ -228,6 +250,10 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
                             sub_path="clickhouse.sql",
                             read_only=True,
                         ),
+                        k8s.V1VolumeMount(
+                            name="s3-data",
+                            mount_path=S3_MOUNT_PATH,
+                        ),
                     ],
                 )],
                 volumes=[
@@ -238,6 +264,12 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
                     k8s.V1Volume(
                         name="clickhouse-sql",
                         secret=k8s.V1SecretVolumeSource(secret_name="hackathon-clickhouse-sql"),
+                    ),
+                    k8s.V1Volume(
+                        name="s3-data",
+                        persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(
+                            claim_name=S3_PVC_CLAIM_NAME,
+                        ),
                     ),
                 ],
             )
@@ -303,8 +335,10 @@ def import_public_hackathon():
     # ── 1 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
     @skippable
-    def verify_studies_exist(study_ids: list[str], s3_bucket: str) -> list[str]:
-        """All-or-nothing: every requested study must exist in S3, else fail the DAG."""
+    def verify_studies_exist(study_ids: list[str]) -> list[str]:
+        """All-or-nothing: every requested study must exist in the S3 mount, else fail the DAG."""
+        import pathlib
+
         # Params with type="array" should arrive as a list, but render_template_as_native_obj
         # may render them as a string repr (e.g. "['study1', 'study2']"). Parse defensively.
         if isinstance(study_ids, str):
@@ -318,19 +352,18 @@ def import_public_hackathon():
         if not study_ids:
             raise AirflowException("No study IDs provided")
 
-        s3 = SecretManager.s3_client()
         missing = []
         for study_id in study_ids:
-            dir_resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=f"{study_id}/", MaxKeys=1)
-            tar_resp = s3.list_objects_v2(Bucket=s3_bucket, Prefix=f"{study_id}.tar", MaxKeys=1)
-            if dir_resp.get("KeyCount", 0) > 0 or tar_resp.get("KeyCount", 0) > 0:
-                logger.info("Study '%s' found in s3://%s", study_id, s3_bucket)
+            dir_path = pathlib.Path(_s3_study_dir(study_id))
+            tar_path = pathlib.Path(f"{S3_MOUNT_PATH}/{study_id}.tar")
+            if dir_path.is_dir() or tar_path.is_file():
+                logger.info("Study '%s' found at %s", study_id, S3_MOUNT_PATH)
             else:
-                logger.error("Study '%s' NOT found in s3://%s", study_id, s3_bucket)
+                logger.error("Study '%s' NOT found at %s", study_id, S3_MOUNT_PATH)
                 missing.append(study_id)
 
         if missing:
-            raise AirflowException(f"Studies not found in s3://{s3_bucket}: {missing}")
+            raise AirflowException(f"Studies not found at {S3_MOUNT_PATH}: {missing}")
         return study_ids
 
     # ── 2 ──────────────────────────────────────────────────────────────
@@ -386,16 +419,16 @@ def import_public_hackathon():
     # ── 6 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE_VALIDATE)
     @skippable
-    def pull_and_validate_study(study_id: str, s3_bucket: str) -> str | None:
+    def pull_and_validate_study(study_id: str) -> str | None:
         import pathlib
         import subprocess
 
-        local_dir = f"/tmp/{study_id}"
-        pathlib.Path(local_dir).mkdir(parents=True, exist_ok=True)
-
         try:
-            s3 = SecretManager.s3_client()
-            _download_study_from_s3(s3, s3_bucket, study_id, local_dir)
+            local_dir = _study_data_path(study_id)
+            if local_dir is None:
+                logging.error("Study '%s' not found at %s", study_id, S3_MOUNT_PATH)
+                return None
+
             log_dir = f"/tmp/validate_logs/{study_id}"
             os.makedirs(log_dir, exist_ok=True)
             result = subprocess.run(
@@ -428,24 +461,18 @@ def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE_IMPORT)
     @skippable
     def import_into_standby_database(valid_studies: list[str]):
-        import pathlib
         import subprocess
 
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
             return
 
-        s3 = SecretManager.s3_client()
         failed = []
 
         for study_id in valid_studies:
-            local_dir = f"/tmp/{study_id}"
-            pathlib.Path(local_dir).mkdir(parents=True, exist_ok=True)
-
-            try:
-                _download_study_from_s3(s3, S3_BUCKET_NAME, study_id, local_dir)
-            except Exception as e:
-                logging.error("Download failed for %s: %s", study_id, e)
+            local_dir = _study_data_path(study_id)
+            if local_dir is None:
+                logging.error("Study '%s' not found at %s — skipping", study_id, S3_MOUNT_PATH)
                 failed.append(study_id)
                 continue
 
@@ -534,9 +561,9 @@ def import_public_hackathon():
         logger.info("[STUB] send_slack_notifications")
 
     # ── Instantiate tasks in execution order ─────────────────────────
-    t_found_studies                  = verify_studies_exist("{{ params.cancer_study_ids }}", S3_BUCKET_NAME, run_tasks="{{ params.run_tasks }}")
+    t_found_studies                  = verify_studies_exist("{{ params.cancer_study_ids }}", run_tasks="{{ params.run_tasks }}")
     t_verify_import_not_in_progress  = verify_import_not_in_progress(CLICKHOUSE_CONFIG_FILE, run_tasks="{{ params.run_tasks }}")
-    t_pull_and_validate              = pull_and_validate_study.partial(s3_bucket=S3_BUCKET_NAME, run_tasks="{{ params.run_tasks }}").expand(study_id=t_found_studies)
+    t_pull_and_validate              = pull_and_validate_study.partial(run_tasks="{{ params.run_tasks }}").expand(study_id=t_found_studies)
     t_collect_valid                  = collect_valid_studies(t_pull_and_validate, run_tasks="{{ params.run_tasks }}")
     t_import                         = import_into_standby_database(t_collect_valid, run_tasks="{{ params.run_tasks }}")
     t_create_derived_tables          = create_derived_tables_in_standby_database(run_tasks="{{ params.run_tasks }}")
