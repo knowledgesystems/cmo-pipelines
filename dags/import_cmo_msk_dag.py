@@ -40,7 +40,7 @@ def _wire(tasks: dict[str, object]) -> None:
 _CMO_MSK_CONFIG = ImporterConfig(
     dag_id="import_cmo_msk_dag",
     description="Imports CMO MSK study to ClickHouse database using blue/green deployment strategy",
-    importer="msk-cmo",
+    importer="msk",
     tags=["cmo"],
     target_nodes=("pipelines3_ssh",),
     data_nodes=("pipelines3_ssh",),
