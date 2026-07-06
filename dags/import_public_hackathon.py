@@ -51,6 +51,38 @@ def skippable(func):
 
 logger = logging.getLogger(__name__)
 
+
+def _log_node_info() -> None:
+    """Log the Kubernetes node/pod identity and available CPU/memory resources.
+
+    Uses Downward API env vars (NODE_NAME, POD_NAME) injected via pod override.
+    Falls back to reading /proc/cpuinfo and /proc/meminfo for resource info.
+    """
+    node_name = os.environ.get("NODE_NAME", "unknown")
+    pod_name = os.environ.get("POD_NAME", "unknown")
+    logger.info("Running on node=%s pod=%s", node_name, pod_name)
+
+    try:
+        cpu_count = os.cpu_count() or 0
+        logger.info("CPU count from os.cpu_count(): %s", cpu_count)
+    except Exception:
+        pass
+
+    try:
+        with open("/proc/cpuinfo") as f:
+            core_lines = [l for l in f if l.startswith("processor")]
+        logger.info("CPU cores from /proc/cpuinfo: %s", len(core_lines))
+    except FileNotFoundError:
+        logger.warning("/proc/cpuinfo not found")
+
+    try:
+        with open("/proc/meminfo") as f:
+            mem = "\n".join(l.strip() for l in f if any(k in l for k in ("MemTotal", "MemFree", "MemAvailable")))
+        logger.info("Memory info from /proc/meminfo:\n%s", mem)
+    except FileNotFoundError:
+        logger.warning("/proc/meminfo not found")
+
+
 K8S_IMAGE            = "jamesko0/cmo-import:dev"
 K8S_IMAGE_VALIDATE   = "averyniceday/hackathon-import:latest"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
@@ -142,11 +174,21 @@ _POD_OVERRIDE = {
                 image=K8S_IMAGE,
                 image_pull_policy="Always",
                 env=[
-                    k8s.V1EnvVar(
-                        name="SAML2AWS_CONFIGFILE",
-                        value=f"{CREDS_DIR}/.saml2aws",
-                    ),
+                    k8s.V1EnvVar(name="SAML2AWS_CONFIGFILE", value=f"{CREDS_DIR}/.saml2aws"),
                     k8s.V1EnvVar(name="KUBECONFIG", value=""),
+                    # Downward API: node/pod identity for runtime logging
+                    k8s.V1EnvVar(
+                        name="NODE_NAME",
+                        value_from=k8s.V1EnvVarSource(
+                            field_ref=k8s.V1ObjectFieldSelector(field_path="spec.nodeName")
+                        ),
+                    ),
+                    k8s.V1EnvVar(
+                        name="POD_NAME",
+                        value_from=k8s.V1EnvVarSource(
+                            field_ref=k8s.V1ObjectFieldSelector(field_path="metadata.name")
+                        ),
+                    ),
                 ],
                 volume_mounts=[
                     k8s.V1VolumeMount(
@@ -210,6 +252,19 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
             name="CLICKHOUSE_DB",
             value_from=k8s.V1EnvVarSource(
                 secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key="database")
+            ),
+        ),
+        # Downward API: node/pod identity for runtime logging
+        k8s.V1EnvVar(
+            name="NODE_NAME",
+            value_from=k8s.V1EnvVarSource(
+                field_ref=k8s.V1ObjectFieldSelector(field_path="spec.nodeName")
+            ),
+        ),
+        k8s.V1EnvVar(
+            name="POD_NAME",
+            value_from=k8s.V1EnvVarSource(
+                field_ref=k8s.V1ObjectFieldSelector(field_path="metadata.name")
             ),
         ),
     ]
@@ -337,6 +392,7 @@ def import_public_hackathon():
     @skippable
     def verify_studies_exist(study_ids: list[str]) -> list[str]:
         """All-or-nothing: every requested study must exist in the S3 mount, else fail the DAG."""
+        _log_node_info()
         import pathlib
 
         # Params with type="array" should arrive as a list, but render_template_as_native_obj
@@ -463,6 +519,8 @@ def import_public_hackathon():
     def import_into_standby_database(valid_studies: list[str]):
         import subprocess
 
+        _log_node_info()
+
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
             return
@@ -499,6 +557,8 @@ def import_public_hackathon():
     @skippable
     def create_derived_tables_in_standby_database():
         import subprocess
+
+        _log_node_info()
 
         # Rebuild derived tables once after all studies are loaded
         rebuild = subprocess.run(
