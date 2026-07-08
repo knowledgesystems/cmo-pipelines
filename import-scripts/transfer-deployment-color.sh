@@ -895,41 +895,33 @@ function adjust_replica_counts_in_deployment_yaml_files() {
     done
 }
 
-#######################################
-# Set the ArgoCD sync policy on every app in ARGOCD_APP_LIST using the argocd CLI in --core
-# mode (talks directly to the kubernetes API via CLUSTER_KUBECONFIG; no ArgoCD server needed).
-# Gobals:
-#   ARGOCD_APP_LIST
-#   CLUSTER_KUBECONFIG
-#   ARGOCD_BINARY
-# Arguments:
-#   the sync-policy flags to pass to 'argocd app set' (e.g. "--sync-policy none")
-# Output:
-#   warnings to stderr if a call fails (does not exit)
-# Side effects:
-#   the sync policy of each listed ArgoCD app is updated
-#######################################
-function set_argocd_auto_sync() {
+# Disable auto-sync and self-heal so ArgoCD does not revert the in-cluster swap before it is
+# committed to the deployment repo.
+function disable_argocd_auto_sync() {
     local app
     if [ ${#ARGOCD_APP_LIST[@]} -eq 0 ] ; then
         return 0
     fi
     for app in "${ARGOCD_APP_LIST[@]}" ; do
-        if ! KUBECONFIG="$CLUSTER_KUBECONFIG" "$ARGOCD_BINARY" app set "$app" --core "$@" ; then
-            echo "warning : failed to run 'argocd app set $app --core $*'" >&2
+        if ! kubectl --kubeconfig $CLUSTER_KUBECONFIG patch application "$app" -n argocd --type=merge -p '{"spec":{"syncPolicy":null}}' ; then
+            echo "warning : failed to disable argocd auto-sync" >&2
+            return 1
         fi
     done
 }
 
-# Disable auto-sync and self-heal so ArgoCD does not revert the in-cluster swap before it is
-# committed to the deployment repo.
-function disable_argocd_auto_sync() {
-    set_argocd_auto_sync --sync-policy none
-}
-
 # Re-enable auto-sync and self-heal (prune left off). Restores the steady-state GitOps behavior.
 function enable_argocd_auto_sync() {
-    set_argocd_auto_sync --sync-policy automated --self-heal --auto-prune=false
+    local app
+    if [ ${#ARGOCD_APP_LIST[@]} -eq 0 ] ; then
+        return 0
+    fi
+    for app in "${ARGOCD_APP_LIST[@]}" ; do
+        if ! kubectl --kubeconfig $CLUSTER_KUBECONFIG patch application "$app" -n argocd --type=merge -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}' ; then
+            echo "warning : failed to enable argocd auto-sync" >&2
+            return 1
+        fi
+    done
 }
 
 #######################################
