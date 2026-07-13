@@ -189,6 +189,7 @@ function authenticate_with_saml2aws() {
         -u "$(id -u):$(id -g)" \
         -v "$HOME/.saml2aws:/saml2aws/.saml2aws" \
         -v "$HOME/.aws:/saml2aws/.aws" \
+        -v "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/certs/ca-certificates.crt:ro" \
         saml2aws login --force --skip-prompt --mfa=Auto --profile=$saml2aws_profile \
         --role="$saml2aws_role" --username="$saml2aws_username" --password="$saml2aws_password" \
         --session-duration=$SESSION_DURATION_FOR_TOKEN_SECONDS
@@ -206,6 +207,7 @@ function authenticate_with_saml2aws() {
         -u "$(id -u):$(id -g)" \
         -v "$HOME/.saml2aws:/saml2aws/.saml2aws" \
         -v "$HOME/.aws:/saml2aws/.aws" \
+        -v "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/certs/ca-certificates.crt:ro" \
         saml2aws login --force --skip-prompt --mfa=Auto \
         --role="$saml2aws_role" --username="$saml2aws_username" --password="$saml2aws_password" \
         --session-duration=$SESSION_DURATION_FOR_TOKEN_SECONDS
