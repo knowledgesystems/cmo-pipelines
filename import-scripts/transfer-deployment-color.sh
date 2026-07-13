@@ -654,7 +654,7 @@ function attempt_to_warm_caches_of_incoming_deployments() {
 #######################################
 # modify an ingressroute yaml file to set all services connected to a route to the destination color
 # Gobals:
-#   YQ_BINARY 
+#   YQ_BINARY
 # Arguments:
 #   yaml filepath to file which should be updated
 #   destination color ('blue' or 'green')
@@ -702,7 +702,7 @@ function rewrite_ingressroute_file_for_new_color() {
 #######################################
 # modify an ingress yaml file to set a specified host's service to a specifie service
 # Gobals:
-#   YQ_BINARY 
+#   YQ_BINARY
 # Arguments:
 #   yaml filepath to file which should be updated
 #   name of host which will be updated with a new service
@@ -744,12 +744,13 @@ function rewrite_ingress_file_for_new_host_service() {
 #######################################
 # modify all related ingress resources to route traffic to the services of the specified destination color
 # Gobals:
-#   YQ_BINARY 
+#   YQ_BINARY
 #   HOST_TO_SERVICE_MAP_BLUE
 #   HOST_TO_SERVICE_MAP_GREEN
 #   KS_K8S_DEPL_REPO_DIRPATH
 #   HOST_TO_INGRESS_YAML_FILEPATH_MAP
 #   HOST_TO_INGRESS_TYPE_MAP
+#   CLUSTER_KUBECONFIG
 # Arguments:
 #   destination color ('blue' or 'green')
 # Output:
@@ -757,6 +758,7 @@ function rewrite_ingress_file_for_new_host_service() {
 # Side effects:
 #   all related ingress resource yaml files are udpated appropriately to route traffic to the specified destination color
 #   the kubernetes cluster is reconfigured using "kubectl apply -f <file>" for all related ingress resource yaml files
+#   the kubernetes cluster is reconfigured to set the cbioportal-db-color configmap (via script)
 #######################################
 function switchover_ingress_rules_to_destination_database_deployment() {
     local DESTINATION_COLOR=$1
@@ -813,7 +815,7 @@ function switchover_ingress_rules_to_destination_database_deployment() {
 #######################################
 # modify a deployment yaml file to set the count for replicas
 # Gobals:
-#   YQ_BINARY 
+#   YQ_BINARY
 # Arguments:
 #   yaml filepath to file which should be updated
 #   desired replica count
@@ -896,7 +898,7 @@ function adjust_replica_counts_in_deployment_yaml_files() {
 #   GREEN_DEPLOYMENT_LIST
 #   DEPLOYMENT_TO_YAML_FILEPATH_MAP
 #   HOST_TO_INGRESS_YAML_FILEPATH_MAP
-#   GIT_COMMIT_MSG 
+#   GIT_COMMIT_MSG
 # Arguments:
 #   destination color ('blue' or 'green')
 # Output:
@@ -1020,9 +1022,22 @@ function main() {
     fi
     switchover_ingress_rules_to_destination_database_deployment $DESTINATION_COLOR
     /data/portal-cron/scripts/set_update_process_state.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" complete
+    local SET_EXTRA_CONFIGMAP_COLOR_SCRIPT="/data/portal-cron/scripts/set_extra_cbioportal_configmap_color.sh"
+    local portal_db_name=''
+    for db_name in msk triage genie public ; do
+        if [[ "$GIT_COMMIT_MSG" =~ $db_name ]] ; then
+            portal_db_name="$db_name"
+        fi
+    done
     if [ "$SOURCE_COLOR" == "blue" ] ; then
+        if [[ "$portal_db_name" == "genie" || "$portal_db_name" == "public" ]] ; then
+            "$SET_EXTRA_CONFIGMAP_COLOR_SCRIPT" "$portal_db_name" "green" "$CLUSTER_KUBECONFIG"
+        fi
         "$CLEAR_PERSISTENCE_CACHES_BLUE_FUNCTION" send-slack
     else
+        if [[ "$portal_db_name" == "genie" || "$portal_db_name" == "public" ]] ; then
+            "$SET_EXTRA_CONFIGMAP_COLOR_SCRIPT" "$portal_db_name" "blue" "$CLUSTER_KUBECONFIG"
+        fi
         "$CLEAR_PERSISTENCE_CACHES_GREEN_FUNCTION" send-slack
     fi
 
