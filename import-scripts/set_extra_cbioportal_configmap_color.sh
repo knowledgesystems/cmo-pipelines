@@ -29,6 +29,7 @@ function load_configuration_or_exit_with_error() {
     local CONFIGURATION_FILEPATH="$PORTAL_HOME/pipelines-credentials/set_extra_cbioportal_configmap_color.yaml"
     if ! [ -f "$CONFIGURATION_FILEPATH" ] ; then
         echo "error: could not find configuration file $CONFIGURATION_FILEPATH" >&2
+        exit 1
     fi
     local portal_db_names=()
     while IFS= read -r line || [ -n "$line" ] ; do
@@ -144,7 +145,7 @@ function apply_altered_configmap_yaml_file() {
     local configmap_filepath="$git_repo_dirpath/$git_repo_relative_configmap_filepath"
     echo "applying configmap yaml file"
     if ! kubectl --kubeconfig "$kubeconfig_filepath" apply -f "$configmap_filepath" ; then
-        echo "Warning : received non-zero exit status for command kubectl --kubeconfig $CLUSTER_KUBECONFIG apply -f $configmap_filepath"
+        echo "Warning : received non-zero exit status for command kubectl --kubeconfig $kubeconfig_filepath apply -f $configmap_filepath"
     fi
     return 0
 }
