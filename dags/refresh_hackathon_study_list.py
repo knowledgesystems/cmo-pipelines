@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.models import Variable
 
-S3_BUCKET             = "hackathon-databricks"
+S3_BUCKET             = "sc-203403084713-pp-4rxlzd426npxu-bucket-kswubqqre3jr"
 STUDY_LIST_VARIABLE_KEY = "hackathon_available_study_ids"
 
 _DEFAULT_ARGS = {
@@ -39,10 +39,8 @@ def refresh_hackathon_study_list():
     @task
     def fetch_and_store_study_ids() -> list[str]:
         import boto3
-        from botocore import UNSIGNED
-        from botocore.config import Config
 
-        s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+        s3 = boto3.client("s3")
         study_ids: set[str] = set()
 
         paginator = s3.get_paginator("list_objects_v2")
