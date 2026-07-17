@@ -1,7 +1,7 @@
 """
-refresh_hackathon_study_list.py
+refresh_study_list.py
 
-Runs hourly to refresh the Airflow Variable 'hackathon_available_study_ids'
+Runs hourly to refresh the Airflow Variable 'available_study_ids'
 with the list of study IDs currently present in the S3 bucket.  The main
 import_public_hackathon DAG reads this Variable at parse time to populate
 the cancer_study_ids Param enum (multiselect dropdown in the trigger UI).
@@ -14,7 +14,7 @@ from airflow.decorators import dag, task
 from airflow.models import Variable
 
 S3_BUCKET             = "sc-203403084713-pp-4rxlzd426npxu-bucket-kswubqqre3jr"
-STUDY_LIST_VARIABLE_KEY = "hackathon_available_study_ids"
+STUDY_LIST_VARIABLE_KEY = "available_study_ids"
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -27,14 +27,14 @@ _DEFAULT_ARGS = {
 
 
 @dag(
-    dag_id="refresh_hackathon_study_list",
+    dag_id="refresh_study_list",
     default_args=_DEFAULT_ARGS,
     start_date=datetime(2026, 1, 1),
     schedule="@hourly",
     catchup=False,
     tags=["hackathon", "maintenance"],
 )
-def refresh_hackathon_study_list():
+def refresh_study_list():
 
     @task
     def fetch_and_store_study_ids() -> list[str]:
@@ -67,4 +67,4 @@ def refresh_hackathon_study_list():
     fetch_and_store_study_ids()
 
 
-refresh_hackathon_study_list()
+refresh_study_list()

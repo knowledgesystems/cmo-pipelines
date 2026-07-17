@@ -87,7 +87,7 @@ K8S_IMAGE            = "jamesko0/cmo-import:dev"
 K8S_IMAGE_VALIDATE   = "averyniceday/hackathon-import:latest"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
-STUDY_LIST_VARIABLE_KEY = "hackathon_available_study_ids"
+STUDY_LIST_VARIABLE_KEY = "available_study_ids"
 SCRIPTS_DIR = "/data/portal-cron/scripts"
 IMPORTER = "public"
 CREDS_DIR = "/data/portal-cron/pipelines-credentials"
@@ -374,7 +374,7 @@ def _should_run(task_id: str, run_tasks: list[str] | None) -> bool:
             [],
             type="array",
             examples=_available_study_ids(),
-            description="Select one or more cancer study IDs to import. Run refresh_hackathon_study_list to update the list.",
+            description="Select one or more cancer study IDs to import. Run refresh_study_list to update the list.",
             title="Cancer Study IDs",
         ),
         "run_tasks": Param(
