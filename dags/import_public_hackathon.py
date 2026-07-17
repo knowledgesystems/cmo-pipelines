@@ -99,7 +99,7 @@ NOTIFICATION_FILE = "/tmp/airflow-notifications/import_public_hackathon/{{ ts_no
 
 S3_MOUNT_PATH = "/mnt/s3-data"
 
-S3_PVC_CLAIM_NAME = "hackathon-databricks-s3-pvc"
+S3_PVC_CLAIM_NAME = "databricks-s3-pvc"
 
 
 def _s3_study_dir(study_id: str) -> str:
