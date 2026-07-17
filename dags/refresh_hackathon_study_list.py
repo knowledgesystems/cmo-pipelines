@@ -51,8 +51,8 @@ def refresh_hackathon_study_list():
             # top-level .tar files → study archives
             for obj in page.get("Contents", []):
                 key = obj["Key"]
-                if key.endswith(".tar"):
-                    study_ids.add(key[: -len(".tar")])
+                if key.endswith(".tar") or key.endswith(".tar.gz"):
+                    study_ids.add(key[:-4] if key.endswith(".tar") else key[:-7])
 
         sorted_ids = sorted(study_ids)
         Variable.set(STUDY_LIST_VARIABLE_KEY, json.dumps(sorted_ids))
