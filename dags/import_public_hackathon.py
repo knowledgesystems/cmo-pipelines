@@ -122,22 +122,26 @@ def _study_data_path(study_id: str) -> str | None:
     dir_path = _s3_study_dir(study_id)
     tar_path = f"{S3_MOUNT_PATH}/{study_id}.tar.gz"
 
+    # S3 CSI driver (mountpoint-s3) does not support stat().
+    # Use listdir instead of is_dir()/is_file() to check for the study.
     try:
-        dir_exists = pathlib.Path(dir_path).is_dir()
+        entries = set(os.listdir(S3_MOUNT_PATH))
     except PermissionError:
-        dir_exists = False
-    if dir_exists:
+        entries = set()
+
+    study_dirs = {d.rstrip("/") for d in entries if d == study_id or d.startswith(f"{study_id}/")}
+    if study_dirs:
         return dir_path
 
-    if pathlib.Path(tar_path).is_file():
+    if f"{study_id}.tar.gz" in entries:
         tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
         with tarfile.open(tar_path, mode="r:gz") as tf:
             tf.extractall(tmp)
-        entries = list(pathlib.Path(tmp).iterdir())
-        if len(entries) == 1 and entries[0].is_dir():
-            for child in entries[0].iterdir():
+        entries_tmp = list(pathlib.Path(tmp).iterdir())
+        if len(entries_tmp) == 1 and entries_tmp[0].is_dir():
+            for child in entries_tmp[0].iterdir():
                 child.rename(pathlib.Path(tmp) / child.name)
-            entries[0].rmdir()
+            entries_tmp[0].rmdir()
         return tmp
 
     return None
@@ -413,14 +417,13 @@ def import_public_hackathon():
             raise AirflowException("No study IDs provided")
 
         missing = []
+        try:
+            s3_entries = set(os.listdir(S3_MOUNT_PATH))
+        except PermissionError:
+            s3_entries = set()
         for study_id in study_ids:
-            dir_path = pathlib.Path(_s3_study_dir(study_id))
-            tar_path = pathlib.Path(f"{S3_MOUNT_PATH}/{study_id}.tar.gz")
-            try:
-                is_dir = dir_path.is_dir()
-            except PermissionError:
-                is_dir = False
-            if is_dir or tar_path.is_file():
+            expected_tar = f"{study_id}.tar.gz"
+            if study_id in s3_entries or expected_tar in s3_entries:
                 logger.info("Study '%s' found at %s", study_id, S3_MOUNT_PATH)
             else:
                 logger.error("Study '%s' NOT found at %s", study_id, S3_MOUNT_PATH)
