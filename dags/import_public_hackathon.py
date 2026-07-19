@@ -422,22 +422,21 @@ def import_public_hackathon():
             raise AirflowException("No study IDs provided")
 
         missing = []
-        try:
-            import subprocess
-            ls_out = subprocess.check_output(
-                ["ls", "-1", S3_MOUNT_PATH],
-                stderr=subprocess.STDOUT, text=True, timeout=30
-            )
-            s3_entries = set(ls_out.strip().split("\n")) if ls_out.strip() else set()
-        except Exception:
-            s3_entries = set()
+        import tarfile as _tarfile
+        import pathlib as _pathlib
         for study_id in study_ids:
-            expected_tar = f"{study_id}.tar.gz"
-            if study_id in s3_entries or expected_tar in s3_entries:
-                logger.info("Study '%s' found at %s", study_id, S3_MOUNT_PATH)
-            else:
-                logger.error("Study '%s' NOT found at %s", study_id, S3_MOUNT_PATH)
+            tar_path = _pathlib.Path(f"{S3_MOUNT_PATH}/{study_id}.tar.gz")
+            try:
+                with _tarfile.open(str(tar_path), mode="r:gz") as _tf:
+                    pass
+                logger.info("Study '%s' found at %s", study_id, tar_path)
+            except (FileNotFoundError, PermissionError, _tarfile.TarError) as _e:
+                logger.error("Study '%s' NOT found at %s: %s", study_id, tar_path, _e)
                 missing.append(study_id)
+            except Exception as _e:
+                logger.error("Study '%s' error at %s: %s", study_id, tar_path, _e)
+                missing.append(study_id)
+
 
         if missing:
             raise AirflowException(f"Studies not found at {S3_MOUNT_PATH}: {missing}")
