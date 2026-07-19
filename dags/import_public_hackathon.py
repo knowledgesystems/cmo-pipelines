@@ -122,7 +122,11 @@ def _study_data_path(study_id: str) -> str | None:
     dir_path = _s3_study_dir(study_id)
     tar_path = f"{S3_MOUNT_PATH}/{study_id}.tar.gz"
 
-    if pathlib.Path(dir_path).is_dir():
+    try:
+        dir_exists = pathlib.Path(dir_path).is_dir()
+    except PermissionError:
+        dir_exists = False
+    if dir_exists:
         return dir_path
 
     if pathlib.Path(tar_path).is_file():
@@ -412,7 +416,11 @@ def import_public_hackathon():
         for study_id in study_ids:
             dir_path = pathlib.Path(_s3_study_dir(study_id))
             tar_path = pathlib.Path(f"{S3_MOUNT_PATH}/{study_id}.tar.gz")
-            if dir_path.is_dir() or tar_path.is_file():
+            try:
+            is_dir = dir_path.is_dir()
+        except PermissionError:
+            is_dir = False
+        if is_dir or tar_path.is_file():
                 logger.info("Study '%s' found at %s", study_id, S3_MOUNT_PATH)
             else:
                 logger.error("Study '%s' NOT found at %s", study_id, S3_MOUNT_PATH)
