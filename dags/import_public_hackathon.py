@@ -120,14 +120,14 @@ def _study_data_path(study_id: str) -> str | None:
     import tempfile
 
     dir_path = _s3_study_dir(study_id)
-    tar_path = f"{S3_MOUNT_PATH}/{study_id}.tar"
+    tar_path = f"{S3_MOUNT_PATH}/{study_id}.tar.gz"
 
     if pathlib.Path(dir_path).is_dir():
         return dir_path
 
     if pathlib.Path(tar_path).is_file():
         tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
-        with tarfile.open(tar_path) as tf:
+        with tarfile.open(tar_path, mode="r:gz") as tf:
             tf.extractall(tmp)
         entries = list(pathlib.Path(tmp).iterdir())
         if len(entries) == 1 and entries[0].is_dir():
@@ -411,7 +411,7 @@ def import_public_hackathon():
         missing = []
         for study_id in study_ids:
             dir_path = pathlib.Path(_s3_study_dir(study_id))
-            tar_path = pathlib.Path(f"{S3_MOUNT_PATH}/{study_id}.tar")
+            tar_path = pathlib.Path(f"{S3_MOUNT_PATH}/{study_id}.tar.gz")
             if dir_path.is_dir() or tar_path.is_file():
                 logger.info("Study '%s' found at %s", study_id, S3_MOUNT_PATH)
             else:
