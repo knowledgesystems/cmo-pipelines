@@ -122,11 +122,16 @@ def _study_data_path(study_id: str) -> str | None:
     dir_path = _s3_study_dir(study_id)
     tar_path = f"{S3_MOUNT_PATH}/{study_id}.tar.gz"
 
-    # S3 CSI driver (mountpoint-s3) does not support stat().
-    # Use listdir instead of is_dir()/is_file() to check for the study.
+    # S3 CSI driver (mountpoint-s3) does not support stat() or listdir().
+    # Use subprocess ls instead.
     try:
-        entries = set(os.listdir(S3_MOUNT_PATH))
-    except PermissionError:
+        import subprocess
+        ls_out = subprocess.check_output(
+            ["ls", "-1", S3_MOUNT_PATH],
+            stderr=subprocess.STDOUT, text=True, timeout=30
+        )
+        entries = set(ls_out.strip().split("\n")) if ls_out.strip() else set()
+    except Exception:
         entries = set()
 
     study_dirs = {d.rstrip("/") for d in entries if d == study_id or d.startswith(f"{study_id}/")}
@@ -418,8 +423,13 @@ def import_public_hackathon():
 
         missing = []
         try:
-            s3_entries = set(os.listdir(S3_MOUNT_PATH))
-        except PermissionError:
+            import subprocess
+            ls_out = subprocess.check_output(
+                ["ls", "-1", S3_MOUNT_PATH],
+                stderr=subprocess.STDOUT, text=True, timeout=30
+            )
+            s3_entries = set(ls_out.strip().split("\n")) if ls_out.strip() else set()
+        except Exception:
             s3_entries = set()
         for study_id in study_ids:
             expected_tar = f"{study_id}.tar.gz"
