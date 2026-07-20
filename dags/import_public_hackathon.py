@@ -98,6 +98,7 @@ CLICKHOUSE_CONFIG_FILE = f"{CREDS_DIR}/manage_public_clickhouse_database_update_
 NOTIFICATION_FILE = "/tmp/airflow-notifications/import_public_hackathon/{{ ts_nodash }}.txt"
 
 S3_MOUNT_PATH = "/mnt/s3-data"
+S3_BUCKET = "sc-203403084713-pp-4rxlzd426npxu-bucket-kswubqqre3jr"
 
 S3_PVC_CLAIM_NAME = "databricks-s3-pvc"
 
@@ -109,47 +110,48 @@ def _s3_study_dir(study_id: str) -> str:
 
 def _study_data_path(study_id: str) -> str | None:
     """
-    Check the mount path for a study. Returns the local path to use if the study
-    exists, or None if it doesn't.
-
-    Studies can be either a directory (``study_id/``) or a tarball (``study_id.tar``).
-    For tarballs, the extracted content is placed in a temp directory.
+    Download the study tarball from S3 via the AWS CLI (which uses pod IRSA)
+    and extract it to a temp directory. Returns the local path to the study.
+    
+    Falls back to the FUSE mount path if the S3 download fails
+    (e.g. for studies that exist as directories on the mount).
     """
     import pathlib
     import tarfile
     import tempfile
+    import subprocess
 
-    dir_path = _s3_study_dir(study_id)
-    tar_path = f"{S3_MOUNT_PATH}/{study_id}.tar.gz"
+    s3_uri = f"s3://{S3_BUCKET}/{study_id}.tar.gz"
+    tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
+    local_tar = pathlib.Path(tmp) / f"{study_id}.tar.gz"
 
-    # S3 CSI driver (mountpoint-s3) does not support stat() or listdir().
-    # Use subprocess ls instead.
     try:
-        import subprocess
-        ls_out = subprocess.check_output(
-            ["ls", "-1", S3_MOUNT_PATH],
-            stderr=subprocess.STDOUT, text=True, timeout=30
+        subprocess.run(
+            ["aws", "s3", "cp", s3_uri, str(local_tar), "--region", "us-east-1"],
+            check=True, capture_output=True, text=True, timeout=300,
         )
-        entries = set(ls_out.strip().split("\n")) if ls_out.strip() else set()
-    except Exception:
-        entries = set()
+    except Exception as e:
+        logger.warning("S3 download failed for %s: %s. Trying FUSE mount.", study_id, e)
+        dir_path = _s3_study_dir(study_id)
+        if dir_path.is_dir():
+            return dir_path
+        import shutil
+        shutil.rmtree(tmp, ignore_errors=True)
+        return None
 
-    study_dirs = {d.rstrip("/") for d in entries if d == study_id or d.startswith(f"{study_id}/")}
-    if study_dirs:
-        return dir_path
+    with tarfile.open(str(local_tar), mode="r:gz") as tf:
+        tf.extractall(tmp)
+    local_tar.unlink()
 
-    if f"{study_id}.tar.gz" in entries:
-        tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
-        with tarfile.open(tar_path, mode="r:gz") as tf:
-            tf.extractall(tmp)
-        entries_tmp = list(pathlib.Path(tmp).iterdir())
-        if len(entries_tmp) == 1 and entries_tmp[0].is_dir():
-            for child in entries_tmp[0].iterdir():
-                child.rename(pathlib.Path(tmp) / child.name)
-            entries_tmp[0].rmdir()
-        return tmp
-
-    return None
+    # Flatten single top-level dir if needed
+    entries = list(pathlib.Path(tmp).iterdir())
+    if len(entries) == 1 and entries[0].is_dir():
+        inner = entries[0]
+        for child in inner.iterdir():
+            child.rename(pathlib.Path(tmp) / child.name)
+        inner.rmdir()
+    
+    return tmp
 
 
 def _available_study_ids() -> list[str]:
@@ -422,19 +424,17 @@ def import_public_hackathon():
             raise AirflowException("No study IDs provided")
 
         missing = []
-        import tarfile as _tarfile
-        import pathlib as _pathlib
+        import subprocess as _subprocess
         for study_id in study_ids:
-            tar_path = _pathlib.Path(f"{S3_MOUNT_PATH}/{study_id}.tar.gz")
+            s3_uri = f"s3://{S3_BUCKET}/{study_id}.tar.gz"
             try:
-                with _tarfile.open(str(tar_path), mode="r:gz") as _tf:
-                    pass
-                logger.info("Study '%s' found at %s", study_id, tar_path)
-            except (FileNotFoundError, PermissionError, _tarfile.TarError) as _e:
-                logger.error("Study '%s' NOT found at %s: %s", study_id, tar_path, _e)
-                missing.append(study_id)
-            except Exception as _e:
-                logger.error("Study '%s' error at %s: %s", study_id, tar_path, _e)
+                _subprocess.run(
+                    ["aws", "s3", "ls", s3_uri, "--region", "us-east-1"],
+                    check=True, capture_output=True, text=True, timeout=30,
+                )
+                logger.info("Study '%s' found at %s", study_id, s3_uri)
+            except _subprocess.CalledProcessError:
+                logger.error("Study '%s' NOT found at %s", study_id, s3_uri)
                 missing.append(study_id)
 
 
