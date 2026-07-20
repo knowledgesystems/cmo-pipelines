@@ -445,7 +445,7 @@ def import_public_hackathon():
     # ── 2 ──────────────────────────────────────────────────────────────
     t_verify_cluster_state = BashOperator(
         task_id="verify_cluster_state",
-        bash_command=_script(
+        bash_command="unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
             "airflow-verify-management.sh",
             SCRIPTS_DIR,
             CLICKHOUSE_CONFIG_FILE,
