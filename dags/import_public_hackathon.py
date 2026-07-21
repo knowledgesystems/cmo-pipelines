@@ -110,48 +110,45 @@ def _s3_study_dir(study_id: str) -> str:
 
 def _study_data_path(study_id: str) -> str | None:
     """
-    Download the study tarball from S3 via the AWS CLI (which uses pod IRSA)
-    and extract it to a temp directory. Returns the local path to the study.
-    
-    Falls back to the FUSE mount path if the S3 download fails
-    (e.g. for studies that exist as directories on the mount).
+    Read the study tarball from the FUSE mount and extract it to a temp directory.
+    Falls back to the mount directory if the data is already extracted.
+    Returns the local path to the study data.
     """
     import pathlib
     import tarfile
     import tempfile
-    import subprocess
+    import shutil
 
-    s3_uri = f"s3://{S3_BUCKET}/{study_id}.tar.gz"
-    tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
-    local_tar = pathlib.Path(tmp) / f"{study_id}.tar.gz"
+    mount_tar = pathlib.Path(S3_MOUNT_PATH) / f"{study_id}.tar.gz"
+    mount_dir = pathlib.Path(S3_MOUNT_PATH) / study_id
 
-    try:
-        subprocess.run(
-            ["aws", "s3", "cp", s3_uri, str(local_tar), "--region", "us-east-1"],
-            check=True, capture_output=True, text=True, timeout=300,
-        )
-    except Exception as e:
-        logger.warning("S3 download failed for %s: %s. Trying FUSE mount.", study_id, e)
-        dir_path = pathlib.Path(_s3_study_dir(study_id))
-        if dir_path.is_dir():
-            return dir_path
-        import shutil
-        shutil.rmtree(tmp, ignore_errors=True)
-        return None
+    # Prefer already-extracted directory on the mount (no extraction needed)
+    if mount_dir.is_dir():
+        return str(mount_dir)
 
-    with tarfile.open(str(local_tar), mode="r:gz") as tf:
-        tf.extractall(tmp)
-    local_tar.unlink()
+    # Read tarball from FUSE mount and extract locally
+    if mount_tar.is_file():
+        tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
+        try:
+            with tarfile.open(str(mount_tar), mode="r:gz") as tf:
+                tf.extractall(tmp)
 
-    # Flatten single top-level dir if needed
-    entries = list(pathlib.Path(tmp).iterdir())
-    if len(entries) == 1 and entries[0].is_dir():
-        inner = entries[0]
-        for child in inner.iterdir():
-            child.rename(pathlib.Path(tmp) / child.name)
-        inner.rmdir()
-    
-    return tmp
+            # Flatten single top-level dir if needed
+            entries = list(pathlib.Path(tmp).iterdir())
+            if len(entries) == 1 and entries[0].is_dir():
+                inner = entries[0]
+                for child in inner.iterdir():
+                    child.rename(pathlib.Path(tmp) / child.name)
+                inner.rmdir()
+
+            return tmp
+        except Exception as e:
+            logger.error("Failed to extract %s: %s", mount_tar, e)
+            shutil.rmtree(tmp, ignore_errors=True)
+            return None
+
+    logger.error("Study '%s' not found at %s (neither .tar.gz nor directory)", study_id, S3_MOUNT_PATH)
+    return None
 
 
 def _available_study_ids() -> list[str]:
