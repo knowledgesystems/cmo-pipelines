@@ -148,7 +148,6 @@ setup() {
     unset MOCK_JAVA_UPDATE_STUDY_EXIT_MSK_RALPHLAUREN_PORTAL
     unset MOCK_JAVA_UPDATE_STUDY_EXIT_MSK_TAILORMEDJAPAN_PORTAL
     unset MOCK_JAVA_UPDATE_STUDY_EXIT_MSK_SCLC_PORTAL
-    unset MOCK_JAVA_UPDATE_STUDY_EXIT_MSK_FMI_LYMPHOMA_PORTAL
 }
 
 teardown() {
@@ -169,7 +168,6 @@ touch_all_dmp_triggers() {
         "$MOCK_TMP/MSK_RALPHLAUREN_IMPORT_TRIGGER" \
         "$MOCK_TMP/MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER" \
         "$MOCK_TMP/MSK_SCLC_IMPORT_TRIGGER" \
-        "$MOCK_TMP/LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER"
 }
 
 run_script() {
@@ -241,13 +239,6 @@ export MOCK_JAVA_UPDATE_STUDY_EXIT_MSK_SCLC_PORTAL=1
 touch "$MOCK_TMP/MSK_SCLC_IMPORT_TRIGGER"
 result=$(run_script "$IMPORT_SCRIPTS_DIR/import-dmp-impact-data.sh")
 assert_nonzero_exit "$result" "dmp: SCLCMSKIMPACT import fails → exit nonzero"
-teardown
-
-setup
-export MOCK_JAVA_UPDATE_STUDY_EXIT_MSK_FMI_LYMPHOMA_PORTAL=1
-touch "$MOCK_TMP/LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER"
-result=$(run_script "$IMPORT_SCRIPTS_DIR/import-dmp-impact-data.sh")
-assert_nonzero_exit "$result" "dmp: LYMPHOMA import fails → exit nonzero"
 teardown
 
 setup
