@@ -283,6 +283,7 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
                 field_ref=k8s.V1ObjectFieldSelector(field_path="metadata.name")
             ),
         ),
+        k8s.V1EnvVar(name="SAML2AWS_CONFIGFILE", value=f"{CREDS_DIR}/.saml2aws"),
     ]
     if java_opts:
         env.append(k8s.V1EnvVar(name="JAVA_OPTS", value=java_opts))
@@ -323,12 +324,24 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
                             read_only=True,
                         ),
                         k8s.V1VolumeMount(
+                            name=CREDS_VOLUME_NAME,
+                            mount_path=CREDS_DIR,
+                            read_only=True,
+                        ),
+                        k8s.V1VolumeMount(
                             name="s3-data",
                             mount_path=S3_MOUNT_PATH,
                         ),
                     ],
                 )],
                 volumes=[
+                    k8s.V1Volume(
+                        name=CREDS_VOLUME_NAME,
+                        secret=k8s.V1SecretVolumeSource(
+                            secret_name=CREDS_SECRET_NAME,
+                            default_mode=0o400,
+                        ),
+                    ),
                     k8s.V1Volume(
                         name="app-properties",
                         secret=k8s.V1SecretVolumeSource(secret_name="hackathon-app-properties"),
