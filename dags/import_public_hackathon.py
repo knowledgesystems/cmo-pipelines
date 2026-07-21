@@ -132,7 +132,7 @@ def _study_data_path(study_id: str) -> str | None:
         )
     except Exception as e:
         logger.warning("S3 download failed for %s: %s. Trying FUSE mount.", study_id, e)
-        dir_path = _s3_study_dir(study_id)
+        dir_path = pathlib.Path(_s3_study_dir(study_id))
         if dir_path.is_dir():
             return dir_path
         import shutil
