@@ -12,6 +12,7 @@ export MAVEN_BINARY=/opt/apache-maven-3.8.3/bin/mvn
 export HG_BINARY=/usr/bin/hg
 export GIT_BINARY=/usr/bin/git
 export YQ_BINARY=/home/cbioportal_importer/bin/yq
+export ARGOCD_BINARY=/home/cbioportal_importer/bin/argocd
 export PATH="/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/bin:/opt/apache-maven-3.8.3/bin:/usr/local/go/bin:/home/cbioportal_importer/.local/bin:/home/cbioportal_importer/bin:/home/cbioportal_importer/tools/go/bin:/home/cbioportal_importer/tools/sling-cli:/home/cbioportal_importer/tools/clickhouse/bin"
 
 #######################
@@ -169,7 +170,6 @@ export DATABRICKS_CREDS_FILE=$PORTAL_HOME/pipelines-credentials/databricks.crede
 #######################
 export SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt" # needed to use the clickhouse CLI
 export GIT_SSL_CAINFO="/etc/pki/tls/certs/ca-bundle.crt" # needed to use git
-
-
+ 
 ###### needed for clickhouse derived table construction
 export CLICKHOUSE_OPTIMIZE_BACKOFF_SECS=90

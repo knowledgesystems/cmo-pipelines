@@ -94,6 +94,9 @@ if [ "$destination_database_color" == "unset" ] ; then
     exit 1
 fi
 
+# ROB : 2026_07_08 disabling DD_AGENT after import failure related to DD Segmentation Violation Error (memory corruption)
+JAVA_DD_AGENT_ARGS=''
+
 MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-importer-$destination_database_color.jar"
 MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-dmp-importer.log -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
 VALIDATE_BLUE_GREEN_STUDY_SCRIPT_FILEPATH="$PORTAL_HOME/scripts/validate_blue_green_study.py"
