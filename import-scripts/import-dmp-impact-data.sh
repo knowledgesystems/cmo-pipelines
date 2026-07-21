@@ -10,7 +10,6 @@ fi
 
 SKIP_AFFILIATE_STUDIES_IMPORT=0
 SKIP_SCLC_MSKIMPACT_IMPORT=0
-SKIP_LYMPHOMA_IMPORT=0
 
 # localize global variables / jar names and functions
 source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
@@ -72,7 +71,6 @@ miamicancerinstitute_notification_file=$(mktemp $MSK_DMP_TMPDIR/miamicancerinsti
 hartfordhealthcare_notification_file=$(mktemp $MSK_DMP_TMPDIR/hartfordhealthcare-portal-update-notification.$now.XXXXXX)
 ralphlauren_notification_file=$(mktemp $MSK_DMP_TMPDIR/ralphlauren-portal-update-notification.$now.XXXXXX)
 rikengenesisjapan_notification_file=$(mktemp $MSK_DMP_TMPDIR/msk-rikengenesisjapan-portal-update-notification.$now.XXXXXX)
-lymphoma_super_cohort_notification_file=$(mktemp $MSK_DMP_TMPDIR/lymphoma-super-cohort-portal-update-notification.$now.XXXXXX)
 sclc_mskimpact_notification_file=$(mktemp $MSK_DMP_TMPDIR/sclc-mskimpact-portal-update-notification.$now.XXXXXX)
 mskimpact_ped_notification_file=$(mktemp $MSK_DMP_TMPDIR/mskimpact-ped-update-notification.$now.XXXXXX)
 
@@ -129,7 +127,6 @@ IMPORT_FAIL_RALPHLAUREN=0
 IMPORT_FAIL_RIKENGENESISJAPAN=0
 IMPORT_FAIL_MSKIMPACT_PED=0
 IMPORT_FAIL_SCLC_MSKIMPACT=0
-IMPORT_FAIL_LYMPHOMA=0
 
 # -------------------------------------------------------------
 # check database version before importing anything
@@ -226,7 +223,7 @@ fi
 ## END MSK DMP cohorts imports
 
 #-------------------------------------------------------------------------------------------------------------------------------------
-##### set 'CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT' flag to 1 if Kings County, Lehigh Valley, Queens Cancer Center, Miami Cancer Institute, MSKIMPACT Ped, or Lymphoma super cohort succesfully update
+##### set 'CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT' flag to 1 if Kings County, Lehigh Valley, Queens Cancer Center, Miami Cancer Institute, or MSKIMPACT Ped succesfully update
 ####CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=0
 
 if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
@@ -416,30 +413,6 @@ fi
 
 # END SCLCMSKIMPACT import
 
-if ! [[ $SKIP_LYMPHOMA_IMPORT == '1' ]] ; then
-    # IMPORT: LYMPHOMASUPERCOHORT
-    if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER ] ; then
-        printTimeStampedDataProcessingStepMessage "import for lymphoma_super_cohort_fmi_msk study"
-        if import_and_validate "lymphoma_super_cohort_fmi_msk" "msk-fmi-lymphoma-portal" "$lymphoma_super_cohort_notification_file" ; then
-            IMPORT_FAIL_LYMPHOMA=0
-        else
-            IMPORT_FAIL_LYMPHOMA=1
-        fi
-        rm $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER
-    else
-        if [ $DB_VERSION_FAIL -gt 0 ] ; then
-            echo "Not importing LYMPHOMASUPERCOHORT - database version is not compatible"
-        else
-            echo "Not importing LYMPHOMASUPERCOHORT - something went wrong with subsetting clinical studies for Lymphoma super cohort."
-        fi
-    fi
-    if [ $IMPORT_FAIL_LYMPHOMA -gt 0 ] ; then
-        sendImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT import"
-    else
-        sendImportSuccessMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT"
-    fi
-fi
-
 ##### clear persistence cache only if at least one of these studies succesfully updated.
 #####   MSK_KINGSCOUNTY
 #####   MSK_LEHIGHVALLEY
@@ -447,7 +420,6 @@ fi
 #####   MSK_MIAMICANCERINSTITUTE
 #####   MSK_HARTFORDHEALTHCARE
 #####   MSK_RALPHLAUREN
-#####   LYMPHOMASUPERCOHORT
 #####   SCLCMSKIMPACT
 ####if [ $CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT -eq 0 ] ; then
 ####    echo "Failed to update all MSK affiliate studies"
@@ -503,4 +475,4 @@ rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_narrow.txt"
 # leave the full sized data_nonsignedout_mutations.txt files in place even though they are not checked into github 
 # they will be reset when the next cycle begins
 
-exit $(( DB_VERSION_FAIL | IMPORT_FAIL_MSKSOLIDHEME | IMPORT_FAIL_ARCHER | IMPORT_FAIL_KINGS | IMPORT_FAIL_LEHIGH | IMPORT_FAIL_QUEENS | IMPORT_FAIL_MCI | IMPORT_FAIL_HARTFORD | IMPORT_FAIL_RALPHLAUREN | IMPORT_FAIL_RIKENGENESISJAPAN | IMPORT_FAIL_MSKIMPACT_PED | IMPORT_FAIL_SCLC_MSKIMPACT | IMPORT_FAIL_LYMPHOMA ))
+exit $(( DB_VERSION_FAIL | IMPORT_FAIL_MSKSOLIDHEME | IMPORT_FAIL_ARCHER | IMPORT_FAIL_KINGS | IMPORT_FAIL_LEHIGH | IMPORT_FAIL_QUEENS | IMPORT_FAIL_MCI | IMPORT_FAIL_HARTFORD | IMPORT_FAIL_RALPHLAUREN | IMPORT_FAIL_RIKENGENESISJAPAN | IMPORT_FAIL_MSKIMPACT_PED | IMPORT_FAIL_SCLC_MSKIMPACT ))

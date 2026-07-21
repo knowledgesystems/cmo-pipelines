@@ -108,7 +108,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     MSK_RALPHLAUREN_SUBSET_FAIL=0
     MSK_RIKENGENESISJAPAN_SUBSET_FAIL=0
     SCLC_MSKIMPACT_SUBSET_FAIL=0
-    LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=0
 
     GENERATE_MASTERLIST_FAIL=0
 
@@ -460,12 +459,12 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     # -----------------------------------------------------------------------------------------------------------
     # GENERATE CANCER TYPE CASE LISTS AND SUPP DATE ADDED FILES
-    # NOTE: Even though cancer type case lists are not needed for MSKIMPACT, HEMEPACT for the portal
-    # since they are imported as part of MSKSOLIDHEME - the LYMPHOMASUPERCOHORT subsets these source
-    # studies by CANCER_TYPE and ONCOTREE_CODE so we want to keep these fields up-to-date which is
-    # accomplished by running the 'addCancerTypeCaseLists' function
+    # NOTE: The maintenance of the cancer type case lists in the primary cohorts was needed for
+    # the subsetting and merging of samples into the constructed LYMPHOMASUPERCOHORT. Now that
+    # that study is no longer constructed this may no longer be needed, but it is still performed
+    # because it may be useful if we need to subset or import a primary cohort in the future.
 
-    # add "DATE ADDED" info to clinical data for MSK-IMPACT
+    # generate case lists by cancer type and add "DATE ADDED" info to clinical data for MSK-IMPACT
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] && [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
         addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
         upload_to_s3 "$MSK_IMPACT_DATA_HOME/case_lists" "mskimpact/case_lists" "mskimpact-databricks"
@@ -476,7 +475,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         downloadFromS3AllStudies
     fi
 
-    # add "DATE ADDED" info to clinical data for HEMEPACT
+    # generate case lists by cancer type and add "DATE ADDED" info to clinical data for HEMEPACT
     if [ $IMPORT_STATUS_HEME -eq 0 ] && [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
         addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
         upload_to_s3 "$MSK_HEMEPACT_DATA_HOME/case_lists" "mskimpact_heme/case_lists" "mskimpact-databricks"
@@ -487,7 +486,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         downloadFromS3AllStudies
     fi
 
-    # add "DATE ADDED" info to clinical data for ARCHER
+    # generate case lists by cancer type and add "DATE ADDED" info to clinical data for ARCHER
     if [[ $IMPORT_STATUS_ARCHER -eq 0 && $FETCH_CVR_ARCHER_FAIL -eq 0 ]] ; then
         addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher" "data_clinical_mskarcher_data_clinical.txt"
         upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME/case_lists" "mskarcher_unfiltered/case_lists" "mskimpact-databricks"
@@ -1162,112 +1161,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     #--------------------------------------------------------------
-    printTimeStampedDataProcessingStepMessage "subset and merge of mskimpact, hemepact for lymphoma_super_cohort_fmi_msk"
-    # Create lymphoma "super" cohort
-    # Subset MSK-IMPACT and HEMEPACT by Cancer Type
-
-    # first touch meta_sv.txt in mskimpact, hemepact if not already exists - need these to generate merged subsets
-    if [ ! -f $MSK_IMPACT_DATA_HOME/meta_sv.txt ] ; then
-        touch $MSK_IMPACT_DATA_HOME/meta_sv.txt
-    fi
-
-    if [ ! -f $MSK_HEMEPACT_DATA_HOME/meta_sv.txt ] ; then
-        touch $MSK_HEMEPACT_DATA_HOME/meta_sv.txt
-    fi
-
-    # **************************************** ORDER OF SUBSET
-    # now subset sample files with lymphoma cases from mskimpact and hemepact
-    LYMPHOMA_FILTER_CRITERIA="CANCER_TYPE=Blastic Plasmacytoid Dendritic Cell Neoplasm,Histiocytosis,Hodgkin Lymphoma,Leukemia,Mastocytosis,Mature B-Cell Neoplasms,Mature T and NK Neoplasms,Myelodysplastic Syndromes,Myelodysplastic/Myeloproliferative Neoplasms,Myeloproliferative Neoplasms,Non-Hodgkin Lymphoma;ONCOTREE_CODE=AITL,ALCL,ALCLALKN,ALCLALKP,AML,AMLCBFBMYH11,AMLCEBPA,AMLDEKNUP214,AMLGATA2MECOM,AMLMRC,AMLNOS,AMLNPM1,AMLRUNX1,AMLRUNX1RUNX1T1,AMML,APLPMLRARA,BCL,BIALCL,BL,CHL,CLLSLL,CLPDNK,CML,CMLBCRABL1,CMML,CMML0,CMML1,CMML2,DLBCL,DLBCLNOS,EBVDLBCLNOS,ECD,EMALT,ET,ETMF,FL,HCL,HDCN,HGBCLMYCBCL2,HS,LCH,LPL,MALTL,MBCL,MCBCL,MCL,MDS,MDSEB,MDSEB1,MDSEB2,MDSID5Q,MDSMD,MDSMPNU,MDSRS,MDSRSMD,MDSRSSLD,MDSSLD,MEITL,MGUS,MPALBNOS,MPALTNOS,MYCF,MZL,NLPHL,NPTLTFH,ONCOTREE_CODE,PCGDTCL,PCLPD,PCM,PCNSL,PLBL,PMBL,PMF,PTCL,PV,RDD,SEZS,SLL,SM,SMAHN,SMZL,SPB,SS,TAML,THRLBCL,TLGL,TMDS,TMN,TNKL,TPLL,WM"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py --study-id="lymphoma_super_cohort_fmi_msk" --clinical-file="$MSK_IMPACT_DATA_HOME/data_clinical_sample.txt" --filter-criteria="$LYMPHOMA_FILTER_CRITERIA" --subset-filename="$MSK_DMP_TMPDIR/mskimpact_lymphoma_subset.txt"
-    if [ $? -gt 0 ] ; then
-        echo "ERROR! Failed to generate subset of lymphoma samples from MSK-IMPACT. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from MSKIMPACT"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    fi
-    $PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py --study-id="lymphoma_super_cohort_fmi_msk" --clinical-file="$MSK_HEMEPACT_DATA_HOME/data_clinical_sample.txt" --filter-criteria="$LYMPHOMA_FILTER_CRITERIA" --subset-filename="$MSK_DMP_TMPDIR/mskimpact_heme_lymphoma_subset.txt"
-    if [ $? -gt 0 ] ; then
-        echo "ERROR! Failed to generate subset of lymphoma samples from MSK-IMPACT Heme. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from HEMEPACT"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    fi
-
-    # check sizes of subset files before attempting to merge data using these subsets
-    grep -v '^#' $FMI_BATLEVI_DATA_HOME/data_clinical_sample.txt | awk -F '\t' '{if ($2 != "SAMPLE_ID") print $2;}' > $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt
-    if [[ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 && $(wc -l < $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt) -eq 0 ]] ; then
-        echo "ERROR! Subset list $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt is empty. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from source Foundation study"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    fi
-
-    if [[ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 && $(wc -l < $MSK_DMP_TMPDIR/mskimpact_lymphoma_subset.txt) -eq 0 ]] ; then
-        echo "ERROR! Subset list $MSK_DMP_TMPDIR/mskimpact_lymphoma_subset.txt is empty. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from MSKIMPACT produced empty list"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    else
-        cat $MSK_DMP_TMPDIR/mskimpact_lymphoma_subset.txt >> $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt
-    fi
-
-    if [[ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 && $(wc -l < $MSK_DMP_TMPDIR/mskimpact_heme_lymphoma_subset.txt) -eq 0 ]] ; then
-        echo "ERROR! Subset list $MSK_DMP_TMPDIR/mskimpact_heme_lymphoma_subset.txt is empty. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from HEMEPACT produced empty list"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    else
-        cat $MSK_DMP_TMPDIR/mskimpact_heme_lymphoma_subset.txt >> $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt
-    fi
-
-    # merge data from mskimpact and hemepact lymphoma subsets with FMI BAT study
-    if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 ] ; then
-        $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py  -d $LYMPHOMA_SUPER_COHORT_DATA_HOME -i "lymphoma_super_cohort_fmi_msk" -m "true" -s $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $FMI_BATLEVI_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            echo "Lymphoma super cohort subset failed! Lymphoma super cohort study will not be updated in the portal."
-            LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-        else
-            filter_derived_clinical_data $LYMPHOMA_SUPER_COHORT_DATA_HOME
-            if [ $? -gt 0 ] ; then
-                echo "Lymphoma super subset clinical attribute filtering step failed! Study will not be updated in the portal."
-                LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-            else
-                # add metadata headers before importing
-                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $LYMPHOMA_SUPER_COHORT_DATA_HOME/data_clinical* -i $PORTAL_HOME/scripts/cdm_metadata.json
-                if [ $? -gt 0 ] ; then
-                    echo "Error: Adding metadata headers for LYMPHOMA_SUPER_COHORT failed! Study will not be updated in portal."
-                else
-                    # Subset Lymphoma super cohort timeline files
-                    sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh lymphoma_super_cohort_fmi_msk $LYMPHOMA_SUPER_COHORT_DATA_HOME $MSK_SOLID_HEME_DATA_HOME
-                    if [ $? -gt 0 ] ; then
-                        echo "Error: CDM timeline file subset for LYMPHOMA_SUPER_COHORT"
-                    fi
-
-                    touch $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER
-                fi
-            fi
-        fi
-        # remove files we don't need for lymphoma super cohort
-        rm -f $LYMPHOMA_SUPER_COHORT_DATA_HOME/*genie* $LYMPHOMA_SUPER_COHORT_DATA_HOME/seq_date.txt
-    fi
-
-    # check that meta_sv.txt is actually an empty file before deleting from IMPACT and HEMEPACT studies
-    if [ $(wc -l < $MSK_IMPACT_DATA_HOME/meta_sv.txt) -eq 0 ] ; then
-        rm $MSK_IMPACT_DATA_HOME/meta_sv.txt
-    fi
-
-    if [ $(wc -l < $MSK_HEMEPACT_DATA_HOME/meta_sv.txt) -eq 0 ] ; then
-        rm $MSK_HEMEPACT_DATA_HOME/meta_sv.txt
-    fi
-
-    # commit or revert changes for Lymphoma super cohort
-    if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT merge"
-        echo "Lymphoma super cohort subset and/or updates failed! Reverting data to last commit."
-        download_from_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks"
-        # purge split parts of nonsignedout_mutations (these might be present in lymphoma super cohort, if incorrectly pushed to s3)
-        find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
-    else
-        echo "Committing Lymphoma super cohort data"
-        upload_to_s3 "$LYMPHOMA_SUPER_COHORT_DATA_HOME" "lymphoma_super_cohort_fmi_msk" "mskimpact-databricks"
-    fi
-
-    #--------------------------------------------------------------
     # S3 PUSH
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to s3 bucket"
     echo "pushing data from $DMP_DATA_HOME to s3 bucket mskimpact-databricks"
@@ -1455,11 +1348,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo -e "$EMAIL_BODY" | mail -s "SCLCMSKIMPACT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
     fi
 
-    EMAIL_BODY="Failed to subset LYMPHOMASUPERCOHORT data. Subset study will not be updated."
-    if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
-        echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "LYMPHOMASUPERCOHORT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
-    fi
     if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
         # a failure status is sent to the wrapper script here, so:
         #     * the import-dmp-impact-data.sh script will not be executed

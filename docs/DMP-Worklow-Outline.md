@@ -187,8 +187,6 @@
     ***[GITHUB | DMP Repository State: 43](#github-dmp-repository-state-43)***
 **SCLC COHORT SUBSET**
     ***[GITHUB | DMP Repository State: 44](#github-dmp-repository-state-44)***
-**LYMPHOMASUPERCOHORT SUBSET**
-    ***[GITHUB | DMP Repository State: 45](#github-dmp-repository-state-45)***
 
 ## 14. Push Updates to GIT Repository
 **********************************************************************

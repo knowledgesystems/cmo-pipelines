@@ -103,7 +103,6 @@ export MSK_RALPHLAUREN_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/ralphlauren_import_trigger
 export MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/msk_rikengenesisjapan_import_trigger.txt
 export MSK_SCLC_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/sclc_mskimpact_import_trigger.txt
 export MSKIMPACT_PED_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/mskimpact_ped_import_trigger.txt
-export LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER=$MSK_DMP_TMPDIR/lymphoma_super_cohort_fmi_msk_import_trigger.txt
 # data directories
 export MSK_IMPACT_DATA_HOME=$DMP_DATA_HOME/mskimpact
 export MSK_RAINDANCE_DATA_HOME=$DMP_DATA_HOME/mskraindance
@@ -128,13 +127,10 @@ export MSK_RALPHLAUREN_DATA_HOME=$DMP_DATA_HOME/msk_ralphlauren
 export MSK_RIKENGENESISJAPAN_DATA_HOME=$DMP_DATA_HOME/msk_rikengenesisjapan
 export MSK_SCLC_DATA_HOME=$DMP_DATA_HOME/sclc_mskimpact_2017
 export MSKIMPACT_PED_DATA_HOME=$DMP_DATA_HOME/mskimpact_ped
-export LYMPHOMA_SUPER_COHORT_DATA_HOME=$DMP_DATA_HOME/lymphoma_super_cohort_fmi_msk
 export MSK_EXTRACT_COHORT_DATA_HOME=$MSK_MIND_DATA_HOME/datahub/msk_extract_cohort2_2019
 export MSK_SPECTRUM_COHORT_DATA_HOME=$MSK_SHAHLAB_DATA_HOME/msk_spectrum
 export MSK_CHORD_DATA_HOME=$CDSI_DATA_HOME/msk-chord
 export AZ_MSK_IMPACT_DATA_HOME=$AZ_DATA_HOME/az_mskimpact
-# read-only data directories
-export FMI_BATLEVI_DATA_HOME=$FOUNDATION_DATA_HOME/mixed/lymphoma/mskcc/foundation/lymph_landscape_fmi_201611
 # other data directories
 export CMO_ACCESS_TMPDIR=$PORTAL_HOME/tmp/import-cron-cmo-access
 export CMO_ACCESS_DATA_HOME=$PORTAL_DATA_HOME/cmo-access/mixed_MSK_cfDNA_RESEARCH_ACCESS
