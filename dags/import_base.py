@@ -192,17 +192,12 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 db_properties_filepath,
                 color_swap_config_filepath,
             ),
-            "verify_import_not_in_progress": f"""
-                set_update_process_state_script="{scripts_dir}/set_update_process_state.sh"
-                manage_db_properties="{db_properties_filepath}"
-                if ! "$set_update_process_state_script" "$manage_db_properties" running ; then
-                    echo "Error: Another import process is currently running. The import cannot proceed while another import is in progress." >&2
-                    exit 1
-                fi
-                "$set_update_process_state_script" "$manage_db_properties" abandoned > /dev/null 2>&1
-                echo "Import not in progress. Proceeding."
-                """
-            ,
+            "verify_import_not_in_progress": _script(
+                scripts_dir,
+                "airflow-verify-not-running.sh",
+                scripts_dir,
+                db_properties_filepath,
+            ),
             "clone_database": _script(
                 scripts_dir,
                 "airflow-clone-db.sh",

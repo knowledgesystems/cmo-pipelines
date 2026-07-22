@@ -13,18 +13,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # localize global variables / jar names and functions
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
-    # Verify that no import is currently in progress via the management database.
-    # Try to acquire the "running" lock as a test. If this fails, another import
-    # (e.g. from the Airflow DAG) is in progress.
-    SET_UPDATE_PROCESS_STATE_SCRIPT="$PORTAL_HOME/scripts/set_update_process_state.sh"
-    MSK_MANAGE_DB_PROPERTIES="/data/portal-cron/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties"
-    if ! "$SET_UPDATE_PROCESS_STATE_SCRIPT" "$MSK_MANAGE_DB_PROPERTIES" running ; then
-        echo "`date`: Error: Another import process is currently running (management database status indicates an import is in progress). The DMP data fetch cannot proceed while an import is running." >&2
-        exit 1
-    fi
-    # Release the lock immediately — we just wanted to verify no import was running
-    "$SET_UPDATE_PROCESS_STATE_SCRIPT" "$MSK_MANAGE_DB_PROPERTIES" abandoned > /dev/null 2>&1
-
     # Merge biobank patient clinical data when present.
     # Clinical merge failure is non-fatal; an existing biobank timeline file is kept for CDM timeline merge.
     #
