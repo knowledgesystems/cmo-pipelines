@@ -55,16 +55,15 @@ function output_whether_preimport_steps_successfully_completed() {
         update_status_is_valid="yes"
     fi
     if [ $update_status_is_valid == "yes" ] ; then
-        # Attempt to abandon any prior incomplete import attempt. Detect if already running.
+        # Check if another import is already in progress (e.g. from the Airflow CMO MSK import DAG)
         if ! "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" running ; then 
-            echo "Warning : the update management database showed that a prior update attempt seemed to be running." 2>&1
-            echo "    Since this script is the only script which should be used to update the msk portal database," 2>&1
-            echo "    and because this script will not run if a run is in progress, we are inferring that the prior run" 2>&1
-            echo "    is no longer running and the update management database is incorrect. However, this inference will" 2>&1
-            echo "    no longer be valid if we introduce any other processes which might independently run an update" 2>&1
-            echo "    into the msk portal database. The update management database has been reset by abandoning the attempt." 2>&1
+            echo "Error : the update management database shows an import is already in progress (status = 'running')." >&2
+            echo "    This could be the Airflow CMO MSK import DAG or a prior DMP wrapper run." >&2
+            echo "    Aborting this run to avoid concurrent data fetches and database imports." >&2
+            send_slack_message_to_channel "#msk-pipeline-logs" "string" \
+                "MSK portal nightly import skipped — another import is already in progress (management DB status is 'running'). You can re-run '$PORTAL_HOME/scripts/fetch-and-import-dmp-data-wrapper.sh' manually once the current import finishes."
+            exit 1
         fi
-        "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned > /dev/null 2>&1
         # Launch the preimport setup script as a background process. This runs for about 2 hours and can run in parallel with fetches.
         rm "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH"
         nohup "$MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH" "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH" > $MSK_PREIMPORT_STEPS_OUTPUT_FILEPATH 2>&1 &
