@@ -40,7 +40,7 @@ import java.io.OutputStream;
 
 public class PausingHttpHandler implements HttpHandler {
 
-    private long pausePeriodMillis;
+    private volatile long pausePeriodMillis;
     private String expectedResponseContentType;
     private String expectedResponseBody;
     private boolean requestCausesServerError;
