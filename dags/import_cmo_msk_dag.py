@@ -15,7 +15,9 @@ def _wire(tasks: dict[str, object]) -> None:
 
     tasks["data_repos"] >> tasks["verify_management_state"]
 
-    tasks["verify_management_state"] >> [
+    tasks["verify_management_state"] >> tasks["verify_import_not_in_progress"]
+
+    tasks["verify_import_not_in_progress"] >> [
         tasks["fetch_data"],
         tasks["clone_database"]
     ]
@@ -47,6 +49,7 @@ _CMO_MSK_CONFIG = ImporterConfig(
     task_names=(
         "data_repos",
         "verify_management_state",
+        "verify_import_not_in_progress",
         "fetch_data",
         "clone_database",
         "setup_import",

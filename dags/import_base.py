@@ -192,6 +192,12 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 db_properties_filepath,
                 color_swap_config_filepath,
             ),
+            "verify_import_not_in_progress": _script(
+                scripts_dir,
+                "airflow-verify-not-running.sh",
+                scripts_dir,
+                db_properties_filepath,
+            ),
             "clone_database": _script(
                 scripts_dir,
                 "airflow-clone-db.sh",
