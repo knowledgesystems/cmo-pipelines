@@ -119,6 +119,13 @@ function load_color_swap_config() {
     read_map_from_yaml HOST_TO_INGRESS_NAME_MAP "$config_path" '.host_to_ingress_name_map'
     read_map_from_yaml HOST_TO_INGRESS_TYPE_MAP "$config_path" '.host_to_ingress_type_map'
     read_map_from_yaml HOST_TO_INGRESS_YAML_FILEPATH_MAP "$config_path" '.host_to_ingress_yaml_filepath_map'
+    # optional : ArgoCD apps whose auto-sync/self-heal is toggled during the transfer.
+    # default to an empty array when the key is absent (read_array_from_yaml hard-exits on a missing path).
+    if [ "$("$YQ_BINARY" -r '.argocd_app_list | type' "$config_path")" == "!!seq" ] ; then
+        read_array_from_yaml ARGOCD_APP_LIST "$config_path" '.argocd_app_list'
+    else
+        ARGOCD_APP_LIST=()
+    fi
     if [ "$WARM_CACHES" == "true" ]; then
         CACHE_WARMING_POD_LIST_FILEPATH=$(read_scalar_from_yaml "$config_path" '.cache_warming_pod_list_filepath')
         CACHE_WARMING_POD_SUBLIST_FILEPATH=$(read_scalar_from_yaml "$config_path" '.cache_warming_pod_sublist_filepath')
@@ -890,6 +897,35 @@ function adjust_replica_counts_in_deployment_yaml_files() {
     done
 }
 
+# Disable auto-sync and self-heal so ArgoCD does not revert the in-cluster swap before it is
+# committed to the deployment repo.
+function disable_argocd_auto_sync() {
+    local app
+    if [ ${#ARGOCD_APP_LIST[@]} -eq 0 ] ; then
+        return 0
+    fi
+    for app in "${ARGOCD_APP_LIST[@]}" ; do
+        if ! kubectl --kubeconfig $CLUSTER_KUBECONFIG patch application "$app" -n argocd --type=merge -p '{"spec":{"syncPolicy":null}}' ; then
+            echo "warning : failed to disable argocd auto-sync" >&2
+            return 1
+        fi
+    done
+}
+
+# Re-enable auto-sync and self-heal (prune left off). Restores the steady-state GitOps behavior.
+function enable_argocd_auto_sync() {
+    local app
+    if [ ${#ARGOCD_APP_LIST[@]} -eq 0 ] ; then
+        return 0
+    fi
+    for app in "${ARGOCD_APP_LIST[@]}" ; do
+        if ! kubectl --kubeconfig $CLUSTER_KUBECONFIG patch application "$app" -n argocd --type=merge -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}' ; then
+            echo "warning : failed to enable argocd auto-sync" >&2
+            return 1
+        fi
+    done
+}
+
 #######################################
 # all involved yaml file changes (ingress, deployment, ...) are committed to a git changeset, which is pushed to the remote repo
 # Gobals:
@@ -996,6 +1032,12 @@ function main() {
     check_that_git_repo_clone_is_current
     /data/portal-cron/scripts/authenticate_service_account.sh "$SERVICE_ACCOUNT"
     check_that_git_repo_clone_matches_cluster_config
+
+    # disable ArgoCD auto-sync/self-heal before mutating the cluster so it does not revert the
+    # swap before we commit. The EXIT trap re-enables it on any exit -- on a mid-swap failure,
+    # self-heal coming back on reverts the cluster to the repo (last good prod) for a clean rollback.
+    trap enable_argocd_auto_sync EXIT
+    disable_argocd_auto_sync
 
     # phase : scale the deployments to get ready to switch traffic
     echo "starting up initial minimal deployment of $DESTINATION_COLOR"
