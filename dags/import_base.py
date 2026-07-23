@@ -193,6 +193,7 @@ def build_import_dag(config: ImporterConfig) -> DAG:
                 color_swap_config_filepath,
             ),
             "verify_import_not_in_progress": f"""
+                source {scripts_dir}/automation-environment.sh
                 set_update_process_state_script="{scripts_dir}/set_update_process_state.sh"
                 manage_db_properties="{db_properties_filepath}"
                 if ! "$set_update_process_state_script" "$manage_db_properties" running ; then
