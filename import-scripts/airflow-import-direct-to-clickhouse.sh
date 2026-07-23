@@ -42,6 +42,13 @@ case "$PORTAL_DATABASE" in
     PORTAL_NAME="genie-portal"
     ONCOTREE_VERSION="oncotree_2019_12_01"
     ;;
+  msk)
+    TMP_DIR_NAME="import-cron-msk-cmo"
+    IMPORTER_NAME="msk"
+    LOG_FILE_NAME="msk-cmo-importer.log"
+    PORTAL_NAME="msk-automation-portal"
+    ONCOTREE_VERSION="oncotree_candidate_release"
+    ;;
   *)
     echo "Unsupported portal database: $PORTAL_DATABASE" >&2
     exit 1
@@ -63,7 +70,7 @@ if [ "$destination_database_color" == "unset" ] ; then
     exit 1
 fi
 
-# eg. genie-aws-importer-blue.jar
+# eg. genie-importer-blue.jar
 IMPORTER_JAR_FILENAME="/data/portal-cron/lib/${IMPORTER_NAME}-importer-${destination_database_color}.jar"
 
 tmp="${PORTAL_HOME}/tmp/${TMP_DIR_NAME}"
