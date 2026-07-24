@@ -22,8 +22,20 @@
 #######################
 # tool / binary paths (PATH lets the scripts find clickhouse-client, kubectl, aws)
 #######################
-export JAVA_HOME="/usr/lib/jdk-21.0.2"
-export JAVA_BINARY="$JAVA_HOME/bin/java"
+# JAVA_HOME/JAVA_BINARY: this image installs NO JDK — the JAR importer these
+# feed (via airflow-import-direct-to-clickhouse.sh) is not present here, so they
+# are inert. The old hardcoded /usr/lib/jdk-21.0.2 pointed at a path that does
+# not exist in this image, which would mask a real "java missing" error behind a
+# confusing one. Resolve from PATH instead: empty when java is absent (so any
+# accidental $JAVA_BINARY call fails loudly, matching this file's safety intent),
+# and self-correcting if a JDK is ever added (e.g. /opt/java/openjdk).
+if _java_bin="$(command -v java 2>/dev/null)"; then
+    export JAVA_HOME="$(dirname "$(dirname "$_java_bin")")"
+    export JAVA_BINARY="$_java_bin"
+else
+    export JAVA_HOME=""
+    export JAVA_BINARY=""
+fi
 export GIT_BINARY=/usr/bin/git
 export YQ_BINARY=/usr/local/bin/yq
 export PATH="/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/bin"

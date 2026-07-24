@@ -10,13 +10,22 @@ FROM apache/airflow:2.10.5
 
 USER root
 
+# clickhouse-client via the apt repo (matches docker/Dockerfile). The old
+# `curl https://clickhouse.com/ | sh && clickhouse install` self-installer pulled
+# a ~177 MB binary that decompressed to ~650 MB in-layer and exhausted the build
+# VM's disk (see docker/TEST_RESULTS.md); it was also an unpinned pipe-to-shell.
+# The apt client package is small and needs no decompression step.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       perl \
-  && rm -rf /var/lib/apt/lists/* \
-  && cd /tmp && curl -fsSL https://clickhouse.com/ | sh \
-  && ./clickhouse install --noninteractive \
-  && rm -f /tmp/clickhouse
+      ca-certificates \
+      gnupg \
+  && curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' \
+      | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg \
+  && echo 'deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main' \
+      > /etc/apt/sources.list.d/clickhouse.list \
+  && apt-get update && apt-get install -y --no-install-recommends clickhouse-client \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copy JDK from builder stage — avoids apt source issues on the Airflow base image
 COPY --from=jar_builder /opt/java/openjdk /opt/java/openjdk

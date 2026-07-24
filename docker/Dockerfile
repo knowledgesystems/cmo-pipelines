@@ -77,25 +77,24 @@ RUN pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements.txt \
         --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
 
 # ── clickhouse import-support scripts the DAG's bash tasks call but that don't
-#    live in this repo (fetched from cbioportal-core). They source each other via
-#    $this_script_dir, so all 7 must land together in the scripts dir. Fetched
-#    before the content COPY so this layer caches independently of local edits
-#    (re-runs only when CBIOPORTAL_CORE_REF changes); pin to a commit SHA later. ──
-ARG CBIOPORTAL_CORE_REF=containerized
+#    live in this repo (maintained in cbioportal-core). They source each other
+#    via $this_script_dir, so the whole clickhouse_import_support/ dir must land
+#    together in the scripts dir. Sparse-clone just that subdir (blob:none keeps
+#    it cheap). Fetched before the content COPY so this layer caches independently
+#    of local edits — it re-runs only when CBIOPORTAL_CORE_REF changes.
+#
+#    Pinned to a commit SHA (not a branch) so a rebuild can't silently pick up
+#    different core scripts. Bump this to advance; resolve with:
+#      git ls-remote https://github.com/cBioPortal/cbioportal-core.git containerized
+ARG CBIOPORTAL_CORE_REF=5f5a064a812dc7ae6594e0f3b782fba3e9f8efca
 RUN set -eux; \
-    base="https://raw.githubusercontent.com/cBioPortal/cbioportal-core/${CBIOPORTAL_CORE_REF}/scripts/clickhouse_import_support"; \
-    for f in \
-        set_update_process_state.sh \
-        get_database_currently_in_production.sh \
-        drop_tables_in_clickhouse_database.sh \
-        clone_clickhouse_database.sh \
-        synchronize_user_tables_between_databases.sh \
-        parse_property_file_functions.sh \
-        clickhouse_client_command_line_functions.sh \
-    ; do \
-        curl -fsSL "$base/$f" -o "/data/portal-cron/scripts/$f"; \
-    done; \
-    chmod +x /data/portal-cron/scripts/*.sh
+    git clone --filter=blob:none --sparse \
+        https://github.com/cBioPortal/cbioportal-core.git /tmp/cbioportal-core; \
+    git -C /tmp/cbioportal-core sparse-checkout set scripts/clickhouse_import_support; \
+    git -C /tmp/cbioportal-core checkout "${CBIOPORTAL_CORE_REF}"; \
+    cp /tmp/cbioportal-core/scripts/clickhouse_import_support/*.sh /data/portal-cron/scripts/; \
+    chmod +x /data/portal-cron/scripts/*.sh; \
+    rm -rf /tmp/cbioportal-core
 
 # ── Content (changes most frequently; copied last for cache efficiency) ──
 # Only the import-scripts the import_public_hackathon DAG executes, plus their
@@ -119,18 +118,6 @@ COPY --chown=airflow:0 docker/automation-environment.sh /data/portal-cron/script
 # DAG code so the task pod can `from dags.utils... import` (DAG appends its parent
 # dir to sys.path; dags/utils/__init__.py already exists).
 COPY --chown=airflow:0 dags/ /opt/airflow/dags/
-
-# ── Supplementary scripts from cbioportal-core (not in cmo-pipelines) ──
-# get_database_currently_in_production.sh and related ClickHouse helpers are
-# maintained in cbioportal-core. Sparse-clone just that subdirectory.
-USER root
-RUN git clone --depth 1 --filter=blob:none --sparse --branch containerized \
-        https://github.com/cBioPortal/cbioportal-core.git /tmp/cbioportal-core \
-    && git -C /tmp/cbioportal-core sparse-checkout set scripts/clickhouse_import_support \
-    && cp /tmp/cbioportal-core/scripts/clickhouse_import_support/*.sh /data/portal-cron/scripts/ \
-    && chown airflow:0 /data/portal-cron/scripts/*.sh \
-    && rm -rf /tmp/cbioportal-core
-USER airflow
 
 ENV PORTAL_HOME=/data/portal-cron \
     PORTAL_SCRIPTS_DIRECTORY=/data/portal-cron/scripts
