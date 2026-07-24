@@ -1,3 +1,14 @@
+# Airflow image bundling the cbioportal-core importer JAR + its ClickHouse
+# helper scripts, for the DAG tasks that run the JAR-based import.
+#
+# IMPORTANT — build context is the cbioportal-core repo, NOT cmo-pipelines. The
+# COPYs below (pom.xml, src/, scripts/, requirements.txt) are cbioportal-core's
+# layout; they do not exist at the cmo-pipelines root, so this file cannot build
+# from here. Build it from a cbioportal-core checkout, e.g.:
+#   docker build --platform linux/amd64 \
+#     -f /path/to/cmo-pipelines/docker/core.Dockerfile \
+#     -t cbioportal-core:dev /path/to/cbioportal-core
+#
 # -------- Stage 1: build the JAR --------
 FROM maven:3-eclipse-temurin-21 AS jar_builder
 WORKDIR /app
@@ -6,7 +17,9 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # -------- Stage 2: Airflow + cbioportal tools --------
-FROM apache/airflow:2.10.5
+# Pin the Python version explicitly so the base can't drift (matches
+# docker/Dockerfile); the plain 2.10.5 tag currently resolves to python3.12.
+FROM apache/airflow:2.10.5-python3.12
 
 USER root
 
@@ -43,7 +56,14 @@ RUN touch /application.properties /clickhouse.sql
 
 USER airflow
 
-# boto3 is needed by the DAG tasks for S3 downloads
+# cbioportal-core's requirements.txt is installed as-is (unconstrained): it pins
+# legacy Jinja2/markupsafe that predate this Airflow base, and applying the
+# Airflow constraints file here would hard-conflict and fail the build. Reconciling
+# those pins with Airflow belongs in cbioportal-core, not here.
 COPY requirements.txt /tmp/cbioportal_requirements.txt
-RUN pip install --no-cache-dir -r /tmp/cbioportal_requirements.txt && \
-    pip install --no-cache-dir boto3
+RUN pip install --no-cache-dir -r /tmp/cbioportal_requirements.txt
+# boto3 is the cmo-pipelines addition (DAG tasks use it for S3 downloads). Pin it
+# under the Airflow constraints file so it resolves to an Airflow-compatible
+# version instead of floating to whatever is latest.
+RUN pip install --no-cache-dir boto3 \
+      --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"

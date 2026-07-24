@@ -1,0 +1,41 @@
+# Build context for docker/Dockerfile (the cmo-import image), which builds from
+# the repo root but only COPYs: docker/requirements.txt, docker/automation-environment.sh,
+# a handful of import-scripts/*.sh, and dags/. Everything excluded below is dead
+# context — keeping it out speeds builds and avoids cache-busting on unrelated edits.
+#
+# Only paths the Dockerfile actually COPYs must survive: import-scripts/, dags/, docker/.
+# (docker/core.Dockerfile builds from a cbioportal-core checkout, so this file
+# does not apply to it.)
+
+# VCS / CI / repo meta
+.git
+.gitignore
+.github
+.circleci
+
+# Pipeline subtrees unrelated to the import image
+common/
+crdb/
+cvr/
+ddp/
+redcap/
+integration-tests/
+docs/
+
+# Repo-root files not needed by the image
+LICENSE
+Makefile
+README.md
+pom.xml
+
+# Docker planning/test docs (not needed inside the image)
+docker/*.md
+
+# Editor / OS / Python cruft
+.idea/
+.vscode/
+*.iml
+.DS_Store
+**/__pycache__/
+**/*.py[cod]
+*.log
