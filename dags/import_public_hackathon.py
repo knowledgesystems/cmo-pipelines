@@ -11,7 +11,7 @@ blue/green color themselves (via get_database_currently_in_production.sh).
 
 The S3/validation/notification tasks stay as TaskFlow @task functions and resolve their
 clients through SecretManager (see dags/utils/). The config-file paths and S3 bucket are
-hardcoded constants for now; only ``cancer_study_ids`` is a DAG param.
+hardcoded constants. Only ``cancer_study_ids`` is a DAG param.
 """
 import json
 import logging
@@ -21,7 +21,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime, timedelta
-from inspect import signature
 from airflow.decorators import dag, task
 from airflow.operators.bash import BashOperator
 from airflow.exceptions import AirflowException, AirflowSkipException
@@ -29,25 +28,6 @@ from airflow.models import Variable
 from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 from kubernetes.client import models as k8s
-
-def skippable(func):
-    """Decorator: skip the task if it's not in the run_tasks param (empty = run all)."""
-    task_id = func.__name__
-    func_params = set(signature(func).parameters)
-
-    def wrapper(*args, **kwargs):
-        run_tasks = kwargs.pop("run_tasks", None)
-        if not _should_run(task_id, run_tasks):
-            logger.info("Skipped per run_tasks param: %s", task_id)
-            return None
-        # Only forward kwargs the original function actually expects.
-        filtered = {k: v for k, v in kwargs.items() if k in func_params}
-        return func(*args, **filtered)
-
-    wrapper.__name__ = func.__name__
-    wrapper.__qualname__ = func.__qualname__
-    wrapper.__doc__ = func.__doc__
-    return wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -372,22 +352,6 @@ _DEFAULT_ARGS = {
 }
 
 
-_ALL_TASK_IDS = [
-    "verify_studies_exist",
-    "verify_import_not_in_progress",
-    "pull_and_validate_study",
-    "collect_valid_studies",
-    "import_into_standby_database",
-    "create_derived_tables_in_standby_database",
-    "send_slack_notifications",
-]
-
-
-def _should_run(task_id: str, run_tasks: list[str] | None) -> bool:
-    """Returns True if the task should run (empty/None list = run all)."""
-    return not run_tasks or task_id in run_tasks
-
-
 @dag(
     dag_id="import_public_hackathon",
     default_args=_DEFAULT_ARGS,
@@ -404,19 +368,11 @@ def _should_run(task_id: str, run_tasks: list[str] | None) -> bool:
             description="Select one or more cancer study IDs to import. Run refresh_study_list to update the list.",
             title="Cancer Study IDs",
         ),
-        "run_tasks": Param(
-            [],
-            type=["array", "null"],
-            examples=_ALL_TASK_IDS,
-            description="Leave empty to run all tasks, or select specific tasks to run.",
-            title="Run Tasks (empty = all)",
-        ),
     },
 )
 def import_public_hackathon():
     # ── 1 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
-    @skippable
     def verify_studies_exist(study_ids: list[str]) -> list[str]:
         """All-or-nothing: every requested study must exist in the S3 mount, else fail the DAG."""
         _log_node_info()
@@ -468,7 +424,6 @@ def import_public_hackathon():
 
     # ── 3 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
-    @skippable
     def verify_import_not_in_progress(clickhouse_config_file: str) -> None:
         """Gate: fail if the management DB reports an import already running.
 
@@ -506,7 +461,6 @@ def import_public_hackathon():
 
     # ── 6 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE_VALIDATE)
-    @skippable
     def pull_and_validate_study(study_id: str) -> str | None:
         import pathlib
         import subprocess
@@ -537,7 +491,6 @@ def import_public_hackathon():
 
     # ── 8 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
-    @skippable
     def collect_valid_studies(results: list) -> list[str]:
         valid = [sid for sid in (results or []) if sid is not None]
         if not valid:
@@ -547,7 +500,6 @@ def import_public_hackathon():
 
     # ── 9 ──────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE_IMPORT)
-    @skippable
     def import_into_standby_database(valid_studies: list[str]):
         import subprocess
 
@@ -586,7 +538,6 @@ def import_public_hackathon():
 
     # ── 10 ─────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE_IMPORT)
-    @skippable
     def create_derived_tables_in_standby_database():
         import subprocess
 
@@ -645,7 +596,6 @@ def import_public_hackathon():
 
     # ── 13 ─────────────────────────────────────────────────────────────
     @task(executor_config=_POD_OVERRIDE)
-    @skippable
     def send_slack_notifications() -> None:
         """Posts the import result to Slack."""
         # TODO: hook = SecretManager.slack_hook()
@@ -653,13 +603,13 @@ def import_public_hackathon():
         logger.info("[STUB] send_slack_notifications")
 
     # ── Instantiate tasks in execution order ─────────────────────────
-    t_found_studies                  = verify_studies_exist("{{ params.cancer_study_ids }}", run_tasks="{{ params.run_tasks }}")
-    t_verify_import_not_in_progress  = verify_import_not_in_progress(CLICKHOUSE_CONFIG_FILE, run_tasks="{{ params.run_tasks }}")
-    t_pull_and_validate              = pull_and_validate_study.partial(run_tasks="{{ params.run_tasks }}").expand(study_id=t_found_studies)
-    t_collect_valid                  = collect_valid_studies(t_pull_and_validate, run_tasks="{{ params.run_tasks }}")
-    t_import                         = import_into_standby_database(t_collect_valid, run_tasks="{{ params.run_tasks }}")
-    t_create_derived_tables          = create_derived_tables_in_standby_database(run_tasks="{{ params.run_tasks }}")
-    t_send_slack_notifications       = send_slack_notifications(run_tasks="{{ params.run_tasks }}")
+    t_found_studies                  = verify_studies_exist("{{ params.cancer_study_ids }}")
+    t_verify_import_not_in_progress  = verify_import_not_in_progress(CLICKHOUSE_CONFIG_FILE)
+    t_pull_and_validate              = pull_and_validate_study.partial().expand(study_id=t_found_studies)
+    t_collect_valid                  = collect_valid_studies(t_pull_and_validate)
+    t_import                         = import_into_standby_database(t_collect_valid)
+    t_create_derived_tables          = create_derived_tables_in_standby_database()
+    t_send_slack_notifications       = send_slack_notifications()
 
     # Sequential gate chain
     (
