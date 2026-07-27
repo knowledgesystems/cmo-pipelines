@@ -361,6 +361,13 @@ _DEFAULT_ARGS = {
     max_active_runs=1,
     render_template_as_native_obj=True,
     params={
+        "database": Param(
+            "public",
+            type="string",
+            enum=["containerized", "public"],
+            description="Which database environment to import into.",
+            title="Database",
+        ),
         "cancer_study_ids": Param(
             [],
             type="array",
