@@ -64,6 +64,8 @@ function output_whether_preimport_steps_successfully_completed() {
                 "MSK portal nightly import skipped — another import is already in progress (management DB status is 'running'). You can re-run '$PORTAL_HOME/scripts/fetch-and-import-dmp-data-wrapper.sh' manually once the current import finishes."
             exit 1
         fi
+        # Reset the state so that the preimport steps script can set it to 'running' itself.
+        "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned > /dev/null 2>&1
         # Launch the preimport setup script as a background process. This runs for about 2 hours and can run in parallel with fetches.
         rm "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH"
         nohup "$MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH" "$MSK_PREIMPORT_STEPS_STATUS_FILEPATH" > $MSK_PREIMPORT_STEPS_OUTPUT_FILEPATH 2>&1 &
