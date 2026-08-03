@@ -63,8 +63,8 @@ def _log_node_info() -> None:
         logger.warning("/proc/meminfo not found")
 
 
-K8S_IMAGE            = "jamesko0/cmo-import:dev"
-K8S_IMAGE_VALIDATE   = "averyniceday/hackathon-import:latest"
+K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo:dev"
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core:dev"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
 STUDY_LIST_VARIABLE_KEY = "available_study_ids"
