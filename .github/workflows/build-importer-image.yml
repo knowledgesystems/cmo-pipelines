@@ -11,13 +11,13 @@
 #   workflow_dispatch    - manual, with an optional ref override
 #
 # schedule/repository_dispatch/workflow_dispatch only run the copy of this file
-# on the default branch. While it lives on import-hackathon, only the push
-# trigger fires.
+# on the default branch (master). While it lives on import-hackathon, only the
+# push trigger fires.
 name: Build importer image
 
 on:
   push:
-    branches: [import-hackathon]
+    branches: [master]
   schedule:
     # Every 6 hours; the build is skipped when the core SHA has not moved.
     - cron: '17 */6 * * *'

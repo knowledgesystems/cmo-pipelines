@@ -12,7 +12,7 @@ name: Build cbioportal-core image
 
 on:
   push:
-    branches: [import-hackathon]
+    branches: [master]
     paths:
       - docker/core.Dockerfile
       - .github/workflows/build-core-image.yml
