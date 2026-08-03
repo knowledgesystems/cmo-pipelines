@@ -152,6 +152,7 @@ def _script(script_name: str, *args: object, source_automation_env: bool = False
 _POD_OVERRIDE = {
     "pod_override": k8s.V1Pod(
         spec=k8s.V1PodSpec(
+            image_pull_secrets=[k8s.V1LocalObjectReference(name="ghcr-pull")],
             security_context=k8s.V1PodSecurityContext(fs_group=1000),
             node_selector={"workload": "airflow-importer-dag"},
             tolerations=[
@@ -268,6 +269,7 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
     return {
         "pod_override": k8s.V1Pod(
             spec=k8s.V1PodSpec(
+                image_pull_secrets=[k8s.V1LocalObjectReference(name="ghcr-pull")],
                 security_context=k8s.V1PodSecurityContext(fs_group=1000),
                 node_selector={"workload": "airflow-importer-dag"},
                 tolerations=[
