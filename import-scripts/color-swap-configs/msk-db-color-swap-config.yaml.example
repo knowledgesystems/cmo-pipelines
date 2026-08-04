@@ -13,10 +13,10 @@ green_deployment_list:
 deployment_to_full_replica_count_map:
   eks-msk-blue: 2
   eks-msk-green: 2
-  #eks-msk-beta-blue: 2
-  #eks-msk-beta-green: 2
-  eks-msk-beta-blue: 0
-  eks-msk-beta-green: 0
+  eks-msk-beta-blue: 1
+  eks-msk-beta-green: 1
+  #eks-msk-beta-blue: 0
+  #eks-msk-beta-green: 0
   eks-private-blue: 1
   eks-private-green: 1
   eks-sclc-blue: 1
@@ -43,10 +43,10 @@ host_to_service_map:
   blue:
     cbioportal.mskcc.org: eks-msk-blue
     cbioportal.aws.mskcc.org: eks-msk-blue
-    #beta.cbioportal.mskcc.org: eks-msk-beta-blue
-    #beta.cbioportal.aws.mskcc.org: eks-msk-beta-blue
-    beta.cbioportal.mskcc.org: eks-msk-beta-offline
-    beta.cbioportal.aws.mskcc.org: eks-msk-beta-offline
+    beta.cbioportal.mskcc.org: eks-msk-beta-blue
+    beta.cbioportal.aws.mskcc.org: eks-msk-beta-blue
+    #beta.cbioportal.mskcc.org: eks-msk-beta-offline
+    #beta.cbioportal.aws.mskcc.org: eks-msk-beta-offline
     private.cbioportal.mskcc.org: eks-private-blue
     private.cbioportal.aws.mskcc.org: eks-private-blue
     sclc.cbioportal.mskcc.org: eks-sclc-blue
@@ -54,10 +54,10 @@ host_to_service_map:
   green:
     cbioportal.mskcc.org: eks-msk-green
     cbioportal.aws.mskcc.org: eks-msk-green
-    #beta.cbioportal.mskcc.org: eks-msk-beta-green
-    #beta.cbioportal.aws.mskcc.org: eks-msk-beta-green
-    beta.cbioportal.mskcc.org: eks-msk-beta-offline
-    beta.cbioportal.aws.mskcc.org: eks-msk-beta-offline
+    beta.cbioportal.mskcc.org: eks-msk-beta-green
+    beta.cbioportal.aws.mskcc.org: eks-msk-beta-green
+    #beta.cbioportal.mskcc.org: eks-msk-beta-offline
+    #beta.cbioportal.aws.mskcc.org: eks-msk-beta-offline
     private.cbioportal.mskcc.org: eks-private-green
     private.cbioportal.aws.mskcc.org: eks-private-green
     sclc.cbioportal.mskcc.org: eks-sclc-green
