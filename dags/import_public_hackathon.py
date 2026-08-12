@@ -4,7 +4,10 @@ validation/import tasks run the cbioportal-core scripts directly."""
 import json
 import logging
 import os
+import subprocess
 import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
@@ -16,6 +19,90 @@ from airflow.utils.trigger_rule import TriggerRule
 from kubernetes.client import models as k8s
 
 logger = logging.getLogger(__name__)
+
+
+def _run_and_stream(
+    cmd: list[str],
+    check: bool = False,
+    timeout: int | None = None,
+    **kwargs,
+) -> "subprocess.CompletedProcess":
+    """Run a command, streaming its stdout/stderr via ``logging`` in real time, then
+    return a ``CompletedProcess`` with full captured output for post-hoc inspection.
+
+    Uses two daemon threads to drain stdout and stderr concurrently, which avoids
+    deadlocks on pipe buffers while preserving the distinction between the two streams.
+    For Python subprocesses the ``-u`` flag is automatically appended so output is
+    unbuffered (no long silences during import).
+    """
+    import subprocess
+    import sys as _sys
+    import threading
+
+    # If running a Python script, add -u for unbuffered output.
+    # Check only the first flag position to avoid matching a path argument.
+    if cmd and cmd[0] == _sys.executable and (len(cmd) < 2 or cmd[1] != "-u"):
+        cmd = [cmd[0], "-u"] + cmd[1:]
+
+    logger.info("Running: %s", " ".join(str(c) for c in cmd))
+
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+        **kwargs,
+    )
+
+    stdout_lines: list[str] = []
+    stderr_lines: list[str] = []
+
+    def _drain(stream, log_fn, lines):
+        for raw in iter(stream.readline, ""):
+            line = raw.rstrip("\n\r")
+            lines.append(line)
+            log_fn("%s", line)
+        stream.close()
+
+    t_out = threading.Thread(
+        target=_drain, args=(process.stdout, logger.info, stdout_lines), daemon=True
+    )
+    t_err = threading.Thread(
+        target=_drain, args=(process.stderr, logger.warning, stderr_lines), daemon=True
+    )
+    t_out.start()
+    t_err.start()
+
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        raise
+
+    # Close our read ends so the drain threads see EOF and exit.
+    process.stdout.close()
+    process.stderr.close()
+    t_out.join()
+    t_err.join()
+
+    rc = process.returncode
+    captured_stdout = "\n".join(stdout_lines)
+    captured_stderr = "\n".join(stderr_lines)
+    logger.info("Exit code: %d", rc)
+    if rc != 0:
+        logger.warning("stderr was:\n%s", captured_stderr)
+
+    if check and rc != 0:
+        raise subprocess.CalledProcessError(rc, cmd)
+
+    return subprocess.CompletedProcess(
+        args=cmd,
+        returncode=rc,
+        stdout=captured_stdout,
+        stderr=captured_stderr,
+    )
 
 K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo:dev"
 K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core:dev"
@@ -308,7 +395,6 @@ def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE_VALIDATE)
     def pull_and_validate_study(study_id: str) -> str | None:
         import pathlib
-        import subprocess
 
         try:
             local_dir = _study_data_path(study_id)
@@ -317,16 +403,13 @@ def import_public_hackathon():
 
             log_dir = f"/tmp/validate_logs/{study_id}"
             os.makedirs(log_dir, exist_ok=True)
-            result = subprocess.run(
+            result = _run_and_stream(
                 [sys.executable, VALIDATE_SCRIPT_PATH, "-l", local_dir, "-n", "-html", log_dir],
-                capture_output=True,
-                text=True,
             )
-            logging.info(result.stdout)
             for log_file in pathlib.Path(log_dir).glob("log-validate-studies-*.txt"):
                 logging.info("=== Validation log: %s ===\n%s", log_file.name, log_file.read_text())
             if result.returncode not in (0, 3):
-                logging.error("Validation failed for %s (exit %d):\n%s", study_id, result.returncode, result.stderr)
+                logging.error("Validation failed for %s (exit %d)", study_id, result.returncode)
                 return None
             return study_id
         except Exception as e:
@@ -343,8 +426,6 @@ def import_public_hackathon():
 
     @task(executor_config=_POD_OVERRIDE_IMPORT)
     def import_into_standby_database(valid_studies: list[str]):
-        import subprocess
-
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
             return
@@ -356,17 +437,13 @@ def import_public_hackathon():
                 failed.append(study_id)
                 continue
 
-            result = subprocess.run(
+            result = _run_and_stream(
                 [sys.executable, IMPORT_SCRIPT_PATH,
                  "-s", local_dir,
                  "-n",
                  "-o",
                  "--no-derive-tables"],
-                capture_output=True, text=True,
             )
-            logging.info(result.stdout)
-            if result.stderr:
-                logging.info(result.stderr)
             if result.returncode != 0:
                 logging.error("Import failed for %s (exit %d)", study_id, result.returncode)
                 failed.append(study_id)
@@ -376,17 +453,11 @@ def import_public_hackathon():
 
     @task(executor_config=_POD_OVERRIDE_IMPORT)
     def create_derived_tables_in_standby_database():
-        import subprocess
-
-        rebuild = subprocess.run(
+        rebuild = _run_and_stream(
             [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables"],
-            capture_output=True, text=True,
         )
-        logging.info(rebuild.stdout)
-        if rebuild.stderr:
-            logging.info(rebuild.stderr)
         if rebuild.returncode != 0:
-            raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode}):\n{rebuild.stderr}")
+            raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode})")
 
     t_transfer_deployment_color = BashOperator(
         task_id="transfer_deployment_color",
