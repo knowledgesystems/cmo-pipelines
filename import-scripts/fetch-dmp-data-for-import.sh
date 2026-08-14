@@ -262,7 +262,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                     upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
                 fi
                 # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
-                $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt -m $MSK_IMPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_impact.json -i mskimpact
+                $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt -m $MSK_IMPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_impact.json -i mskimpact -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
             fi
         fi
 
@@ -334,8 +334,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 echo "pushing cvr data for heme to s3"
                 upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
             fi
-            # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
-            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt -m $MSK_HEMEPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_heme.json -i mskimpact_heme
         fi
         # fetch new/updated HEMEPACT germline samples using CVR Web service   (must come after normal cvr fetching)
         drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
@@ -363,6 +361,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 echo "uploading CVR germline data to s3"
                 upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
             fi
+            # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt -m $MSK_HEMEPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_heme.json -i mskimpact_heme -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
         fi
 
         # Upload HEMEPACT sample list to S3 for CDM use
@@ -406,7 +406,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
             fi
             # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
-            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_archer.json -i mskarcher
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_archer.json -i mskarcher -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
         fi
 
         # Upload ARCHER sample list to S3 for CDM use
@@ -451,7 +451,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
             fi
             # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
-            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt -m $MSK_ACCESS_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_access.json -i mskaccess
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt -m $MSK_ACCESS_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_access.json -i mskaccess -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
         fi
 
         # Upload ACCESS sample list to S3 for CDM use

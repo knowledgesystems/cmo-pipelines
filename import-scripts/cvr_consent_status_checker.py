@@ -272,6 +272,7 @@ def main():
     parser.add_option('-f', '--portal-properties-file', action = 'store', dest = 'portal_properties_file', help = 'CVR portal properties file for requeue [optional; enables automatic requeue of NO->YES samples]')
     parser.add_option('-s', '--session-data-file', action = 'store', dest = 'session_data_file', help = 'File to store CVR session data for requeue [optional; required with -f]')
     parser.add_option('-i', '--study-id', action = 'store', dest = 'study_id', help = 'DMP study ID for requeue (e.g. mskimpact) [optional; required with -f]')
+    parser.add_option('-e', '--consent-cache-file', action = 'store', dest = 'consent_cache_file', help = 'JSON file to cache consent API values across cohort invocations [optional]')
 
     (options, args) = parser.parse_args()
 
@@ -282,6 +283,7 @@ def main():
     portal_properties_file = options.portal_properties_file
     session_data_file = options.session_data_file
     study_id = options.study_id
+    consent_cache_file = options.consent_cache_file
 
     if not cvr_clinical_file or not os.path.exists(cvr_clinical_file):
         print >> ERROR_FILE, "Invalid CVR clinical file: %s, exiting..." % (cvr_clinical_file)
@@ -302,7 +304,22 @@ def main():
         print >> ERROR_FILE, "Options --session-data-file/-s and --study-id/-i are required when --portal-properties-file/-f is provided, exiting..."
         sys.exit(2)
 
-    expected_consent_status_values = fetch_expected_consent_status_values()
+    if consent_cache_file and os.path.exists(consent_cache_file):
+        try:
+            with open(consent_cache_file, 'r') as f:
+                expected_consent_status_values = json.load(f)
+        except Exception as e:
+            print >> ERROR_FILE, 'WARNING: failed to load consent cache file %s, fetching from API: %s' % (consent_cache_file, str(e))
+            expected_consent_status_values = fetch_expected_consent_status_values()
+    else:
+        expected_consent_status_values = fetch_expected_consent_status_values()
+        if consent_cache_file:
+            try:
+                with open(consent_cache_file, 'w') as f:
+                    json.dump(expected_consent_status_values, f)
+            except Exception as e:
+                print >> ERROR_FILE, 'WARNING: failed to write consent cache file %s: %s' % (consent_cache_file, str(e))
+
     cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password, portal_properties_file, session_data_file, study_id)
 
 if __name__ == '__main__':
