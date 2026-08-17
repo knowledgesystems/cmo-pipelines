@@ -2,8 +2,12 @@
 # build context is a cbioportal-core checkout while the Dockerfile comes from
 # this repo; both are checked out below and handed to buildx separately.
 #
-# repository_dispatch is for cbioportal-core to poke on its pushes — NOTHING
-# SENDS IT YET, so a core change currently needs a manual workflow_dispatch run.
+# Triggers:
+#   push to master  — when core.Dockerfile or this workflow changes
+#   repository_dispatch (cbioportal-core-push) — cbioportal-core CI can fire
+#     this with client_payload.core_branch to rebuild from a specific branch
+#   workflow_dispatch — manual runs; use core_branch to target a branch by name
+#     or core_ref to pin an exact SHA (core_ref takes precedence)
 name: Build cbioportal-core image
 
 on:
@@ -16,15 +20,19 @@ on:
     types: [cbioportal-core-push]
   workflow_dispatch:
     inputs:
+      core_branch:
+        description: 'cbioportal-core branch to build from (default: main)'
+        required: false
+        default: 'main'
+        type: string
       core_ref:
-        description: 'cbioportal-core ref to build (default: head of the tracked branch)'
+        description: 'Exact cbioportal-core ref/SHA — overrides core_branch if set'
         required: false
         type: string
 
 env:
   IMAGE: ghcr.io/cbioportal/containerized-importer-core
   CORE_REPO: cBioPortal/cbioportal-core
-  CORE_BRANCH: main
 
 jobs:
   build:
@@ -41,7 +49,8 @@ jobs:
           set -euo pipefail
           ref="${{ inputs.core_ref }}"
           if [ -z "$ref" ]; then
-            ref=$(git ls-remote "https://github.com/${CORE_REPO}.git" "${CORE_BRANCH}" | cut -f1)
+            branch="${{ inputs.core_branch || github.event.client_payload.core_branch || 'main' }}"
+            ref=$(git ls-remote "https://github.com/${CORE_REPO}.git" "${branch}" | cut -f1)
           fi
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
