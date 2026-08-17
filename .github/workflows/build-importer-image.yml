@@ -69,7 +69,7 @@ jobs:
           head=$(git ls-remote "https://github.com/${CORE_REPO}.git" "${CORE_BRANCH}" | cut -f1)
           case "${{ github.event_name }}" in
             push)  ref="$pinned" ;;
-            *)     ref="${{ inputs.core_ref }}"; ref="${ref:-$head}" ;;
+            *)     ref="${{ inputs.core_ref || github.event.client_payload.core_ref }}"; ref="${ref:-$head}" ;;
           esac
           {
             echo "pinned=$pinned"

@@ -47,7 +47,7 @@ jobs:
         id: core
         run: |
           set -euo pipefail
-          ref="${{ inputs.core_ref }}"
+          ref="${{ inputs.core_ref || github.event.client_payload.core_ref }}"
           if [ -z "$ref" ]; then
             branch="${{ inputs.core_branch || github.event.client_payload.core_branch || 'main' }}"
             ref=$(git ls-remote "https://github.com/${CORE_REPO}.git" "${branch}" | cut -f1)
