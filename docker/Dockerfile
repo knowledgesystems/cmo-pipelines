@@ -48,11 +48,8 @@ RUN set -eux; \
 # PORTAL_HOME tree the import-scripts assume; pipelines-credentials/ is a runtime mount
 RUN mkdir -p \
         /data/portal-cron/scripts \
-        /data/portal-cron/lib \
         /data/portal-cron/logs \
         /data/portal-cron/tmp \
-        /data/portal-cron/cbio-portal-data \
-        /data/portal-cron/git-repos \
         /data/portal-cron/pipelines-credentials \
     && chown -R airflow:0 /data/portal-cron
 
