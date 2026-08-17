@@ -1,0 +1,105 @@
+# Rebuilds the importer image (docker/Dockerfile). The image is assembled from
+# two branches: docker/, dags/ and the Dockerfile from master; import-scripts/
+# from import-hackathon, whose script changes cannot merge to master while
+# pipelines3 deploys from it. The import-scripts/ tree is overlaid onto the
+# master checkout before the build, so the Dockerfile needs no branch awareness.
+#
+# Triggers: the push trigger lives in the same-named workflow on import-hackathon
+# (a push only runs the pushed branch's copy), which calls this file at @master.
+# repository_dispatch is for cbioportal-core to poke on its pushes — NOTHING
+# SENDS IT YET, so a core change currently needs a manual workflow_dispatch run.
+name: Build importer image
+
+on:
+  workflow_call:
+    inputs:
+      core_ref:
+        description: 'cbioportal-core ref to build against (default: the SHA pinned in docker/Dockerfile)'
+        required: false
+        type: string
+  repository_dispatch:
+    types: [cbioportal-core-push]
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: 'cbioportal-core ref to build against (default: the SHA pinned in docker/Dockerfile)'
+        required: false
+        type: string
+
+env:
+  IMAGE: ghcr.io/cbioportal/containerized-importer-cmo
+  CORE_REPO: cBioPortal/cbioportal-core
+  CORE_BRANCH: main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout infra (Dockerfile, docker/, dags/)
+        uses: actions/checkout@v4
+        with:
+          # pushes to import-hackathon build master's infra; a manual dispatch
+          # builds the infra of whatever ref it was dispatched from
+          ref: ${{ github.event_name == 'push' && 'master' || github.sha }}
+
+      # on a push, build the exact pushed commit, not the branch head at runner start
+      - name: Checkout import-hackathon (import-scripts/)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || 'import-hackathon' }}
+          path: .scripts-branch
+
+      - name: Resolve import-scripts SHA
+        id: refs
+        run: echo "scripts_sha=$(git -C .scripts-branch rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Overlay import-scripts/ from import-hackathon
+        run: |
+          set -euo pipefail
+          rm -rf import-scripts
+          mv .scripts-branch/import-scripts import-scripts
+          rm -rf .scripts-branch
+
+      # a push builds the SHA pinned in the Dockerfile; only core-triggered runs override it
+      - name: Resolve cbioportal-core ref
+        id: core
+        run: |
+          set -euo pipefail
+          pinned=$(grep -oP '(?<=^ARG CBIOPORTAL_CORE_REF=).*' docker/Dockerfile)
+          head=$(git ls-remote "https://github.com/${CORE_REPO}.git" "${CORE_BRANCH}" | cut -f1)
+          case "${{ github.event_name }}" in
+            push)  ref="$pinned" ;;
+            *)     ref="${{ inputs.core_ref || github.event.client_payload.core_ref }}"; ref="${ref:-$head}" ;;
+          esac
+          {
+            echo "pinned=$pinned"
+            echo "head=$head"
+            echo "ref=$ref"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$pinned" != "$head" ]; then
+            echo "::notice::cbioportal-core ${CORE_BRANCH} is at ${head}, docker/Dockerfile pins ${pinned}"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          build-args: CBIOPORTAL_CORE_REF=${{ steps.core.outputs.ref }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:sha-${{ steps.refs.outputs.scripts_sha }}
+            ${{ env.IMAGE }}:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

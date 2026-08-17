@@ -1,0 +1,85 @@
+# Rebuilds the cbioportal-core importer image (docker/core.Dockerfile). The
+# build context is a cbioportal-core checkout while the Dockerfile comes from
+# this repo; both are checked out below and handed to buildx separately.
+#
+# Triggers:
+#   push to master  — when core.Dockerfile or this workflow changes
+#   repository_dispatch (cbioportal-core-push) — cbioportal-core CI can fire
+#     this with client_payload.core_branch to rebuild from a specific branch
+#   workflow_dispatch — manual runs; use core_branch to target a branch by name
+#     or core_ref to pin an exact SHA (core_ref takes precedence)
+name: Build cbioportal-core image
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - docker/core.Dockerfile
+      - .github/workflows/build-core-image.yml
+  repository_dispatch:
+    types: [cbioportal-core-push]
+  workflow_dispatch:
+    inputs:
+      core_branch:
+        description: 'cbioportal-core branch to build from (default: main)'
+        required: false
+        default: 'main'
+        type: string
+      core_ref:
+        description: 'Exact cbioportal-core ref/SHA — overrides core_branch if set'
+        required: false
+        type: string
+
+env:
+  IMAGE: ghcr.io/cbioportal/containerized-importer-core
+  CORE_REPO: cBioPortal/cbioportal-core
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cmo-pipelines (Dockerfile)
+        uses: actions/checkout@v4
+        with:
+          path: cmo-pipelines
+
+      - name: Resolve cbioportal-core ref
+        id: core
+        run: |
+          set -euo pipefail
+          ref="${{ inputs.core_ref || github.event.client_payload.core_ref }}"
+          if [ -z "$ref" ]; then
+            branch="${{ inputs.core_branch || github.event.client_payload.core_branch || 'main' }}"
+            ref=$(git ls-remote "https://github.com/${CORE_REPO}.git" "${branch}" | cut -f1)
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout cbioportal-core (build context)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CORE_REPO }}
+          ref: ${{ steps.core.outputs.ref }}
+          path: cbioportal-core
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: cbioportal-core
+          file: cmo-pipelines/docker/core.Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:sha-${{ steps.core.outputs.ref }}
+            ${{ env.IMAGE }}:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
