@@ -354,6 +354,7 @@ def _activate_standby_properties() -> str:
     src_path = f"{APP_PROPERTIES_PATH}.{standby_color}"
     dest_path = "/tmp/application.properties"
     shutil.copy(src_path, dest_path)
+    shutil.copy("/clickhouse.sql", "/tmp/clickhouse.sql")
     os.environ["PORTAL_HOME"] = "/tmp"
     logging.info("Activated %s application.properties (live=%s, standby=%s) -> %s", standby_color, live_color, standby_color, dest_path)
     return standby_color
