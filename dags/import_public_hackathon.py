@@ -505,7 +505,7 @@ def import_public_hackathon():
 
     t_transfer_deployment_color = BashOperator(
         task_id="transfer_deployment_color",
-        bash_command=_script(
+        bash_command="unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
             "airflow-transfer-deployment.sh",
             SCRIPTS_DIR,
             CLICKHOUSE_CONFIG_FILE,
