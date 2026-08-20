@@ -126,6 +126,11 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
             record = dict(zip(header, map(str.strip, line.split('\t'))))
 
             for field in CVR_CONSENT_STATUS_ENDPOINTS.keys():
+                # If the API returned no data for this field, skip it entirely to avoid
+                # treating every patient as having revoked consent (the .get() default of 'NO'
+                # would otherwise cause all current-YES patients to appear as revoked).
+                if not expected_consent_status_values[field]:
+                    continue
                 current_consent_status = record[field]
                 expected_consent_status = expected_consent_status_values[field].get(record['PATIENT_ID'], 'NO')
                 # if current and expected values are the same then skip
@@ -145,9 +150,13 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
                     samples_to_remove[field] = remove_list
 
     removed_germline_mutations = False
-    if cvr_mutation_file and samples_to_remove.get(PARTC_FIELD_NAME, set()):
-        # Attempt to remove germline mutation records where the Part C consent status has changed from YES => NO
-        removed_germline_mutations = remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
+    if samples_to_remove.get(PARTC_FIELD_NAME, set()):
+        if not cvr_mutation_file:
+            # No mutation file was provided; germline records cannot be removed for Part C revocations.
+            print >> ERROR_FILE, "WARNING: Part C consent was revoked for %d sample(s) but no mutation file was provided; germline records will not be removed." % len(samples_to_remove[PARTC_FIELD_NAME])
+        else:
+            # Attempt to remove germline mutation records where the Part C consent status has changed from YES => NO
+            removed_germline_mutations = remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
 
     if samples_to_requeue and portal_properties_file and session_data_file and study_id:
         requeue_consent_granted_samples(samples_to_requeue, portal_properties_file, session_data_file, study_id)
@@ -158,6 +167,7 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
             samples_to_remove,
             expected_consent_status_values,
             removed_germline_mutations,
+            cvr_mutation_file,
             gmail_username,
             gmail_password)
 
@@ -193,6 +203,10 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
             tmpfile.write(line)
     tmpfile.close()
 
+    if num_germline_records == 0:
+        os.remove(tmpfile_name)
+        return True
+
     pct_removed = 100*(float(num_removed_records) / float(num_germline_records))
     cutoff = 20 # If we're trying to remove too many records, then something's probably wrong with the server response. 20% is an arbitrary cutoff
     if pct_removed >= cutoff:
@@ -216,6 +230,7 @@ def email_consent_status_report(
         samples_to_remove,
         expected_consent_status_values,
         removed_germline_mutations,
+        cvr_mutation_file,
         gmail_username,
         gmail_password):
     '''
@@ -241,8 +256,14 @@ def email_consent_status_report(
             if missing_data:
                 summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, "A" if field == PARTA_FIELD_NAME else "C")
             elif field == PARTC_FIELD_NAME and not removed_germline_mutations:
-                # If too many samples had their Part C cosent status changed, there is probably an issue with the upstream server, so we didn't remove any records.
-                summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.' % (field)
+                if not cvr_mutation_file:
+                    # No mutation file was provided, so germline records could not be removed. Still report the samples.
+                    summary += '\n\t%s:\t%s samples (no mutation file provided; germline records not removed)' % (field, len(samples))
+                    filename = field.lower() + '_consent_revoked_report.txt'
+                    generate_attachment(message, filename, samples)
+                else:
+                    # If too many samples had their Part C consent status changed, there is probably an issue with the upstream server, so we didn't remove any records.
+                    summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.' % (field)
             else:
                 summary += '\n\t%s:\t%s samples' % (field, len(samples))
                 filename = field.lower() + '_consent_revoked_report.txt'
@@ -314,11 +335,16 @@ def main():
     else:
         expected_consent_status_values = fetch_expected_consent_status_values()
         if consent_cache_file:
-            try:
-                with open(consent_cache_file, 'w') as f:
-                    json.dump(expected_consent_status_values, f)
-            except Exception as e:
-                print >> ERROR_FILE, 'WARNING: failed to write consent cache file %s: %s' % (consent_cache_file, str(e))
+            if any(not expected_consent_status_values[f] for f in CVR_CONSENT_STATUS_ENDPOINTS):
+                # Don't cache if any field returned empty data -- a bad cache would propagate
+                # the API failure silently to all subsequent cohort invocations in this run.
+                print >> ERROR_FILE, 'WARNING: consent API returned empty data for one or more fields; skipping cache write to %s' % (consent_cache_file)
+            else:
+                try:
+                    with open(consent_cache_file, 'w') as f:
+                        json.dump(expected_consent_status_values, f)
+                except Exception as e:
+                    print >> ERROR_FILE, 'WARNING: failed to write consent cache file %s: %s' % (consent_cache_file, str(e))
 
     cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password, portal_properties_file, session_data_file, study_id)
 
