@@ -28,7 +28,7 @@ while true ; do
         break
     fi
     echo "pausing at checkpoint"
-    sleep 10 * 60
+    sleep $((10 * 60))
 done
 
 echo $(date)
