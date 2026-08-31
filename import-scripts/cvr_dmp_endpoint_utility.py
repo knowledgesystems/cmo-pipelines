@@ -403,7 +403,16 @@ def run_requeue_samples_mode(portal_properties, session_data, study_id, study_ma
                 signed out or is considered a failed sample. 
                 ** These cases must be reported to CVR. **
     '''
-    requeue_success_samples = set()
+    # Pre-filter: skip samples already in the current queue to avoid redundant API calls
+    already_in_queue = get_samples_in_queue(current_study_sample_queue, sample_ids)
+    if already_in_queue:
+        print >> OUTPUT_FILE, 'Skipping %d sample(s) already in the study queue:\n\t%s' % (len(already_in_queue), '\n\t'.join(already_in_queue))
+    sample_ids = sample_ids - set(already_in_queue)
+    if not sample_ids:
+        print >> OUTPUT_FILE, 'All samples are already in the study queue; nothing to requeue.'
+        return
+
+    requeue_success_samples = set(already_in_queue)  # treat pre-existing queue members as success
     requeue_failure_samples = set()
     for sample_id in sample_ids:
         if not requeue_sample(portal_properties, session_data, sample_id):
