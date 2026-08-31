@@ -35,6 +35,8 @@ MASTERLIST_ACCESS = 'dmp.tokens.retrieve_master_list.access'
 MASTERLIST_RAINDANCE = 'dmp.tokens.retrieve_master_list.rdts'
 
 RETRIEVE_VARIANTS_MSKIMPMACT = 'dmp.tokens.retrieve_variants.impact'
+
+CVR_QUEUE_MAX_SIZE = 300
 RETRIEVE_VARIANTS_HEMEPACT = 'dmp.tokens.retrieve_variants.heme'
 RETRIEVE_VARIANTS_ARCHER = 'dmp.tokens.retrieve_variants.archer'
 RETRIEVE_VARIANTS_ACCESS = 'dmp.tokens.retrieve_variants.access'
@@ -411,6 +413,15 @@ def run_requeue_samples_mode(portal_properties, session_data, study_id, study_ma
     if not sample_ids:
         print >> OUTPUT_FILE, 'All samples are already in the study queue; nothing to requeue.'
         return
+
+    # Cap requeue attempts to available queue slots to avoid futile API calls when queue is at capacity
+    available_slots = CVR_QUEUE_MAX_SIZE - len(current_study_sample_queue)
+    if available_slots <= 0:
+        print >> OUTPUT_FILE, 'CVR queue is at capacity (%d/%d); no slots available to requeue samples this run.' % (len(current_study_sample_queue), CVR_QUEUE_MAX_SIZE)
+        return
+    if len(sample_ids) > available_slots:
+        print >> OUTPUT_FILE, 'Capping requeue to %d available queue slot(s) (%d sample(s) deferred to subsequent runs).' % (available_slots, len(sample_ids) - available_slots)
+        sample_ids = set(list(sample_ids)[:available_slots])
 
     requeue_success_samples = set()
     requeue_failure_samples = set()
