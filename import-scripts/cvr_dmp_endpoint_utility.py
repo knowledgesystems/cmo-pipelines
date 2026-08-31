@@ -88,7 +88,7 @@ RETRIEVE_VARIANTS_DMP_SAMPLE_ID = 'dmp_sample_id'
 CONSUME_AFFECTED_ROWS = 'affectedRows'
 
 DMP_STUDY_IDS = ['mskimpact', 'mskimpact_heme', 'mskraindance', 'mskarcher', 'mskaccess']
-DMP_SAMPLE_ID_PATTERN = re.compile('P-\d+-(T|N)\d+-(IH|TB|TS|AH|AS|IM|XS)\d+')
+DMP_SAMPLE_ID_PATTERN = re.compile('P-\d+-(T|N)\d+-(IH|TB|TS|AH|AS|IM|XS|XH)\d+')
 
 MASTERLIST_CHECK_ARG_DESCRIPTION = '[optional] Fetches masterlist for study and reports samples from samples file that are missing from masterlist.'
 REQUEUE_SAMPLES_ARG_DESCRIPTION = '[optional] Requeues samples and reports whether requeue was successful or not. If requeue failed then attempts to determine if failure is due to sample(s) missing from study masterlist or if sample is already queued for next CVR fetch.'
