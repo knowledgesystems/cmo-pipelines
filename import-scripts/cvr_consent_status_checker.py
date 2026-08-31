@@ -169,7 +169,8 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
             removed_germline_mutations,
             cvr_mutation_file,
             gmail_username,
-            gmail_password)
+            gmail_password,
+            study_id)
 
 def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples):
     '''
@@ -232,7 +233,8 @@ def email_consent_status_report(
         removed_germline_mutations,
         cvr_mutation_file,
         gmail_username,
-        gmail_password):
+        gmail_password,
+        study_id=None):
     '''
         Constructs and sends email reporting consent status updates.
     '''
@@ -272,7 +274,10 @@ def email_consent_status_report(
     body = MIMEText(summary, 'plain')
     message.attach(body)
 
-    message['Subject'] = CONSENT_STATUS_EMAIL_SUBJECT
+    subject = CONSENT_STATUS_EMAIL_SUBJECT
+    if study_id:
+        subject = '[%s] %s' % (study_id, CONSENT_STATUS_EMAIL_SUBJECT)
+    message['Subject'] = subject
     message['From'] = MESSAGE_SENDER
     message['To'] = COMMASPACE.join(MESSAGE_RECIPIENTS)
     message['Date'] = formatdate(localtime=True)
