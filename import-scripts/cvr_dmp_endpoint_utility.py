@@ -412,7 +412,7 @@ def run_requeue_samples_mode(portal_properties, session_data, study_id, study_ma
         print >> OUTPUT_FILE, 'All samples are already in the study queue; nothing to requeue.'
         return
 
-    requeue_success_samples = set(already_in_queue)  # treat pre-existing queue members as success
+    requeue_success_samples = set()
     requeue_failure_samples = set()
     for sample_id in sample_ids:
         if not requeue_sample(portal_properties, session_data, sample_id):
