@@ -13,61 +13,85 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # localize global variables / jar names and functions
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
-    # Merge biobank patient clinical data when present.
-    # Clinical merge failure is non-fatal; an existing biobank timeline file is kept for CDM timeline merge.
+    # Merge biobank/biofluid patient clinical supplements when present.
+    # Clinical merge failure is non-fatal. Timeline files are kept separate for CDM import.
+    # Requires combine_files_py3.py --prefer-right-columns (-p).
     #
     # Args:
     #   $1  study_data_home  Local directory for the study.
-    #   $2  s3_prefix        Optional. If provided, the biobank clinical patient file is fetched
-    #                        fresh from S3 at this prefix (e.g. "msk_solid_heme") before merging.
-    #                        Use this when the file is written by an external process (e.g. Databricks)
-    #                        and deleted locally after each successful merge.
+    #   $2  s3_prefix        Optional. If provided, biobank/biofluid clinical (and timeline)
+    #                        files are fetched fresh from S3 at this prefix before merging.
+    #                        Must match the local study directory basename (S3 download suffix
+    #                        check), e.g. "msk_solid_heme". Use when files are
+    #                        written externally (e.g. Databricks) and clinical supplements are
+    #                        deleted locally after each successful merge.
     function merge_biobank_clinical_data() {
         local study_data_home="$1"
         local s3_prefix="$2"
 
         local input_clinical_file="$study_data_home/data_clinical_patient.txt"
         local biobank_clinical_file="$study_data_home/data_clinical_patient_biobank.txt"
+        local biofluid_clinical_file="$study_data_home/data_clinical_patient_biofluid.txt"
         local biobank_timeline_file="$study_data_home/data_timeline_biobank_specimen.txt"
+        local biofluid_timeline_file="$study_data_home/data_timeline_biofluid_specimen.txt"
         local merged_clinical_file="$study_data_home/data_clinical_patient_merged.txt"
 
         if [ -n "$s3_prefix" ]; then
-            # Re-fetch the biobank clinical patient file fresh from S3 before merging.
-            # The file is deleted locally after each successful merge and must be
-            # retrieved each run rather than relying on it surviving in S3 overnight.
+            # Re-fetch Databricks supplements. Clinical files are deleted after merge;
+            # timeline files stay in the study dir for CDM/portal import. Study merge/subset
+            # wipes the dest dir, so these must be pulled after that step.
             # touch creates the file so try_download_from_s3 can accept a file path;
             # the -s check ensures we clean up if S3 had no file to download.
-            touch "$biobank_clinical_file"
-            if ! try_download_from_s3 "$biobank_clinical_file" \
-                    "${s3_prefix}/data_clinical_patient_biobank.txt" "mskimpact-databricks" \
-                || [ ! -s "$biobank_clinical_file" ] ; then
-                rm -f "$biobank_clinical_file"
-                echo "`date`: Warning: could not fetch biobank clinical patient file from S3 for ${study_data_home}; biobank merge will be skipped."
-            fi
+            fetch_s3_supplement() {
+                local dest="$1"
+                local s3_key="$2"
+                local label="$3"
+                touch "$dest"
+                if ! try_download_from_s3 "$dest" "$s3_key" "mskimpact-databricks" \
+                    || [ ! -s "$dest" ] ; then
+                    rm -f "$dest"
+                    echo "`date`: Warning: could not fetch ${label} from S3 for ${study_data_home}; ${label} will be skipped."
+                fi
+            }
+            fetch_s3_supplement "$biobank_clinical_file" "${s3_prefix}/data_clinical_patient_biobank.txt" "biobank clinical patient file"
+            fetch_s3_supplement "$biofluid_clinical_file" "${s3_prefix}/data_clinical_patient_biofluid.txt" "biofluid clinical patient file"
+            fetch_s3_supplement "$biobank_timeline_file" "${s3_prefix}/data_timeline_biobank_specimen.txt" "biobank timeline file"
+            fetch_s3_supplement "$biofluid_timeline_file" "${s3_prefix}/data_timeline_biofluid_specimen.txt" "biofluid timeline file"
         fi
 
-        if [ -f "$biobank_clinical_file" ]; then
-            # -p / --prefer-right-columns: data_clinical_patient.txt may already
-            # contain ALIQUOT_STATUS from a prior S3 round-trip. Without -p,
-            # pandas emits ALIQUOT_STATUS_x and ALIQUOT_STATUS_y instead of one
-            # column with fresh biobank values.
-            # TODO: prefer-right-columns may be right for all combine_files_py3
-            # callers, but other merges have never had overlapping column names
-            # before biobank; audit before making -p the default.
-            $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$input_clinical_file" "$biobank_clinical_file" -o "$merged_clinical_file" -c "PATIENT_ID" -m left -p
-            if [ $? -gt 0 ]; then
-                echo "`date`: Warning: failed to merge biobank patient clinical data for ${study_data_home}; skipping biobank clinical merge for this import."
-                rm -f "$merged_clinical_file"
-            else
-                mv "$merged_clinical_file" "$input_clinical_file"
-                rm -f "$biobank_clinical_file"
+        merge_clinical_supplement() {
+            local label="$1"
+            local supplemental_file="$2"
+
+            if [ ! -f "$supplemental_file" ]; then
+                echo "`date`: Warning: ${label} patient clinical file not found in ${study_data_home}; skipping ${label} clinical merge for this import."
+                return 0
             fi
-        else
-            echo "`date`: Warning: biobank patient clinical file not found in ${study_data_home}; skipping biobank clinical merge for this import."
-        fi
+
+            # -p / --prefer-right-columns: supplemental file wins on overlapping columns
+            # (e.g. BIOBANK_TISSUE_STATUS, BIOBANK_BIOFLUID_STATUS) when
+            # data_clinical_patient.txt already has them from a prior S3 round-trip.
+            $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$input_clinical_file" "$supplemental_file" -o "$merged_clinical_file" -c "PATIENT_ID" -m left -p
+            if [ $? -gt 0 ]; then
+                echo "`date`: Warning: failed to merge ${label} patient clinical data for ${study_data_home}; skipping ${label} clinical merge for this import."
+                rm -f "$merged_clinical_file"
+                return 0
+            fi
+
+            mv "$merged_clinical_file" "$input_clinical_file"
+            rm -f "$supplemental_file"
+            return 0
+        }
+
+        merge_clinical_supplement "biobank" "$biobank_clinical_file"
+        merge_clinical_supplement "biofluid" "$biofluid_clinical_file"
 
         if [ -f "$biobank_timeline_file" ]; then
             echo "`date`: Biobank timeline data present in ${study_data_home}."
+        fi
+
+        if [ -f "$biofluid_timeline_file" ]; then
+            echo "`date`: Biofluid timeline data present in ${study_data_home}."
         fi
 
         return 0

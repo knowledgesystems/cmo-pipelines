@@ -51,7 +51,7 @@ def combine_files(
 ):
     """Merge tabular files. When prefer_right_columns is True and join keys are
     given (-c), overlapping non-key columns use values from later files instead
-    of pandas ALIQUOT_STATUS_x / ALIQUOT_STATUS_y suffix columns.
+    of pandas BIOBANK_TISSUE_STATUS_x / BIOBANK_TISSUE_STATUS_y suffix columns.
 
     TODO: prefer_right_columns may be the right default for all callers, but
     other uses of this script (timeline merges, age-at-seq, Sophia) have never

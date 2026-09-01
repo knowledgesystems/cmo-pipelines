@@ -57,26 +57,26 @@ class TestCombineFiles(unittest.TestCase):
         merge_type='outer'
         self.compare_expected_output_to_actual(sub_dir, ddp_files, merge_type)
 
-    def test_biobank_merge_both_have_aliquot_status_with_prefer_right(self):
+    def test_biobank_merge_both_have_tissue_status_with_prefer_right(self):
         self._assert_biobank_merge_matches_expected(
             'biobank_clinical/both_overlap',
             prefer_right_columns=True,
         )
 
-    def test_biobank_merge_aliquot_status_only_on_right_with_prefer_right(self):
+    def test_biobank_merge_tissue_status_only_on_right_with_prefer_right(self):
         self._assert_biobank_merge_matches_expected(
             'biobank_clinical/right_only',
             prefer_right_columns=True,
         )
 
-    def test_biobank_merge_aliquot_status_only_on_left_with_prefer_right(self):
+    def test_biobank_merge_tissue_status_only_on_left_with_prefer_right(self):
         self._assert_biobank_merge_matches_expected(
             'biobank_clinical/left_only',
             prefer_right_columns=True,
         )
 
-    def test_biobank_merge_both_have_aliquot_status_without_prefer_right(self):
-        """Legacy pandas behavior when both files have ALIQUOT_STATUS (no -p)."""
+    def test_biobank_merge_both_have_tissue_status_without_prefer_right(self):
+        """Legacy pandas behavior when both files have BIOBANK_TISSUE_STATUS (no -p)."""
         self._assert_biobank_merge_matches_expected(
             'biobank_clinical/both_overlap',
             prefer_right_columns=False,
@@ -95,7 +95,7 @@ class TestCombineFiles(unittest.TestCase):
         )
 
     def test_biobank_merge_left_only_without_prefer_right_matches_with_prefer_right(self):
-        """Biobank file has no ALIQUOT_STATUS column; -p should not change output."""
+        """Biobank file has no BIOBANK_TISSUE_STATUS column; -p should not change output."""
         self._assert_biobank_merge_matches_expected(
             'biobank_clinical/left_only',
             prefer_right_columns=False,
