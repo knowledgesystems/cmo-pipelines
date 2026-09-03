@@ -183,13 +183,17 @@ def _script(script_name: str, *args: object, source_automation_env: bool = False
 _SAML2AWS_ENV = k8s.V1EnvVar(name="SAML2AWS_CONFIGFILE", value=f"{CREDS_DIR}/.saml2aws")
 
 
-def _clickhouse_secret_env(name: str, key: str) -> k8s.V1EnvVar:
-    return k8s.V1EnvVar(
-        name=name,
-        value_from=k8s.V1EnvVarSource(
-            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key=key)
-        ),
-    )
+def _load_properties(path: str) -> dict[str, str]:
+    """Parse a simple key=value properties file (comments and blank lines ignored)."""
+    props: dict[str, str] = {}
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            props[key.strip()] = value.strip()
+    return props
 
 
 def _pod_override(
@@ -265,11 +269,6 @@ _POD_OVERRIDE = _pod_override(
 def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: str = "2Gi", memory_limit: str = "3Gi") -> dict:
     env = [
         k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
-        _clickhouse_secret_env("CLICKHOUSE_HOST", "host"),
-        _clickhouse_secret_env("CLICKHOUSE_NATIVE_PORT", "native_port"),
-        _clickhouse_secret_env("CLICKHOUSE_USER", "user"),
-        _clickhouse_secret_env("CLICKHOUSE_PASSWORD", "password"),
-        _clickhouse_secret_env("CLICKHOUSE_DB", "database"),
         _SAML2AWS_ENV,
     ]
     if java_opts:
@@ -356,6 +355,18 @@ def _activate_standby_properties() -> str:
     shutil.copy(src_path, dest_path)
     shutil.copy("/clickhouse.sql", "/tmp/clickhouse.sql")
     os.environ["PORTAL_HOME"] = "/tmp"
+
+    # Point the derive-tables clickhouse client at the standby database.
+    # rebuild_derived_tables.py reads CLICKHOUSE_* env vars; these previously came
+    # from a fixed k8s secret (hackathon-clickhouse-secret) whose single database
+    # value ignored the blue/green color, so derived tables could be built in the
+    # live database instead of the standby one.
+    ch_props = _load_properties(CLICKHOUSE_CONFIG_FILE)
+    os.environ["CLICKHOUSE_HOST"] = ch_props["clickhouse_server_host_name"]
+    os.environ["CLICKHOUSE_NATIVE_PORT"] = ch_props["clickhouse_server_port"]
+    os.environ["CLICKHOUSE_USER"] = ch_props["clickhouse_server_username"]
+    os.environ["CLICKHOUSE_PASSWORD"] = ch_props["clickhouse_server_password"]
+    os.environ["CLICKHOUSE_DB"] = ch_props[f"clickhouse_{standby_color}_database_name"]
     logging.info("Activated %s application.properties (live=%s, standby=%s) -> %s", standby_color, live_color, standby_color, dest_path)
     return standby_color
 
@@ -498,7 +509,8 @@ def import_public_hackathon():
     def create_derived_tables_in_standby_database():
         _activate_standby_properties()
         rebuild = _run_and_stream(
-            [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables"],
+            [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables",
+             "--derived-table-sql", "/tmp/clickhouse.sql"],
         )
         if rebuild.returncode != 0:
             raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode})")
