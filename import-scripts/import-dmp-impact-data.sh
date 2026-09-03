@@ -43,17 +43,6 @@ if [ -z $JAVA_BINARY ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
     exit 2
 fi
 
-MSK_DMP_IMPORT_PROPERTIES_FILE="$PIPELINES_CONFIG_HOME/properties/import-dmp/importer.properties"
-extractPropertiesFromFile "$MSK_DMP_IMPORT_PROPERTIES_FILE" db.user db.password db.host db.portal_db_name
-if [ $? -ne 0 ] ; then
-    echo "warning : could not read database properties from property file $MSK_DMP_IMPORT_PROPERTIES_FILE"
-    echo "    archer import is likely to fail because adjustment of mutations will not be possible"
-fi
-DMP_DB_HOST=${extracted_properties[db.host]}
-DMP_DB_USER=${extracted_properties[db.user]}
-DMP_DB_PASSWORD=${extracted_properties[db.password]}
-DMP_DB_DATABASE_NAME=${extracted_properties[db.portal_db_name]}
-
 if ! [ -d "$MSK_DMP_TMPDIR" ] ; then
     if ! mkdir -p "$MSK_DMP_TMPDIR" ; then
         echo "Error : could not create tmp directory '$MSK_DMP_TMPDIR'" >&2
