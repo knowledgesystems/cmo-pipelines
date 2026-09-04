@@ -59,14 +59,20 @@ def fetch_expected_consent_status_values():
         expected_consent_status_values[field] = consent_values
     return expected_consent_status_values
 
-def requeue_consent_granted_samples(samples_to_requeue, portal_properties_file, session_data_file, study_id):
+def requeue_consent_changed_samples(samples_to_requeue, samples_to_remove, portal_properties_file, session_data_file, study_id):
     '''
-        Requeues samples with NO -> YES consent status changes via cvr_dmp_endpoint_utility.py
-        so they are re-fetched from CVR with the updated consent value in the next nightly run.
+        Requeues samples with consent status changes via cvr_dmp_endpoint_utility.py
+        so they are re-fetched from CVR with updated consent values in the next nightly run.
     '''
-    all_samples = set()
+    granted_samples = set()
     for field_samples in samples_to_requeue.values():
-        all_samples.update(field_samples)
+        granted_samples.update(field_samples)
+
+    revoked_samples = set()
+    for field_samples in samples_to_remove.values():
+        revoked_samples.update(field_samples)
+
+    all_samples = granted_samples | revoked_samples
     if not all_samples:
         return
 
@@ -86,13 +92,13 @@ def requeue_consent_granted_samples(samples_to_requeue, portal_properties_file, 
             '-f', tmpfile_path,
             '-r'
         ]
-        print >> ERROR_FILE, 'Requeueing %d consent-granted sample(s) for study %s: %s' % (
-            len(all_samples), study_id, ', '.join(sorted(all_samples)))
+        print >> ERROR_FILE, 'Requeueing %d consent-changed sample(s) for study %s (%d granted, %d revoked): %s' % (
+            len(all_samples), study_id, len(granted_samples), len(revoked_samples), ', '.join(sorted(all_samples)))
         ret = subprocess.call(cmd)
         if ret != 0:
             print >> ERROR_FILE, 'WARNING: cvr_dmp_endpoint_utility.py requeue exited with code %d for study %s' % (ret, study_id)
     except Exception as e:
-        print >> ERROR_FILE, 'WARNING: failed to requeue consent-granted samples for study %s: %s' % (study_id, str(e))
+        print >> ERROR_FILE, 'WARNING: failed to requeue consent-changed samples for study %s: %s' % (study_id, str(e))
     finally:
         if tmpfile_path and os.path.exists(tmpfile_path):
             os.remove(tmpfile_path)
@@ -112,7 +118,9 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
         automatically requeued via cvr_dmp_endpoint_utility.py.
 
         Samples are added to the removal list if their expected consent
-        status is 'NO' and their current status is 'YES'.
+        status is 'NO' and their current status is 'YES'. If portal_properties_file,
+        session_data_file, and study_id are all provided, those samples are also
+        automatically requeued so downstream clinical consent fields can be refreshed.
     '''
     samples_to_requeue = {}
     samples_to_remove = {}
@@ -158,8 +166,8 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
             # Attempt to remove germline mutation records where the Part C consent status has changed from YES => NO
             removed_germline_mutations = remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
 
-    if samples_to_requeue and portal_properties_file and session_data_file and study_id:
-        requeue_consent_granted_samples(samples_to_requeue, portal_properties_file, session_data_file, study_id)
+    if (samples_to_requeue or samples_to_remove) and portal_properties_file and session_data_file and study_id:
+        requeue_consent_changed_samples(samples_to_requeue, samples_to_remove, portal_properties_file, session_data_file, study_id)
 
     if samples_to_requeue != {} or samples_to_remove != {}:
         email_consent_status_report(
