@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# File containing list of patients should be passed in as argument
-export SUBSET_FILE="$1"
-export COHORT_NAME="$2"
+export COHORT_NAME="$1"
+export PORTAL_SCRIPTS_DIR="$2"
+export CDM_METADATA="$3"
 export CURRENT_DATE="$(date '+%m.%d.%y')"
 export CDD_URL="https://cdd.cbioportal.mskcc.org/api/"
 
@@ -10,8 +10,8 @@ export SOPHIA_MSK_IMPACT_DATA_HOME="$SOPHIA_DATA_HOME/$COHORT_NAME"
 export SOPHIA_TMPDIR="$SOPHIA_MSK_IMPACT_DATA_HOME/tmp"
 
 # Patient and sample attributes that we want to deliver in our data
-DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID PARTC_CONSENTED_12_245 RACE SEX ETHNICITY"
-DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_SCORE MSI_TYPE SOMATIC_STATUS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE SEQ_DATE"
+DELIVERED_PATIENT_ATTRIBUTES="PATIENT_ID GENDER RACE ETHNICITY CURRENT_AGE_DEID STAGE_HIGHEST_RECORDED NUM_ICDO_DX ADRENAL_GLANDS BONE CNS_BRAIN INTRA_ABDOMINAL LIVER LUNG LYMPH_NODES OTHER PLEURA REPRODUCTIVE_ORGANS SMOKING_PREDICTIONS_3_CLASSES GLEASON_FIRST_REPORTED GLEASON_HIGHEST_REPORTED HISTORY_OF_PDL1 HISTORY_OF_D_MMR PRIOR_MED_TO_MSK YOST_INDEX_IMPUTED_MEDIAN OS_MONTHS OS_STATUS ECOG_KPS PARTA_CONSENTED_12_245 PARTC_CONSENTED_12_245"
+DELIVERED_SAMPLE_ATTRIBUTES="SAMPLE_ID PATIENT_ID GLEASON_SAMPLE_LEVEL PDL1_POSITIVE CANCER_TYPE SAMPLE_TYPE SAMPLE_CLASS METASTATIC_SITE PRIMARY_SITE CANCER_TYPE_DETAILED GENE_PANEL SAMPLE_COVERAGE TUMOR_PURITY ONCOTREE_CODE MSI_COMMENT MSI_SCORE MSI_TYPE SOMATIC_STATUS ARCHER CVR_TMB_COHORT_PERCENTILE CVR_TMB_SCORE CVR_TMB_TT_COHORT_PERCENTILE SEQ_DATE"
 
 # Duplicate columns that we want to filter out of MAF files
 MUTATIONS_EXTENDED_COLS_TO_FILTER="amino_acid_change,cdna_change,transcript,COMMENTS,Comments,comments,Matched_Norm_Sample_Barcode"
@@ -23,8 +23,8 @@ declare -gA clinical_attributes_in_file=()
 unset clinical_attributes_to_filter_arg
 declare -g clinical_attributes_to_filter_arg="unset"
 
-source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
-source $PORTAL_HOME/scripts/filter-clinical-arg-functions.sh
+source $PORTAL_SCRIPTS_DIR/dmp-import-vars-functions.sh
+source $PORTAL_SCRIPTS_DIR/filter-clinical-arg-functions.sh
 
 function report_error() {
     # Error message provided as an argument
@@ -61,11 +61,17 @@ function setup_data_directories() {
             return 1
         fi
     fi
+
+    cp -a $MSK_SOLID_HEME_DATA_HOME/* $SOPHIA_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to populate temporary directory"
+        return 1
+    fi
 }
 
 function merge_solid_heme_and_archer() {
     # Merge solid heme and archer to use as source dataset
-    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/merge.py \
         --study-id="mskimpact" \
         --output-directory="$SOPHIA_TMPDIR" \
         --merge-clinical="true" \
@@ -77,7 +83,7 @@ function merge_solid_heme_and_archer() {
 
     # Add clinical attribute headers
     INPUT_FILENAMES="$SOPHIA_TMPDIR/data_clinical_sample.txt $SOPHIA_TMPDIR/data_clinical_patient.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact -i $CDM_METADATA
     if [ $? -gt 0 ] ; then
         echo "Failed to add clinical attribute metadata headers to MSK_SOLID_HEME and MSKARCHER merged dataset"
         return 1
@@ -89,14 +95,20 @@ function merge_solid_heme_and_archer() {
         echo "Failed to copy metadata files to MSK_SOLID_HEME and MSKARCHER merged dataset"
         return 1
     fi
+
+    # Add CDM timeline files
+    sh $PORTAL_SCRIPTS_DIR/merge-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_TMPDIR "$MSK_SOLID_HEME_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME"
+    if [ $? -gt 0 ] ; then
+        echo "Failed to merge CDM timeline files"
+        return 1
+    fi
 }
 
 function subset_consented_cohort_patients() {
     CONSENTED_SUBSET_FILE=$(mktemp -q)
-    CONSENTED_COHORT_SUBSET_FILE=$(mktemp -q)
 
     # Generate subset of Part A consented patients from merged solid heme and archer
-    $PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py \
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/generate-clinical-subset.py \
         --study-id="mskimpact" \
         --clinical-file="$SOPHIA_TMPDIR/data_clinical_patient.txt" \
         --filter-criteria="PARTA_CONSENTED_12_245=YES" \
@@ -106,22 +118,22 @@ function subset_consented_cohort_patients() {
         return 1
     fi
 
-    # Get intersection of consented patients and patients in current cohort
-    comm -12 <(sort $SUBSET_FILE) <(sort $CONSENTED_SUBSET_FILE) > $CONSENTED_COHORT_SUBSET_FILE
-    if [ $? -gt 0 ] ; then
-        echo "Failed to generate list of consented patients in $COHORT_NAME cohort"
-        return 1
-    fi
-
     # Write out the subsetted data
-    $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py \
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/merge.py \
         --study-id="mskimpact" \
-        --subset="$CONSENTED_COHORT_SUBSET_FILE" \
+        --subset="$CONSENTED_SUBSET_FILE" \
         --output-directory="$SOPHIA_MSK_IMPACT_DATA_HOME" \
         --merge-clinical="true" \
         $SOPHIA_TMPDIR
     if [ $? -gt 0 ] ; then
         echo "Failed to subset on list of consented patients"
+        return 1
+    fi
+
+    # Add CDM timeline files
+    sh $PORTAL_SCRIPTS_DIR/subset-cdm-timeline-files.sh sophia_mskimpact $SOPHIA_MSK_IMPACT_DATA_HOME $SOPHIA_TMPDIR
+    if [ $? -gt 0 ] ; then
+        echo "Failed to generate CDM timeline files"
         return 1
     fi
 }
@@ -170,18 +182,6 @@ function filter_clinical_cols() {
     fi
 }
 
-function rename_cdm_clinical_attribute_columns() {
-    # Rename clinical patient attributes coming from CDM:
-    # CURRENT_AGE_DEID -> AGE_CURRENT
-    # GENDER -> SEX
-
-    PATIENT_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
-    PATIENT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.renamed"
-
-    sed -e '1s/CURRENT_AGE_DEID/AGE_CURRENT/' -e '1s/GENDER/SEX/' $PATIENT_INPUT_FILEPATH > $PATIENT_OUTPUT_FILEPATH &&
-    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH"
-}
-
 function standardize_clinical_data() {
     PATIENT_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
     PATIENT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.standardized"
@@ -189,8 +189,8 @@ function standardize_clinical_data() {
     SAMPLE_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt.standardized"
 
     # Standardize the clinical files to use NA for blank values
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_clinical_data.py -f "$PATIENT_INPUT_FILEPATH" > "$PATIENT_OUTPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_clinical_data.py -f "$SAMPLE_INPUT_FILEPATH" > "$SAMPLE_OUTPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/standardize_clinical_data.py -f "$PATIENT_INPUT_FILEPATH" > "$PATIENT_OUTPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/standardize_clinical_data.py -f "$SAMPLE_INPUT_FILEPATH" > "$SAMPLE_OUTPUT_FILEPATH" &&
 
     # Rewrite the patient and sample files with updated data
     mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH" &&
@@ -208,12 +208,12 @@ function add_seq_date_to_sample_file() {
     KEY_COLUMNS="SAMPLE_ID PATIENT_ID"
 
     # Download seq_date.txt file from DataBricks
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/databricks_query_py3.py \
+    $PYTHON3_BINARY $PORTAL_SCRIPTS_DIR/databricks_query_py3.py \
         --server-hostname $DATABRICKS_SERVER_HOSTNAME \
         --http-path $DATABRICKS_HTTP_PATH \
         --access-token $DATABRICKS_TOKEN \
         query \
-        --sql-query "SELECT DMP_SAMPLE_ID AS SAMPLE_ID, DMP_PATIENT_ID AS PATIENT_ID, SEQUENCING_DATE AS SEQ_DATE FROM cdsi_eng_phi.msk_impact_dates.sequencing_date" \
+        --sql-query "SELECT DMP_SAMPLE_ID AS SAMPLE_ID, DMP_PATIENT_ID AS PATIENT_ID, SEQUENCING_DATE AS SEQ_DATE FROM cdsi_eng_phi.deng_msk_impact_dates.sequencing_date" \
         --output-path $SEQ_DATE_FILEPATH
     if [ $? -gt 0 ] ; then
         echo "Failed to query DataBricks for SEQ_DATE file"
@@ -221,7 +221,7 @@ function add_seq_date_to_sample_file() {
     fi
 
     # Add SEQ_DATE column to sample file and overwrite the previous sample file
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$SEQ_DATE_FILEPATH" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
+    $PYTHON3_BINARY $PORTAL_SCRIPTS_DIR/combine_files_py3.py -i "$SAMPLE_INPUT_FILEPATH" "$SEQ_DATE_FILEPATH" -o "$SAMPLE_OUTPUT_FILEPATH" -c $KEY_COLUMNS -m left &&
     mv "$SAMPLE_OUTPUT_FILEPATH" "$SAMPLE_INPUT_FILEPATH"
     if [ $? -gt 0 ] ; then
         echo "Failed to merge $SAMPLE_INPUT_FILEPATH and $SEQ_DATE_FILEPATH"
@@ -229,22 +229,39 @@ function add_seq_date_to_sample_file() {
     fi
 }
 
+function anonymize_age_at_seq_with_cap() {
+    PATIENT_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
+    PATIENT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt.os_months_trunc"
+    UPPER_AGE_LIMIT=80
+    OS_MONTHS_PRECISION=2
+
+    # Anonymize AGE_AT_SEQUENCING_REPORTED_YEARS and truncate OS_MONTHS
+    $PYTHON3_BINARY $PORTAL_SCRIPTS_DIR/anonymize_age_at_seq_with_cap_py3.py "$PATIENT_INPUT_FILEPATH" "$PATIENT_OUTPUT_FILEPATH" -u "$UPPER_AGE_LIMIT" -o "$OS_MONTHS_PRECISION" &&
+
+    # Rewrite the patient and sample files with updated data
+    mv "$PATIENT_OUTPUT_FILEPATH" "$PATIENT_INPUT_FILEPATH"
+    if [ $? -gt 0 ] ; then
+        echo "Failed to anonymize CURRENT_AGE_DEID"
+        return 1
+    fi
+}
+
 function add_metadata_headers() {
     # Calling merge.py strips out metadata headers from our clinical files - add them back in
     INPUT_FILENAMES="$SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt $SOPHIA_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/add_clinical_attribute_metadata_headers.py -f $INPUT_FILENAMES -c "$CDD_URL" -s mskimpact -i $CDM_METADATA
 }
 
 function standardize_cna_data() {
     # Standardize the CNA file to use NA for blank values
     DATA_CNA_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_CNA.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_cna_data.py -f "$DATA_CNA_INPUT_FILEPATH"
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/standardize_cna_data.py -f "$DATA_CNA_INPUT_FILEPATH"
 }
 
 function transpose_cna_data() {
     # Transpose the CNA file so that sample IDs are contained in the first column instead of the header
     DATA_CNA_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_CNA.txt"
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/transpose_cna_py3.py "$DATA_CNA_INPUT_FILEPATH"
+    $PYTHON3_BINARY $PORTAL_SCRIPTS_DIR/transpose_cna_py3.py "$DATA_CNA_INPUT_FILEPATH"
 }
 
 function standardize_mutations_data() {
@@ -252,8 +269,8 @@ function standardize_mutations_data() {
     NSOUT_MUTATIONS_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout.txt"
 
     # Standardize the mutations files to check for valid values in the 'NCBI_Build' column
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_mutations_data.py -f "$NSOUT_MUTATIONS_INPUT_FILEPATH"
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/standardize_mutations_data.py -f "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/standardize_mutations_data.py -f "$NSOUT_MUTATIONS_INPUT_FILEPATH"
 }
 
 function remove_duplicate_maf_variants() {
@@ -265,8 +282,8 @@ function remove_duplicate_maf_variants() {
 
     # Remove duplicate variants from MAF files
     # CVR data can contain duplicates for a gene and its alias
-    $PYTHON_BINARY $PORTAL_HOME/scripts/remove-duplicate-maf-variants.py -i "$MUTATIONS_EXTD_INPUT_FILEPATH" -o "$MUTATIONS_EXTD_OUTPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/scripts/remove-duplicate-maf-variants.py -i "$NSOUT_MUTATIONS_INPUT_FILEPATH" -o "$NSOUT_MUTATIONS_OUTPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/remove-duplicate-maf-variants.py -i "$MUTATIONS_EXTD_INPUT_FILEPATH" -o "$MUTATIONS_EXTD_OUTPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/remove-duplicate-maf-variants.py -i "$NSOUT_MUTATIONS_INPUT_FILEPATH" -o "$NSOUT_MUTATIONS_OUTPUT_FILEPATH" &&
 
     # Rewrite mutation files with updated data
     mv "$MUTATIONS_EXTD_OUTPUT_FILEPATH" "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
@@ -276,7 +293,7 @@ function remove_duplicate_maf_variants() {
 function filter_germline_events_from_maf() {
     MUTATION_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt"
     MUTATION_FILTERED_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_extended.txt.filtered"
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $MUTATION_FILEPATH $MUTATION_FILTERED_FILEPATH --event-type mutation
+    $PYTHON3_BINARY $PORTAL_SCRIPTS_DIR/filter_non_somatic_events_py3.py $MUTATION_FILEPATH $MUTATION_FILTERED_FILEPATH --event-type mutation
     if [ $? -gt 0 ] ; then
         echo "Failed to filter germline events from mutation file"
         return 1
@@ -285,7 +302,7 @@ function filter_germline_events_from_maf() {
 
     MUTATION_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout.txt"
     MUTATION_FILTERED_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout.txt.filtered"
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $MUTATION_FILEPATH $MUTATION_FILTERED_FILEPATH --event-type mutation
+    $PYTHON3_BINARY $PORTAL_SCRIPTS_DIR/filter_non_somatic_events_py3.py $MUTATION_FILEPATH $MUTATION_FILTERED_FILEPATH --event-type mutation
     if [ $? -gt 0 ] ; then
         echo "Failed to filter germline events from nonsignedout mutation file"
         return 1
@@ -308,8 +325,8 @@ function filter_replicated_maf_columns() {
     MUTATIONS_NONSIGNEDOUT_OUTPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_mutations_non_signedout.txt.filtered"
 
     # Filter out the columns we want to exclude in both files
-    $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$MUTATIONS_EXTENDED_INPUT_FILEPATH" -e "$MUTATIONS_EXTENDED_COLS_TO_FILTER" > "$MUTATIONS_EXTENDED_OUTPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/scripts/filter_clinical_data.py -c "$MUTATIONS_NONSIGNEDOUT_INPUT_FILEPATH" -e "$NONSIGNEDOUT_COLS_TO_FILTER" > "$MUTATIONS_NONSIGNEDOUT_OUTPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/filter_clinical_data.py -c "$MUTATIONS_EXTENDED_INPUT_FILEPATH" -e "$MUTATIONS_EXTENDED_COLS_TO_FILTER" > "$MUTATIONS_EXTENDED_OUTPUT_FILEPATH" &&
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/filter_clinical_data.py -c "$MUTATIONS_NONSIGNEDOUT_INPUT_FILEPATH" -e "$NONSIGNEDOUT_COLS_TO_FILTER" > "$MUTATIONS_NONSIGNEDOUT_OUTPUT_FILEPATH" &&
 
     # Rewrite the MAF files
     mv "$MUTATIONS_EXTENDED_OUTPUT_FILEPATH" "$MUTATIONS_EXTENDED_INPUT_FILEPATH" &&
@@ -318,13 +335,13 @@ function filter_replicated_maf_columns() {
 
 function standardize_structural_variant_data() {
     DATA_SV_INPUT_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/standardize_structural_variant_data.py -f "$DATA_SV_INPUT_FILEPATH"
+    $PYTHON_BINARY $PORTAL_SCRIPTS_DIR/standardize_structural_variant_data.py -f "$DATA_SV_INPUT_FILEPATH"
 }
 
 function filter_germline_events_from_sv() {
     SV_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt"
     SV_FILTERED_FILEPATH="$SOPHIA_MSK_IMPACT_DATA_HOME/data_sv.txt.filtered"
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/filter_non_somatic_events_py3.py $SV_FILEPATH $SV_FILTERED_FILEPATH --event-type structural_variant
+    $PYTHON3_BINARY $PORTAL_SCRIPTS_DIR/filter_non_somatic_events_py3.py $SV_FILEPATH $SV_FILTERED_FILEPATH --event-type structural_variant
     if [ $? -gt 0 ] ; then
         echo "Failed to filter germline events from structural variant file"
         return 1
@@ -354,7 +371,28 @@ function filter_files_in_delivery_directory() {
     filenames_to_deliver[data_mutations_non_signedout.txt]+=1
     filenames_to_deliver[data_sv.txt]+=1
     filenames_to_deliver[sophia_mskimpact_data_cna_hg19.seg]+=1
-    filenames_to_deliver[DMP_IDs.txt]+=1
+    filenames_to_deliver[data_timeline_bmi.txt]+=1
+    filenames_to_deliver[data_timeline_ca_125_labs.txt]+=1
+    filenames_to_deliver[data_timeline_ca_15-3_labs.txt]+=1
+    filenames_to_deliver[data_timeline_ca_19-9_labs.txt]+=1
+    filenames_to_deliver[data_timeline_cancer_presence.txt]+=1
+    filenames_to_deliver[data_timeline_cea_labs.txt]+=1
+    filenames_to_deliver[data_timeline_diagnosis.txt]+=1
+    filenames_to_deliver[data_timeline_ecog_kps.txt]+=1
+    filenames_to_deliver[data_timeline_follow_up.txt]+=1
+    filenames_to_deliver[data_timeline_gleason.txt]+=1
+    filenames_to_deliver[data_timeline_mmr.txt]+=1
+    filenames_to_deliver[data_timeline_pdl1.txt]+=1
+    filenames_to_deliver[data_timeline_prior_meds.txt]+=1
+    filenames_to_deliver[data_timeline_progression.txt]+=1
+    filenames_to_deliver[data_timeline_psa_labs.txt]+=1
+    filenames_to_deliver[data_timeline_radiation.txt]+=1
+    filenames_to_deliver[data_timeline_specimen_surgery.txt]+=1
+    filenames_to_deliver[data_timeline_specimen.txt]+=1
+    filenames_to_deliver[data_timeline_surgery.txt]+=1
+    filenames_to_deliver[data_timeline_treatment.txt]+=1
+    filenames_to_deliver[data_timeline_tsh_labs.txt]+=1
+    filenames_to_deliver[data_timeline_tumor_sites.txt]+=1
 
     # Remove any files/directories that are not specified above
     for filepath in $SOPHIA_MSK_IMPACT_DATA_HOME/* ; do
@@ -390,7 +428,7 @@ function cleanup_repo() {
     fi
 
     # Clean up untracked files and LFS objects
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $SOPHIA_DATA_HOME
+    bash $PORTAL_SCRIPTS_DIR/datasource-repo-cleanup.sh $SOPHIA_DATA_HOME
 }
 
 printTimeStampedDataProcessingStepMessage "Subset Sophia MSK-IMPACT"
@@ -422,11 +460,6 @@ if ! filter_clinical_cols ; then
     report_error "Failed to filter non-delivered clinical attribute columns for Sophia MSK-IMPACT"
 fi
 
-# Rename columns coming from CDM
-if ! rename_cdm_clinical_attribute_columns ; then
-    report_error "Failed to rename CDM clinical attribute columns"
-fi
-
 # Standardize blank clinical data values to NA
 if ! standardize_clinical_data ; then
     report_error "ERROR: Failed to standardize blank clinical data values to NA"
@@ -435,6 +468,11 @@ fi
 # Add SEQ_DATE to clinical sample file
 if ! add_seq_date_to_sample_file; then
     report_error "ERROR: Failed to add SEQ_DATE column to clinical sample file"
+fi
+
+# Anonymize ages
+if ! anonymize_age_at_seq_with_cap ; then
+    report_error "ERROR: Failed to anonymize AGE_CURRENT_DEID"
 fi
 
 # Add metadata headers to clinical files
