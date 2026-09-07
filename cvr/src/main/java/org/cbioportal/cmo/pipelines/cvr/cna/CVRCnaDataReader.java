@@ -151,10 +151,13 @@ public class CVRCnaDataReader implements ItemStreamReader<String>{
         for (String gene : genes) {
             StringBuilder line = new StringBuilder(gene);
             for (String sample : samples) {
-                String cnaValue = "0";
+                String cnaValue;
                 Object value = cnaMap.get(gene, sample);
                 if (value != null) {
-                    cnaValue = value.toString();
+                    cnaValue = value.toString().trim();
+                    cnaValue = cnaValue.isEmpty() ? "NA" : cnaValue;
+                } else {
+                    cnaValue = "NA";
                 }
                 line.append("\t").append(cnaValue);
             }
