@@ -114,12 +114,16 @@ IMPORTER = "public"
 CREDS_DIR = "/data/portal-cron/pipelines-credentials"
 CREDS_SECRET_NAME = "pipelines-credentials"
 CREDS_VOLUME_NAME = "pipelines-credentials"
-APP_PROPERTIES_SECRET_BLUE  = "containerized-properties-blue"
-APP_PROPERTIES_SECRET_GREEN = "containerized-properties-green"
-APP_PROPERTIES_PATH         = "/application.properties"
 GET_DB_IN_PROD_SCRIPT       = f"{SCRIPTS_DIR}/get_database_currently_in_production.sh"
-COLOR_SWAP_CONFIG_FILE = f"{CREDS_DIR}/public-db-color-swap-config.yaml"
-CLICKHOUSE_CONFIG_FILE = f"{CREDS_DIR}/manage_public_clickhouse_database_update_tools.properties"
+
+# Both environments' config files live in the pipelines-credentials secret under
+# env-prefixed keys; params.database ('containerized' or 'public') selects the set.
+MANAGE_PROPS_TEMPLATE = f"{CREDS_DIR}/{{{{ params.database }}}}.manage.properties"
+COLOR_SWAP_TEMPLATE   = f"{CREDS_DIR}/{{{{ params.database }}}}.color-swap.yaml"
+
+
+def _manage_props_path(env: str) -> str:
+    return f"{CREDS_DIR}/{env}.manage.properties"
 
 S3_MOUNT_PATH = "/mnt/s3-data"
 S3_PVC_CLAIM_NAME = "databricks-s3-pvc"
@@ -297,6 +301,9 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
     if java_opts:
         env.append(k8s.V1EnvVar(name="JAVA_OPTS", value=java_opts))
 
+    # application.properties, clickhouse.sql and manage properties for both
+    # environments come from the pipelines-credentials secret (mounted at
+    # CREDS_DIR) under env-prefixed keys — no extra per-environment mounts.
     return _pod_override(
         image=K8S_IMAGE_VALIDATE,
         env=env,
@@ -304,40 +311,6 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
             requests={"memory": memory_request, "cpu": "1"},
             limits={"memory": memory_limit},
         ),
-        extra_volumes=[
-            k8s.V1Volume(
-                name="app-properties-blue",
-                secret=k8s.V1SecretVolumeSource(secret_name=APP_PROPERTIES_SECRET_BLUE),
-            ),
-            k8s.V1Volume(
-                name="app-properties-green",
-                secret=k8s.V1SecretVolumeSource(secret_name=APP_PROPERTIES_SECRET_GREEN),
-            ),
-            k8s.V1Volume(
-                name="clickhouse-sql",
-                secret=k8s.V1SecretVolumeSource(secret_name="hackathon-clickhouse-sql"),
-            ),
-        ],
-        extra_mounts=[
-            k8s.V1VolumeMount(
-                name="app-properties-blue",
-                mount_path=f"{APP_PROPERTIES_PATH}.blue",
-                sub_path="application.properties",
-                read_only=True,
-            ),
-            k8s.V1VolumeMount(
-                name="app-properties-green",
-                mount_path=f"{APP_PROPERTIES_PATH}.green",
-                sub_path="application.properties",
-                read_only=True,
-            ),
-            k8s.V1VolumeMount(
-                name="clickhouse-sql",
-                mount_path="/clickhouse.sql",
-                sub_path="clickhouse.sql",
-                read_only=True,
-            ),
-        ],
     )
 
 
@@ -354,8 +327,10 @@ _DEFAULT_ARGS = {
 }
 
 
-def _activate_standby_properties() -> str:
-    """Determine the standby color and copy the matching application.properties into place.
+def _activate_standby_properties(env: str) -> str:
+    """Determine the standby color for the given environment ('containerized' or
+    'public') and copy the matching application.properties + derived-table SQL into
+    /tmp, pointing PORTAL_HOME and the CLICKHOUSE_* env vars at the standby database.
 
     Calls get_database_currently_in_production.sh from the cbioportal-core scripts
     (available at /scripts/clickhouse_import_support/ in the core image).
@@ -363,34 +338,37 @@ def _activate_standby_properties() -> str:
     Returns the standby color string ('blue' or 'green').
     """
     import shutil
+    manage_props_path = _manage_props_path(env)
     # The core image has cbioportal-core scripts at /scripts/clickhouse_import_support/
     result = _run_and_stream([
         "/scripts/clickhouse_import_support/get_database_currently_in_production.sh",
-        CLICKHOUSE_CONFIG_FILE,
+        manage_props_path,
     ])
     if result.returncode != 0:
         raise Exception(f"get_database_currently_in_production failed (exit {result.returncode})")
     live_db       = result.stdout.strip()  # e.g. "cbioportal_public_blue : current production database"
     live_color    = "blue" if "blue" in live_db else "green"
     standby_color = "green" if live_color == "blue" else "blue"
-    src_path = f"{APP_PROPERTIES_PATH}.{standby_color}"
+    src_path = f"{CREDS_DIR}/{env}.application.properties.{standby_color}"
     dest_path = "/tmp/application.properties"
     shutil.copy(src_path, dest_path)
-    shutil.copy("/clickhouse.sql", "/tmp/clickhouse.sql")
+    shutil.copy(f"{CREDS_DIR}/{env}.clickhouse.sql", "/tmp/clickhouse.sql")
     os.environ["PORTAL_HOME"] = "/tmp"
 
     # Point the derive-tables clickhouse client at the standby database.
-    # rebuild_derived_tables.py reads CLICKHOUSE_* env vars; these previously came
-    # from a fixed k8s secret (hackathon-clickhouse-secret) whose single database
-    # value ignored the blue/green color, so derived tables could be built in the
-    # live database instead of the standby one.
-    ch_props = _load_properties(CLICKHOUSE_CONFIG_FILE)
+    # rebuild_derived_tables.py reads CLICKHOUSE_* env vars; a fixed value would
+    # ignore the blue/green color, so derive them from the manage properties here.
+    ch_props = _load_properties(manage_props_path)
+    standby_db = ch_props[f"clickhouse_{standby_color}_database_name"]
     os.environ["CLICKHOUSE_HOST"] = ch_props["clickhouse_server_host_name"]
     os.environ["CLICKHOUSE_NATIVE_PORT"] = ch_props["clickhouse_server_port"]
     os.environ["CLICKHOUSE_USER"] = ch_props["clickhouse_server_username"]
     os.environ["CLICKHOUSE_PASSWORD"] = ch_props["clickhouse_server_password"]
-    os.environ["CLICKHOUSE_DB"] = ch_props[f"clickhouse_{standby_color}_database_name"]
-    logging.info("Activated %s application.properties (live=%s, standby=%s) -> %s", standby_color, live_color, standby_color, dest_path)
+    os.environ["CLICKHOUSE_DB"] = standby_db
+    logging.info(
+        "=== TARGET ENVIRONMENT: %s | live=%s standby=%s | standby db=%s ===",
+        env, live_color, standby_color, standby_db,
+    )
     return standby_color
 
 
@@ -404,10 +382,15 @@ def _activate_standby_properties() -> str:
     render_template_as_native_obj=True,
     params={
         "database": Param(
-            "public",
+            "containerized",
             type="string",
             enum=["containerized", "public"],
-            description="Which database environment to import into.",
+            description=(
+                "Which database environment to import into. 'containerized' targets the "
+                "test databases and containerized.cbioportal.org; 'public' targets the "
+                "REAL public databases — its traffic swap moves www.cbioportal.org. "
+                "Defaults to the safe environment; select 'public' deliberately."
+            ),
             title="Database",
         ),
         "cancer_study_ids": Param(
@@ -469,8 +452,8 @@ def import_public_hackathon():
         bash_command="unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
             "airflow-verify-management.sh",
             SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-            COLOR_SWAP_CONFIG_FILE,
+            MANAGE_PROPS_TEMPLATE,
+            COLOR_SWAP_TEMPLATE,
         ),
         executor_config=_POD_OVERRIDE,
     )
@@ -481,7 +464,7 @@ def import_public_hackathon():
             "airflow-clone-db.sh",
             IMPORTER,
             SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
+            MANAGE_PROPS_TEMPLATE,
         ),
         executor_config=_POD_OVERRIDE,
     )
@@ -524,7 +507,7 @@ def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
     def import_into_standby_database(valid_studies: list[str], params: dict | None = None):
         _skip_if_requested("import_into_standby_database", params)
-        _activate_standby_properties()
+        _activate_standby_properties(params["database"])
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
             return
@@ -553,7 +536,7 @@ def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
     def create_derived_tables_in_standby_database(params: dict | None = None):
         _skip_if_requested("create_derived_tables_in_standby_database", params)
-        _activate_standby_properties()
+        _activate_standby_properties(params["database"])
         rebuild = _run_and_stream(
             [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables",
              "--derived-table-sql", "/tmp/clickhouse.sql"],
@@ -567,15 +550,15 @@ def import_public_hackathon():
         + "unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
             "airflow-transfer-deployment.sh",
             SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-            COLOR_SWAP_CONFIG_FILE,
+            MANAGE_PROPS_TEMPLATE,
+            COLOR_SWAP_TEMPLATE,
         ),
         executor_config=_POD_OVERRIDE,
         trigger_rule=TriggerRule.NONE_FAILED,
     )
 
     @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED)
-    def finalize_import_state(ti=None):
+    def finalize_import_state(ti=None, params: dict | None = None):
         """Set the management DB end state: 'complete' only if production traffic was
         actually swapped, otherwise 'abandoned' so the next run re-clones standby."""
         transfer_state = ti.get_dagrun().get_task_instance("transfer_deployment_color").state
@@ -587,7 +570,7 @@ def import_public_hackathon():
         _run_and_stream(
             ["bash", "-c", _script(
                 "set_update_process_state.sh",
-                CLICKHOUSE_CONFIG_FILE,
+                _manage_props_path(params["database"]),
                 state,
                 source_automation_env=True,
             )],
@@ -598,7 +581,7 @@ def import_public_hackathon():
         task_id="set_import_abandoned",
         bash_command=_script(
             "set_update_process_state.sh",
-            CLICKHOUSE_CONFIG_FILE,
+            MANAGE_PROPS_TEMPLATE,
             "abandoned",
             source_automation_env=True,
         ),
