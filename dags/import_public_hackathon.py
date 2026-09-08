@@ -124,6 +124,29 @@ CLICKHOUSE_CONFIG_FILE = f"{CREDS_DIR}/manage_public_clickhouse_database_update_
 S3_MOUNT_PATH = "/mnt/s3-data"
 S3_PVC_CLAIM_NAME = "databricks-s3-pvc"
 
+# Task IDs that may be listed in the skip_tasks param (dry-run support).
+SKIPPABLE_TASK_IDS = (
+    "clone_live_database_into_standby",
+    "import_into_standby_database",
+    "create_derived_tables_in_standby_database",
+    "transfer_deployment_color",
+)
+
+
+def _bash_skip_guard(task_id: str) -> str:
+    """Jinja prefix for a BashOperator command: exit 99 (BashOperator's skip exit
+    code) when the task is listed in params.skip_tasks."""
+    return (
+        f"{{% if '{task_id}' in params.skip_tasks %}}"
+        f"echo '{task_id} listed in skip_tasks - skipping'; exit 99"
+        f"{{% endif %}}\n"
+    )
+
+
+def _skip_if_requested(task_id: str, params: dict | None) -> None:
+    if task_id in ((params or {}).get("skip_tasks") or []):
+        raise AirflowSkipException(f"{task_id} listed in skip_tasks - skipping")
+
 
 def _study_data_path(study_id: str) -> str | None:
     """Resolve a study on the S3 mount; extract tarballs to a temp dir. None if absent."""
@@ -394,13 +417,31 @@ def _activate_standby_properties() -> str:
             description="Select one or more cancer study IDs to import. Run refresh_study_list to update the list.",
             title="Cancer Study IDs",
         ),
+        "skip_tasks": Param(
+            [],
+            type="array",
+            examples=list(SKIPPABLE_TASK_IDS),
+            description=(
+                "Task IDs to skip this run (dry-run support). Skipping "
+                "transfer_deployment_color imports into the standby database without "
+                "swapping production traffic; the run then finishes in the 'abandoned' "
+                "management state so the next run re-clones the standby database."
+            ),
+            title="Skip Tasks",
+        ),
     },
 )
 def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE)
-    def verify_studies_exist(study_ids: list[str]) -> list[str]:
+    def verify_studies_exist(study_ids: list[str], params: dict | None = None) -> list[str]:
         """All-or-nothing: every requested study must exist on the S3 mount, else fail the DAG."""
         import pathlib
+
+        # Fail fast on typos: a misspelled skip_tasks entry would silently NOT skip
+        # its task, which for transfer_deployment_color means an unintended traffic swap.
+        unknown = set((params or {}).get("skip_tasks") or []) - set(SKIPPABLE_TASK_IDS)
+        if unknown:
+            raise AirflowException(f"skip_tasks contains unknown task ids: {sorted(unknown)}")
 
         # render_template_as_native_obj may render the array Param as its string repr
         if isinstance(study_ids, str):
@@ -436,7 +477,7 @@ def import_public_hackathon():
 
     t_clone_live_database = BashOperator(
         task_id="clone_live_database_into_standby",
-        bash_command=_script(
+        bash_command=_bash_skip_guard("clone_live_database_into_standby") + _script(
             "airflow-clone-db.sh",
             IMPORTER,
             SCRIPTS_DIR,
@@ -473,12 +514,16 @@ def import_public_hackathon():
     def collect_valid_studies(results: list) -> list[str]:
         valid = [sid for sid in (results or []) if sid is not None]
         if not valid:
-            raise AirflowSkipException("No studies passed validation — skipping import")
+            # Fail (not skip): downstream tasks use NONE_FAILED so that explicit
+            # skip_tasks skips flow through them — a skip here would let
+            # transfer_deployment_color swap traffic onto an unmodified clone.
+            raise AirflowException("No studies passed validation")
         logging.info("Studies passing validation: %s", valid)
         return valid
 
-    @task(executor_config=_POD_OVERRIDE_IMPORT)
-    def import_into_standby_database(valid_studies: list[str]):
+    @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
+    def import_into_standby_database(valid_studies: list[str], params: dict | None = None):
+        _skip_if_requested("import_into_standby_database", params)
         _activate_standby_properties()
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
@@ -505,8 +550,9 @@ def import_public_hackathon():
         if failed:
             raise Exception(f"Import failed for {len(failed)} study/studies: {failed}")
 
-    @task(executor_config=_POD_OVERRIDE_IMPORT)
-    def create_derived_tables_in_standby_database():
+    @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
+    def create_derived_tables_in_standby_database(params: dict | None = None):
+        _skip_if_requested("create_derived_tables_in_standby_database", params)
         _activate_standby_properties()
         rebuild = _run_and_stream(
             [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables",
@@ -517,25 +563,36 @@ def import_public_hackathon():
 
     t_transfer_deployment_color = BashOperator(
         task_id="transfer_deployment_color",
-        bash_command="unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
+        bash_command=_bash_skip_guard("transfer_deployment_color")
+        + "unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
             "airflow-transfer-deployment.sh",
             SCRIPTS_DIR,
             CLICKHOUSE_CONFIG_FILE,
             COLOR_SWAP_CONFIG_FILE,
         ),
         executor_config=_POD_OVERRIDE,
+        trigger_rule=TriggerRule.NONE_FAILED,
     )
 
-    t_set_import_complete = BashOperator(
-        task_id="set_import_complete",
-        bash_command=_script(
-            "set_update_process_state.sh",
-            CLICKHOUSE_CONFIG_FILE,
-            "complete",
-            source_automation_env=True,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED)
+    def finalize_import_state(ti=None):
+        """Set the management DB end state: 'complete' only if production traffic was
+        actually swapped, otherwise 'abandoned' so the next run re-clones standby."""
+        transfer_state = ti.get_dagrun().get_task_instance("transfer_deployment_color").state
+        state = "complete" if transfer_state == "success" else "abandoned"
+        logging.info(
+            "transfer_deployment_color finished in state %r -> setting update process state %r",
+            transfer_state, state,
+        )
+        _run_and_stream(
+            ["bash", "-c", _script(
+                "set_update_process_state.sh",
+                CLICKHOUSE_CONFIG_FILE,
+                state,
+                source_automation_env=True,
+            )],
+            check=True,
+        )
 
     t_set_import_abandoned = BashOperator(
         task_id="set_import_abandoned",
@@ -554,6 +611,7 @@ def import_public_hackathon():
     t_collect_valid  = collect_valid_studies(t_pull_and_validate)
     t_import         = import_into_standby_database(t_collect_valid)
     t_create_derived_tables = create_derived_tables_in_standby_database()
+    t_finalize       = finalize_import_state()
 
     t_found_studies >> t_verify_cluster_state >> [t_clone_live_database, t_pull_and_validate]
     t_clone_live_database >> t_import
@@ -561,7 +619,7 @@ def import_public_hackathon():
         t_import
         >> t_create_derived_tables
         >> t_transfer_deployment_color
-        >> t_set_import_complete
+        >> t_finalize
     )
 
     [
@@ -573,7 +631,7 @@ def import_public_hackathon():
         t_import,
         t_create_derived_tables,
         t_transfer_deployment_color,
-        t_set_import_complete,
+        t_finalize,
     ] >> t_set_import_abandoned
 
 
