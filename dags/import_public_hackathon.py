@@ -128,6 +128,19 @@ def _manage_props_path(env: str) -> str:
 S3_MOUNT_PATH = "/mnt/s3-data"
 S3_PVC_CLAIM_NAME = "databricks-s3-pvc"
 
+
+def _study_prefix(params: dict | None) -> str:
+    """Normalize params.study_prefix to a single relative path segment ('' = bucket root)."""
+    prefix = str((params or {}).get("study_prefix") or "").strip().strip("/")
+    if prefix and (".." in prefix or "/" in prefix):
+        raise AirflowException(f"study_prefix must be a single top-level folder name, got {prefix!r}")
+    return prefix
+
+
+def _study_mount(prefix: str = "") -> "pathlib.Path":
+    import pathlib
+    return pathlib.Path(S3_MOUNT_PATH) / prefix if prefix else pathlib.Path(S3_MOUNT_PATH)
+
 # Task IDs that may be listed in the skip_tasks param (dry-run support).
 SKIPPABLE_TASK_IDS = (
     "clone_live_database_into_standby",
@@ -152,15 +165,17 @@ def _skip_if_requested(task_id: str, params: dict | None) -> None:
         raise AirflowSkipException(f"{task_id} listed in skip_tasks - skipping")
 
 
-def _study_data_path(study_id: str) -> str | None:
-    """Resolve a study on the S3 mount; extract tarballs to a temp dir. None if absent."""
+def _study_data_path(study_id: str, prefix: str = "") -> str | None:
+    """Resolve a study under the S3 mount (optionally inside a top-level folder);
+    extract tarballs to a temp dir. None if absent."""
     import pathlib
     import tarfile
     import tempfile
     import shutil
 
-    mount_tar = pathlib.Path(S3_MOUNT_PATH) / f"{study_id}.tar.gz"
-    mount_dir = pathlib.Path(S3_MOUNT_PATH) / study_id
+    mount = _study_mount(prefix)
+    mount_tar = mount / f"{study_id}.tar.gz"
+    mount_dir = mount / study_id
 
     if mount_dir.is_dir():
         return str(mount_dir)
@@ -185,7 +200,7 @@ def _study_data_path(study_id: str) -> str | None:
             shutil.rmtree(tmp, ignore_errors=True)
             return None
 
-    logger.error("Study '%s' not found at %s (neither .tar.gz nor directory)", study_id, S3_MOUNT_PATH)
+    logger.error("Study '%s' not found at %s (neither .tar.gz nor directory)", study_id, mount)
     return None
 
 
@@ -400,6 +415,18 @@ def _activate_standby_properties(env: str) -> str:
             description="Select one or more cancer study IDs to import. Run refresh_study_list to update the list.",
             title="Cancer Study IDs",
         ),
+        "study_prefix": Param(
+            "",
+            type="string",
+            examples=["", "staging"],
+            description=(
+                "Top-level folder in the S3 bucket to read studies from. Empty = bucket "
+                "root (the studies the scheduled public import uses). 'staging' reads "
+                "s3://<bucket>/staging/, a scratch area for dry runs of pre-processed or "
+                "otherwise modified studies that must not affect the real import."
+            ),
+            title="Study Prefix",
+        ),
         "skip_tasks": Param(
             [],
             type="array",
@@ -417,8 +444,8 @@ def _activate_standby_properties(env: str) -> str:
 def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE)
     def verify_studies_exist(study_ids: list[str], params: dict | None = None) -> list[str]:
-        """All-or-nothing: every requested study must exist on the S3 mount, else fail the DAG."""
-        import pathlib
+        """All-or-nothing: every requested study must exist on the S3 mount
+        (under params.study_prefix, if set), else fail the DAG."""
 
         # Fail fast on typos: a misspelled skip_tasks entry would silently NOT skip
         # its task, which for transfer_deployment_color means an unintended traffic swap.
@@ -437,13 +464,13 @@ def import_public_hackathon():
         if not study_ids:
             raise AirflowException("No study IDs provided")
 
-        mount = pathlib.Path(S3_MOUNT_PATH)
+        mount = _study_mount(_study_prefix(params))
         missing = [
             s for s in study_ids
             if not (mount / f"{s}.tar.gz").is_file() and not (mount / s).is_dir()
         ]
         if missing:
-            raise AirflowException(f"Studies not found at {S3_MOUNT_PATH}: {missing}")
+            raise AirflowException(f"Studies not found at {mount}: {missing}")
         return study_ids
 
     t_verify_cluster_state = BashOperator(
@@ -470,11 +497,11 @@ def import_public_hackathon():
     )
 
     @task(executor_config=_POD_OVERRIDE_VALIDATE)
-    def pull_and_validate_study(study_id: str) -> str | None:
+    def pull_and_validate_study(study_id: str, params: dict | None = None) -> str | None:
         import pathlib
 
         try:
-            local_dir = _study_data_path(study_id)
+            local_dir = _study_data_path(study_id, _study_prefix(params))
             if local_dir is None:
                 return None
 
@@ -514,7 +541,7 @@ def import_public_hackathon():
 
         failed = []
         for study_id in valid_studies:
-            local_dir = _study_data_path(study_id)
+            local_dir = _study_data_path(study_id, _study_prefix(params))
             if local_dir is None:
                 failed.append(study_id)
                 continue

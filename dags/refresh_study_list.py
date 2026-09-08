@@ -9,6 +9,10 @@ from airflow.models import Variable
 
 S3_BUCKET             = "sc-203403084713-pp-4rxlzd426npxu-bucket-kswubqqre3jr"
 STUDY_LIST_VARIABLE_KEY = "available_study_ids"
+# Top-level folders in the bucket that are not studies: the datahub LFS store,
+# embeddings, and the dry-run scratch area import_public_hackathon reads via
+# its study_prefix param.
+NON_STUDY_PREFIXES = {"lfs", "embeddings", "staging"}
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -40,7 +44,9 @@ def refresh_study_list():
         paginator = s3.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=S3_BUCKET, Delimiter="/"):
             for prefix in page.get("CommonPrefixes", []):
-                study_ids.add(prefix["Prefix"].rstrip("/"))
+                name = prefix["Prefix"].rstrip("/")
+                if name not in NON_STUDY_PREFIXES:
+                    study_ids.add(name)
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 if key.endswith(".tar") or key.endswith(".tar.gz"):
