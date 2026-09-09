@@ -7,9 +7,8 @@ directory of this script:
 
 import unittest
 import os
-from unittest.mock import patch
 
-from generate_az_study_changelog_py3 import Changelog, DataHandler
+from generate_az_study_changelog_py3 import Changelog
 
 
 class TestChangelog(unittest.TestCase):
@@ -37,14 +36,12 @@ class TestChangelog(unittest.TestCase):
         )
 
     def test_move_patient_up(self):
-        self.compare_expected_output_to_actual(
-            'move_patient_up', expected_modified_patient_count=2
-        )
+        # Reordering rows is no longer reported as a change
+        self.compare_expected_output_to_actual('move_patient_up')
 
     def test_move_patient_down(self):
-        self.compare_expected_output_to_actual(
-            'move_patient_down', expected_modified_patient_count=2
-        )
+        # Reordering rows is no longer reported as a change
+        self.compare_expected_output_to_actual('move_patient_down')
 
     def test_modified_sample(self):
         # Sample where cancer type has changed is counted in the modified sample count here
@@ -66,27 +63,23 @@ class TestChangelog(unittest.TestCase):
         )
 
     def test_move_sample_up(self):
-        self.compare_expected_output_to_actual(
-            'move_sample_up', expected_modified_sample_count=2
-        )
+        # Reordering rows is no longer reported as a change
+        self.compare_expected_output_to_actual('move_sample_up')
 
     def test_move_sample_down(self):
-        self.compare_expected_output_to_actual(
-            'move_sample_down', expected_modified_sample_count=2
-        )
+        # Reordering rows is no longer reported as a change
+        self.compare_expected_output_to_actual('move_sample_down')
 
     def test_reorder_patients(self):
-        self.compare_expected_output_to_actual(
-            'reorder_patients', expected_modified_patient_count=17
-        )
+        # Reordering rows is no longer reported as a change
+        self.compare_expected_output_to_actual('reorder_patients')
 
     def test_reorder_samples(self):
-        self.compare_expected_output_to_actual(
-            'reorder_samples', expected_modified_sample_count=22
-        )
+        # Reordering rows is no longer reported as a change
+        self.compare_expected_output_to_actual('reorder_samples')
 
     def test_new_files(self):
-        # Tests changelog output for clinical files that are newly added
+        # Tests changelog output for clinical files that are newly added (no previous version)
         self.compare_expected_output_to_actual('new_files')
 
     def test_cancer_type_changes(self):
@@ -94,28 +87,11 @@ class TestChangelog(unittest.TestCase):
             'cancer_type_changes', expected_modified_sample_count=5
         )
 
-    def parse_git_line_tokens(self, git_path):
-        git_lines = []
-        data_handler = DataHandler(git_path)
-
-        with open(git_path, 'r') as git_file_handle:
-            for line in git_file_handle:
-                tokens = line.split('\t')
-
-                # Git prepends each line of git log with a '+' or '-'
-                # We will use this to correctly parse the changes to each line
-                mode = tokens[0][0]
-                tokens[0] = tokens[0][1:]
-
-                # Only want to process the file contents (tab-delimited data)
-                # Ignore commented lines - they are tab delimited, and will be marked as added on first commit
-                # Ignore row that contains column names - this will be marked as added on first commit
-                if data_handler.is_git_diff_header(tokens, mode) or data_handler.is_commented_line(tokens) or data_handler.is_data_header_line(tokens):
-                    continue
-                
-                git_lines.append((mode, tokens))
-
-        return git_lines
+    def _fixture_path(self, sub_dir, name):
+        """Returns the path to a fixture file, or None when it does not exist
+        (a missing previous_* file means there is no prior version to compare against)."""
+        path = os.path.join(TestChangelog.base_dir, sub_dir, name)
+        return path if os.path.exists(path) else None
 
     def compare_expected_output_to_actual(
         self,
@@ -123,44 +99,24 @@ class TestChangelog(unittest.TestCase):
         expected_modified_patient_count=0,
         expected_modified_sample_count=0,
     ):
-        patient_data_path = os.path.join(
-            TestChangelog.base_dir, sub_dir, 'data_clinical_patient.txt'
-        )
-        sample_data_path = os.path.join(
-            TestChangelog.base_dir, sub_dir, 'data_clinical_sample.txt'
-        )
+        previous_patient_path = self._fixture_path(sub_dir, 'previous_data_clinical_patient.txt')
+        current_patient_path = self._fixture_path(sub_dir, 'current_data_clinical_patient.txt')
+        previous_sample_path = self._fixture_path(sub_dir, 'previous_data_clinical_sample.txt')
+        current_sample_path = self._fixture_path(sub_dir, 'current_data_clinical_sample.txt')
         output_path = os.path.join(
             TestChangelog.base_dir, sub_dir, 'changelog_summary.txt'
-        )
-        patient_git_path = os.path.join(
-            TestChangelog.base_dir, sub_dir, 'data_clinical_patient_diff.txt'
-        )
-        sample_git_path = os.path.join(
-            TestChangelog.base_dir, sub_dir, 'data_clinical_sample_diff.txt'
         )
         expected_out_path = os.path.join(
             TestChangelog.base_dir, sub_dir, 'expected_changelog_summary.txt'
         )
 
-        changelog_generator = Changelog(patient_data_path, sample_data_path)
-
-        # Get our fake git changes for our mocked method next_git_diff_line (below)
-        patient_git_lines = self.parse_git_line_tokens(patient_git_path)
-        sample_git_lines = self.parse_git_line_tokens(sample_git_path)
-
-        # Mock the method that provides the diff with patch.object
-        # so that we do not actually read git history
-        with patch.object(
-            DataHandler, "next_git_diff_line"
-        ) as next_git_diff_line_mocked:
-            next_git_diff_line_mocked.side_effect = [
-                iter(patient_git_lines),
-                iter(sample_git_lines),
-            ]
-            changelog_generator.generate_changelog(output_path)
-
-            # Make sure method is called at least once
-            next_git_diff_line_mocked.assert_called()
+        changelog_generator = Changelog(
+            previous_patient_path,
+            current_patient_path,
+            previous_sample_path,
+            current_sample_path,
+        )
+        changelog_generator.generate_changelog(output_path)
 
         # Read output file and compare it to expected output
         with open(expected_out_path, 'r') as expected_out:
