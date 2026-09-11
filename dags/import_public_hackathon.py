@@ -105,7 +105,8 @@ def _run_and_stream(
     )
 
 K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo:dev"
-K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core:dev"
+# Core e6cc508: demo-fast-methylation-validation, verified Airflow worker build.
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:5407513befedc1d0ae01a288af055b74e8b6ba3c046a1e3bad9c21cef3767828"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
 STUDY_LIST_VARIABLE_KEY = "available_study_ids"
@@ -114,26 +115,68 @@ IMPORTER = "public"
 CREDS_DIR = "/data/portal-cron/pipelines-credentials"
 CREDS_SECRET_NAME = "pipelines-credentials"
 CREDS_VOLUME_NAME = "pipelines-credentials"
-APP_PROPERTIES_SECRET_BLUE  = "containerized-properties-blue"
-APP_PROPERTIES_SECRET_GREEN = "containerized-properties-green"
-APP_PROPERTIES_PATH         = "/application.properties"
 GET_DB_IN_PROD_SCRIPT       = f"{SCRIPTS_DIR}/get_database_currently_in_production.sh"
-COLOR_SWAP_CONFIG_FILE = f"{CREDS_DIR}/public-db-color-swap-config.yaml"
-CLICKHOUSE_CONFIG_FILE = f"{CREDS_DIR}/manage_public_clickhouse_database_update_tools.properties"
+
+# Both environments' config files live in the pipelines-credentials secret under
+# env-prefixed keys; params.database ('containerized' or 'public') selects the set.
+MANAGE_PROPS_TEMPLATE = f"{CREDS_DIR}/{{{{ params.database }}}}.manage.properties"
+COLOR_SWAP_TEMPLATE   = f"{CREDS_DIR}/{{{{ params.database }}}}.color-swap.yaml"
+
+
+def _manage_props_path(env: str) -> str:
+    return f"{CREDS_DIR}/{env}.manage.properties"
 
 S3_MOUNT_PATH = "/mnt/s3-data"
 S3_PVC_CLAIM_NAME = "databricks-s3-pvc"
 
 
-def _study_data_path(study_id: str) -> str | None:
-    """Resolve a study on the S3 mount; extract tarballs to a temp dir. None if absent."""
+def _study_prefix(params: dict | None) -> str:
+    """Normalize params.study_prefix to a single relative path segment ('' = bucket root)."""
+    prefix = str((params or {}).get("study_prefix") or "").strip().strip("/")
+    if prefix and (".." in prefix or "/" in prefix):
+        raise AirflowException(f"study_prefix must be a single top-level folder name, got {prefix!r}")
+    return prefix
+
+
+def _study_mount(prefix: str = "") -> "pathlib.Path":
+    import pathlib
+    return pathlib.Path(S3_MOUNT_PATH) / prefix if prefix else pathlib.Path(S3_MOUNT_PATH)
+
+# Task IDs that may be listed in the skip_tasks param (dry-run support).
+SKIPPABLE_TASK_IDS = (
+    "clone_live_database_into_standby",
+    "import_into_standby_database",
+    "create_derived_tables_in_standby_database",
+    "transfer_deployment_color",
+)
+
+
+def _bash_skip_guard(task_id: str) -> str:
+    """Jinja prefix for a BashOperator command: exit 99 (BashOperator's skip exit
+    code) when the task is listed in params.skip_tasks."""
+    return (
+        f"{{% if '{task_id}' in params.skip_tasks %}}"
+        f"echo '{task_id} listed in skip_tasks - skipping'; exit 99"
+        f"{{% endif %}}\n"
+    )
+
+
+def _skip_if_requested(task_id: str, params: dict | None) -> None:
+    if task_id in ((params or {}).get("skip_tasks") or []):
+        raise AirflowSkipException(f"{task_id} listed in skip_tasks - skipping")
+
+
+def _study_data_path(study_id: str, prefix: str = "") -> str | None:
+    """Resolve a study under the S3 mount (optionally inside a top-level folder);
+    extract tarballs to a temp dir. None if absent."""
     import pathlib
     import tarfile
     import tempfile
     import shutil
 
-    mount_tar = pathlib.Path(S3_MOUNT_PATH) / f"{study_id}.tar.gz"
-    mount_dir = pathlib.Path(S3_MOUNT_PATH) / study_id
+    mount = _study_mount(prefix)
+    mount_tar = mount / f"{study_id}.tar.gz"
+    mount_dir = mount / study_id
 
     if mount_dir.is_dir():
         return str(mount_dir)
@@ -158,7 +201,7 @@ def _study_data_path(study_id: str) -> str | None:
             shutil.rmtree(tmp, ignore_errors=True)
             return None
 
-    logger.error("Study '%s' not found at %s (neither .tar.gz nor directory)", study_id, S3_MOUNT_PATH)
+    logger.error("Study '%s' not found at %s (neither .tar.gz nor directory)", study_id, mount)
     return None
 
 
@@ -183,13 +226,17 @@ def _script(script_name: str, *args: object, source_automation_env: bool = False
 _SAML2AWS_ENV = k8s.V1EnvVar(name="SAML2AWS_CONFIGFILE", value=f"{CREDS_DIR}/.saml2aws")
 
 
-def _clickhouse_secret_env(name: str, key: str) -> k8s.V1EnvVar:
-    return k8s.V1EnvVar(
-        name=name,
-        value_from=k8s.V1EnvVarSource(
-            secret_key_ref=k8s.V1SecretKeySelector(name="hackathon-clickhouse-secret", key=key)
-        ),
-    )
+def _load_properties(path: str) -> dict[str, str]:
+    """Parse a simple key=value properties file (comments and blank lines ignored)."""
+    props: dict[str, str] = {}
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            props[key.strip()] = value.strip()
+    return props
 
 
 def _pod_override(
@@ -265,16 +312,14 @@ _POD_OVERRIDE = _pod_override(
 def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: str = "2Gi", memory_limit: str = "3Gi") -> dict:
     env = [
         k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
-        _clickhouse_secret_env("CLICKHOUSE_HOST", "host"),
-        _clickhouse_secret_env("CLICKHOUSE_NATIVE_PORT", "native_port"),
-        _clickhouse_secret_env("CLICKHOUSE_USER", "user"),
-        _clickhouse_secret_env("CLICKHOUSE_PASSWORD", "password"),
-        _clickhouse_secret_env("CLICKHOUSE_DB", "database"),
         _SAML2AWS_ENV,
     ]
     if java_opts:
         env.append(k8s.V1EnvVar(name="JAVA_OPTS", value=java_opts))
 
+    # application.properties, clickhouse.sql and manage properties for both
+    # environments come from the pipelines-credentials secret (mounted at
+    # CREDS_DIR) under env-prefixed keys — no extra per-environment mounts.
     return _pod_override(
         image=K8S_IMAGE_VALIDATE,
         env=env,
@@ -282,40 +327,6 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
             requests={"memory": memory_request, "cpu": "1"},
             limits={"memory": memory_limit},
         ),
-        extra_volumes=[
-            k8s.V1Volume(
-                name="app-properties-blue",
-                secret=k8s.V1SecretVolumeSource(secret_name=APP_PROPERTIES_SECRET_BLUE),
-            ),
-            k8s.V1Volume(
-                name="app-properties-green",
-                secret=k8s.V1SecretVolumeSource(secret_name=APP_PROPERTIES_SECRET_GREEN),
-            ),
-            k8s.V1Volume(
-                name="clickhouse-sql",
-                secret=k8s.V1SecretVolumeSource(secret_name="hackathon-clickhouse-sql"),
-            ),
-        ],
-        extra_mounts=[
-            k8s.V1VolumeMount(
-                name="app-properties-blue",
-                mount_path=f"{APP_PROPERTIES_PATH}.blue",
-                sub_path="application.properties",
-                read_only=True,
-            ),
-            k8s.V1VolumeMount(
-                name="app-properties-green",
-                mount_path=f"{APP_PROPERTIES_PATH}.green",
-                sub_path="application.properties",
-                read_only=True,
-            ),
-            k8s.V1VolumeMount(
-                name="clickhouse-sql",
-                mount_path="/clickhouse.sql",
-                sub_path="clickhouse.sql",
-                read_only=True,
-            ),
-        ],
     )
 
 
@@ -332,8 +343,10 @@ _DEFAULT_ARGS = {
 }
 
 
-def _activate_standby_properties() -> str:
-    """Determine the standby color and copy the matching application.properties into place.
+def _activate_standby_properties(env: str) -> str:
+    """Determine the standby color for the given environment ('containerized' or
+    'public') and copy the matching application.properties + derived-table SQL into
+    /tmp, pointing PORTAL_HOME and the CLICKHOUSE_* env vars at the standby database.
 
     Calls get_database_currently_in_production.sh from the cbioportal-core scripts
     (available at /scripts/clickhouse_import_support/ in the core image).
@@ -341,22 +354,37 @@ def _activate_standby_properties() -> str:
     Returns the standby color string ('blue' or 'green').
     """
     import shutil
+    manage_props_path = _manage_props_path(env)
     # The core image has cbioportal-core scripts at /scripts/clickhouse_import_support/
     result = _run_and_stream([
         "/scripts/clickhouse_import_support/get_database_currently_in_production.sh",
-        CLICKHOUSE_CONFIG_FILE,
+        manage_props_path,
     ])
     if result.returncode != 0:
         raise Exception(f"get_database_currently_in_production failed (exit {result.returncode})")
     live_db       = result.stdout.strip()  # e.g. "cbioportal_public_blue : current production database"
     live_color    = "blue" if "blue" in live_db else "green"
     standby_color = "green" if live_color == "blue" else "blue"
-    src_path = f"{APP_PROPERTIES_PATH}.{standby_color}"
+    src_path = f"{CREDS_DIR}/{env}.application.properties.{standby_color}"
     dest_path = "/tmp/application.properties"
     shutil.copy(src_path, dest_path)
-    shutil.copy("/clickhouse.sql", "/tmp/clickhouse.sql")
+    shutil.copy(f"{CREDS_DIR}/{env}.clickhouse.sql", "/tmp/clickhouse.sql")
     os.environ["PORTAL_HOME"] = "/tmp"
-    logging.info("Activated %s application.properties (live=%s, standby=%s) -> %s", standby_color, live_color, standby_color, dest_path)
+
+    # Point the derive-tables clickhouse client at the standby database.
+    # rebuild_derived_tables.py reads CLICKHOUSE_* env vars; a fixed value would
+    # ignore the blue/green color, so derive them from the manage properties here.
+    ch_props = _load_properties(manage_props_path)
+    standby_db = ch_props[f"clickhouse_{standby_color}_database_name"]
+    os.environ["CLICKHOUSE_HOST"] = ch_props["clickhouse_server_host_name"]
+    os.environ["CLICKHOUSE_NATIVE_PORT"] = ch_props["clickhouse_server_port"]
+    os.environ["CLICKHOUSE_USER"] = ch_props["clickhouse_server_username"]
+    os.environ["CLICKHOUSE_PASSWORD"] = ch_props["clickhouse_server_password"]
+    os.environ["CLICKHOUSE_DB"] = standby_db
+    logging.info(
+        "=== TARGET ENVIRONMENT: %s | live=%s standby=%s | standby db=%s ===",
+        env, live_color, standby_color, standby_db,
+    )
     return standby_color
 
 
@@ -370,10 +398,15 @@ def _activate_standby_properties() -> str:
     render_template_as_native_obj=True,
     params={
         "database": Param(
-            "public",
+            "containerized",
             type="string",
             enum=["containerized", "public"],
-            description="Which database environment to import into.",
+            description=(
+                "Which database environment to import into. 'containerized' targets the "
+                "test databases and containerized.cbioportal.org; 'public' targets the "
+                "REAL public databases — its traffic swap moves www.cbioportal.org. "
+                "Defaults to the safe environment; select 'public' deliberately."
+            ),
             title="Database",
         ),
         "cancer_study_ids": Param(
@@ -383,13 +416,43 @@ def _activate_standby_properties() -> str:
             description="Select one or more cancer study IDs to import. Run refresh_study_list to update the list.",
             title="Cancer Study IDs",
         ),
+        "study_prefix": Param(
+            "",
+            type="string",
+            examples=["", "staging"],
+            description=(
+                "Top-level folder in the S3 bucket to read studies from. Empty = bucket "
+                "root (the studies the scheduled public import uses). 'staging' reads "
+                "s3://<bucket>/staging/, a scratch area for dry runs of pre-processed or "
+                "otherwise modified studies that must not affect the real import."
+            ),
+            title="Study Prefix",
+        ),
+        "skip_tasks": Param(
+            [],
+            type="array",
+            examples=list(SKIPPABLE_TASK_IDS),
+            description=(
+                "Task IDs to skip this run (dry-run support). Skipping "
+                "transfer_deployment_color imports into the standby database without "
+                "swapping production traffic; the run then finishes in the 'abandoned' "
+                "management state so the next run re-clones the standby database."
+            ),
+            title="Skip Tasks",
+        ),
     },
 )
 def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE)
-    def verify_studies_exist(study_ids: list[str]) -> list[str]:
-        """All-or-nothing: every requested study must exist on the S3 mount, else fail the DAG."""
-        import pathlib
+    def verify_studies_exist(study_ids: list[str], params: dict | None = None) -> list[str]:
+        """All-or-nothing: every requested study must exist on the S3 mount
+        (under params.study_prefix, if set), else fail the DAG."""
+
+        # Fail fast on typos: a misspelled skip_tasks entry would silently NOT skip
+        # its task, which for transfer_deployment_color means an unintended traffic swap.
+        unknown = set((params or {}).get("skip_tasks") or []) - set(SKIPPABLE_TASK_IDS)
+        if unknown:
+            raise AirflowException(f"skip_tasks contains unknown task ids: {sorted(unknown)}")
 
         # render_template_as_native_obj may render the array Param as its string repr
         if isinstance(study_ids, str):
@@ -402,13 +465,13 @@ def import_public_hackathon():
         if not study_ids:
             raise AirflowException("No study IDs provided")
 
-        mount = pathlib.Path(S3_MOUNT_PATH)
+        mount = _study_mount(_study_prefix(params))
         missing = [
             s for s in study_ids
             if not (mount / f"{s}.tar.gz").is_file() and not (mount / s).is_dir()
         ]
         if missing:
-            raise AirflowException(f"Studies not found at {S3_MOUNT_PATH}: {missing}")
+            raise AirflowException(f"Studies not found at {mount}: {missing}")
         return study_ids
 
     t_verify_cluster_state = BashOperator(
@@ -417,29 +480,29 @@ def import_public_hackathon():
         bash_command="unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
             "airflow-verify-management.sh",
             SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-            COLOR_SWAP_CONFIG_FILE,
+            MANAGE_PROPS_TEMPLATE,
+            COLOR_SWAP_TEMPLATE,
         ),
         executor_config=_POD_OVERRIDE,
     )
 
     t_clone_live_database = BashOperator(
         task_id="clone_live_database_into_standby",
-        bash_command=_script(
+        bash_command=_bash_skip_guard("clone_live_database_into_standby") + _script(
             "airflow-clone-db.sh",
             IMPORTER,
             SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
+            MANAGE_PROPS_TEMPLATE,
         ),
         executor_config=_POD_OVERRIDE,
     )
 
     @task(executor_config=_POD_OVERRIDE_VALIDATE)
-    def pull_and_validate_study(study_id: str) -> str | None:
+    def pull_and_validate_study(study_id: str, params: dict | None = None) -> str | None:
         import pathlib
 
         try:
-            local_dir = _study_data_path(study_id)
+            local_dir = _study_data_path(study_id, _study_prefix(params))
             if local_dir is None:
                 return None
 
@@ -462,20 +525,24 @@ def import_public_hackathon():
     def collect_valid_studies(results: list) -> list[str]:
         valid = [sid for sid in (results or []) if sid is not None]
         if not valid:
-            raise AirflowSkipException("No studies passed validation — skipping import")
+            # Fail (not skip): downstream tasks use NONE_FAILED so that explicit
+            # skip_tasks skips flow through them — a skip here would let
+            # transfer_deployment_color swap traffic onto an unmodified clone.
+            raise AirflowException("No studies passed validation")
         logging.info("Studies passing validation: %s", valid)
         return valid
 
-    @task(executor_config=_POD_OVERRIDE_IMPORT)
-    def import_into_standby_database(valid_studies: list[str]):
-        _activate_standby_properties()
+    @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
+    def import_into_standby_database(valid_studies: list[str], params: dict | None = None):
+        _skip_if_requested("import_into_standby_database", params)
+        _activate_standby_properties(params["database"])
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
             return
 
         failed = []
         for study_id in valid_studies:
-            local_dir = _study_data_path(study_id)
+            local_dir = _study_data_path(study_id, _study_prefix(params))
             if local_dir is None:
                 failed.append(study_id)
                 continue
@@ -494,42 +561,55 @@ def import_public_hackathon():
         if failed:
             raise Exception(f"Import failed for {len(failed)} study/studies: {failed}")
 
-    @task(executor_config=_POD_OVERRIDE_IMPORT)
-    def create_derived_tables_in_standby_database():
-        _activate_standby_properties()
+    @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
+    def create_derived_tables_in_standby_database(params: dict | None = None):
+        _skip_if_requested("create_derived_tables_in_standby_database", params)
+        _activate_standby_properties(params["database"])
         rebuild = _run_and_stream(
-            [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables"],
+            [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables",
+             "--derived-table-sql", "/tmp/clickhouse.sql"],
         )
         if rebuild.returncode != 0:
             raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode})")
 
     t_transfer_deployment_color = BashOperator(
         task_id="transfer_deployment_color",
-        bash_command="unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
+        bash_command=_bash_skip_guard("transfer_deployment_color")
+        + "unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
             "airflow-transfer-deployment.sh",
             SCRIPTS_DIR,
-            CLICKHOUSE_CONFIG_FILE,
-            COLOR_SWAP_CONFIG_FILE,
+            MANAGE_PROPS_TEMPLATE,
+            COLOR_SWAP_TEMPLATE,
         ),
         executor_config=_POD_OVERRIDE,
+        trigger_rule=TriggerRule.NONE_FAILED,
     )
 
-    t_set_import_complete = BashOperator(
-        task_id="set_import_complete",
-        bash_command=_script(
-            "set_update_process_state.sh",
-            CLICKHOUSE_CONFIG_FILE,
-            "complete",
-            source_automation_env=True,
-        ),
-        executor_config=_POD_OVERRIDE,
-    )
+    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED)
+    def finalize_import_state(ti=None, params: dict | None = None):
+        """Set the management DB end state: 'complete' only if production traffic was
+        actually swapped, otherwise 'abandoned' so the next run re-clones standby."""
+        transfer_state = ti.get_dagrun().get_task_instance("transfer_deployment_color").state
+        state = "complete" if transfer_state == "success" else "abandoned"
+        logging.info(
+            "transfer_deployment_color finished in state %r -> setting update process state %r",
+            transfer_state, state,
+        )
+        _run_and_stream(
+            ["bash", "-c", _script(
+                "set_update_process_state.sh",
+                _manage_props_path(params["database"]),
+                state,
+                source_automation_env=True,
+            )],
+            check=True,
+        )
 
     t_set_import_abandoned = BashOperator(
         task_id="set_import_abandoned",
         bash_command=_script(
             "set_update_process_state.sh",
-            CLICKHOUSE_CONFIG_FILE,
+            MANAGE_PROPS_TEMPLATE,
             "abandoned",
             source_automation_env=True,
         ),
@@ -542,6 +622,7 @@ def import_public_hackathon():
     t_collect_valid  = collect_valid_studies(t_pull_and_validate)
     t_import         = import_into_standby_database(t_collect_valid)
     t_create_derived_tables = create_derived_tables_in_standby_database()
+    t_finalize       = finalize_import_state()
 
     t_found_studies >> t_verify_cluster_state >> [t_clone_live_database, t_pull_and_validate]
     t_clone_live_database >> t_import
@@ -549,7 +630,7 @@ def import_public_hackathon():
         t_import
         >> t_create_derived_tables
         >> t_transfer_deployment_color
-        >> t_set_import_complete
+        >> t_finalize
     )
 
     [
@@ -561,7 +642,7 @@ def import_public_hackathon():
         t_import,
         t_create_derived_tables,
         t_transfer_deployment_color,
-        t_set_import_complete,
+        t_finalize,
     ] >> t_set_import_abandoned
 
 
