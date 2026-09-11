@@ -105,7 +105,8 @@ def _run_and_stream(
     )
 
 K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo:dev"
-K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core:dev"
+# Core e6cc508: demo-fast-methylation-validation, verified Airflow worker build.
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:5407513befedc1d0ae01a288af055b74e8b6ba3c046a1e3bad9c21cef3767828"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
 STUDY_LIST_VARIABLE_KEY = "available_study_ids"
