@@ -265,8 +265,8 @@ function remove_duplicate_maf_variants() {
 
     # Remove duplicate variants from MAF files
     # CVR data can contain duplicates for a gene and its alias
-    $PYTHON_BINARY $PORTAL_HOME/scripts/remove-duplicate-maf-variants.py -i "$MUTATIONS_EXTD_INPUT_FILEPATH" -o "$MUTATIONS_EXTD_OUTPUT_FILEPATH" &&
-    $PYTHON_BINARY $PORTAL_HOME/scripts/remove-duplicate-maf-variants.py -i "$NSOUT_MUTATIONS_INPUT_FILEPATH" -o "$NSOUT_MUTATIONS_OUTPUT_FILEPATH" &&
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/remove_duplicate_maf_variants.py -i "$MUTATIONS_EXTD_INPUT_FILEPATH" -o "$MUTATIONS_EXTD_OUTPUT_FILEPATH" &&
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/remove_duplicate_maf_variants.py -i "$NSOUT_MUTATIONS_INPUT_FILEPATH" -o "$NSOUT_MUTATIONS_OUTPUT_FILEPATH" &&
 
     # Rewrite mutation files with updated data
     mv "$MUTATIONS_EXTD_OUTPUT_FILEPATH" "$MUTATIONS_EXTD_INPUT_FILEPATH" &&
