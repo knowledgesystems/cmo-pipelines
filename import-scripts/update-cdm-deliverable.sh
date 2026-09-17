@@ -21,7 +21,7 @@ CDM_DELIVERABLE="$CDSI_DATA_HOME/sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
 declare -a S3_BUCKETS=("cdm-deliverable" "cdm-deliverable-dev")
 
 function check_args() {
-    if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
+    if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" && "$COHORT" != "msk_solid_heme" ]]; then
         usage
         exit 1
     fi
@@ -29,7 +29,7 @@ function check_args() {
 
 function usage {
     echo "update-cdm-deliverable.sh \$COHORT_ID"
-    echo -e "\t\$COHORT_ID                      one of: ['mskimpact', 'mskimpact_heme', 'mskaccess', 'mskarcher']"
+    echo -e "\t\$COHORT_ID                      one of: ['mskimpact', 'mskimpact_heme', 'mskaccess', 'mskarcher', 'msk_solid_heme']"
 }
 
 function set_cohort_filepaths() {
@@ -42,6 +42,8 @@ function set_cohort_filepaths() {
         CLINICAL_SAMPLE_FILEPATH="$MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt"
     elif [ "$COHORT" == "mskaccess" ] ; then
         CLINICAL_SAMPLE_FILEPATH="$MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt"
+    elif [ "$COHORT" == "msk_solid_heme" ] ; then
+        CLINICAL_SAMPLE_FILEPATH="$MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt"
     fi
 
     # Check that required files exist

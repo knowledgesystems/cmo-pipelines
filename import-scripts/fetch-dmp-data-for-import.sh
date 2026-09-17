@@ -915,6 +915,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         if [ $? -gt 0 ] ; then
           sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM timeline file merge for MSKSOLIDHEME"
         fi
+        # Update CDM deliverable for the merged solid heme cohort
+        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh msk_solid_heme
+        if [ $? -gt 0 ] ; then
+          sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM deliverable generation for MSKSOLIDHEME"
+        fi
     fi
 
     #----------------------------------------------------------
