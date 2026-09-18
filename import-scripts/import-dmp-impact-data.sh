@@ -439,15 +439,7 @@ echo "Fetching and importing of clinical datasets complete!"
 echo $(date)
 
 echo "Cleaning up any untracked files in $PORTAL_DATA_HOME/dmp..."
-bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $DMP_DATA_HOME
-
-echo "purging split parts of nonsignedout_mutations before s3 upload"
-find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
-
-echo "Restoring the cleaned up nonsignedout mutation files to $portal_data_home/dmp before s3 upload"
-if ! restoreNonsignedoutMutationFilesForDMP ; then
-    echo "Error restoring nonsignedout mutation files before S3 upload" >&2
-fi
+deleteS3IgnoredFiles "$PORTAL_DATA_HOME/dmp"
 
 # Convert data_CNA.txt to narrow format
 # Copy this to S3, then remove the file
@@ -457,11 +449,5 @@ if [ $? -ne 0 ] ; then
 fi
 
 uploadToS3OrSendFailureMessage "$DMP_DATA_HOME" "" "mskimpact-databricks"
-
-# now remove the narrow format data cna file we just created
-rm "$MSK_SOLID_HEME_DATA_HOME/data_CNA_narrow.txt"
-
-# leave the full sized data_nonsignedout_mutations.txt files in place even though they are not checked into github 
-# they will be reset when the next cycle begins
 
 exit $(( DB_VERSION_FAIL | IMPORT_FAIL_MSKSOLIDHEME | IMPORT_FAIL_ARCHER | IMPORT_FAIL_KINGS | IMPORT_FAIL_LEHIGH | IMPORT_FAIL_QUEENS | IMPORT_FAIL_MCI | IMPORT_FAIL_HARTFORD | IMPORT_FAIL_RALPHLAUREN | IMPORT_FAIL_RIKENGENESISJAPAN | IMPORT_FAIL_MSKIMPACT_PED | IMPORT_FAIL_SCLC_MSKIMPACT ))
