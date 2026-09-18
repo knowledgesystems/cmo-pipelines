@@ -7,23 +7,36 @@ sample files for MSK Impact in the most recent update to the study. Note that
 this script has been written specifically for the MSK Impact study and has not
 been tested for use with other studies.
 
-For use with Git LFS files, the following value must be set in your git config
-prior to running the script:
-    git config diff.lfs.textconv cat
+The script compares two versions of each clinical file - a "previous" version
+(v1) and a "current" version (v2) - and reports the patients and samples that
+were added, deleted, or modified between them. Rows are matched by primary key
+(PATIENT_ID for the patient file, SAMPLE_ID for the sample file), so reordering
+rows within a file is not reported as a change.
 
-This script requires that `pandas` and `GitPython` be installed within the
-Python environment you are running this script in.
+This script requires that `pandas` be installed within the Python environment
+you are running this script in.
 
 Usage:
-    python3 generate_az_study_changelog_py3.py $DATA_REPO_PATH \
+    python3 generate_az_study_changelog_py3.py \
+        --current-patient $CURRENT_PATIENT_FILE \
+        --current-sample $CURRENT_SAMPLE_FILE \
+        --previous-patient $PREVIOUS_PATIENT_FILE \
+        --previous-sample $PREVIOUS_SAMPLE_FILE \
         --output-filename $OUTPUT_FILENAME \
         --output-dir $OUTPUT_DIR
 
 Example:
-    python3 generate_az_study_changelog_py3.py /path/to/az_mskimpact/
+    python3 generate_az_study_changelog_py3.py \
+        --current-patient /path/to/current/data_clinical_patient.txt \
+        --current-sample /path/to/current/data_clinical_sample.txt \
+        --previous-patient /path/to/previous/data_clinical_patient.txt \
+        --previous-sample /path/to/previous/data_clinical_sample.txt
+
+When `--previous-patient` / `--previous-sample` are omitted, every patient and
+sample in the current files is reported as new (use this for a brand new study).
 
 When `--output-filename` and `--output-dir` are not provided, the summary file
-is written to `$DATA_REPO_PATH/changelog_summary.txt` by default.
+is written to `<dir of --current-patient>/changelog_summary.txt` by default.
 
 Sample output:
 
@@ -57,13 +70,76 @@ import os
 import argparse
 from collections import defaultdict
 from datetime import datetime
-import git
 import pandas as pd
+
+
+def read_clinical_file(path):
+    """Reads a clinical (patient or sample) data file into a DataFrame.
+
+    All values are read as strings and missing cells are normalized to the empty
+    string so that cell-by-cell comparison between two versions of a file is
+    reliable (no float formatting drift, consistent handling of blank cells).
+
+    Args:
+        path (string or None): Path to the clinical data file, or None
+
+    Returns:
+        DataFrame or None: The parsed file, or None if `path` is None
+    """
+    if path is None:
+        return None
+    return pd.read_csv(path, sep='\t', comment='#', dtype=str).fillna('')
+
+
+def diff_records(previous_df, current_df, key):
+    """Compares two versions of a clinical data file, keyed by `key`.
+
+    Args:
+        previous_df (DataFrame or None): The previous (v1) version, or None
+        current_df (DataFrame): The current (v2) version
+        key (string): Name of the primary key column (unique within each file)
+
+    Returns:
+        (set, set, set):
+            added: key values present in v2 but not v1
+            deleted: key values present in v1 but not v2
+            modified: key values present in both, with a differing value in at
+                least one column shared by both versions
+    """
+    current_indexed = current_df.set_index(key)
+    current_ids = set(current_indexed.index)
+
+    # No previous version - treat every current record as newly added
+    if previous_df is None:
+        return current_ids, set(), set()
+
+    previous_indexed = previous_df.set_index(key)
+    previous_ids = set(previous_indexed.index)
+
+    added = current_ids - previous_ids
+    deleted = previous_ids - current_ids
+    common = sorted(current_ids & previous_ids)
+
+    modified = set()
+    if common:
+        shared_cols = [col for col in current_indexed.columns if col in previous_indexed.columns]
+        previous_common = previous_indexed.loc[common, shared_cols]
+        current_common = current_indexed.loc[common, shared_cols]
+
+        # Row-wise comparison over shared columns; .values keeps this positional
+        # so column ordering differences between versions don't matter
+        row_changed = (previous_common.values != current_common.values).any(axis=1)
+        modified = {key_value for key_value, changed in zip(common, row_changed) if changed}
+
+    return added, deleted, modified
 
 
 class DataHandler:
     """Generic data handler class. Provides helper functions for reading
-    clinical patient and sample data files."""
+    clinical patient and sample data files.
+
+    Kept for use by other import scripts (filter_non_somatic_events_py3.py,
+    anonymize_age_at_seq_with_cap_py3.py) that import it for get_col_indices."""
 
     def __init__(self, data_path):
         self.data_path = data_path
@@ -95,87 +171,23 @@ class DataHandler:
 
         return ret_map
 
-    def is_git_diff_header(self, line_tokens, mode):
-        """Determines if the given git diff line belongs to the git diff header.
 
-        Args:
-            line_tokens (list): Tab delimited values from the git diff line
-            mode (string): '+' or '-' as indicated by git diff
+class ClinicalFileComparer:
+    """Loads the previous (v1) and current (v2) versions of a clinical data file
+    for the changelog subclasses to compare."""
 
-        Returns:
-            boolean: True or False, indicating if the line belongs to the diff header
-        """
-        return len(line_tokens) == 1 or mode not in {'-', '+'}
-
-    def is_commented_line(self, line_tokens):
-        """Determines if the given git diff line is commented out and should not be processed.
-
-        Args:
-            line_tokens (list): Tab delimited values from the git diff line
-
-        Returns:
-            boolean: True or False, indicating if the line is commented
-        """
-        return line_tokens[0][0] == '#'
-
-    def is_data_header_line(self, line_tokens):
-        """Determines if the given git diff line contains column names for the data file.
-        This line will be marked as 'added' on first commit, but we do not want to process it
-        for the changelog summary.
-
-        Args:
-            line_tokens (list): Tab delimited values from the git diff line
-
-        Returns:
-            boolean: True or False, indicating if the line is the data header line
-        """
-        return 'PATIENT_ID' in line_tokens
-
-    def next_git_diff_line(self):
-        """Parses each line of git diff output.
-
-        Yields:
-            (string, list):
-                string: '+' or '-', indicating whether git marked the line as added or deleted from the file
-                list: String data values from the tab-delimited line
-        """
-        g = git.Git(os.path.dirname(self.data_path))
-
-        # Add the file with -N flag (--intent-to-add), so that in the case of
-        # a new file (untracked) we are still able to view the diff info
-        g.add('-N', self.data_path)
-
-        # Obtain git diff for the file
-        diff_info = g.diff('--unified=0', '--', self.data_path)
-
-        # Check if there is a git diff to process
-        if not diff_info:
-            return
-
-        lines = diff_info.split('\n')
-        for line in lines:
-            tokens = line.split('\t')
-
-            # Git prepends each line of git diff with a '+' or '-'
-            # We will use this to correctly parse the changes to each line
-
-            mode = tokens[0][0]
-            tokens[0] = tokens[0][1:]
-
-            # Only want to process the file contents (tab-delimited data)
-            # Ignore commented lines - they are tab delimited, and will be marked as added on first commit
-            # Ignore row that contains column names - this will be marked as added on first commit
-            if self.is_git_diff_header(tokens, mode) or self.is_commented_line(tokens) or self.is_data_header_line(tokens):
-                continue
-
-            yield mode, tokens
+    def __init__(self, previous_path, current_path):
+        self.previous_path = previous_path
+        self.current_path = current_path
+        self.previous_df = read_clinical_file(previous_path)
+        self.current_df = read_clinical_file(current_path)
 
 
-class PatientDataHandler(DataHandler):
-    """Handles reading and processing of clinical patient data. Inherits from the generic DataHandler class."""
+class PatientDataHandler(ClinicalFileComparer):
+    """Handles reading and processing of clinical patient data."""
 
-    def __init__(self, data_path):
-        super().__init__(data_path)
+    def __init__(self, previous_path, current_path):
+        super().__init__(previous_path, current_path)
 
         # Total number of patients in the study
         self.total_patient_count = 0
@@ -186,55 +198,27 @@ class PatientDataHandler(DataHandler):
         self.modified_patient_ids = set()
 
     def get_modified_patient_ids(self):
-        """Provides IDs of patients that were modified in the most recent
-        git commit to the clinical patient file.
+        """Provides IDs of patients that were modified between the previous and
+        current versions of the clinical patient file.
 
         Returns:
-            DictView: View of keys from modified_patients dict
+            set: Set of modified patient IDs
         """
         return self.modified_patient_ids
 
-    def count_total_patients(self):
-        """Uses pandas to read the clinical patient file. Stores total number of patients
-        in class member set self.total_patients.
-        """
-        # Read relevant columns from patient file
-        df = pd.read_csv(self.data_path, sep='\t', comment='#', usecols=['PATIENT_ID'])
-
-        # Store total number of patients
-        self.total_patient_count = len(df)
-
     def process_patient_data(self):
-        """Processes git diff output for the clinical patient file. Stores the patient IDs
-        of all patients that were added, deleted, or modified in the latest commit to the patient file.
+        """Compares the previous and current clinical patient files. Stores the patient IDs
+        of all patients that were added, deleted, or modified, along with the total patient count.
         """
-        # Get total count of patients from the patient file
-        self.count_total_patients()
+        # Store total number of patients from the current patient file
+        self.total_patient_count = len(self.current_df)
 
-        # Process file and get column index for PATIENT_ID
-        # We have to do this because we can't get this info from the git diff
-        col_indices = self.get_col_indices({'PATIENT_ID'})
-
-        # Keep track of patient IDs that are marked as added/deleted in git diff
-        # We will use set arithmetic to separate out the modified patients after
-        git_added_patient_ids = set()
-        git_deleted_patient_ids = set()
-
-        # Process each line of the git diff for new or deleted patients
-        for mode, tokens in self.next_git_diff_line():
-            patient_id = tokens[col_indices['PATIENT_ID']]
-
-            # Add to relevant set depending on whether git has prepended the line with a + or -
-            if mode == '-':
-                git_deleted_patient_ids.add(patient_id)
-            elif mode == '+':
-                git_added_patient_ids.add(patient_id)
-
-        # Use set arithmetic operations to determine which patients were modified, added, and deleted
-        # NOTE: In the future, will want to keep track of whether patients were actually modified or just moved in the file
-        self.modified_patient_ids = git_added_patient_ids.intersection(git_deleted_patient_ids)
-        self.added_patient_ids = git_added_patient_ids.difference(git_deleted_patient_ids)
-        self.deleted_patient_ids = git_deleted_patient_ids.difference(git_added_patient_ids)
+        # Compare the two versions of the file, keyed by PATIENT_ID
+        (
+            self.added_patient_ids,
+            self.deleted_patient_ids,
+            self.modified_patient_ids,
+        ) = diff_records(self.previous_df, self.current_df, 'PATIENT_ID')
 
 
 class Sample:
@@ -247,13 +231,13 @@ class Sample:
         self.sample_class = sample_class
 
 
-class SampleDataHandler(DataHandler):
-    """Handles reading and processing of clinical sample data. Inherits from the generic DataHandler class."""
+class SampleDataHandler(ClinicalFileComparer):
+    """Handles reading and processing of clinical sample data."""
 
-    def __init__(self, data_path):
-        super().__init__(data_path)
+    def __init__(self, previous_path, current_path):
+        super().__init__(previous_path, current_path)
 
-        # Will store 3 columns for each sample from the sample file:
+        # Will store 3 columns for each sample from the current sample file:
         #   SAMPLE_ID
         #   PATIENT_ID
         #   CANCER_TYPE
@@ -267,10 +251,12 @@ class SampleDataHandler(DataHandler):
         # Dict of <cancer_type> -> int sample count
         self.cancer_type_to_sample_count = {}
 
-        # Samples marked as added or deleted by git diff
+        # Sample rows from the current (v2) and previous (v1) versions of the file.
+        # A modified sample appears in both dicts (its v2 row in curr_samples and
+        # its v1 row in prev_samples).
         # <sample_id> -> Sample obj
-        self.git_added_samples = {}
-        self.git_deleted_samples = {}
+        self.curr_samples = {}
+        self.prev_samples = {}
 
         # Dicts containing samples that were added, deleted, or modified, respectively
         # <sample_id> -> Sample obj
@@ -279,80 +265,63 @@ class SampleDataHandler(DataHandler):
         self.modified_samples = {}
 
     def populate_sample_set(self):
-        """Uses pandas to read the clinical sample file. Stores the total number of samples along with
-        the total number of patients and samples per cancer type.
+        """Reads the current clinical sample file. Stores the total number of patients
+        and samples per cancer type.
         """
-        # Read relevant columns from patient file
-        self.sample_df = pd.read_csv(
-            self.data_path,
-            sep='\t',
-            comment='#',
-            usecols=['PATIENT_ID', 'SAMPLE_ID', 'CANCER_TYPE'],
-        )
+        # Keep just the columns needed for per-cancer-type aggregation
+        self.sample_df = self.current_df[['PATIENT_ID', 'SAMPLE_ID', 'CANCER_TYPE']].copy()
 
-        self.sample_df['CANCER_TYPE'].fillna(self.unknown_cancer_type_label, inplace=True)
+        # Blank cancer type values are labeled so they aggregate together
+        self.sample_df['CANCER_TYPE'] = self.sample_df['CANCER_TYPE'].replace('', self.unknown_cancer_type_label)
 
         # Get the number of patients + samples for each cancer type
         self.cancer_type_to_patient_count = self.sample_df.groupby("CANCER_TYPE")["PATIENT_ID"].nunique().to_dict()
         self.cancer_type_to_sample_count = self.sample_df.groupby("CANCER_TYPE")["SAMPLE_ID"].nunique().to_dict()
 
+    def _row_to_sample(self, row):
+        """Builds a Sample object from a clinical sample file row.
+
+        Args:
+            row (Series): A row from the sample DataFrame, indexed by column name
+
+        Returns:
+            Sample: Object of the Sample class
+        """
+        cancer_type = row['CANCER_TYPE'] if row['CANCER_TYPE'] else self.unknown_cancer_type_label
+        return Sample(
+            row['PATIENT_ID'],
+            cancer_type=cancer_type,
+            sample_type=row['SAMPLE_TYPE'],
+            sample_class=row['SAMPLE_CLASS'],
+        )
+
     def process_sample_data(self):
-        """Processes git diff output for the clinical sample file. Stores the sample IDs
-        of all samples that were added, deleted, or modified in the latest change to the sample file.
+        """Compares the previous and current clinical sample files. Stores the sample IDs
+        of all samples that were added, deleted, or modified.
         """
         self.populate_sample_set()
 
-        # Process header and get indices for needed data columns
-        col_names = {
-            'PATIENT_ID',
-            'SAMPLE_ID',
-            'CANCER_TYPE',
-            'SAMPLE_TYPE',
-            'SAMPLE_CLASS',
-        }
-        col_indices = self.get_col_indices(col_names)
+        # Compare the two versions of the file, keyed by SAMPLE_ID
+        added, deleted, modified = diff_records(self.previous_df, self.current_df, 'SAMPLE_ID')
 
-        # Process each line of the git diff for new or deleted patients
-        for mode, tokens in self.next_git_diff_line():
-            patient_id = tokens[col_indices['PATIENT_ID']]
-            sample_id = tokens[col_indices['SAMPLE_ID']]
-            cancer_type = (
-                tokens[col_indices['CANCER_TYPE']]
-                if tokens[col_indices['CANCER_TYPE']]
-                else self.unknown_cancer_type_label
-            )
-            sample_type = tokens[col_indices['SAMPLE_TYPE']]
-            sample_class = tokens[col_indices['SAMPLE_CLASS']]
-            current_sample = Sample(
-                patient_id,
-                cancer_type=cancer_type,
-                sample_type=sample_type,
-                sample_class=sample_class,
-            )
+        # Capture the current row for every added or modified sample
+        current_indexed = self.current_df.set_index('SAMPLE_ID')
+        for sample_id in added | modified:
+            self.curr_samples[sample_id] = self._row_to_sample(current_indexed.loc[sample_id])
 
-            if mode == '-':
-                self.git_deleted_samples[sample_id] = current_sample
-            elif mode == '+':
-                self.git_added_samples[sample_id] = current_sample
+        # Capture the previous row for every deleted or modified sample
+        if self.previous_df is not None:
+            previous_indexed = self.previous_df.set_index('SAMPLE_ID')
+            for sample_id in deleted | modified:
+                self.prev_samples[sample_id] = self._row_to_sample(previous_indexed.loc[sample_id])
 
-        # Store git added/deleted IDs in sets for use in dict comprehension below
-        git_deleted_sample_ids = set(self.git_deleted_samples.keys())
-        git_added_sample_ids = set(self.git_added_samples.keys())
-
-        # NOTE: In the future, will want to keep track of whether samples were actually modified or just moved in the file
-        self.modified_samples = {
-            k: self.git_added_samples[k] for k in git_added_sample_ids.intersection(git_deleted_sample_ids)
-        }
-        self.added_samples = {
-            k: self.git_added_samples[k] for k in git_added_sample_ids.difference(git_deleted_sample_ids)
-        }
-        self.deleted_samples = {
-            k: self.git_deleted_samples[k] for k in git_deleted_sample_ids.difference(git_added_sample_ids)
-        }
+        self.added_samples = {sample_id: self.curr_samples[sample_id] for sample_id in added}
+        self.deleted_samples = {sample_id: self.prev_samples[sample_id] for sample_id in deleted}
+        self.modified_samples = {sample_id: self.curr_samples[sample_id] for sample_id in modified}
 
     def get_modified_sample_ids(self):
-        """Provides IDs of samples that were modified in the most recent
-        change to the clinical sample file.
+        """Provides IDs of samples that were modified between the previous and
+        current versions of the clinical sample file.
 
         Returns:
             DictView: View of keys from modified_samples dict
@@ -368,10 +337,10 @@ class SampleDataHandler(DataHandler):
         Returns:
             boolean: True if the cancer type has changed, False otherwise
         """
-        if sample_id not in self.git_added_samples or sample_id not in self.git_deleted_samples:
+        if sample_id not in self.curr_samples or sample_id not in self.prev_samples:
             return False
 
-        return self.git_added_samples[sample_id].cancer_type != self.git_deleted_samples[sample_id].cancer_type
+        return self.curr_samples[sample_id].cancer_type != self.prev_samples[sample_id].cancer_type
 
     def patient_new_for_cancer_type(self, sample, sample_id):
         """Determine if a patient should be marked as "new" for the cancer type associated with
@@ -439,12 +408,9 @@ class CancerTypeAggregated:
 class Changelog:
     """The "driver" class for generating a changelog for the patient and sample files."""
 
-    def __init__(self, patient_data_path, sample_data_path):
-        self.patient_data_path = patient_data_path
-        self.sample_data_path = sample_data_path
-
-        self.patient_data_handler = PatientDataHandler(self.patient_data_path)
-        self.sample_data_handler = SampleDataHandler(self.sample_data_path)
+    def __init__(self, previous_patient_path, current_patient_path, previous_sample_path, current_sample_path):
+        self.patient_data_handler = PatientDataHandler(previous_patient_path, current_patient_path)
+        self.sample_data_handler = SampleDataHandler(previous_sample_path, current_sample_path)
 
         # Will store data in the following format: <cancer_type> -> CancerTypeAggregated obj
         self.aggregated_data = defaultdict(CancerTypeAggregated)
@@ -470,9 +436,9 @@ class Changelog:
         self.write_output_data(output_path)
 
     def get_num_modified_patients(self):
-        """Needed for unit tests. Returns the number of modified patients in
-        the most recent change to the clinical patient file, where "modified"
-        refers to a patient whose attributes have been changed/updated in the patient file.
+        """Needed for unit tests. Returns the number of modified patients
+        between the previous and current versions of the clinical patient file,
+        where "modified" refers to a patient whose attributes have been changed/updated.
 
         Returns:
             int: Number of modified patients
@@ -480,9 +446,9 @@ class Changelog:
         return len(self.patient_data_handler.get_modified_patient_ids())
 
     def get_num_modified_samples(self):
-        """Needed for unit tests. Returns the number of modified samples in
-        the most recent change to the clinical sample file, where "modified"
-        refers to a sample whose attributes have been changed/updated in the sample file.
+        """Needed for unit tests. Returns the number of modified samples
+        between the previous and current versions of the clinical sample file,
+        where "modified" refers to a sample whose attributes have been changed/updated.
 
         Returns:
             int: Number of modified samples
@@ -582,8 +548,8 @@ class Changelog:
 
         # ---------------------------------------------------------------
 
-        # Get previous cancer type from the git diff
-        prev_cancer_type = self.sample_data_handler.git_deleted_samples[sample_id].cancer_type
+        # Get previous cancer type from the previous version of the sample file
+        prev_cancer_type = self.sample_data_handler.prev_samples[sample_id].cancer_type
 
         # Determine if patient can was 'deleted' from previous cancer type
         # by checking if it has other samples with that cancer type
@@ -673,12 +639,35 @@ class Changelog:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate changelog summary for new clinical patient and sample data')
-    parser.add_argument('data_repo_path', help='Path to location of data repository')
+    parser.add_argument(
+        '--current-patient',
+        dest='current_patient',
+        required=True,
+        help='Path to the current (v2) clinical patient file',
+    )
+    parser.add_argument(
+        '--current-sample',
+        dest='current_sample',
+        required=True,
+        help='Path to the current (v2) clinical sample file',
+    )
+    parser.add_argument(
+        '--previous-patient',
+        dest='previous_patient',
+        default=None,
+        help='Path to the previous (v1) clinical patient file. Omit for a brand new study.',
+    )
+    parser.add_argument(
+        '--previous-sample',
+        dest='previous_sample',
+        default=None,
+        help='Path to the previous (v1) clinical sample file. Omit for a brand new study.',
+    )
     parser.add_argument(
         '--output-dir',
         '-d',
         dest='output_dir',
-        help='Optional argument to specify output directory. If not provided, output will be written to data_repo_path',
+        help='Optional argument to specify output directory. Defaults to the directory of --current-patient',
     )
     parser.add_argument(
         '--output-filename',
@@ -690,41 +679,48 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    data_repo_path = args.data_repo_path
-    output_dir = args.output_dir
-    output_filename = args.output_filename
+    # Store absolute paths to the clinical data files
+    current_patient_path = os.path.abspath(args.current_patient)
+    current_sample_path = os.path.abspath(args.current_sample)
+    previous_patient_path = os.path.abspath(args.previous_patient) if args.previous_patient else None
+    previous_sample_path = os.path.abspath(args.previous_sample) if args.previous_sample else None
 
-    # Store absolute path to data repository
-    data_repo_path = os.path.abspath(data_repo_path)
+    # The previous patient and sample files must be provided together
+    if (previous_patient_path is None) != (previous_sample_path is None):
+        parser.error('--previous-patient and --previous-sample must be provided together')
 
-    # Ensure that data repository exists
-    if not os.path.exists(data_repo_path):
-        raise FileNotFoundError(f'Data repository directory not found at {data_repo_path}')
-
-    # Ensure that patient and sample data files exist for the given study
-    patient_data_path = os.path.join(data_repo_path, 'data_clinical_patient.txt')
-    sample_data_path = os.path.join(data_repo_path, 'data_clinical_sample.txt')
-
-    if not os.path.exists(patient_data_path):
-        raise FileNotFoundError(f'Patient data not found at {patient_data_path}')
-
-    if not os.path.exists(sample_data_path):
-        raise FileNotFoundError(f'Sample data not found at {sample_data_path}')
+    # Ensure that the provided data files exist
+    required_files = [
+        ('Current patient', current_patient_path),
+        ('Current sample', current_sample_path),
+    ]
+    optional_files = [
+        ('Previous patient', previous_patient_path),
+        ('Previous sample', previous_sample_path),
+    ]
+    for label, path in required_files:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f'{label} data file not found at {path}')
+    for label, path in optional_files:
+        if path is not None and not os.path.exists(path):
+            raise FileNotFoundError(f'{label} data file not found at {path}')
 
     # ---------------------------------------------------------------------------------
 
-    # If provided, create the output directory
-    if output_dir is not None:
-        out_dir = os.path.abspath(output_dir)
-
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-    # Else the output directory will be the data repo path
+    # If provided, create the output directory; otherwise write next to the current patient file
+    if args.output_dir is not None:
+        output_dir = os.path.abspath(args.output_dir)
+        os.makedirs(output_dir, exist_ok=True)
     else:
-        output_dir = data_repo_path
+        output_dir = os.path.dirname(current_patient_path)
 
-    output_path = os.path.join(output_dir, output_filename)
+    output_path = os.path.join(output_dir, args.output_filename)
 
     # Generate the changelog file for the given data
-    changelog_generator = Changelog(patient_data_path, sample_data_path)
+    changelog_generator = Changelog(
+        previous_patient_path,
+        current_patient_path,
+        previous_sample_path,
+        current_sample_path,
+    )
     changelog_generator.generate_changelog(output_path)
