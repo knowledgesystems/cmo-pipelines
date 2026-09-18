@@ -142,13 +142,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     DROP_DEAD_INSTANT_END_TO_END=$(date --date="+18hours" -Iseconds)
 
     # -----------------------------------------------------------------------------------------------------------
-    # RESET DMP CLONE TO HEAD OF ORIGIN
-
-    echo $(date)
-    echo "resetting repository $PORTAL_DATA_HOME/dmp to discard any unpushed changesets from clone"
-    bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $DMP_DATA_HOME
-
-    # -----------------------------------------------------------------------------------------------------------
     # START DMP DATA FETCHING
 
     echo $(date)
@@ -157,7 +150,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         rm -rf "$MSK_DMP_TMPDIR"/*
     fi
 
-    if [ -z $JAVA_BINARY ] || [ -z $GIT_BINARY ] || [ -z $PORTAL_HOME ] || [ -z $MSK_IMPACT_DATA_HOME ] ; then
+    if [ -z $JAVA_BINARY ] || [ -z $PORTAL_HOME ] || [ -z $MSK_IMPACT_DATA_HOME ] ; then
         message="Could not run fetch-dmp-data-for-import.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
         echo $message
         echo -e "$message" |  mail -s "fetch-dmp-data-for-import failed to run." $PIPELINES_EMAIL_LIST
@@ -165,19 +158,30 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         exit 2
     fi
 
-    if ! declare -f download_from_s3 > /dev/null; then
-        message="Could not run fetch-dmp-data-for-import.sh: s3_functions.sh must be sourced for sync with s3 bucket"
-        echo $message
-        echo -e "$message" |  mail -s "fetch-dmp-data-for-import failed to run." $PIPELINES_EMAIL_LIST
-        sendPreImportFailureMessageMskPipelineLogsSlack "$message"
-        exit 2
-    fi
+    # -----------------------------------------------------------------------------------------------------------
+    # reset dmp staging directory to match s3 bucket contents (and remove any residual unwanted temp files from a prior partial run)
 
-    # fetch clinical data and full nonsignedout mutation files from data repository
+    echo $(date)
+    echo "cleaning contents of staging data source directory $PORTAL_DATA_HOME/dmp to discard any unwanted temp files"
+    deleteS3IgnoredFiles "$PORTAL_DATA_HOME/dmp"
     echo "downloading full content from s3 bucket mskimpact-databricks to $DMP_DATA_HOME"
     if ! downloadFromS3AllStudies ; then
-        sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch failure: DMP repository update"
+        message="s3 fetch failure: DMP repository update"
+        sendPreImportFailureMessageMskPipelineLogsSlack "$message"
+        if ! declare -f download_from_s3 > /dev/null; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch failure: function downloadFromS3AllStudies is undefined - s3_functions.sh must be sourced"
+        fi
+        echo -e "$message" |  mail -s "fetch-dmp-data-for-import failed to run." $PIPELINES_EMAIL_LIST
         exit 2
+    fi
+    in_progress_filename="$PORTAL_DATA_HOME/dmp/.S3_update_in_progress"
+    if [ -f "$in_progress_filename" ] ; then
+        in_progress_status="$(head -n1 "$in_progress_filename")"
+        if [ "true" == "$in_progress_status" ] ; then
+            # we could instead wait here for a limited time to see if the update completes .. but for now, just exit
+            sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch canceled : the s3 content is in the process of being updated and is not yet in a consistent state."
+            exit 2
+        fi
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -941,8 +945,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         sendPreImportFailureMessageMskPipelineLogsSlack "MIXEDPACT merge"
         echo "MIXEDPACT merge failed! Reverting data to last commit."
         download_from_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks"
-        # purge split parts of nonsignedout_mutations (these might be present in mixedpact, if incorrectly pushed to s3)
-        find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
     else
         echo "Committing MIXEDPACT data"
         upload_to_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks"
@@ -953,8 +955,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKSOLIDHEME merge"
         echo "MSKSOLIDHEME merge and/or updates failed! Reverting data to last commit."
         download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
-        # purge split parts of nonsignedout_mutations (these might be present in msk_solid_heme, if incorrectly pushed to s3)
-        find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
     else
         echo "Committing MSKSOLIDHEME data"
         upload_to_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
@@ -1197,9 +1197,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     #--------------------------------------------------------------
     # S3 PUSH
+    deleteS3IgnoredFiles "$PORTAL_DATA_HOME/dmp"
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to s3 bucket"
     echo "pushing data from $DMP_DATA_HOME to s3 bucket mskimpact-databricks"
-    # push all data into s3
     S3_BUCKET_PUSH_FAIL=0
     upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
     if [ $? -gt 0 ] ; then
@@ -1209,66 +1209,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     #--------------------------------------------------------------
-    # backup and split up data_nonsignedout_mutations.txt files for git push
-    # backup (this allows us to restore these files to the clone after the git reset / cleaning at the end of imports)
-    backupNonsignedoutMutationFilesForDMP
-    # split up (for git push only)
-    unset nonsignedout_filepaths
-    declare -a nonsignedout_filepaths
-    while IFS= read -r line ; do
-        nonsignedout_filepaths+=("$line")
-    done < <(find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt")
-    pos=0
-    while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
-        nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
-        full_linecount=$(cat $nonsignedout_filepath | wc -l )
-        part1_linecount=$(($full_linecount/2))
-        part2_linecount=$(($full_linecount-$part1_linecount))
-        echo "creating ${nonsignedout_filepath}_part1forcat"
-        head -n $part1_linecount "$nonsignedout_filepath" > "${nonsignedout_filepath}_part1forcat"
-        echo "creating ${nonsignedout_filepath}_part2forcat"
-        tail -n $part2_linecount "$nonsignedout_filepath" > "${nonsignedout_filepath}_part2forcat"
-        pos=$(($pos+1))
-    done
-
-    #--------------------------------------------------------------
-    # GIT PUSH
-    printTimeStampedDataProcessingStepMessage "push of dmp data updates to git repository"
-    echo "pushing data (with split nonsignedout mutations) back into github repository"
-    # check updated data back into git
-    GIT_PUSH_FAIL=1 # assume fail if we don't succeed below
-    cd $DMP_DATA_HOME
-    if $GIT_BINARY add ./* ; then
-        pos=0
-        while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
-            nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
-            $GIT_BINARY reset "$nonsignedout_filepath"
-            pos=$(($pos+1))
-        done
-        git_commit_message="DMP Fetch and Cohort Updates $(date +%Y_%m_%d)"
-        if $GIT_BINARY commit -m "$git_commit_message" && $GIT_BINARY push origin --force; then
-            GIT_PUSH_FAIL=0 # success
-        fi
-    else
-        sendPreImportFailureMessageMskPipelineLogsSlack "GIT ADD (dmp)!"
-    fi
-    if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
-        sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (dmp) :fire: - address ASAP!"
-    fi
-
-    # purge split parts of nonsignedout_mutations
-    echo "removing all files from $DMP_DATA_HOME matching pattern 'data_nonsignedout_mutations.txt_part[12]forcat"
-    find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
-
-    #--------------------------------------------------------------
     # Emails for failed processes
-
-    EMAIL_BODY="Failed to push dmp outgoing changes to Git - address ASAP!"
-    # send email if failed to push outgoing changes to git
-    if [ $GIT_PUSH_FAIL -gt 0 ] ; then
-        echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "[URGENT] GIT PUSH FAILURE" $PIPELINES_EMAIL_LIST
-    fi
 
     EMAIL_BODY="Failed to push dmp outgoing changes to s3 - address ASAP!"
     # send email if failed to push outgoing changes to s3
@@ -1383,14 +1324,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo -e "$EMAIL_BODY" | mail -s "SCLCMSKIMPACT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
     fi
 
-    if [ "$GIT_PUSH_FAIL" -ne 0 ] ; then
-        # a failure status is sent to the wrapper script here, so:
-        #     * the import-dmp-impact-data.sh script will not be executed
-        #     * changes were pushed to the s3 bucket today, but will not be "used" today .. and new samples will be re-fetched tomorrow
-        #     * only one git changeset is pushed each day, and push failed, so we have added one unpushed changeset to the head of our local clone
-        #         so we will (tomorrow) discard that changeset at the start of the execution of this script by calling datasource-repo-cleanup.sh
-        exit $GIT_PUSH_FAIL
-    else
-        exit 0
-    fi
+    exit 0
+
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH
