@@ -366,47 +366,33 @@ function downloadFromS3AllStudies() {
         sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch failure: DMP repository update"
         return $status_code
     fi
-    # purge split parts of nonsignedout_mutations (if left over from last cycle or just pulled)
-    find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt_part[12]forcat" -delete
     return 0
 }
 
-function backupNonsignedoutMutationFilesForDMP() {
-    NONSIGNEDOUT_BACKUP_DIRPATH="/data/portal-cron/nonsignedout_holding"
-    unset nonsignedout_filepaths
-    declare -a nonsignedout_filepaths
-    while IFS= read -r line ; do
-        nonsignedout_filepaths+=("$line")
-    done < <(find -L "$DMP_DATA_HOME" -name "data_nonsignedout_mutations.txt")
-    pos=0
-    while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
-        nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
-        relative_filepath=${nonsignedout_filepath:${#DMP_DATA_HOME}}
-        backup_filepath=${NONSIGNEDOUT_BACKUP_DIRPATH}${relative_filepath}
-        echo "copying $nonsignedout_filepath to $backup_filepath"
-        if ! cp -a $nonsignedout_filepath $backup_filepath ; then
-            echo "Error during nonsignedout backup!" >&2
+function deleteS3IgnoredFiles() {
+    local DIR_TO_PURGE="$1"
+    local S3_ignore_filepath="$DIR_TO_PURGE/.S3ignore"
+    if ! [ -d "$DIR_TO_PURGE" ] ; then
+        echo "refusing to delete from nonexistant diretory '$DIR_TO_PURGE'" >&2
+        return 1
+    fi
+    while IFS="" read -r line || [ -n "$line" ] ; do
+        if [ "#" == "${line:0:1}" ] ; then
+            continue #ignore spaces
         fi
-        pos=$(($pos+1))
-    done
-}
-
-function restoreNonsignedoutMutationFilesForDMP() {
-    NONSIGNEDOUT_BACKUP_DIRPATH="/data/portal-cron/nonsignedout_holding"
-    unset nonsignedout_filepaths
-    declare -a nonsignedout_filepaths
-    while IFS= read -r line ; do
-        nonsignedout_filepaths+=("$line")
-    done < <(find -L "$NONSIGNEDOUT_BACKUP_DIRPATH" -name "data_nonsignedout_mutations.txt")
-    pos=0
-    while [ "$pos" -lt "${#nonsignedout_filepaths[*]}" ] ; do
-        nonsignedout_filepath="${nonsignedout_filepaths[$pos]}"
-        relative_filepath=${nonsignedout_filepath:${#NONSIGNEDOUT_BACKUP_DIRPATH}}
-        restore_filepath=${DMP_DATA_HOME}${relative_filepath}
-        echo "copying $nonsignedout_filepath to $restore_filepath"
-        if ! cp -a $nonsignedout_filepath $restore_filepath ; then
-            echo "Error during nonsignedout restore!" >&2
+        if [ ${#line} -eq 0 ] ; then
+             continue # skip empty lines
         fi
-        pos=$(($pos+1))
-    done
+        if [ "${line:0:3}" == "**/" ] ; then
+            # process line as "look for following pattern in all subdirectories
+            local line_suffix="${line:3}"
+            if [ ${#line_suffix} -eq 0 ] ; then
+                continue # must have a valid pattern for matching .. so '**/*' would be to delete everything under the specified directory (not '**/')
+            fi
+            find "$DIR_TO_PURGE/" -name "${line_suffix}" -delete
+            continue
+        fi
+        # otherwise process the whole line as a relative path to be matched by the 'find' command
+        find "$DIR_TO_PURGE/$line" -delete
+    done < "$S3_ignore_filepath"
 }
