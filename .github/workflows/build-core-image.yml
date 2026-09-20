@@ -29,6 +29,11 @@ on:
         description: 'Exact cbioportal-core ref/SHA — overrides core_branch if set'
         required: false
         type: string
+      publish_dev:
+        description: 'Also move the shared dev tag (leave false for rollout candidates)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   IMAGE: ghcr.io/cbioportal/containerized-importer-core
@@ -80,6 +85,6 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE }}:sha-${{ steps.core.outputs.ref }}
-            ${{ env.IMAGE }}:dev
+            ${{ (github.event_name != 'workflow_dispatch' || inputs.publish_dev) && format('{0}:dev', env.IMAGE) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
