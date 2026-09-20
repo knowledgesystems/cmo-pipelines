@@ -9,7 +9,7 @@ the Airflow submodule, Kubernetes secrets, images, or production traffic.
 
 Use cbioportal-core candidate `fa9f69f36a6c37618a79a11dad42af96966d9e65`
 or a deliberately revalidated successor. Use the Python 3 case-list generator
-from cmo-pipelines `178276316a21f4871b41ae8f769d833ebfdbcdca`, based on PR1394.
+from cmo-pipelines `cd98aef313566fc6e37acd5ff940056141995865`, based on PR1394.
 Its `case_list_config.tsv` is byte-identical to that core candidate's rules.
 The preprocessing wrapper's tool lock also pins these revisions. Do not use
 the old EC2 case-list configuration for newly prepared studies.
@@ -19,6 +19,9 @@ custom filenames count as existing lists. Study-local nonempty curated lists
 with the expected non-generic category also count; unrelated occupied filenames
 raise an explicit conflict. No annotations, curated memberships,
 or existing physical lists are deleted or rewritten to force acceptance.
+The importer's mandatory primary `_all`, `_sequenced` and `_cna` stable IDs are
+not replaced by category equivalence. The category fallback applies to additional
+generated roles such as `_cnaseq`, not those primary profiled-sample requirements.
 
 ## Local preparation and validation
 
