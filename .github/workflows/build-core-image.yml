@@ -34,6 +34,11 @@ on:
         required: false
         default: false
         type: boolean
+      image_tag:
+        description: 'Optional additional unique tag; dev requires publish_dev=true for manual builds'
+        required: false
+        default: 'dev'
+        type: string
 
 env:
   IMAGE: ghcr.io/cbioportal/containerized-importer-core
@@ -85,6 +90,18 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE }}:sha-${{ steps.core.outputs.ref }}
-            ${{ (github.event_name != 'workflow_dispatch' || inputs.publish_dev) && format('{0}:dev', env.IMAGE) || '' }}
+            ${{ (github.event_name != 'workflow_dispatch' || inputs.publish_dev || (inputs.image_tag && inputs.image_tag != 'dev')) && format('{0}:{1}', env.IMAGE, inputs.image_tag || 'dev') || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Verify Airflow runtime and validator contents
+        env:
+          CORE_REF: ${{ steps.core.outputs.ref }}
+        run: |
+          set -euo pipefail
+          image="${IMAGE}:sha-${CORE_REF}"
+          expected=$(sha256sum cbioportal-core/scripts/importer/validateData.py | cut -d ' ' -f1)
+          actual=$(docker run --rm --entrypoint sha256sum "$image" /scripts/importer/validateData.py | cut -d ' ' -f1)
+          test "$actual" = "$expected"
+          docker run --rm -e PYTHONPATH=/scripts --entrypoint python "$image" -c 'import airflow; from importer import validateData; print(airflow.__version__, validateData.__file__)'
+          docker run --rm --entrypoint java "$image" -version

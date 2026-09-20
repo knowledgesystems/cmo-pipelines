@@ -4,6 +4,7 @@ validation/import tasks run the cbioportal-core scripts directly."""
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -12,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dags.public_rollout import (checked_path, read_manifest, selected_entries,
                                 require_hash, reference_input, study_input,
-                                validation_command)
+                                validation_command, standby_target)
 
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 def _run_and_stream(
     cmd: list[str],
     check: bool = False,
-    timeout: int | None = None,
+    timeout: int | None = 21600,
     **kwargs,
 ) -> "subprocess.CompletedProcess":
     """Run a command, streaming its stdout/stderr via ``logging`` in real time, then
@@ -57,6 +58,7 @@ def _run_and_stream(
         stderr=subprocess.PIPE,
         text=True,
         bufsize=1,
+        start_new_session=True,
         **kwargs,
     )
 
@@ -82,13 +84,16 @@ def _run_and_stream(
     try:
         process.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
-        process.kill()
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
         process.wait()
+        t_out.join()
+        t_err.join()
         raise
 
-    # Close our read ends so the drain threads see EOF and exit.
-    process.stdout.close()
-    process.stderr.close()
+    # Readers drain through EOF and close their own streams.
     t_out.join()
     t_err.join()
 
@@ -109,8 +114,9 @@ def _run_and_stream(
         stderr=captured_stderr,
     )
 
-K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo:dev"
-K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core:dev"
+K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:1b47a6c8751e34e9da9685fe72d2c4899136c77091348d6008d0891226c01beb"
+# Public candidate core fa9f69f: warning-only unresolved CNA and curated case-list parity.
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:5db32172629855ef4a7d31997612744131fef584c4797cd35e25399ffd099278"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
 STUDY_LIST_VARIABLE_KEY = "available_study_ids"
@@ -156,6 +162,8 @@ def _rollout_manifest(params):
         return None
     if _study_prefix(params) != 'staging':
         raise AirflowException('Pinned rollout inputs must use study_prefix=staging')
+    if params.get('database') == 'public' and 'transfer_deployment_color' not in params.get('skip_tasks', []):
+        raise AirflowException('Public rollout testing requires transfer_deployment_color to be skipped')
     return read_manifest(checked_path(S3_MOUNT_PATH, key), params.get('rollout_manifest_sha256'))
 
 
@@ -363,6 +371,7 @@ _DEFAULT_ARGS = {
     "email_on_retry": False,
     "retries": 0,
     "retry_delay": timedelta(minutes=5),
+    "execution_timeout": timedelta(hours=24),
 }
 
 
@@ -382,13 +391,25 @@ def _activate_standby_properties(env: str) -> str:
     result = _run_and_stream([
         "/scripts/clickhouse_import_support/get_database_currently_in_production.sh",
         manage_props_path,
-    ])
+    ], timeout=120)
     if result.returncode != 0:
         raise Exception(f"get_database_currently_in_production failed (exit {result.returncode})")
-    live_db       = result.stdout.strip()  # e.g. "cbioportal_public_blue : current production database"
-    live_color    = "blue" if "blue" in live_db else "green"
+    ch_props = _load_properties(manage_props_path)
+    live_db = result.stdout.strip().split(':', 1)[0].strip()
+    blue_db = ch_props['clickhouse_blue_database_name']
+    green_db = ch_props['clickhouse_green_database_name']
+    live_db = {'blue': blue_db, 'green': green_db}.get(live_db, live_db)
+    if blue_db == green_db or live_db not in (blue_db, green_db):
+        raise AirflowException('Management returned an unknown or ambiguous production database')
+    live_color = 'blue' if live_db == blue_db else 'green'
     standby_color = "green" if live_color == "blue" else "blue"
     src_path = f"{CREDS_DIR}/{env}.application.properties.{standby_color}"
+    if env == 'public':
+        if (ch_props.get('portal_database_name') != 'public'
+                or ch_props.get('clickhouse_update_management_database') != 'publicdb_update_management_database'
+                or blue_db != 'cbioportal_public_blue' or green_db != 'cbioportal_public_green'):
+            raise AirflowException('Public management configuration targets unexpected databases')
+        standby_target(ch_props, result.stdout, _load_properties(src_path))
     dest_path = "/tmp/application.properties"
     shutil.copy(src_path, dest_path)
     shutil.copy(f"{CREDS_DIR}/{env}.clickhouse.sql", "/tmp/clickhouse.sql")
@@ -397,7 +418,6 @@ def _activate_standby_properties(env: str) -> str:
     # Point the derive-tables clickhouse client at the standby database.
     # rebuild_derived_tables.py reads CLICKHOUSE_* env vars; a fixed value would
     # ignore the blue/green color, so derive them from the manage properties here.
-    ch_props = _load_properties(manage_props_path)
     standby_db = ch_props[f"clickhouse_{standby_color}_database_name"]
     os.environ["CLICKHOUSE_HOST"] = ch_props["clickhouse_server_host_name"]
     os.environ["CLICKHOUSE_NATIVE_PORT"] = ch_props["clickhouse_server_port"]

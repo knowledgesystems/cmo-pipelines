@@ -7,15 +7,17 @@ the Airflow submodule, Kubernetes secrets, images, or production traffic.
 
 ## Prerequisites
 
-Use cbioportal-core candidate `a964d5bd194213145384027dd0a18d51838f39db`
+Use cbioportal-core candidate `fa9f69f36a6c37618a79a11dad42af96966d9e65`
 or a deliberately revalidated successor. Use the Python 3 case-list generator
-from cmo-pipelines `632739dea6581feb84bb7b6df0706d44756ff1d8`, based on PR1394.
+from cmo-pipelines `178276316a21f4871b41ae8f769d833ebfdbcdca`, based on PR1394.
 Its `case_list_config.tsv` is byte-identical to that core candidate's rules.
 The preprocessing wrapper's tool lock also pins these revisions. Do not use
 the old EC2 case-list configuration for newly prepared studies.
 
 Case generation is gap-fill only. Virtual `_all` and existing stable IDs under
-custom filenames count as existing lists. No annotations, curated memberships,
+custom filenames count as existing lists. Study-local nonempty curated lists
+with the expected non-generic category also count; unrelated occupied filenames
+raise an explicit conflict. No annotations, curated memberships,
 or existing physical lists are deleted or rewritten to force acceptance.
 
 ## Local preparation and validation
@@ -95,8 +97,12 @@ Record S3 verification and keep validation logs with the batch provenance.
 The generated `.params.json` sets `database=public`, `study_prefix=staging`,
 the exact selected IDs, manifest key/hash, and
 `skip_tasks=["transfer_deployment_color"]`. This is a no-swap sample configuration,
-not authorization to execute it. Standby preflight and timeout improvements are
-separate rollout work and are not implemented here.
+not authorization to execute it. Public runs require the no-swap setting until
+the separate cutover step explicitly changes that guard. Standby activation
+rejects unknown management output, wrong public database/host settings and
+missing/unlimited JDBC socket timeouts before copying properties or importing.
+Management lookup is bounded to 120 seconds, subprocesses to six hours and tasks
+to 24 hours. Public JDBC socket timeouts are 600,000 ms in both colors.
 
 Build/pin the candidate core image before deployment. Validation/import workers
 verify all top-level importer `.py`/`.tsv` hashes against the manifest and check

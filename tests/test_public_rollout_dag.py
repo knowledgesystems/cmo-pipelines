@@ -1,5 +1,10 @@
 """Exercise the real task bodies without installing/running an Airflow scheduler."""
 import ast
+import logging
+import os
+import signal
+import subprocess
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -46,6 +51,23 @@ class TaskTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'require a pinned'):
             self.load_manifest({'database': 'public'})
         self.assertIsNone(self.load_manifest({'database': 'containerized'}))
+
+    def test_public_requires_explicit_no_swap(self):
+        self.env['_study_prefix'] = lambda params: 'staging'
+        with self.assertRaisesRegex(RuntimeError, 'requires transfer_deployment_color'):
+            self.load_manifest({'database': 'public', 'rollout_manifest_key': 'manifest.json'})
+
+    def test_command_streaming_and_timeout(self):
+        source = Path(__file__).resolve().parents[1] / 'dags/import_public_hackathon.py'
+        node = next(n for n in ast.parse(source.read_text()).body
+                    if isinstance(n, ast.FunctionDef) and n.name == '_run_and_stream')
+        env = dict(os=os, signal=signal, subprocess=subprocess,
+                   logger=logging.getLogger(self.id()))
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), 'exec'), env)
+        result = env['_run_and_stream']([sys.executable, '-c', 'print("hello")'], timeout=5)
+        self.assertEqual(result.stdout, 'hello')
+        with self.assertRaises(subprocess.TimeoutExpired):
+            env['_run_and_stream']([sys.executable, '-c', 'import time; time.sleep(10)'], timeout=0.1)
 
     def test_collection_cannot_drop_a_preselected_study(self):
         with self.assertRaises(ValueError):

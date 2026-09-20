@@ -10,10 +10,36 @@ import re
 import shutil
 import tarfile
 import tempfile
+from urllib.parse import urlsplit, parse_qs
 
 REFERENCE_FILES = ('info.json', 'cancer-types.json', 'genes.json', 'genesaliases.json',
                    'genesets.json', 'genesets_version.json', 'gene-panels.json',
                    'oncotree.json', 'case_list_config.tsv')
+
+
+def standby_target(manage, live_output, application):
+    """Fail closed before activating JDBC or derived-table settings."""
+    blue = manage['clickhouse_blue_database_name']
+    green = manage['clickhouse_green_database_name']
+    if not blue or not green or blue == green:
+        raise ValueError('Blue and green database names must be distinct')
+    live = live_output.strip().split(':', 1)[0].strip()
+    live = {'blue': blue, 'green': green}.get(live, live)
+    if live not in (blue, green):
+        raise ValueError('Management returned an unknown production database')
+    color, target = ('green', green) if live == blue else ('blue', blue)
+    url = urlsplit(application['spring.datasource.url'].removeprefix('jdbc:'))
+    query = parse_qs(url.query)
+    if url.scheme != 'clickhouse' or url.hostname != manage['clickhouse_server_host_name']:
+        raise ValueError('JDBC and management ClickHouse hosts differ')
+    if url.path.strip('/') != target or target == live:
+        raise ValueError('JDBC destination is not the configured standby database')
+    if query.get('ssl') != ['true']:
+        raise ValueError('Public standby JDBC connection must use TLS')
+    timeout = query.get('socket_timeout', [])
+    if len(timeout) != 1 or not timeout[0].isdigit() or not 0 < int(timeout[0]) <= 3600000:
+        raise ValueError('JDBC socket_timeout must be explicit, positive and at most one hour')
+    return color, target
 
 
 def sha256(path):

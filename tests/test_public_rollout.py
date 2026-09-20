@@ -24,6 +24,20 @@ class RolloutTests(unittest.TestCase):
         second = rollout.select_sample(self.manifest, 2, 'seed')
         self.assertEqual(first['selected_study_ids'], second['selected_study_ids'])
 
+    def test_standby_target_rejects_live_unknown_host_and_unlimited_timeout(self):
+        manage = dict(clickhouse_blue_database_name='blue_db', clickhouse_green_database_name='green_db',
+                      clickhouse_server_host_name='example.org')
+        app = {'spring.datasource.url': 'jdbc:clickhouse://example.org:8443/green_db?ssl=true&socket_timeout=600000'}
+        self.assertEqual(('green', 'green_db'), rollout.standby_target(manage, 'blue_db : current production database', app))
+        self.assertEqual(('green', 'green_db'), rollout.standby_target(manage, 'blue : current production database', app))
+        for live, url in [('unexpected blue output', app['spring.datasource.url']),
+                          ('blue_db', app['spring.datasource.url'].replace('green_db', 'blue_db')),
+                          ('blue_db', app['spring.datasource.url'].replace('example.org', 'elsewhere.org')),
+                          ('blue_db', app['spring.datasource.url'].replace('600000', '0')),
+                          ('blue_db', app['spring.datasource.url'].replace('ssl=true', 'ssl=false'))]:
+            with self.subTest(live=live, url=url), self.assertRaises(ValueError):
+                rollout.standby_target(manage, live, {'spring.datasource.url': url})
+
     def test_never_select_rejected_or_silently_shrink_sample(self):
         self.manifest['studies'][0].update(status='rejected', validator_exit_code=1)
         selected = rollout.select_sample(self.manifest, 2, 'seed')
