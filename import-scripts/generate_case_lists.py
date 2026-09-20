@@ -199,7 +199,11 @@ def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, stu
         if stable_id in existing_ids and not overwrite:
             continue
         category = config['META_CASE_LIST_CATEGORY']
-        if category and category != 'other' and category in existing_categories and not overwrite:
+        # The importer still requires these primary stable IDs for profiled-sample
+        # semantics. Category equivalence only substitutes additional generated roles.
+        primary_id = stable_id in {study_id + suffix for suffix in ('_all', '_sequenced', '_cna')}
+        if (not primary_id and category and category != 'other'
+                and category in existing_categories and not overwrite):
             continue
         case_list_filename = config["CASE_LIST_FILENAME"]
         staging_filename_list = config["STAGING_FILENAME"]

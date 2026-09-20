@@ -50,10 +50,11 @@ class CaseListParityTests(unittest.TestCase):
         self.assertFalse((self.cases / 'cases.txt').exists())
 
     def test_existing_category_preserves_custom_stable_id_and_members(self):
-        self.configure('data.txt')
+        self.configure('data.txt', suffix='_cnaseq')
+        self.config.write_text(self.config.read_text().replace('all_cases_in_study', 'all_cases_with_mutation_and_cna_data'))
         (self.study / 'data.txt').write_text('SAMPLE_ID\nS1\n')
         original = ('cancer_study_identifier: test\nstable_id: test_curated\n'
-                    'case_list_category: all_cases_in_study\ncase_list_ids: S1\tCURATED\n')
+                    'case_list_category: all_cases_with_mutation_and_cna_data\ncase_list_ids: S1\tCURATED\n')
         for name in ('cases.txt', 'custom.txt'):
             with self.subTest(filename=name):
                 path = self.cases / name
@@ -62,6 +63,14 @@ class CaseListParityTests(unittest.TestCase):
                 self.assertEqual(original, path.read_text())
                 self.assertEqual([path], list(self.cases.iterdir()))
                 path.unlink()
+
+    def test_primary_stable_ids_remain_required_even_with_equivalent_category(self):
+        self.configure('data.txt')
+        (self.study / 'data.txt').write_text('SAMPLE_ID\nS1\n')
+        (self.cases / 'custom.txt').write_text('cancer_study_identifier: test\n'
+            'stable_id: test_custom\ncase_list_category: all_cases_in_study\ncase_list_ids: S1\n')
+        self.generate()
+        self.assertIn('stable_id: test_all', (self.cases / 'cases.txt').read_text())
 
     def test_unrelated_filename_conflict_is_not_silently_skipped(self):
         self.configure('data.txt')
