@@ -183,20 +183,27 @@ def read_metadata(path):
 
 def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, study_id, overwrite=False, verbose=False, normalize_tcga_barcodes=False):
     virtual_all = read_metadata(os.path.join(study_dir, META_STUDY_FILENAME)).get('add_global_case_list', '').lower() == 'true'
-    existing_ids = {read_metadata(os.path.join(case_list_dir, name)).get('stable_id')
-                    for name in os.listdir(case_list_dir)}
+    existing = [read_metadata(os.path.join(case_list_dir, name))
+                for name in os.listdir(case_list_dir)
+                if not (name.startswith('.') or name.endswith('~'))
+                and os.path.isfile(os.path.join(case_list_dir, name))]
+    existing_ids = {values.get('stable_id') for values in existing}
+    existing_categories = {values.get('case_list_category') for values in existing
+                           if values.get('cancer_study_identifier') == study_id
+                           and values.get('stable_id', '').startswith(study_id + '_')
+                           and values.get('case_list_ids', '').strip()}
     for config in read_case_list_config(case_list_config_filename):
         stable_id = config['META_STABLE_ID'].replace(CANCER_STUDY_TAG, study_id)
         if virtual_all and stable_id == study_id + '_all':
             continue
         if stable_id in existing_ids and not overwrite:
             continue
+        category = config['META_CASE_LIST_CATEGORY']
+        if category and category != 'other' and category in existing_categories and not overwrite:
+            continue
         case_list_filename = config["CASE_LIST_FILENAME"]
         staging_filename_list = config["STAGING_FILENAME"]
         case_list_file_full_path = os.path.join(case_list_dir, case_list_filename)
-        if os.path.isfile(case_list_file_full_path) and not overwrite:
-            log(verbose, "generate_case_lists(), '%s' exists and overwrite is false, skipping caselist..." % (case_list_filename))
-            continue
 
         # union (like all cases) is checked first, then intersection (like complete or cna-seq)
         union_case_list = CASE_LIST_UNION_DELIMITER in staging_filename_list
@@ -235,9 +242,14 @@ def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, stu
         if intersection_case_list and num_staging_files_processed != len(staging_filenames):
             log(verbose, "generate_case_lists(), number of staging files processed (%d) != number of staging files required (%d) for '%s', skipping call to write_case_list_file()..." % (num_staging_files_processed, len(staging_filenames), case_list_filename))
             continue
+        if os.path.exists(case_list_file_full_path) and not overwrite:
+            raise ValueError("Required case-list filename '%s' is occupied by an unrelated list; "
+                             "preserve it and resolve the stable-ID/category conflict explicitly"
+                             % case_list_filename)
         log(verbose, "generate_case_lists(), calling write_case_list_file()...")
         write_case_list_file(config, study_id, case_list_file_full_path, case_set, verbose)
         existing_ids.add(stable_id)
+        existing_categories.add(category)
 
 
 def get_case_list_from_staging_file(study_dir, staging_filename, verbose):

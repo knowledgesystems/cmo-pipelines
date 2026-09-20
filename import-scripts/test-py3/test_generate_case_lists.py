@@ -110,10 +110,11 @@ class TestGenerateCaseLists(unittest.TestCase):
             self.assertEqual("case_list_name: CNA", lines[2])
             self.assertEqual("case_list_description: CNA (2 samples)", lines[3])
             self.assertEqual("case_list_ids: TCGA-A1-A0SB-01\tTCGA-A1-A0SD-01", lines[5])
-            # gap-fill only: a second run without overwrite leaves the file alone
+            # A malformed occupied filename must be preserved and reported.
             with open(os.path.join(case_list_dir, "cases_cna.txt"), "w") as case_list_file:
                 case_list_file.write("keep me\n")
-            generate_case_lists(config_filename, case_list_dir, study_dir, "tcga_test", False, False, True)
+            with self.assertRaisesRegex(ValueError, 'occupied by an unrelated list'):
+                generate_case_lists(config_filename, case_list_dir, study_dir, "tcga_test", False, False, True)
             with open(os.path.join(case_list_dir, "cases_cna.txt")) as case_list_file:
                 self.assertEqual("keep me\n", case_list_file.read())
         finally:
