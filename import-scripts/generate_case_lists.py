@@ -170,8 +170,27 @@ def read_case_list_config(case_list_config_filename):
             yield dict(zip(header, fields))
 
 
+def read_metadata(path):
+    values = {}
+    if os.path.isfile(path):
+        with open(path) as stream:
+            for line in stream:
+                if not line.lstrip().startswith('#') and ':' in line:
+                    key, value = line.split(':', 1)
+                    values[key.strip()] = value.strip()
+    return values
+
+
 def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, study_id, overwrite=False, verbose=False, normalize_tcga_barcodes=False):
+    virtual_all = read_metadata(os.path.join(study_dir, META_STUDY_FILENAME)).get('add_global_case_list', '').lower() == 'true'
+    existing_ids = {read_metadata(os.path.join(case_list_dir, name)).get('stable_id')
+                    for name in os.listdir(case_list_dir)}
     for config in read_case_list_config(case_list_config_filename):
+        stable_id = config['META_STABLE_ID'].replace(CANCER_STUDY_TAG, study_id)
+        if virtual_all and stable_id == study_id + '_all':
+            continue
+        if stable_id in existing_ids and not overwrite:
+            continue
         case_list_filename = config["CASE_LIST_FILENAME"]
         staging_filename_list = config["STAGING_FILENAME"]
         case_list_file_full_path = os.path.join(case_list_dir, case_list_filename)
@@ -201,7 +220,7 @@ def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, stu
             if normalize_tcga_barcodes:
                 case_list = [get_sample_id(case_id) for case_id in case_list]
             if intersection_case_list:
-                if len(case_set) == 0:
+                if num_staging_files_processed == 0:
                     case_set = ordered_union([], case_list)
                 else:
                     case_set = ordered_intersection(case_set, case_list)
@@ -218,6 +237,7 @@ def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, stu
             continue
         log(verbose, "generate_case_lists(), calling write_case_list_file()...")
         write_case_list_file(config, study_id, case_list_file_full_path, case_set, verbose)
+        existing_ids.add(stable_id)
 
 
 def get_case_list_from_staging_file(study_dir, staging_filename, verbose):
