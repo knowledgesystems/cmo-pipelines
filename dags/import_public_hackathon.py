@@ -6,8 +6,13 @@ import logging
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dags.public_rollout import (checked_path, read_manifest, selected_entries,
+                                require_hash, reference_input, study_input,
+                                validation_command)
 
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
@@ -140,6 +145,25 @@ def _study_prefix(params: dict | None) -> str:
 def _study_mount(prefix: str = "") -> "pathlib.Path":
     import pathlib
     return pathlib.Path(S3_MOUNT_PATH) / prefix if prefix else pathlib.Path(S3_MOUNT_PATH)
+
+
+def _rollout_manifest(params):
+    params = params or {}
+    key = params.get('rollout_manifest_key')
+    if not key:
+        if params.get('database') == 'public':
+            raise AirflowException('Public imports require a pinned rollout manifest')
+        return None
+    if _study_prefix(params) != 'staging':
+        raise AirflowException('Pinned rollout inputs must use study_prefix=staging')
+    return read_manifest(checked_path(S3_MOUNT_PATH, key), params.get('rollout_manifest_sha256'))
+
+
+def _rollout_entry(manifest, study_id):
+    for entry in selected_entries(manifest):
+        if entry['study_id'] == study_id:
+            return entry
+    raise AirflowException(f'Study is not in pinned selection: {study_id}')
 
 # Task IDs that may be listed in the skip_tasks param (dry-run support).
 SKIPPABLE_TASK_IDS = (
@@ -439,6 +463,8 @@ def _activate_standby_properties(env: str) -> str:
             ),
             title="Skip Tasks",
         ),
+        "rollout_manifest_key": Param("", type="string", description="S3 key of the pinned public validation/selection manifest."),
+        "rollout_manifest_sha256": Param("", type="string", description="SHA-256 of the exact manifest bytes; mandatory for public."),
     },
 )
 def import_public_hackathon():
@@ -463,6 +489,14 @@ def import_public_hackathon():
         study_ids = [s.strip() for s in (study_ids or []) if s and s.strip()]
         if not study_ids:
             raise AirflowException("No study IDs provided")
+
+        manifest = _rollout_manifest(params)
+        if manifest is not None:
+            for entry in selected_entries(manifest, study_ids):
+                require_hash(checked_path(S3_MOUNT_PATH, entry['key']), entry['sha256'])
+            refs = manifest['references']
+            require_hash(checked_path(S3_MOUNT_PATH, refs['key']), refs['sha256'])
+            return study_ids
 
         mount = _study_mount(_study_prefix(params))
         missing = [
@@ -500,6 +534,20 @@ def import_public_hackathon():
     def pull_and_validate_study(study_id: str, params: dict | None = None) -> str | None:
         import pathlib
 
+        manifest = _rollout_manifest(params)
+        if manifest is not None:
+            importer = Path(VALIDATE_SCRIPT_PATH).parent
+            entry = _rollout_entry(manifest, study_id)
+            log_dir = Path('/tmp/validate_logs') / study_id
+            log_dir.mkdir(parents=True, exist_ok=True)
+            with reference_input(S3_MOUNT_PATH, manifest, importer) as refs:
+                with study_input(S3_MOUNT_PATH, entry) as study:
+                    result = _run_and_stream(validation_command(
+                        sys.executable, importer, study, refs, log_dir / 'report.html'))
+            if result.returncode not in (0, 3):
+                raise AirflowException(f'Previously passing study {study_id} failed pinned validation: {result.returncode}')
+            return study_id
+
         try:
             local_dir = _study_data_path(study_id, _study_prefix(params))
             if local_dir is None:
@@ -521,7 +569,11 @@ def import_public_hackathon():
             return None
 
     @task(executor_config=_POD_OVERRIDE)
-    def collect_valid_studies(results: list) -> list[str]:
+    def collect_valid_studies(results: list, params: dict | None = None) -> list[str]:
+        manifest = _rollout_manifest(params)
+        if manifest is not None:
+            selected_entries(manifest, results)
+            return results
         valid = [sid for sid in (results or []) if sid is not None]
         if not valid:
             # Fail (not skip): downstream tasks use NONE_FAILED so that explicit
@@ -534,6 +586,21 @@ def import_public_hackathon():
     @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
     def import_into_standby_database(valid_studies: list[str], params: dict | None = None):
         _skip_if_requested("import_into_standby_database", params)
+        manifest = _rollout_manifest(params)
+        if manifest is not None:
+            selected_entries(manifest, valid_studies)
+            importer = Path(IMPORT_SCRIPT_PATH).parent
+            with reference_input(S3_MOUNT_PATH, manifest, importer) as refs:
+                _activate_standby_properties(params['database'])
+                for study_id in valid_studies:
+                    with study_input(S3_MOUNT_PATH, _rollout_entry(manifest, study_id)) as study:
+                        result = _run_and_stream([
+                            sys.executable, IMPORT_SCRIPT_PATH, '-s', str(study),
+                            '-p', str(refs), '--oncotree-file', str(refs / 'oncotree.json'),
+                            '-o', '--no-derive-tables'])
+                        if result.returncode != 0:
+                            raise AirflowException(f'Validator-passing study failed import: {study_id} (exit {result.returncode})')
+            return
         _activate_standby_properties(params["database"])
         if not valid_studies:
             logging.info("No valid studies to import — exiting.")
