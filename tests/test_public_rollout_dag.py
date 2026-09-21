@@ -15,6 +15,27 @@ from dags import public_rollout
 
 
 class TaskTests(unittest.TestCase):
+    def test_diagnostic_image_and_import_only_tracing(self):
+        source = Path(__file__).resolve().parents[1] / 'dags/import_public_hackathon.py'
+        wanted = {'K8S_IMAGE_VALIDATE', '_POD_OVERRIDE_VALIDATE', '_POD_OVERRIDE_IMPORT'}
+        nodes = [node for node in ast.parse(source.read_text()).body
+                 if (isinstance(node, ast.FunctionDef) and node.name == '_make_cbioportal_pod_override')
+                 or (isinstance(node, ast.Assign) and any(
+                     isinstance(target, ast.Name) and target.id in wanted for target in node.targets))]
+        env = dict(k8s=SimpleNamespace(V1EnvVar=SimpleNamespace,
+                                      V1ResourceRequirements=SimpleNamespace),
+                   _SAML2AWS_ENV=SimpleNamespace(name='SAML2AWS_SKIP', value='true'),
+                   _pod_override=lambda **kwargs: kwargs)
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), str(source), 'exec'), env)
+        for name in ('_POD_OVERRIDE_VALIDATE', '_POD_OVERRIDE_IMPORT'):
+            self.assertEqual(env[name]['image'], 'ghcr.io/cbioportal/containerized-importer-core@sha256:59fd2371e1e05245dde8e9a123feb832cc288cfa55619d6d941e66a2a4fbc040')
+        validation_env = {v.name: v.value for v in env['_POD_OVERRIDE_VALIDATE']['env']}
+        import_env = {v.name: v.value for v in env['_POD_OVERRIDE_IMPORT']['env']}
+        self.assertNotIn('JAVA_TOOL_OPTIONS', validation_env)
+        self.assertEqual(import_env['JAVA_TOOL_OPTIONS'], '-Dcbio.jdbc.diagnostics=true')
+        self.assertEqual(import_env['JAVA_OPTS'], '-Xmx22g')
+        self.assertEqual(env['_POD_OVERRIDE_IMPORT']['resources'].limits, {'memory': '26Gi'})
+
     def setUp(self):
         source = Path(__file__).resolve().parents[1] / 'dags/import_public_hackathon.py'
         tree = ast.parse(source.read_text())

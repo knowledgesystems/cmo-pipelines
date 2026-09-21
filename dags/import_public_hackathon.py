@@ -115,8 +115,8 @@ def _run_and_stream(
     )
 
 K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:1b47a6c8751e34e9da9685fe72d2c4899136c77091348d6008d0891226c01beb"
-# Public candidate core fa9f69f: warning-only unresolved CNA and curated case-list parity.
-K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:5db32172629855ef4a7d31997612744131fef584c4797cd35e25399ffd099278"
+# Diagnostic core 6c18cc3: retains fa9f69f validator and adds opt-in JDBC tracing.
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:59fd2371e1e05245dde8e9a123feb832cc288cfa55619d6d941e66a2a4fbc040"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
 STUDY_LIST_VARIABLE_KEY = "available_study_ids"
@@ -340,13 +340,16 @@ _POD_OVERRIDE = _pod_override(
 )
 
 
-def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: str = "2Gi", memory_limit: str = "3Gi") -> dict:
+def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: str = "2Gi", memory_limit: str = "3Gi", jdbc_diagnostics: bool = False) -> dict:
     env = [
         k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
         _SAML2AWS_ENV,
     ]
     if java_opts:
         env.append(k8s.V1EnvVar(name="JAVA_OPTS", value=java_opts))
+    if jdbc_diagnostics:
+        # Reaches Java subprocesses launched by the Python importer, too.
+        env.append(k8s.V1EnvVar(name="JAVA_TOOL_OPTIONS", value="-Dcbio.jdbc.diagnostics=true"))
 
     # application.properties, clickhouse.sql and manage properties for both
     # environments come from the pipelines-credentials secret (mounted at
@@ -362,7 +365,7 @@ def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: 
 
 
 _POD_OVERRIDE_VALIDATE = _make_cbioportal_pod_override(memory_request="2Gi", memory_limit="3Gi")
-_POD_OVERRIDE_IMPORT   = _make_cbioportal_pod_override(java_opts="-Xmx22g", memory_request="24Gi", memory_limit="26Gi")
+_POD_OVERRIDE_IMPORT   = _make_cbioportal_pod_override(java_opts="-Xmx22g", memory_request="24Gi", memory_limit="26Gi", jdbc_diagnostics=True)
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
