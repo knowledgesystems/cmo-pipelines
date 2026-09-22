@@ -115,8 +115,8 @@ def _run_and_stream(
     )
 
 K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:1b47a6c8751e34e9da9685fe72d2c4899136c77091348d6008d0891226c01beb"
-# Diagnostic core 6c18cc3: retains fa9f69f validator and adds opt-in JDBC tracing.
-K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:59fd2371e1e05245dde8e9a123feb832cc288cfa55619d6d941e66a2a4fbc040"
+# Diagnostic core 7dae762: retains fa9f69f validation and JDBC tracing, and fixes sample-list read-after-write.
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:7f62c04ba9c53636129d2c9a1ba4e157f2b70d6701c74537f0b435934fba8468"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
 STUDY_LIST_VARIABLE_KEY = "available_study_ids"
