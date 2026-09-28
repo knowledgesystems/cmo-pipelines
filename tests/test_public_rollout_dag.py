@@ -73,10 +73,12 @@ class TaskTests(unittest.TestCase):
             self.load_manifest({'database': 'public'})
         self.assertIsNone(self.load_manifest({'database': 'containerized'}))
 
-    def test_public_requires_explicit_no_swap(self):
+    def test_public_allows_color_swap(self):
         self.env['_study_prefix'] = lambda params: 'staging'
-        with self.assertRaisesRegex(RuntimeError, 'requires transfer_deployment_color'):
-            self.load_manifest({'database': 'public', 'rollout_manifest_key': 'manifest.json'})
+        self.env['checked_path'] = lambda root, key: key
+        self.env['read_manifest'] = Mock(return_value=self.manifest)
+        self.assertIs(self.load_manifest({'database': 'public', 'rollout_manifest_key': 'manifest.json'}),
+                      self.manifest)
 
     def test_command_streaming_and_timeout(self):
         source = Path(__file__).resolve().parents[1] / 'dags/import_public_hackathon.py'

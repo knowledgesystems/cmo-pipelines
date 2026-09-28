@@ -162,8 +162,6 @@ def _rollout_manifest(params):
         return None
     if _study_prefix(params) != 'staging':
         raise AirflowException('Pinned rollout inputs must use study_prefix=staging')
-    if params.get('database') == 'public' and 'transfer_deployment_color' not in params.get('skip_tasks', []):
-        raise AirflowException('Public rollout testing requires transfer_deployment_color to be skipped')
     return read_manifest(checked_path(S3_MOUNT_PATH, key), params.get('rollout_manifest_sha256'))
 
 
