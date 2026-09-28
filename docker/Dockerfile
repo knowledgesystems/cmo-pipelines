@@ -61,7 +61,7 @@ RUN pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements.txt \
 
 # clickhouse import-support scripts from cbioportal-core, SHA-pinned; bump to advance:
 #   git ls-remote https://github.com/cBioPortal/cbioportal-core.git main
-ARG CBIOPORTAL_CORE_REF=6f69e5459a75b6b1dffdcb8c1d820d0426454577
+ARG CBIOPORTAL_CORE_REF=d549d6ff4065e348eded87c5878ac5d1af570a6e
 RUN set -eux; \
     git clone --filter=blob:none --sparse \
         https://github.com/cBioPortal/cbioportal-core.git /tmp/cbioportal-core; \
