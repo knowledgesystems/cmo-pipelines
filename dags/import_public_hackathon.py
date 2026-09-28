@@ -116,7 +116,7 @@ def _run_and_stream(
 
 K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:d67fe65687d66cb5ce4f7f2bebd96bc8bc144a82c02e47b40814a15814af9ad6"
 # Diagnostic core db4360f: adds Java-computed fixed-format FGA to bounded pool validation, JDBC tracing, and sample-list fixes.
-K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:9ca90cb35210778cc8d2faff31fc41452b9c900b55cf3ea82d3b470dbb602293"
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:2a3ffb1365bb7eee4116bc3c95adad9ceabbcf1f40fae2285336d73b5ce17d95"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
 STUDY_LIST_VARIABLE_KEY = "available_study_ids"

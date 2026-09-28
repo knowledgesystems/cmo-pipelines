@@ -28,7 +28,7 @@ class TaskTests(unittest.TestCase):
                    _pod_override=lambda **kwargs: kwargs)
         exec(compile(ast.Module(body=nodes, type_ignores=[]), str(source), 'exec'), env)
         for name in ('_POD_OVERRIDE_VALIDATE', '_POD_OVERRIDE_IMPORT'):
-            self.assertEqual(env[name]['image'], 'ghcr.io/cbioportal/containerized-importer-core@sha256:9ca90cb35210778cc8d2faff31fc41452b9c900b55cf3ea82d3b470dbb602293')
+            self.assertEqual(env[name]['image'], 'ghcr.io/cbioportal/containerized-importer-core@sha256:2a3ffb1365bb7eee4116bc3c95adad9ceabbcf1f40fae2285336d73b5ce17d95')
         validation_env = {v.name: v.value for v in env['_POD_OVERRIDE_VALIDATE']['env']}
         import_env = {v.name: v.value for v in env['_POD_OVERRIDE_IMPORT']['env']}
         self.assertNotIn('JAVA_TOOL_OPTIONS', validation_env)
