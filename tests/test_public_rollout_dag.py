@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from dags import public_rollout
+from dags import public_rollout, study_sources
 
 
 class TaskTests(unittest.TestCase):
@@ -40,7 +40,7 @@ class TaskTests(unittest.TestCase):
         source = Path(__file__).resolve().parents[1] / 'dags/import_public_hackathon.py'
         tree = ast.parse(source.read_text())
         nodes = []
-        wanted = {'_rollout_manifest', '_rollout_entry', 'pull_and_validate_study',
+        wanted = {'_rollout_manifest', '_rollout_entry', '_selected_rollout_entries', 'pull_and_validate_study',
                   'collect_valid_studies', 'import_into_standby_database'}
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name in wanted:
@@ -58,12 +58,15 @@ class TaskTests(unittest.TestCase):
                         VALIDATE_SCRIPT_PATH='/importer/validateStudies.py',
                         IMPORT_SCRIPT_PATH='/importer/metaImport.py', S3_MOUNT_PATH='/s3',
                         selected_entries=public_rollout.selected_entries,
+                        DEFAULT_BUCKET=study_sources.DEFAULT_BUCKET,
+                        parse_study_source=study_sources.parse_study_source,
+                        _input_root=lambda entry: Path("/s3"),
                         validation_command=public_rollout.validation_command,
                         reference_input=references, study_input=study,
                         _skip_if_requested=Mock(), _activate_standby_properties=Mock(),
                         _run_and_stream=Mock(return_value=SimpleNamespace(returncode=0)))
         exec(compile(ast.Module(body=nodes, type_ignores=[]), str(source), 'exec'), self.env)
-        self.manifest = dict(selected_study_ids=['study'], studies=[dict(study_id='study',
+        self.manifest = dict(references={}, selected_study_ids=['study'], studies=[dict(study_id='study',
             key='staging/study.tar.gz', sha256='a' * 64, status='passed', validator_exit_code=0)])
         self.load_manifest = self.env['_rollout_manifest']
         self.env['_rollout_manifest'] = Mock(return_value=self.manifest)
