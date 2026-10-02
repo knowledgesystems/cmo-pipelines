@@ -15,6 +15,9 @@ from dags.public_rollout import (checked_path, read_manifest, selected_entries,
                                 require_hash, reference_input, study_input,
                                 validation_command, standby_target)
 
+from dags.study_sources import (DEFAULT_BUCKET, S3_SOURCES, STUDY_LIST_VARIABLE_KEY,
+                               bucket_mount, parse_study_source, study_selections, verified_study_directory)
+
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.operators.bash import BashOperator
@@ -119,7 +122,6 @@ K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:d67
 K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:2a3ffb1365bb7eee4116bc3c95adad9ceabbcf1f40fae2285336d73b5ce17d95"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
 IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
-STUDY_LIST_VARIABLE_KEY = "available_study_ids"
 SCRIPTS_DIR = "/data/portal-cron/scripts"
 IMPORTER = "public"
 CREDS_DIR = "/data/portal-cron/pipelines-credentials"
@@ -137,7 +139,6 @@ def _manage_props_path(env: str) -> str:
     return f"{CREDS_DIR}/{env}.manage.properties"
 
 S3_MOUNT_PATH = "/mnt/s3-data"
-S3_PVC_CLAIM_NAME = "databricks-s3-pvc"
 
 
 def _study_prefix(params: dict | None) -> str:
@@ -148,9 +149,9 @@ def _study_prefix(params: dict | None) -> str:
     return prefix
 
 
-def _study_mount(prefix: str = "") -> "pathlib.Path":
-    import pathlib
-    return pathlib.Path(S3_MOUNT_PATH) / prefix if prefix else pathlib.Path(S3_MOUNT_PATH)
+def _study_mount(prefix: str = "", bucket: str = DEFAULT_BUCKET) -> "Path":
+    mount = bucket_mount(bucket)
+    return mount / prefix if prefix else mount
 
 
 def _rollout_manifest(params):
@@ -167,9 +168,21 @@ def _rollout_manifest(params):
 
 def _rollout_entry(manifest, study_id):
     for entry in selected_entries(manifest):
-        if entry['study_id'] == study_id:
+        if entry['study_id'] == parse_study_source(study_id)[1]:
             return entry
     raise AirflowException(f'Study is not in pinned selection: {study_id}')
+
+def _selected_rollout_entries(manifest, selections):
+    sources = [parse_study_source(selection) for selection in selections]
+    entries = selected_entries(manifest, [study_id for _, study_id in sources])
+    for entry, (bucket, _) in zip(entries, sources):
+        if entry.get('bucket', DEFAULT_BUCKET) != bucket:
+            raise AirflowException(f"Selected bucket differs from pinned input for {entry['study_id']}")
+    return entries
+
+
+def _input_root(entry):
+    return bucket_mount(entry.get('bucket', DEFAULT_BUCKET))
 
 # Task IDs that may be listed in the skip_tasks param (dry-run support).
 SKIPPABLE_TASK_IDS = (
@@ -203,12 +216,13 @@ def _study_data_path(study_id: str, prefix: str = "") -> str | None:
     import tempfile
     import shutil
 
-    mount = _study_mount(prefix)
+    bucket, study_id = parse_study_source(study_id)
+    mount = _study_mount(prefix, bucket)
     mount_tar = mount / f"{study_id}.tar.gz"
     mount_dir = mount / study_id
 
     if mount_dir.is_dir():
-        return str(mount_dir)
+        return verified_study_directory(mount_dir, study_id)
 
     if mount_tar.is_file():
         tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
@@ -224,7 +238,7 @@ def _study_data_path(study_id: str, prefix: str = "") -> str | None:
                     child.rename(pathlib.Path(tmp) / child.name)
                 inner.rmdir()
 
-            return tmp
+            return verified_study_directory(tmp, study_id)
         except Exception as e:
             logger.error("Failed to extract %s: %s", mount_tar, e)
             shutil.rmtree(tmp, ignore_errors=True)
@@ -237,7 +251,11 @@ def _study_data_path(study_id: str, prefix: str = "") -> str | None:
 def _available_study_ids() -> list[str]:
     """Read the study-list Variable at parse time to populate the Param enum."""
     try:
-        return json.loads(Variable.get(STUDY_LIST_VARIABLE_KEY, default_var="[]"))
+        catalog = Variable.get(STUDY_LIST_VARIABLE_KEY, default_var=None)
+        choices = json.loads(catalog if catalog is not None else
+                             Variable.get('available_study_ids', default_var='[]'))
+        return [f's3://{bucket}/{study_id}' for bucket, study_id in
+                (parse_study_source(choice) for choice in choices)]
     except Exception:
         return []
 
@@ -278,6 +296,7 @@ def _pod_override(
     return {
         "pod_override": k8s.V1Pod(
             spec=k8s.V1PodSpec(
+                service_account_name="airflow-worker",
                 image_pull_secrets=[k8s.V1LocalObjectReference(name="ghcr-pull")],
                 # fsGroup so the mounted Secret volume is readable with the S3 CSI driver v2
                 security_context=k8s.V1PodSecurityContext(fs_group=1000),
@@ -302,10 +321,9 @@ def _pod_override(
                             mount_path=CREDS_DIR,
                             read_only=True,
                         ),
-                        k8s.V1VolumeMount(
-                            name="s3-data",
-                            mount_path=S3_MOUNT_PATH,
-                        ),
+                    ] + [
+                        k8s.V1VolumeMount(name=f"study-source-{i}", mount_path=source['mount'], read_only=True)
+                        for i, source in enumerate(S3_SOURCES.values())
                     ],
                 )],
                 volumes=(extra_volumes or []) + [
@@ -316,12 +334,10 @@ def _pod_override(
                             default_mode=0o400,
                         ),
                     ),
-                    k8s.V1Volume(
-                        name="s3-data",
-                        persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(
-                            claim_name=S3_PVC_CLAIM_NAME,
-                        ),
-                    ),
+                ] + [
+                    k8s.V1Volume(name=f"study-source-{i}", persistent_volume_claim=
+                        k8s.V1PersistentVolumeClaimVolumeSource(claim_name=source['claim'], read_only=True))
+                    for i, source in enumerate(S3_SOURCES.values())
                 ],
             )
         )
@@ -457,8 +473,8 @@ def _activate_standby_properties(env: str) -> str:
             [],
             type="array",
             examples=_available_study_ids(),
-            description="Select one or more cancer study IDs to import. Run refresh_study_list to update the list.",
-            title="Cancer Study IDs",
+            description="Select studies from either or both S3 buckets. Choose one source per study ID. Run refresh_study_list to update the list.",
+            title="Studies (S3 bucket and study ID)",
         ),
         "study_prefix": Param(
             "",
@@ -507,25 +523,26 @@ def import_public_hackathon():
                 study_ids = json.loads(study_ids)
             except (json.JSONDecodeError, ValueError):
                 study_ids = ast.literal_eval(study_ids)
-        study_ids = [s.strip() for s in (study_ids or []) if s and s.strip()]
+        study_ids = study_selections(study_ids or [])
         if not study_ids:
             raise AirflowException("No study IDs provided")
 
         manifest = _rollout_manifest(params)
         if manifest is not None:
-            for entry in selected_entries(manifest, study_ids):
-                require_hash(checked_path(S3_MOUNT_PATH, entry['key']), entry['sha256'])
+            for entry in _selected_rollout_entries(manifest, study_ids):
+                require_hash(checked_path(_input_root(entry), entry['key']), entry['sha256'])
             refs = manifest['references']
-            require_hash(checked_path(S3_MOUNT_PATH, refs['key']), refs['sha256'])
+            require_hash(checked_path(_input_root(refs), refs['key']), refs['sha256'])
             return study_ids
 
-        mount = _study_mount(_study_prefix(params))
-        missing = [
-            s for s in study_ids
-            if not (mount / f"{s}.tar.gz").is_file() and not (mount / s).is_dir()
-        ]
+        missing = []
+        for selection in study_ids:
+            bucket, study_id = parse_study_source(selection)
+            mount = _study_mount(_study_prefix(params), bucket)
+            if not (mount / f"{study_id}.tar.gz").is_file() and not (mount / study_id).is_dir():
+                missing.append(selection)
         if missing:
-            raise AirflowException(f"Studies not found at {mount}: {missing}")
+            raise AirflowException(f"Studies not found in selected sources: {missing}")
         return study_ids
 
     t_verify_cluster_state = BashOperator(
@@ -559,10 +576,10 @@ def import_public_hackathon():
         if manifest is not None:
             importer = Path(VALIDATE_SCRIPT_PATH).parent
             entry = _rollout_entry(manifest, study_id)
-            log_dir = Path('/tmp/validate_logs') / study_id
+            log_dir = Path('/tmp/validate_logs') / parse_study_source(study_id)[1]
             log_dir.mkdir(parents=True, exist_ok=True)
-            with reference_input(S3_MOUNT_PATH, manifest, importer) as refs:
-                with study_input(S3_MOUNT_PATH, entry) as study:
+            with reference_input(_input_root(manifest['references']), manifest, importer) as refs:
+                with study_input(_input_root(entry), entry) as study:
                     result = _run_and_stream(validation_command(
                         sys.executable, importer, study, refs, log_dir / 'report.html'))
             if result.returncode not in (0, 3):
@@ -574,7 +591,7 @@ def import_public_hackathon():
             if local_dir is None:
                 return None
 
-            log_dir = f"/tmp/validate_logs/{study_id}"
+            log_dir = f"/tmp/validate_logs/{parse_study_source(study_id)[1]}"
             os.makedirs(log_dir, exist_ok=True)
             result = _run_and_stream(
                 [sys.executable, VALIDATE_SCRIPT_PATH, "-l", local_dir, "-n", "-html", log_dir],
@@ -593,7 +610,7 @@ def import_public_hackathon():
     def collect_valid_studies(results: list, params: dict | None = None) -> list[str]:
         manifest = _rollout_manifest(params)
         if manifest is not None:
-            selected_entries(manifest, results)
+            _selected_rollout_entries(manifest, results)
             return results
         valid = [sid for sid in (results or []) if sid is not None]
         if not valid:
@@ -609,12 +626,13 @@ def import_public_hackathon():
         _skip_if_requested("import_into_standby_database", params)
         manifest = _rollout_manifest(params)
         if manifest is not None:
-            selected_entries(manifest, valid_studies)
+            _selected_rollout_entries(manifest, valid_studies)
             importer = Path(IMPORT_SCRIPT_PATH).parent
-            with reference_input(S3_MOUNT_PATH, manifest, importer) as refs:
+            with reference_input(_input_root(manifest['references']), manifest, importer) as refs:
                 _activate_standby_properties(params['database'])
                 for study_id in valid_studies:
-                    with study_input(S3_MOUNT_PATH, _rollout_entry(manifest, study_id)) as study:
+                    entry = _rollout_entry(manifest, study_id)
+                    with study_input(_input_root(entry), entry) as study:
                         result = _run_and_stream([
                             sys.executable, IMPORT_SCRIPT_PATH, '-s', str(study),
                             '-p', str(refs), '--oncotree-file', str(refs / 'oncotree.json'),
