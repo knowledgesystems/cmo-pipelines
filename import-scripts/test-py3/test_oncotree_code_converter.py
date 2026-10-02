@@ -84,6 +84,70 @@ class TestOncotreeCodeConverter(unittest.TestCase):
         # make sure we didn't lose any lines (data is deleted if there is a problem)
         self.assertEqual(len(original_clinical_data.split("\n")), len(processed_clinical_data.split("\n")))
 
+    def test_audit_clinical_file(self):
+        # NA cancer types are not drift; UNKNOWN_CODE is stale; blank code ignored; file untouched
+        with io.open(self.data_clinical_incorrect_cancer_type_filename, "r", encoding="utf8") as clinical_file:
+            original = clinical_file.read()
+        findings = audit_clinical_file(self.oncotree_mappings, self.data_clinical_incorrect_cancer_type_filename)
+        self.assertEqual({"UNKNOWN_CODE": 1}, findings["stale_codes"])
+        self.assertEqual({}, findings["cancer_type_mismatches"])
+        self.assertEqual({}, findings["cancer_type_detailed_mismatches"])
+        self.assertTrue(audit_has_findings(findings))
+        with io.open(self.data_clinical_incorrect_cancer_type_filename, "r", encoding="utf8") as clinical_file:
+            self.assertEqual(original, clinical_file.read())
+        # a populated cancer type differing from oncotree is counted per sample; matching values are not drift
+        prad = self.oncotree_mappings["PRAD"]
+        with tempfile.NamedTemporaryFile(mode="w", prefix="__", suffix=".tmp", delete=False, encoding="utf8") as temp_file:
+            self.temp_files.append(temp_file.name)
+            temp_file.write("SAMPLE_ID\tONCOTREE_CODE\tCANCER_TYPE\tCANCER_TYPE_DETAILED\n")
+            temp_file.write("S1\tPRAD\tWrong Type\tNA\n")
+            temp_file.write("S2\tPRAD\tWrong Type\tNA\n")
+            temp_file.write("S3\tPRAD\t%s\t%s\n" % (prad["CANCER_TYPE"], prad["CANCER_TYPE_DETAILED"]))
+            temp_file.write("S4\tPRAD\tNA\tWrong Detailed\n")
+        findings = audit_clinical_file(self.oncotree_mappings, temp_file.name)
+        self.assertEqual({}, findings["stale_codes"])
+        self.assertEqual({("PRAD", "Wrong Type", prad["CANCER_TYPE"]): 2}, findings["cancer_type_mismatches"])
+        self.assertEqual({("PRAD", "Wrong Detailed", prad["CANCER_TYPE_DETAILED"]): 1}, findings["cancer_type_detailed_mismatches"])
+        report = io.StringIO()
+        report_audit_findings(findings, temp_file.name, out=report)
+        self.assertIn("oncotree drift found", report.getvalue())
+        self.assertIn("PRAD\tWrong Type\t%s\t2 samples" % (prad["CANCER_TYPE"]), report.getvalue())
+
+    def test_audit_clinical_file_no_drift(self):
+        prad = self.oncotree_mappings["PRAD"]
+        with tempfile.NamedTemporaryFile(mode="w", prefix="__", suffix=".tmp", delete=False, encoding="utf8") as temp_file:
+            self.temp_files.append(temp_file.name)
+            temp_file.write("#Sample\tCode\tType\tDetailed\n#Sample\tCode\tType\tDetailed\n#STRING\tSTRING\tSTRING\tSTRING\n#1\t1\t1\t1\n")
+            temp_file.write("SAMPLE_ID\tONCOTREE_CODE\tCANCER_TYPE\tCANCER_TYPE_DETAILED\n")
+            temp_file.write("S1\tPRAD\t%s\t%s\n" % (prad["CANCER_TYPE"], prad["CANCER_TYPE_DETAILED"]))
+            temp_file.write("S2\t\tNA\tNA\n")
+            temp_file.write("S3\tPRAD\tNA\t\n")
+        findings = audit_clinical_file(self.oncotree_mappings, temp_file.name)
+        self.assertFalse(audit_has_findings(findings), findings)
+        report = io.StringIO()
+        report_audit_findings(findings, temp_file.name, out=report)
+        self.assertIn("no oncotree drift", report.getvalue())
+
+    def test_process_clinical_file_adds_metadata_columns(self):
+        # 4 metadata rows + missing CANCER_TYPE columns: headers and metadata rows both gain the two attributes
+        with tempfile.NamedTemporaryFile(mode="w", prefix="__", suffix=".tmp", delete=False, encoding="utf8") as temp_file:
+            self.temp_files.append(temp_file.name)
+            temp_file.write("#Sample\tCode\n#Sample\tCode\n#STRING\tSTRING\n#1\t1\n")
+            temp_file.write("SAMPLE_ID\tONCOTREE_CODE\nS1\tPRAD\n")
+        process_clinical_file(self.oncotree_mappings, temp_file.name, False)
+        with io.open(temp_file.name, "r", encoding="utf8") as processed:
+            lines = processed.read().split("\n")
+        prad = self.oncotree_mappings["PRAD"]
+        self.assertEqual("#Sample\tCode\tCancer Type\tCancer Type Detailed", lines[0])
+        self.assertEqual("#STRING\tSTRING\tSTRING\tSTRING", lines[2])
+        self.assertEqual("#1\t1\t1\t1", lines[3])
+        self.assertEqual("SAMPLE_ID\tONCOTREE_CODE\tCANCER_TYPE\tCANCER_TYPE_DETAILED", lines[4])
+        self.assertEqual("S1\tPRAD\t%s\t%s" % (prad["CANCER_TYPE"], prad["CANCER_TYPE_DETAILED"]), lines[5])
+
+    def test_audit_clinical_file_no_oncotree_code(self):
+        with self.assertRaises(ValueError):
+            audit_clinical_file(self.oncotree_mappings, self.data_clinical_no_oncotree_code_filename)
+
     def call_process_clinical_file(self, data_clinical_filename):
         original_clinical_data = ""
         processed_clinical_data = ""

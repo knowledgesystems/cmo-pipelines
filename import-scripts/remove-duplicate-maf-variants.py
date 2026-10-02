@@ -1,13 +1,14 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 """ remove-duplicate-maf-variants.py
 Script to remove duplicate maf records based on the 8 key columns.
-Calculates VAF for each record and picks the record with high VAF
-Formula for VAF = t_alt_count / (t_ref_count + t_alt_count)
+Within each group, apply ImportExtendedMutationData.mergeMutationData preferences
+and merge sequencing centers. Read counts do not affect selection.
 """
 
 import sys
 import optparse
+import re
 
 ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
@@ -16,36 +17,44 @@ KEY_COLUMNS_INDEX = []
 KEY_COLUMNS = ['Entrez_Gene_Id','Chromosome','Start_Position','End_Position','Variant_Classification','Tumor_Seq_Allele2','Tumor_Sample_Barcode','HGVSp_Short']
 MAF_DATA = {}
 
-def remove_duplicate_variants(out_filename, comments, header, t_refc_index, t_altc_index):
-	outfile = []
-	outfile.append(comments)
-	outfile.append(header)
-	for key in MAF_DATA:
-		if len(MAF_DATA[key]) > 1:
-			vaf_ind = 0
-			vaf_value = 0
-			for val in MAF_DATA[key]:
-				#calculate VAF for each duplicate record.
-				columns = val.rstrip('\n').split('\t')
-				try:
-					VAF = int(columns[t_altc_index])/(int(columns[t_altc_index])+int(columns[t_refc_index]))
-					if VAF > vaf_value:
-						vaf_value = VAF
-						vaf_ind = MAF_DATA[key].index(val)
-						outfile.append(MAF_DATA[key][vaf_ind])
-				except:
-					print >> ERROR_FILE, 'ERROR: VAF cannot be calculated for the variant : ' + key
-					print >> ERROR_FILE, 'The t_ref_count is: '+ columns[t_refc_index]+ ' and t_alt_count is: '+ columns[t_altc_index]
-					outfile.append(val)
-		else:
-			outfile.append(MAF_DATA[key][0])
-			
-	datafile = open(out_filename, 'w')
-	for line in outfile:
-		datafile.write(line)
-	datafile.close()
-	print >> OUTPUT_FILE, 'MAF file with duplicate variants removed is written to: ' + out_filename +'\n'
-		
+def merge_duplicate_records(records, header_columns):
+	"""Match Java mergeMutationData within the existing eight-column groups."""
+	indexes = {name: i for i, name in enumerate(header_columns)}
+	def value(row, name):
+		return row[indexes[name]] if name in indexes else ''
+	selected = records[0].rstrip('\n').split('\t')
+	for record in records[1:]:
+		candidate = record.rstrip('\n').split('\t')
+		choose_candidate = False
+		if value(selected, 'Matched_Norm_Sample_Barcode').lower() != value(candidate, 'Matched_Norm_Sample_Barcode').lower():
+			choose_candidate = re.fullmatch(r'TCGA-..-....-10.*', value(candidate, 'Matched_Norm_Sample_Barcode')) is not None
+		elif value(selected, 'Validation_Status').lower() != value(candidate, 'Validation_Status').lower():
+			choose_candidate = value(candidate, 'Validation_Status').lower() in ('valid', 'validated')
+		elif value(selected, 'Mutation_Status').lower() != value(candidate, 'Mutation_Status').lower():
+			status = value(candidate, 'Mutation_Status').lower()
+			choose_candidate = status == 'germline' or (status == 'somatic' and value(selected, 'Mutation_Status').lower() != 'germline')
+		merged = candidate if choose_candidate else selected
+		if 'Center' in indexes:
+			centers = set(value(selected, 'Center').split(';'))
+			additional = set(value(candidate, 'Center').split(';')) - centers
+			if additional:
+				centers.update(additional)
+				if len(centers) > 1:
+					centers.discard('NA')
+				merged[indexes['Center']] = ';'.join(sorted(centers))
+		selected = merged
+	return '\t'.join(selected) + '\n'
+
+
+def remove_duplicate_variants(out_filename, comments, header):
+	header_columns = header.rstrip('\n').split('\t')
+	with open(out_filename, 'w') as datafile:
+		datafile.write(comments)
+		datafile.write(header)
+		for records in MAF_DATA.values():
+			datafile.write(records[0] if len(records) == 1 else merge_duplicate_records(records, header_columns))
+	print('MAF file with duplicate variants removed is written to: ' + out_filename +'\n', file=OUTPUT_FILE)
+
 
 def main():
 	# get command line arguments
@@ -59,19 +68,17 @@ def main():
 
 	comments = ""
 	header = ""
-	
+
 	with open(maf_filename,'r') as maf_file:
 		for line in maf_file:
 			if line.startswith('#'):
 				comments += line
-			elif line.startswith('Hugo_Symbol'):
+			elif not header:
 				header += line
 				header_cols = line.rstrip('\n').split('\t')
 				#get the positions of the 8 key maf columns
 				for value in KEY_COLUMNS:
 					KEY_COLUMNS_INDEX.append(header_cols.index(value))
-				t_refc_index = header_cols.index('t_ref_count')
-				t_altc_index = header_cols.index('t_alt_count')
 			else:
 				reference_key = ""
 				data = line.rstrip('\n').split('\t')
@@ -82,8 +89,8 @@ def main():
 					MAF_DATA[reference_key] = [line]
 				else:
 					MAF_DATA[reference_key].append(line)
-	
-	remove_duplicate_variants(out_filename, comments, header, t_refc_index, t_altc_index)
+
+	remove_duplicate_variants(out_filename, comments, header)
 
 if __name__ == '__main__':
 	main()
