@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import os
+import subprocess
 
 import clinicalfile_utils
-import generate_case_lists
 
 SAMPLE_ID_COLUMN = "SAMPLE_ID"
 SEQUENCED_SAMPLES_HEADER_TAG = "#sequenced_samples:"
@@ -328,19 +328,18 @@ def call_generate_case_lists(case_list_config_file, case_list_dir, study_dir, st
 
         If overwrite is False, no new case lists will be generated (assuming case lists already exist).
     """
-    specified_args = ['-c', case_list_config_file,
+    specified_args = [os.environ.get('PYTHON3_BINARY', 'python3'),
+                      os.path.join(os.path.dirname(os.path.abspath(__file__)), 'generate_case_lists.py'),
+                      '-c', case_list_config_file,
                       '-d', case_list_dir,
                       '-s', study_dir,
-                      '-i', study_id]
+                      '-i', study_id,
+                      '--normalize-tcga-barcodes']
     if overwrite:
         specified_args.append('-o')
     if verbose:
         specified_args.append('-v')
-    parser = generate_case_lists.parse_generate_case_list_args()
-    args = parser.parse_args(specified_args)
     try:
-        generate_case_lists.main(args)
-    # SystemExit because script calls sys.exit() on certain errors
-    except SystemExit as e:
-        print "Attempt to generate case lists failed with exit status: " + str(e.message)
-        raise RuntimeError(e.message)
+        subprocess.check_call(specified_args)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("Case-list generation failed with exit status: %s" % e.returncode)
