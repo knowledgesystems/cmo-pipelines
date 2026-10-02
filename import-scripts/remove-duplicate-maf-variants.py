@@ -1,89 +1,134 @@
 #!/usr/bin/env python3
+"""Deduplicate MAF variants using the validator's eight-column key.
 
-""" remove-duplicate-maf-variants.py
-Script to remove duplicate maf records based on the 8 key columns.
-Calculates VAF for each record and picks the record with high VAF
-Formula for VAF = t_alt_count / (t_ref_count + t_alt_count)
+Keep the highest VAF (default) or the first record (--strategy first).
+Preserve comments, header and first-seen variant order; --in-place is optional.
 """
-
+import argparse
+import os
 import sys
-import optparse
 
-ERROR_FILE = sys.stderr
-OUTPUT_FILE = sys.stdout
+KEY_COLUMNS = ["Entrez_Gene_Id", "Chromosome", "Start_Position", "End_Position", "Variant_Classification", "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "HGVSp_Short"]
+T_REF_COUNT_COLUMN = "t_ref_count"
+T_ALT_COUNT_COLUMN = "t_alt_count"
+STRATEGY_VAF = "vaf"
+STRATEGY_FIRST = "first"
+STRATEGIES = [STRATEGY_VAF, STRATEGY_FIRST]
 
-KEY_COLUMNS_INDEX = []
-KEY_COLUMNS = ['Entrez_Gene_Id','Chromosome','Start_Position','End_Position','Variant_Classification','Tumor_Seq_Allele2','Tumor_Sample_Barcode','HGVSp_Short']
-MAF_DATA = {}
 
-def remove_duplicate_variants(out_filename, comments, header, t_refc_index, t_altc_index):
-	outfile = []
-	outfile.append(comments)
-	outfile.append(header)
-	for key in MAF_DATA:
-		if len(MAF_DATA[key]) > 1:
-			vaf_ind = 0
-			vaf_value = 0
-			for val in MAF_DATA[key]:
-				#calculate VAF for each duplicate record.
-				columns = val.rstrip('\n').split('\t')
-				try:
-					VAF = int(columns[t_altc_index])//(int(columns[t_altc_index])+int(columns[t_refc_index]))
-					if VAF > vaf_value:
-						vaf_value = VAF
-						vaf_ind = MAF_DATA[key].index(val)
-						outfile.append(MAF_DATA[key][vaf_ind])
-				except:
-					print('ERROR: VAF cannot be calculated for the variant : ' + key, file=ERROR_FILE)
-					print('The t_ref_count is: '+ columns[t_refc_index]+ ' and t_alt_count is: '+ columns[t_altc_index], file=ERROR_FILE)
-					outfile.append(val)
-		else:
-			outfile.append(MAF_DATA[key][0])
+def calculate_vaf(record, t_refc_index, t_altc_index):
+    """VAF for a record line, or None if it cannot be calculated."""
+    columns = record.rstrip("\n").split("\t")
+    try:
+        t_alt = int(columns[t_altc_index])
+        t_ref = int(columns[t_refc_index])
+        return t_alt / (t_alt + t_ref)
+    except (ValueError, IndexError, ZeroDivisionError):
+        return None
 
-	datafile = open(out_filename, 'w')
-	for line in outfile:
-		datafile.write(line)
-	datafile.close()
-	print('MAF file with duplicate variants removed is written to: ' + out_filename +'\n', file=OUTPUT_FILE)
+
+def pick_record(key, records, strategy, t_refc_index, t_altc_index):
+    """The single record to keep for a duplicate group."""
+    if strategy == STRATEGY_FIRST or len(records) == 1:
+        return records[0]
+    best_record = records[0]
+    best_vaf = None
+    for record in records:
+        vaf = calculate_vaf(record, t_refc_index, t_altc_index)
+        if vaf is None:
+            columns = record.rstrip("\n").split("\t")
+            print("ERROR: VAF cannot be calculated for the variant : " + key, file=sys.stderr)
+            print("The t_ref_count is: %s and t_alt_count is: %s" % (columns[t_refc_index], columns[t_altc_index]), file=sys.stderr)
+            continue
+        if best_vaf is None or vaf > best_vaf:
+            best_vaf = vaf
+            best_record = record
+    return best_record
+
+
+def remove_duplicate_variants(maf_data, strategy, t_refc_index, t_altc_index):
+    """(kept records in input order, number of dropped records)."""
+    kept = [pick_record(key, records, strategy, t_refc_index, t_altc_index)
+            for key, records in maf_data.items()]
+    return kept, sum(len(records) - 1 for records in maf_data.values())
+
+
+def build_key(data, key_columns_index):
+    return "\t".join(data[index].strip() for index in key_columns_index)
+
+
+def process_maf_file(maf_filename, out_filename, strategy):
+    comments = []
+    header = None
+    key_columns_index = []
+    t_refc_index = None
+    t_altc_index = None
+    maf_data = {}  # insertion ordered
+
+    with open(maf_filename, "r") as maf_file:
+        for line in maf_file:
+            if header is None and line.startswith("#"):
+                comments.append(line)
+            elif header is None:
+                # first non-comment line is the header
+                header = line
+                header_cols = line.rstrip("\r\n").split("\t")
+                missing = [column for column in KEY_COLUMNS if column not in header_cols]
+                if missing:
+                    print("ERROR: MAF header is missing key columns: " + ", ".join(missing), file=sys.stderr)
+                    sys.exit(2)
+                key_columns_index = [header_cols.index(column) for column in KEY_COLUMNS]
+                if strategy == STRATEGY_VAF:
+                    if T_REF_COUNT_COLUMN not in header_cols or T_ALT_COUNT_COLUMN not in header_cols:
+                        print('ERROR: strategy "%s" needs %s and %s columns, use --strategy %s' % (STRATEGY_VAF, T_REF_COUNT_COLUMN, T_ALT_COUNT_COLUMN, STRATEGY_FIRST), file=sys.stderr)
+                        sys.exit(2)
+                    t_refc_index = header_cols.index(T_REF_COUNT_COLUMN)
+                    t_altc_index = header_cols.index(T_ALT_COUNT_COLUMN)
+            else:
+                if not line.strip():
+                    continue
+                data = line.rstrip("\r\n").split("\t")
+                try:
+                    reference_key = build_key(data, key_columns_index)
+                except IndexError:
+                    print("ERROR: record has fewer columns than the header, keeping as is: " + line.rstrip("\n")[:80], file=sys.stderr)
+                    reference_key = line
+                maf_data.setdefault(reference_key, []).append(line)
+
+    if header is None:
+        print("ERROR: no header line found in " + maf_filename, file=sys.stderr)
+        sys.exit(2)
+
+    kept, dropped = remove_duplicate_variants(maf_data, strategy, t_refc_index, t_altc_index)
+    tmp_filename = out_filename + ".tmp"
+    with open(tmp_filename, "w") as datafile:
+        datafile.writelines(comments)
+        datafile.write(header)
+        datafile.writelines(kept)
+    os.replace(tmp_filename, out_filename)
+    print("MAF file with %d duplicate variants removed is written to: %s" % (dropped, out_filename))
+    return dropped
 
 
 def main():
-	# get command line arguments
-	parser = optparse.OptionParser()
-	parser.add_option('-i', '--input-maf-file', action = 'store', dest = 'input_maf_file')
-	parser.add_option('-o', '--output-maf-file', action = 'store', dest = 'output_maf_file')
+    parser = argparse.ArgumentParser(description="Remove duplicate MAF records on the validator's 8 key columns.")
+    parser.add_argument("-i", "--input-maf-file", dest="input_maf_file", required=True)
+    parser.add_argument("-o", "--output-maf-file", dest="output_maf_file", help="output path (required unless --in-place)")
+    parser.add_argument("--in-place", dest="in_place", action="store_true", help="rewrite the input file")
+    parser.add_argument("-s", "--strategy", dest="strategy", choices=STRATEGIES, default=STRATEGY_VAF, help="which duplicate to keep (default: %s)" % (STRATEGY_VAF))
+    args = parser.parse_args()
 
-	(options, args) = parser.parse_args()
-	maf_filename = options.input_maf_file
-	out_filename = options.output_maf_file
+    if args.in_place:
+        out_filename = args.input_maf_file
+    elif args.output_maf_file:
+        out_filename = args.output_maf_file
+    else:
+        parser.error("one of --output-maf-file or --in-place is required")
+    if not os.path.isfile(args.input_maf_file):
+        print("ERROR: input MAF file not found: " + args.input_maf_file, file=sys.stderr)
+        sys.exit(2)
+    process_maf_file(args.input_maf_file, out_filename, args.strategy)
 
-	comments = ""
-	header = ""
 
-	with open(maf_filename,'r') as maf_file:
-		for line in maf_file:
-			if line.startswith('#'):
-				comments += line
-			elif line.startswith('Hugo_Symbol'):
-				header += line
-				header_cols = line.rstrip('\n').split('\t')
-				#get the positions of the 8 key maf columns
-				for value in KEY_COLUMNS:
-					KEY_COLUMNS_INDEX.append(header_cols.index(value))
-				t_refc_index = header_cols.index('t_ref_count')
-				t_altc_index = header_cols.index('t_alt_count')
-			else:
-				reference_key = ""
-				data = line.rstrip('\n').split('\t')
-				for index in KEY_COLUMNS_INDEX:
-					reference_key += data[index]+'\t'
-				reference_key = reference_key.rstrip('\t')
-				if reference_key not in MAF_DATA:
-					MAF_DATA[reference_key] = [line]
-				else:
-					MAF_DATA[reference_key].append(line)
-
-	remove_duplicate_variants(out_filename, comments, header, t_refc_index, t_altc_index)
-
-if __name__ == '__main__':
-	main()
+if __name__ == "__main__":
+    main()
