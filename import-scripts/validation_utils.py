@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 import os
+import subprocess
 
 import clinicalfile_utils
-import generate_case_lists
+
+GENERATE_CASE_LISTS_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generate_case_lists.py")
+PYTHON3_BINARY = os.environ.get("PYTHON3_BINARY", "python3")
 
 SAMPLE_ID_COLUMN = "SAMPLE_ID"
 SEQUENCED_SAMPLES_HEADER_TAG = "#sequenced_samples:"
@@ -318,29 +321,17 @@ def insert_maf_sequenced_samples_header(clinical_file, maf_file):
     clinicalfile_utils.write_data_list_to_file(maf_file, to_write)
 
 def call_generate_case_lists(case_list_config_file, case_list_dir, study_dir, study_id, overwrite = False, verbose = False):
-    """
-        Runs generate_case_lists python script and generates standard case lists
-        for a specified study.
-        i.e., cases_all.txt, cases_sequenced.txt, etc.
-
-        Arguments passed into the function are equivalent to commandline arguments
-        passed into the script.
-
-        If overwrite is False, no new case lists will be generated (assuming case lists already exist).
-    """
-    specified_args = ['-c', case_list_config_file,
-                      '-d', case_list_dir,
-                      '-s', study_dir,
-                      '-i', study_id]
+    """Run case-list generation with Python 3; propagate failures to the PDX flow."""
+    call = [PYTHON3_BINARY, GENERATE_CASE_LISTS_SCRIPT,
+            '-c', case_list_config_file,
+            '-d', case_list_dir,
+            '-s', study_dir,
+            '-i', study_id]
     if overwrite:
-        specified_args.append('-o')
+        call.append('-o')
     if verbose:
-        specified_args.append('-v')
-    parser = generate_case_lists.parse_generate_case_list_args()
-    args = parser.parse_args(specified_args)
+        call.append('-v')
     try:
-        generate_case_lists.main(args)
-    # SystemExit because script calls sys.exit() on certain errors
-    except SystemExit as e:
-        print "Attempt to generate case lists failed with exit status: " + str(e.message)
-        raise RuntimeError(e.message)
+        subprocess.check_call(call)
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError("Case-list generation failed with exit status: %s" % error.returncode)

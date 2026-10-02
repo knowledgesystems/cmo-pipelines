@@ -26,7 +26,7 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
         cls.data_repos = os.path.join(resource_dir, "data_repos/")
         cls.crdb_fetch_directory_backup = os.path.join(cls.data_repos, "crdb_pdx_repos/crdb_pdx_raw_data/")
         cls.expected_files = os.path.join(resource_dir, "expected_outputs")
-        cls.case_lists_config_file = "test/resources/generate_case_lists/case_list_config.tsv"
+        cls.case_lists_config_file = "test-py3/resources/generate_case_lists/case_list_config.tsv"
 
         # move all data into a temporary directory for manipulation
         cls.temp_dir = os.path.join(resource_dir, tempfile.mkdtemp())

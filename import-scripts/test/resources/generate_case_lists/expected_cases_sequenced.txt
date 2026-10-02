@@ -3,4 +3,4 @@ stable_id: TESTING_STUDY_sequenced
 case_list_name: Sequenced Tumors
 case_list_description: All (Next-Gen) sequenced samples (9 samples)
 case_list_category: all_cases_with_mutation_data
-case_list_ids: A	C	B	E	G	I	H	C2	C1
+case_list_ids: A	B	C	C1	E	C2	G	H	I
