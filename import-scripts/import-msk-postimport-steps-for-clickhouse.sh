@@ -78,6 +78,30 @@ function create_derived_tables_in_target_clickhouse_database() {
     $CREATE_DERIVED_TABLES_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color "$CREATE_DERIVED_TABLES_SQL_FILE_DIRPATH"/*
 }
 
+function create_temp_dir_if_necessary() {
+    if ! [ -d "$MSK_DMP_TMPDIR" ] ; then
+        if ! mkdir -p "$MSK_DMP_TMPDIR" ; then
+            echo "Error : could not create tmp directory '$MSK_DMP_TMPDIR'" >&2
+            exit 1
+        fi
+    fi
+}
+
+function make_all_studies_available() {
+    destination_database_color="$1"
+    create_temp_dir_if_necessary
+    echo "setting all studies to status AVAILABLE in database color $destination_database_color"
+    JAVA_DD_AGENT_ARGS=''
+    MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-importer-$destination_database_color.jar"
+    MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-dmp-importer.log -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    $JAVA_BINARY -Xmx16g $MSK_JAVA_IMPORTER_ARGS --make-all-studies-available true
+    if [ $? -ne 0 ] ; then
+        echo "failed to set all studies to status AVAILABLE"
+        return 1
+    fi
+    return 0
+}
+
 function transfer_color_to_new_database() {
     destination_database_color="$1"
     echo "transferring to databases with color $destination_database_color"
@@ -91,6 +115,9 @@ function main() {
     echo "Source DB color: $source_database_color"
     echo "Destination DB color: $destination_database_color"
     if ! create_derived_tables_in_target_clickhouse_database $destination_database_color ; then
+        return 1
+    fi
+    if ! make_all_studies_available $destination_database_color ; then
         return 1
     fi
     if ! transfer_color_to_new_database $destination_database_color ; then
