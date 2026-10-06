@@ -1,3 +1,4 @@
+import io
 import linecache
 import os
 import re
@@ -41,22 +42,31 @@ def get_header(data_file):
         Returns header from file as a tab-delimited list of columns.
     """
     header = []
-    with open(data_file, "r") as header_source:
+    with io.open(data_file, "r", encoding="utf-8") as header_source:
         for line in header_source:
             if not line.startswith("#"):
-                header = line.rstrip().split('\t')
+                header = line.rstrip('\r\n').split('\t')
                 break
     return header
+
+def clinical_data_rows(clinical_filename):
+    """Yield tab-separated data rows after comments and the column header."""
+    with io.open(clinical_filename, encoding="utf-8") as clinical_file:
+        rows = (line.rstrip("\r\n").split("\t") for line in clinical_file
+                if not line.startswith(METADATA_PREFIX))
+        next(rows, None)
+        for row in rows:
+            yield row
 
 def get_comments(data_file):
     """
         Returns comments from file.
     """
     comments = []
-    with open(data_file, "rU") as data_reader:
+    with io.open(data_file, "r", encoding="utf-8") as data_reader:
         for line in data_reader:
             if line.startswith("#"):
-                comments.append(line.rstrip("\n"))
+                comments.append(line.rstrip("\r\n"))
             else:
                 break
     return comments
@@ -73,14 +83,7 @@ def has_legacy_clinical_metadata_headers(clinical_file):
             4. attribute types
             5. priorities
     """
-    metadata_headers = []
-    with open(clinical_file, 'rU') as f:
-        for line in f.readlines():
-            if line.startswith(METADATA_PREFIX):
-                metadata_headers.append(line)
-                continue
-            break
-    return (len(metadata_headers) == 5)
+    return len(get_comments(clinical_file)) == 5
 
 def get_metadata_mapping(clinical_file, attribute_line):
     metadata_mapping = {}
@@ -119,23 +122,23 @@ def has_metadata_headers(clinical_file):
     return all([linecache.getline(clinical_file, header_line).startswith("#") for header_line in range(1, 5)])
 
 def get_display_name_line(clinical_file):
-    return linecache.getline(clinical_file, 1).rstrip().split('\t')
+    return linecache.getline(clinical_file, 1).rstrip('\r\n').split('\t')
 
 def get_description_line(clinical_file):
-    return linecache.getline(clinical_file, 2).rstrip().split('\t')
+    return linecache.getline(clinical_file, 2).rstrip('\r\n').split('\t')
 
 def get_datatype_line(clinical_file):
-    return linecache.getline(clinical_file, 3).rstrip().split('\t')
+    return linecache.getline(clinical_file, 3).rstrip('\r\n').split('\t')
 
 def get_priority_line(clinical_file):
     if has_legacy_clinical_metadata_headers(clinical_file):
-        return linecache.getline(clinical_file, 5).rstrip().split('\t')
+        return linecache.getline(clinical_file, 5).rstrip('\r\n').split('\t')
     else:
-        return linecache.getline(clinical_file, 4).rstrip().split('\t')
+        return linecache.getline(clinical_file, 4).rstrip('\r\n').split('\t')
 
 def get_attribute_type_line(clinical_file):
     if has_legacy_clinical_metadata_headers(clinical_file):
-        return linecache.getline(clinical_file, 4).rstrip().split('\t')
+        return linecache.getline(clinical_file, 4).rstrip('\r\n').split('\t')
     else:
         return []
 
@@ -147,6 +150,7 @@ def add_metadata_for_attribute(attribute, all_metadata_lines):
     all_metadata_lines[PRIORITY].append("1")
 
 def get_all_metadata_lines(clinical_file):
+    linecache.checkcache(clinical_file)
     all_metadata_lines = {DISPLAY_NAME: get_display_name_line(clinical_file),
                           DESCRIPTION: get_description_line(clinical_file),
                           DATATYPE: get_datatype_line(clinical_file),
