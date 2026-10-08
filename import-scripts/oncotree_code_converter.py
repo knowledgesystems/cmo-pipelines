@@ -2,8 +2,8 @@
 
 import argparse
 from clinicalfile_utils import (
-    add_metadata_for_attribute, clinical_data_rows, get_all_metadata_lines,
-    get_comments, get_header, get_metadata_header_line_order,
+    add_metadata_for_attribute, parse_file, get_all_metadata_lines,
+    get_comments, get_header, get_metadata_header_line_order, split_tab_fields,
 )
 import fileinput
 import json
@@ -32,25 +32,20 @@ def audit_clinical_file(oncotree_mappings, clinical_filename):
     header = get_header(clinical_filename)
     if ONCOTREE_CODE not in header:
         raise ValueError("%s column not found in %s" % (ONCOTREE_CODE, clinical_filename))
-    oncotree_code_index = header.index(ONCOTREE_CODE)
-    attribute_indexes = [
-        (header.index(CANCER_TYPE) if CANCER_TYPE in header else None, CANCER_TYPE, "cancer_type_mismatches"),
-        (header.index(CANCER_TYPE_DETAILED) if CANCER_TYPE_DETAILED in header else None, CANCER_TYPE_DETAILED, "cancer_type_detailed_mismatches"),
+    attributes = [
+        (CANCER_TYPE, "cancer_type_mismatches"),
+        (CANCER_TYPE_DETAILED, "cancer_type_detailed_mismatches"),
     ]
-    for data in clinical_data_rows(clinical_filename):
-        if oncotree_code_index >= len(data):
-            continue
-        oncotree_code = data[oncotree_code_index].strip()
+    for data in parse_file(clinical_filename, allow_empty_values=True):
+        oncotree_code = data.get(ONCOTREE_CODE, "").strip()
         if existing_data_is_not_available(oncotree_code):
             continue
         if oncotree_code not in oncotree_mappings:
             findings["stale_codes"][oncotree_code] = findings["stale_codes"].get(oncotree_code, 0) + 1
             continue
         oncotree_code_info = oncotree_mappings[oncotree_code]
-        for index, attribute, bucket in attribute_indexes:
-            if index is None or index >= len(data):
-                continue
-            existing_data = data[index].strip()
+        for attribute, bucket in attributes:
+            existing_data = data.get(attribute, "").strip()
             if existing_data_is_not_available(existing_data):
                 continue
             expected = oncotree_code_info[attribute]
@@ -152,14 +147,14 @@ def process_clinical_file(oncotree_mappings, clinical_filename, force_cancer_typ
                 continue
             if first:
                 first = False
-                header = line.split('\t')
+                header = split_tab_fields(line)
                 if CANCER_TYPE not in header:
                     header.append(CANCER_TYPE)
                 if CANCER_TYPE_DETAILED not in header:
                     header.append(CANCER_TYPE_DETAILED)
                 print('\t'.join(header))
                 continue
-            data = line.split('\t')
+            data = split_tab_fields(line)
             oncotree_code = data[header.index(ONCOTREE_CODE)]
             if not oncotree_code or not oncotree_code in oncotree_mappings:
                 samples_that_have_undefined_oncotree_codes.append(data[header.index(SAMPLE_ID)])

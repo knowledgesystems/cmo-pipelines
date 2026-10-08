@@ -317,6 +317,16 @@ def insert_maf_sequenced_samples_header(clinical_file, maf_file):
 
     clinicalfile_utils.write_data_list_to_file(maf_file, to_write)
 
+def call_normalize_tcga_barcodes(study_dir):
+    """Run TCGA normalization as an explicit preprocessing step."""
+    specified_args = [os.environ.get('PYTHON3_BINARY', 'python3'),
+                      os.path.join(os.path.dirname(os.path.abspath(__file__)), 'normalize_tcga_barcodes.py'),
+                      '--study-dir', study_dir]
+    try:
+        subprocess.check_call(specified_args)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("TCGA normalization failed with exit status: %s" % e.returncode)
+
 def call_generate_case_lists(case_list_config_file, case_list_dir, study_dir, study_id, overwrite = False, verbose = False):
     """
         Runs generate_case_lists python script and generates standard case lists
@@ -339,9 +349,6 @@ def call_generate_case_lists(case_list_config_file, case_list_dir, study_dir, st
     if verbose:
         specified_args.append('-v')
     try:
-        subprocess.check_call([os.environ.get('PYTHON3_BINARY', 'python3'),
-                               os.path.join(os.path.dirname(os.path.abspath(__file__)), 'normalize_tcga_barcodes.py'),
-                               '--study-dir', study_dir])
         subprocess.check_call(specified_args)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError("TCGA normalization or case-list generation failed with exit status: %s" % e.returncode)
+        raise RuntimeError("Case-list generation failed with exit status: %s" % e.returncode)

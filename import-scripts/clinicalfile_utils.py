@@ -1,4 +1,3 @@
-import io
 import linecache
 import os
 import re
@@ -13,6 +12,10 @@ METADATA_PREFIX = "#"
 def is_clinical_file(filename):
     return (re.match('data_clinical[_a-z]*.txt', os.path.basename(filename)) != None)
 
+def split_tab_fields(line):
+    """Trim trailing field whitespace while preserving empty TSV columns."""
+    return [field.rstrip() for field in line.rstrip("\r\n").split("\t")]
+
 def parse_file(data_file, allow_empty_values):
     """
         Returns a list of dictionaries, each dictionary representing a row in the file
@@ -26,13 +29,13 @@ def parse_file(data_file, allow_empty_values):
     records = []
     with open(data_file, 'r') as f:
         header_processed = False
-        for line in f.readlines():
+        for line in f:
             if line.startswith(METADATA_PREFIX):
                 continue
             if not header_processed:
                 header_processed = True
                 continue
-            record = dict(zip(header, line.rstrip("\n").split("\t")))
+            record = dict(zip(header, split_tab_fields(line)))
             if allow_empty_values or (not allow_empty_values and all([value for value in record.values()])):
                 records.append(record)
     return records
@@ -42,31 +45,22 @@ def get_header(data_file):
         Returns header from file as a tab-delimited list of columns.
     """
     header = []
-    with io.open(data_file, "r", encoding="utf-8") as header_source:
+    with open(data_file, "r") as header_source:
         for line in header_source:
             if not line.startswith("#"):
-                header = line.rstrip('\r\n').split('\t')
+                header = split_tab_fields(line)
                 break
     return header
-
-def clinical_data_rows(clinical_filename):
-    """Yield tab-separated data rows after comments and the column header."""
-    with io.open(clinical_filename, encoding="utf-8") as clinical_file:
-        rows = (line.rstrip("\r\n").split("\t") for line in clinical_file
-                if not line.startswith(METADATA_PREFIX))
-        next(rows, None)
-        for row in rows:
-            yield row
 
 def get_comments(data_file):
     """
         Returns comments from file.
     """
     comments = []
-    with io.open(data_file, "r", encoding="utf-8") as data_reader:
+    with open(data_file, "r") as data_reader:
         for line in data_reader:
             if line.startswith("#"):
-                comments.append(line.rstrip("\r\n"))
+                comments.append("\t".join(split_tab_fields(line)))
             else:
                 break
     return comments
@@ -87,7 +81,7 @@ def has_legacy_clinical_metadata_headers(clinical_file):
 
 def get_metadata_mapping(clinical_file, attribute_line):
     metadata_mapping = {}
-    metadata = linecache.getline(clinical_file, attribute_line).rstrip().replace("#", "").split('\t')
+    metadata = split_tab_fields(linecache.getline(clinical_file, attribute_line).replace("#", ""))
     attributes = get_header(clinical_file)
     for i in range(len(attributes)):
         metadata_mapping[attributes[i]] = metadata[i]
@@ -122,23 +116,23 @@ def has_metadata_headers(clinical_file):
     return all([linecache.getline(clinical_file, header_line).startswith("#") for header_line in range(1, 5)])
 
 def get_display_name_line(clinical_file):
-    return linecache.getline(clinical_file, 1).rstrip('\r\n').split('\t')
+    return split_tab_fields(linecache.getline(clinical_file, 1))
 
 def get_description_line(clinical_file):
-    return linecache.getline(clinical_file, 2).rstrip('\r\n').split('\t')
+    return split_tab_fields(linecache.getline(clinical_file, 2))
 
 def get_datatype_line(clinical_file):
-    return linecache.getline(clinical_file, 3).rstrip('\r\n').split('\t')
+    return split_tab_fields(linecache.getline(clinical_file, 3))
 
 def get_priority_line(clinical_file):
     if has_legacy_clinical_metadata_headers(clinical_file):
-        return linecache.getline(clinical_file, 5).rstrip('\r\n').split('\t')
+        return split_tab_fields(linecache.getline(clinical_file, 5))
     else:
-        return linecache.getline(clinical_file, 4).rstrip('\r\n').split('\t')
+        return split_tab_fields(linecache.getline(clinical_file, 4))
 
 def get_attribute_type_line(clinical_file):
     if has_legacy_clinical_metadata_headers(clinical_file):
-        return linecache.getline(clinical_file, 4).rstrip('\r\n').split('\t')
+        return split_tab_fields(linecache.getline(clinical_file, 4))
     else:
         return []
 
