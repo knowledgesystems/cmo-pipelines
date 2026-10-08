@@ -657,8 +657,9 @@ def generate_destination_study_case_lists(lib, destination_to_source_mapping, ro
         if not os.path.exists(destination_case_lists_directory):
             os.mkdir(destination_case_lists_directory)
 
-        # generate standard case lists for each destination study
+        # Normalize study files before generating the standard case lists.
         try:
+            validation_utils.call_normalize_tcga_barcodes(destination_directory)
             validation_utils.call_generate_case_lists(case_lists_config_file, destination_case_lists_directory, destination_directory, destination, True)
             DESTINATION_STUDY_STATUS_FLAGS[destination][GENERATE_CASE_LISTS_SUCCESS] = True
         except:
