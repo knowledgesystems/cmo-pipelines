@@ -1,18 +1,17 @@
-"""Hourly refresh of the 'available_study_ids' Variable from the S3 bucket;
+"""Hourly refresh of study sources from configured S3 buckets;
 import_public_hackathon reads it at parse time for its study-picker dropdown."""
 import json
 import logging
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timedelta
 
 from airflow.decorators import dag, task
 from airflow.models import Variable
 
-S3_BUCKET             = "sc-203403084713-pp-4rxlzd426npxu-bucket-kswubqqre3jr"
-STUDY_LIST_VARIABLE_KEY = "available_study_ids"
-# Top-level folders in the bucket that are not studies: the datahub LFS store,
-# embeddings, and the dry-run scratch area import_public_hackathon reads via
-# its study_prefix param.
-NON_STUDY_PREFIXES = {"lfs", "embeddings", "staging"}
+from dags.study_sources import STUDY_LIST_VARIABLE_KEY, discover_studies
 
 _DEFAULT_ARGS = {
     "owner": "airflow",
@@ -39,20 +38,7 @@ def refresh_study_list():
         import boto3
 
         s3 = boto3.client("s3")
-        study_ids: set[str] = set()
-
-        paginator = s3.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=S3_BUCKET, Delimiter="/"):
-            for prefix in page.get("CommonPrefixes", []):
-                name = prefix["Prefix"].rstrip("/")
-                if name not in NON_STUDY_PREFIXES:
-                    study_ids.add(name)
-            for obj in page.get("Contents", []):
-                key = obj["Key"]
-                if key.endswith(".tar") or key.endswith(".tar.gz"):
-                    study_ids.add(key[:-4] if key.endswith(".tar") else key[:-7])
-
-        sorted_ids = sorted(study_ids)
+        sorted_ids = discover_studies(s3)
         Variable.set(STUDY_LIST_VARIABLE_KEY, json.dumps(sorted_ids))
         logging.info(
             "Stored %d study IDs to Variable '%s': %s",
