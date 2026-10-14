@@ -174,7 +174,7 @@ def validation_command(python, importer, study, references, html):
             '--html', str(html), '-v']
 
 
-def selected_entries(manifest, requested=None):
+def selected_entries(manifest, requested=None, *, root_only=False):
     selected = manifest.get('selected_study_ids', [])
     if not selected or len(set(selected)) != len(selected):
         raise ValueError('Selection must contain unique, explicit study IDs')
@@ -189,8 +189,10 @@ def selected_entries(manifest, requested=None):
         record = by_id[study_id]
         if record.get('status') != 'passed' or record.get('validator_exit_code') not in (0, 3):
             raise ValueError(f'Selected study did not pass validation: {study_id}')
-        if record['key'] != f'staging/{study_id}.tar.gz':
-            raise ValueError(f'Selected input is outside staging: {study_id}')
+        expected_key = f'{study_id}.tar.gz' if root_only else f'staging/{study_id}.tar.gz'
+        if record['key'] != expected_key:
+            location = 'bucket root' if root_only else 'staging'
+            raise ValueError(f'Selected input is outside {location}: {study_id}')
         result.append(record)
     return result
 

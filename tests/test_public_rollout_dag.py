@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from dags import public_rollout
+from dags.study_sources import DEFAULT_BUCKET, bucket_mount, parse_study_source
 
 
 class TaskTests(unittest.TestCase):
@@ -41,6 +42,7 @@ class TaskTests(unittest.TestCase):
         tree = ast.parse(source.read_text())
         nodes = []
         wanted = {'_rollout_manifest', '_rollout_entry', 'pull_and_validate_study',
+                  '_selected_rollout_entries', '_input_root',
                   'collect_valid_studies', 'import_into_standby_database'}
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name in wanted:
@@ -58,13 +60,15 @@ class TaskTests(unittest.TestCase):
                         VALIDATE_SCRIPT_PATH='/importer/validateStudies.py',
                         IMPORT_SCRIPT_PATH='/importer/metaImport.py', S3_MOUNT_PATH='/s3',
                         selected_entries=public_rollout.selected_entries,
+                        parse_study_source=parse_study_source, DEFAULT_BUCKET=DEFAULT_BUCKET,
+                        bucket_mount=bucket_mount,
                         validation_command=public_rollout.validation_command,
                         reference_input=references, study_input=study,
                         _skip_if_requested=Mock(), _activate_standby_properties=Mock(),
                         _run_and_stream=Mock(return_value=SimpleNamespace(returncode=0)))
         exec(compile(ast.Module(body=nodes, type_ignores=[]), str(source), 'exec'), self.env)
-        self.manifest = dict(selected_study_ids=['study'], studies=[dict(study_id='study',
-            key='staging/study.tar.gz', sha256='a' * 64, status='passed', validator_exit_code=0)])
+        self.manifest = dict(selected_study_ids=['study'], references={}, studies=[dict(study_id='study',
+            key='study.tar.gz', sha256='a' * 64, status='passed', validator_exit_code=0)])
         self.load_manifest = self.env['_rollout_manifest']
         self.env['_rollout_manifest'] = Mock(return_value=self.manifest)
 
@@ -72,6 +76,7 @@ class TaskTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'require a pinned'):
             self.load_manifest({'database': 'public'})
         self.assertIsNone(self.load_manifest({'database': 'containerized'}))
+
 
     def test_public_allows_color_swap(self):
         self.env['_study_prefix'] = lambda params: 'staging'
