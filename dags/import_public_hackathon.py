@@ -13,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dags.public_rollout import (checked_path, read_manifest, selected_entries,
                                 require_hash, reference_input, study_input,
-                                validation_command, standby_target, importer_timeout_properties)
+                                validation_command, standby_target)
 
 from dags.study_sources import (DEFAULT_BUCKET, S3_SOURCES, STUDY_LIST_VARIABLE_KEY,
                                bucket_mount, parse_study_source, resolve_studies, search_buckets, verified_study_directory)
@@ -411,9 +411,7 @@ def _activate_standby_properties(env: str) -> str:
             raise AirflowException('Public management configuration targets unexpected databases')
         standby_target(ch_props, result.stdout, _load_properties(src_path))
     dest_path = "/tmp/application.properties"
-    contents = importer_timeout_properties(Path(src_path).read_text())
-    with open(dest_path, 'w', opener=lambda path, flags: os.open(path, flags, 0o600)) as output:
-        output.write(contents)
+    shutil.copy(src_path, dest_path)
     shutil.copy(f"{CREDS_DIR}/{env}.clickhouse.sql", "/tmp/clickhouse.sql")
     os.environ["PORTAL_HOME"] = "/tmp"
 

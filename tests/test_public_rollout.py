@@ -5,7 +5,6 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
-from urllib.parse import urlsplit, parse_qs
 
 from dags import public_rollout as rollout
 
@@ -18,34 +17,6 @@ class RolloutTests(unittest.TestCase):
         self.manifest = {'schema_version': 1, 'studies': [
             dict(study_id=s, key=f'staging/{s}.tar.gz', sha256='a' * 64,
                  status='passed', validator_exit_code=0) for s in ('a', 'b', 'c')]}
-
-    def test_importer_timeouts_preserve_connection_and_other_properties(self):
-        for ending in ('\n', '\r\n', ''):
-            contents = ('# configuration\n'
-                        'spring.datasource.username=example\n'
-                        'spring.datasource.password=example=with&punctuation\n'
-                        'spring.datasource.url = jdbc:clickhouse://example.org:8443/green_db?'
-                        'ssl=true&socket_timeout=600000&connect_timeout=5000&socket_timeout=1&'
-                        'custom_settings=max_threads%3D4%2Cmax_execution_time%3D0&empty=' + ending)
-            result = rollout.importer_timeout_properties(contents)
-            self.assertEqual(contents.splitlines()[:-1], result.splitlines()[:-1])
-            url = urlsplit(result.splitlines()[-1].split('=', 1)[1].strip().removeprefix('jdbc:'))
-            self.assertEqual(('clickhouse', 'example.org:8443', '/green_db'),
-                             (url.scheme, url.netloc, url.path))
-            self.assertEqual({'ssl': ['true'], 'socket_timeout': ['3600000'],
-                              'connect_timeout': ['60000'], 'empty': [''],
-                              'custom_settings': ['max_threads=4,max_execution_time=0']},
-                             parse_qs(url.query, keep_blank_values=True))
-            self.assertEqual(result, rollout.importer_timeout_properties(result))
-
-    def test_importer_timeouts_add_missing_options_and_reject_ambiguous_config(self):
-        line = 'spring.datasource.url=jdbc:clickhouse://example.org/green_db'
-        self.assertEqual(line + '?socket_timeout=3600000&connect_timeout=60000',
-                         rollout.importer_timeout_properties(line))
-        for contents in ('# missing JDBC URL\n', line + '\n' + line,
-                         line.replace('clickhouse:', 'mysql:')):
-            with self.subTest(contents=contents), self.assertRaises(ValueError):
-                rollout.importer_timeout_properties(contents)
 
     def test_selection_is_repeatable_and_independent_of_record_order(self):
         first = rollout.select_sample(self.manifest, 2, 'seed')
