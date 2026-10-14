@@ -9,9 +9,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 
 from dags import public_rollout
+from dags.study_sources import DEFAULT_BUCKET, bucket_mount, parse_study_source
 
 
 class TaskTests(unittest.TestCase):
@@ -41,6 +42,7 @@ class TaskTests(unittest.TestCase):
         tree = ast.parse(source.read_text())
         nodes = []
         wanted = {'_rollout_manifest', '_rollout_entry', 'pull_and_validate_study',
+                  '_selected_rollout_entries', '_input_root',
                   'collect_valid_studies', 'import_into_standby_database'}
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name in wanted:
@@ -58,13 +60,15 @@ class TaskTests(unittest.TestCase):
                         VALIDATE_SCRIPT_PATH='/importer/validateStudies.py',
                         IMPORT_SCRIPT_PATH='/importer/metaImport.py', S3_MOUNT_PATH='/s3',
                         selected_entries=public_rollout.selected_entries,
+                        parse_study_source=parse_study_source, DEFAULT_BUCKET=DEFAULT_BUCKET,
+                        bucket_mount=bucket_mount,
                         validation_command=public_rollout.validation_command,
                         reference_input=references, study_input=study,
                         _skip_if_requested=Mock(), _activate_standby_properties=Mock(),
                         _run_and_stream=Mock(return_value=SimpleNamespace(returncode=0)))
         exec(compile(ast.Module(body=nodes, type_ignores=[]), str(source), 'exec'), self.env)
-        self.manifest = dict(selected_study_ids=['study'], studies=[dict(study_id='study',
-            key='staging/study.tar.gz', sha256='a' * 64, status='passed', validator_exit_code=0)])
+        self.manifest = dict(selected_study_ids=['study'], references={}, studies=[dict(study_id='study',
+            key='study.tar.gz', sha256='a' * 64, status='passed', validator_exit_code=0)])
         self.load_manifest = self.env['_rollout_manifest']
         self.env['_rollout_manifest'] = Mock(return_value=self.manifest)
 
@@ -72,6 +76,38 @@ class TaskTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'require a pinned'):
             self.load_manifest({'database': 'public'})
         self.assertIsNone(self.load_manifest({'database': 'containerized'}))
+
+    def test_activation_sets_timeouts_in_local_copy_for_both_environments(self):
+        source = Path(__file__).resolve().parents[1] / 'dags/import_public_hackathon.py'
+        node = next(n for n in ast.parse(source.read_text()).body
+                    if isinstance(n, ast.FunctionDef) and n.name == '_activate_standby_properties')
+        manage = dict(clickhouse_blue_database_name='cbioportal_public_blue',
+                      clickhouse_green_database_name='cbioportal_public_green',
+                      clickhouse_server_host_name='example.org', clickhouse_server_port='9440',
+                      clickhouse_server_username='example', clickhouse_server_password='example',
+                      portal_database_name='public',
+                      clickhouse_update_management_database='publicdb_update_management_database')
+        contents = ('spring.datasource.url=jdbc:clickhouse://example.org:8443/'
+                    'cbioportal_public_green?ssl=true&socket_timeout=600000\n')
+        for target in ('public', 'containerized'):
+            with self.subTest(target=target):
+                properties = Mock(side_effect=[manage, {'spring.datasource.url':
+                    contents.split('=', 1)[1].strip()}])
+                paths, output = Mock(), mock_open()
+                paths.return_value.read_text.return_value = contents
+                env = dict(Path=paths, os=SimpleNamespace(environ={}, open=os.open),
+                           open=output, logging=Mock(), AirflowException=RuntimeError,
+                           CREDS_DIR='/creds', _manage_props_path=lambda name: '/manage',
+                           _run_and_stream=Mock(return_value=SimpleNamespace(returncode=0, stdout='blue')),
+                           _load_properties=properties, standby_target=public_rollout.standby_target,
+                           importer_timeout_properties=public_rollout.importer_timeout_properties)
+                exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), 'exec'), env)
+                with patch('shutil.copy') as copy:
+                    self.assertEqual('green', env['_activate_standby_properties'](target))
+                paths.assert_called_once_with('/creds/' + target + '.application.properties.green')
+                output().write.assert_called_once_with(public_rollout.importer_timeout_properties(contents))
+                self.assertEqual('/tmp', env['os'].environ['PORTAL_HOME'])
+                copy.assert_called_once_with('/creds/' + target + '.clickhouse.sql', '/tmp/clickhouse.sql')
 
     def test_public_allows_color_swap(self):
         self.env['_study_prefix'] = lambda params: 'staging'

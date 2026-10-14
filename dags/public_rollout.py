@@ -10,11 +10,32 @@ import re
 import shutil
 import tarfile
 import tempfile
-from urllib.parse import urlsplit, parse_qs
+from urllib.parse import urlsplit, urlunsplit, parse_qs, parse_qsl, urlencode
 
 REFERENCE_FILES = ('info.json', 'cancer-types.json', 'genes.json', 'genesaliases.json',
                    'genesets.json', 'genesets_version.json', 'gene-panels.json',
                    'oncotree.json', 'case_list_config.tsv')
+
+
+def importer_timeout_properties(contents):
+    """Set bounded JDBC timeouts in a task-local copy of the secret properties."""
+    lines, matches = [], 0
+    for line in contents.splitlines(keepends=True):
+        key, separator, value = line.partition('=')
+        if separator and key.strip() == 'spring.datasource.url':
+            matches += 1
+            endpoint = urlsplit(value.strip().removeprefix('jdbc:'))
+            if not value.strip().startswith('jdbc:') or endpoint.scheme != 'clickhouse':
+                raise ValueError('Importer requires a ClickHouse JDBC URL')
+            options = [(k, v) for k, v in parse_qsl(endpoint.query, keep_blank_values=True)
+                       if k not in ('socket_timeout', 'connect_timeout')]
+            options.extend((('socket_timeout', '3600000'), ('connect_timeout', '60000')))
+            ending = '\r\n' if line.endswith('\r\n') else '\n' if line.endswith('\n') else ''
+            line = key + '=jdbc:' + urlunsplit(endpoint._replace(query=urlencode(options))) + ending
+        lines.append(line)
+    if matches != 1:
+        raise ValueError('Expected exactly one spring.datasource.url property')
+    return ''.join(lines)
 
 
 def standby_target(manage, live_output, application):
