@@ -77,7 +77,14 @@ def has_legacy_clinical_metadata_headers(clinical_file):
             4. attribute types
             5. priorities
     """
-    return len(get_comments(clinical_file)) == 5
+    comments = get_comments(clinical_file)
+    if len(comments) < 5:
+        return False
+    # Extra comments do not change the metadata format. In the legacy format,
+    # row four describes attribute scopes; modern files put priorities there.
+    attribute_types = comments[3].lstrip("#").split("\t")
+    return bool(attribute_types) and all(value.upper() in ("PATIENT", "SAMPLE")
+                                         for value in attribute_types)
 
 def get_metadata_mapping(clinical_file, attribute_line):
     metadata_mapping = {}

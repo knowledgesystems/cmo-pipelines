@@ -1,5 +1,5 @@
 # run all unit tests with:
-#     import-scripts> python -m unittest discover test
+#     import-scripts> python3 -m unittest discover test-py3
 #
 # TODO this only tests process_clinical_file, other methods should be tested too
 # TODO fix the removing data bug
@@ -83,6 +83,30 @@ class TestOncotreeCodeConverter(unittest.TestCase):
         original_clinical_data, processed_clinical_data = self.call_process_clinical_file(self.data_clinical_oncotree_last_column_filename)
         # make sure we didn't lose any lines (data is deleted if there is a problem)
         self.assertEqual(len(original_clinical_data.split("\n")), len(processed_clinical_data.split("\n")))
+
+    def test_metadata_survives_extra_comments(self):
+        for legacy in (False, True):
+            for extra_count in (0, 1, 2, 4):
+                with self.subTest(legacy=legacy, extra_count=extra_count):
+                    metadata = ["#Sample\tCode", "#Sample description\tCode description",
+                                "#STRING\tSTRING"]
+                    if legacy:
+                        metadata.append("#SAMPLE\tSAMPLE")
+                    metadata.append("#1\t1")
+                    with tempfile.NamedTemporaryFile(mode="w", delete=False) as stream:
+                        self.temp_files.append(stream.name)
+                        stream.write("\n".join(metadata + ["#extra comment"] * extra_count) + "\n")
+                        stream.write("SAMPLE_ID\tONCOTREE_CODE\nS1\tPRAD\n")
+                    process_clinical_file(self.oncotree_mappings, stream.name, False)
+                    with open(stream.name) as processed:
+                        lines = processed.read().splitlines()
+                    self.assertEqual(len(metadata) + 2, len(lines))
+                    self.assertEqual([line.split("\t")[:2] for line in metadata],
+                                     [line.split("\t")[:2] for line in lines[:len(metadata)]])
+                    self.assertTrue(all(len(line.split("\t")) == 4 for line in lines))
+                    self.assertEqual("SAMPLE_ID\tONCOTREE_CODE\tCANCER_TYPE\tCANCER_TYPE_DETAILED",
+                                     lines[len(metadata)])
+                    self.assertEqual("S1\tPRAD\tProstate Cancer\tProstate Adenocarcinoma", lines[-1])
 
     def call_process_clinical_file(self, data_clinical_filename):
         original_clinical_data = ""

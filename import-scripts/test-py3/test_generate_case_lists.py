@@ -1,5 +1,5 @@
 # run all unit tests with:
-#     import-scripts> python -m unittest discover test
+#     import-scripts> python3 -m unittest discover test-py3
 #
 # Author: Manda Wilson
 
@@ -7,7 +7,6 @@ import unittest
 import os.path
 import tempfile
 import shutil
-import filecmp
 
 from generate_case_lists import *
 
@@ -66,7 +65,7 @@ class TestGenerateCaseLists(unittest.TestCase):
     def test_generate_case_lists(self):
         # confirm we don't have any files in temp directory yet
         all_files_in_temp_dir = [f for f in os.listdir(self.temp_dir) if os.path.isfile(os.path.join(self.temp_dir, f))]
-        self.assertEquals(0, len(all_files_in_temp_dir), msg="Expecting no files in '%s' but found %d" % (self.temp_dir, len(all_files_in_temp_dir)))
+        self.assertEqual(0, len(all_files_in_temp_dir), msg="Expecting no files in '%s' but found %d" % (self.temp_dir, len(all_files_in_temp_dir)))
 
         # generate case files in temporary directory
         generate_case_lists(self.case_list_config_file, self.temp_dir, self.study_dir, "TESTING_STUDY", False, False)
@@ -77,16 +76,30 @@ class TestGenerateCaseLists(unittest.TestCase):
             "cases_sequenced.txt", # generally union of cases but in this case it is only sequenced_samples.txt (which replaces data_mutations_extended.txt)
             "cases_cna.txt", # single file data_CNA.txt
             "cases_cnaseq.txt"] # intersection of cases from data_CNA.txt and sequenced_samples.txt
-        self.assertEquals(sorted(expected_files), sorted(all_files_in_temp_dir))
+        self.assertEqual(sorted(expected_files), sorted(all_files_in_temp_dir))
 
         # check each file against expected version
         for expected_file in expected_files:
             actual_file_full_path = os.path.join(self.temp_dir, expected_file)
             expected_file_full_path = os.path.join(self.study_dir, "expected_" + expected_file)
-            actual_file_contents = ""
-            with open(actual_file_full_path, 'r') as actual_file:
-                actual_file_contents = actual_file.read()
-            self.assertTrue(filecmp.cmp(actual_file_full_path, expected_file_full_path), msg="Actual file '%s' differs from '%s' expected file.  Actual file contains: \"%s\"" % (actual_file_full_path, expected_file_full_path, actual_file_contents))
+            with open(actual_file_full_path) as actual_file:
+                actual_lines = actual_file.read().splitlines()
+            with open(expected_file_full_path) as expected_stream:
+                expected_lines = expected_stream.read().splitlines()
+            self.assertEqual(expected_lines[:-1], actual_lines[:-1])
+            # Legacy fixtures were generated from unordered Python 2 sets.
+            expected_ids = expected_lines[-1].split(": ", 1)[1].split("\t")
+            actual_ids = actual_lines[-1].split(": ", 1)[1].split("\t")
+            self.assertCountEqual(expected_ids, actual_ids)
+            first_seen = {
+                "cases_cna.txt": ["C1", "C2", "C3"],
+                "cases_cnaseq.txt": ["C1", "C2"],
+                "cases_sequenced.txt": ["A", "B", "C", "C1", "E", "C2", "G", "H", "I"],
+                "cases_all.txt": ["C1", "C2", "C3", "A", "B", "C", "E", "G", "H", "I"] +
+                    ["P-0000001-T01-XXX", "P-0000002-T02-XYZ", "P-0000003-T01-YYY",
+                     "P-0000004-T02-ZZZ", "P-0000005-T02-ZYZ", "P-0000006-T02-XXX"],
+            }
+            self.assertEqual(first_seen[expected_file], actual_ids)
 
     @classmethod
     def tearDownClass(cls):

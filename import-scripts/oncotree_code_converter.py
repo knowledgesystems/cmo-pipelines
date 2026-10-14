@@ -3,7 +3,7 @@
 import argparse
 from clinicalfile_utils import (
     add_metadata_for_attribute, parse_file, get_all_metadata_lines,
-    get_comments, get_header, get_metadata_header_line_order, split_tab_fields,
+    get_header, get_metadata_header_line_order, has_metadata_headers, split_tab_fields,
 )
 import fileinput
 import json
@@ -121,7 +121,7 @@ def process_clinical_file(oncotree_mappings, clinical_filename, force_cancer_typ
     original_header = get_header(clinical_filename)
     if ONCOTREE_CODE not in original_header:
         raise ValueError("%s column not found in %s" % (ONCOTREE_CODE, clinical_filename))
-    file_has_metadata_headers = len(get_comments(clinical_filename)) in (4, 5)
+    file_has_metadata_headers = has_metadata_headers(clinical_filename)
 
     # same logic checking for Cancer Type/ Cancer Type Detailed but applied to metadata headers
     if file_has_metadata_headers:
