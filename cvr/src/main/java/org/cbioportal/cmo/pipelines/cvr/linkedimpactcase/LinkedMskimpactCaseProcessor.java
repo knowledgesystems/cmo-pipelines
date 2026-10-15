@@ -35,7 +35,7 @@ package org.cbioportal.cmo.pipelines.cvr.linkedimpactcase;
 import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**

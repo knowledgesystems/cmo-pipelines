@@ -36,8 +36,8 @@ import org.cbioportal.cmo.pipelines.cvr.model.staging.LinkedMskimpactCaseRecord;
 
 import java.util.*;
 import org.apache.log4j.Logger;
-import org.springframework.batch.item.file.mapping.FieldSetMapper;
-import org.springframework.batch.item.file.transform.FieldSet;
+import org.springframework.batch.infrastructure.item.file.mapping.FieldSetMapper;
+import org.springframework.batch.infrastructure.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;
 
 /**

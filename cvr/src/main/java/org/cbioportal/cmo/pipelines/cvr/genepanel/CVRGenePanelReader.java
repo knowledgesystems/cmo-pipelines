@@ -38,10 +38,10 @@ import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRGenePanelRecord;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.*;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
 
@@ -104,7 +104,7 @@ public class CVRGenePanelReader implements ItemStreamReader<CVRGenePanelRecord> 
             mapper.setLineTokenizer(tokenizer);
             mapper.setFieldSetMapper(new CVRGenePanelFieldSetMapper());
 
-            FlatFileItemReader<CVRGenePanelRecord> reader = new FlatFileItemReader<>();
+            FlatFileItemReader<CVRGenePanelRecord> reader = new FlatFileItemReader<>(mapper);
             reader.setResource(new FileSystemResource(genePanelFile));
             reader.setLineMapper(mapper);
             reader.setLinesToSkip(1);

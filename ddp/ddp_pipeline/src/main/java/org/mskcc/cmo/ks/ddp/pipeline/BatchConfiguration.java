@@ -42,18 +42,22 @@ import java.util.concurrent.Future;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 import org.springframework.batch.core.*;
+import org.springframework.batch.core.job.*;
+import org.springframework.batch.core.job.parameters.*;
+import org.springframework.batch.core.step.*;
+import org.springframework.batch.core.listener.*;
 import org.springframework.batch.core.configuration.annotation.*;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.support.SimpleJobLauncher;
+import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.integration.async.*;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.support.CompositeItemWriter;
+import org.springframework.batch.infrastructure.support.transaction.ResourcelessTransactionManager;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.context.annotation.*;
 import org.springframework.core.io.Resource;
@@ -107,16 +111,15 @@ public class BatchConfiguration {
     @Bean
     @StepScope
     public ItemProcessor<DDPCompositeRecord, Future<CompositeResult>> asyncItemProcessor() {
-        AsyncItemProcessor<DDPCompositeRecord, CompositeResult> asyncItemProcessor = new AsyncItemProcessor<>();
+        AsyncItemProcessor<DDPCompositeRecord, CompositeResult> asyncItemProcessor =
+                new AsyncItemProcessor<>(ddpCompositeProcessor());
         asyncItemProcessor.setTaskExecutor(processorThreadPoolTaskExecutor());
-        asyncItemProcessor.setDelegate(ddpCompositeProcessor());
         return asyncItemProcessor;
     }
 
     @Bean
     ItemWriter<Future<CompositeResult>> asyncItemWriter() {
-        AsyncItemWriter<CompositeResult> asyncItemWriter = new AsyncItemWriter<>();
-        asyncItemWriter.setDelegate(ddpCompositeWriter());
+        AsyncItemWriter<CompositeResult> asyncItemWriter = new AsyncItemWriter<>(ddpCompositeWriter());
         return asyncItemWriter;
     }
 
@@ -355,7 +358,7 @@ public class BatchConfiguration {
      * @throws Exception
      */
     public JobLauncher getJobLauncher() throws Exception {
-        SimpleJobLauncher jobLauncher = new SimpleJobLauncher();
+        TaskExecutorJobLauncher jobLauncher = new TaskExecutorJobLauncher();
         jobLauncher.setJobRepository(getJobRepository());
         jobLauncher.afterPropertiesSet();
         return jobLauncher;
