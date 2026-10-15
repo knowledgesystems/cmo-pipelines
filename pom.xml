@@ -21,14 +21,14 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.1.4</version> <!-- please match this with ${spring.boot.version} defined in properties -->
+    <version>4.1.0</version> <!-- please match this with ${spring.boot.version} defined in properties -->
   </parent>
 
   <properties>
-    <spring.version>6.0.12</spring.version>
-    <spring.boot.version>3.1.4</spring.boot.version>
-    <spring.batch.version>5.0.3</spring.batch.version>
-    <jackson.version>2.14.3</jackson.version>
+    <spring.version>7.0.8</spring.version>
+    <spring.boot.version>4.1.0</spring.boot.version>
+    <spring.batch.version>6.0.4</spring.batch.version>
+    <jackson.version>2.21.4</jackson.version>
     <slf4j.version>1.7.30</slf4j.version>
     <maven.compiler.version>3.11.0</maven.compiler.version>
     <maven.compiler.java.source>21</maven.compiler.java.source>
@@ -72,14 +72,12 @@
     </dependency>
     <dependency>
         <groupId>net.bytebuddy</groupId>
-        <!-- required for mockito -->
+        <!-- required for mockito, version managed by spring-boot-starter-parent -->
         <artifactId>byte-buddy</artifactId>
-        <version>1.14.5</version>
         </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>5.4.0</version>
       <scope>test</scope>
     </dependency>
     <!-- slf4j -->

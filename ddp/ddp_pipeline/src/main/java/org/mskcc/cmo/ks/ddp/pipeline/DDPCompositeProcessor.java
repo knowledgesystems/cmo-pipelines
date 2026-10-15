@@ -44,7 +44,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.*;
 import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 

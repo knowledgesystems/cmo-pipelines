@@ -59,21 +59,25 @@ import org.cbioportal.cmo.pipelines.cvr.whitelist.ZeroVariantWhitelistTasklet;
 import org.cbioportal.models.*;
 import org.mskcc.cmo.messaging.Gateway;
 import org.springframework.batch.core.*;
+import org.springframework.batch.core.job.*;
+import org.springframework.batch.core.job.parameters.*;
+import org.springframework.batch.core.step.*;
+import org.springframework.batch.core.listener.*;
 import org.springframework.batch.core.configuration.annotation.*;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.job.flow.*;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.support.SimpleJobLauncher;
+import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.dao.Jackson2ExecutionContextStringSerializer;
 import org.springframework.batch.core.repository.ExecutionContextSerializer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.support.CompositeItemWriter;
+import org.springframework.batch.infrastructure.support.transaction.ResourcelessTransactionManager;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.context.annotation.*;
 import org.springframework.core.io.Resource;
@@ -87,7 +91,11 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 @Configuration
 @ComponentScan(basePackages = {"org.cbioportal.annotator", "org.mskcc.cmo.messaging", "org.mskcc.cmo.common.*"})
-@EnableBatchProcessing(executionContextSerializerRef = "jacksonSerializer")
+@EnableBatchProcessing
+@EnableJdbcJobRepository(
+        dataSourceRef = "dataSource",
+        transactionManagerRef = "transactionManager",
+        executionContextSerializerRef = "jacksonSerializer")
 public class BatchConfiguration {
     public static final String CVR_JOB = "cvrJob";
     public static final String JSON_JOB = "jsonJob";
@@ -879,7 +887,7 @@ public class BatchConfiguration {
      * @throws Exception
      */
     public JobLauncher getJobLauncher() throws Exception {
-        SimpleJobLauncher jobLauncher = new SimpleJobLauncher();
+        TaskExecutorJobLauncher jobLauncher = new TaskExecutorJobLauncher();
         jobLauncher.setJobRepository(getJobRepository());
         jobLauncher.afterPropertiesSet();
         return jobLauncher;

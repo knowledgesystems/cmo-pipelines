@@ -39,9 +39,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.FileReader;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.core.io.FileSystemResource;
 
 /**
@@ -69,17 +69,15 @@ public class ClinicalFileReaderUtil {
         tokenizer.setQuoteCharacter('\0'); // Use the null character to effectively disable quotes 
                                            // The default quote character is a " which was causing issues in a record where there was a single unclosed "
 
-        // Create the reader
-        FlatFileItemReader<CVRClinicalRecord> reader = new FlatFileItemReader<>();
-        reader.setResource(new FileSystemResource(mskimpactClinicalFile));
-        reader.setLinesToSkip(1);  // Skip the header row after reading it
-
         // Set up the line mapper
         DefaultLineMapper<CVRClinicalRecord> lineMapper = new DefaultLineMapper<>();
         lineMapper.setLineTokenizer(tokenizer);
         lineMapper.setFieldSetMapper(new CVRClinicalFieldSetMapper());
 
-        reader.setLineMapper(lineMapper);
+        // Create the reader
+        FlatFileItemReader<CVRClinicalRecord> reader = new FlatFileItemReader<>(lineMapper);
+        reader.setResource(new FileSystemResource(mskimpactClinicalFile));
+        reader.setLinesToSkip(1);  // Skip the header row after reading it
         return reader;
     }
 }

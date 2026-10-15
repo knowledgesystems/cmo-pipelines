@@ -38,7 +38,7 @@ import org.apache.commons.collections.map.MultiKeyMap;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
-import org.springframework.batch.item.*;
+import org.springframework.batch.infrastructure.item.*;
 import org.springframework.beans.factory.annotation.*;
 
 /**
