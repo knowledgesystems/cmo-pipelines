@@ -79,12 +79,13 @@ repositories:
     repository_local_path_for_remote_rsync: none
     repository_clone_limited_scope_subdirectory: none
   -
-    repository_id: cmo-argos
+    repository_id: cdsi-bic
     repository_clone_dirpath_per_host_map:
-      pipelines3: /data/portal-cron/cbio-portal-data/cmo-argos
+      pipelines3: /data/portal-cron/cbio-portal-data/cdsi-bic
       knowledgesystems-importer: none
     repository_local_path_for_remote_rsync: none
     repository_clone_limited_scope_subdirectory: none
+    repository_s3_bucket: cdsi-bic
   -
     repository_id: datahub_shahlab
     repository_clone_dirpath_per_host_map:
@@ -134,7 +135,7 @@ database_destinations:
     all_recognized_source_repositories:
       - cmo-access
       - bic-mskcc-legacy
-      - cmo-argos
+      - cdsi-bic
       - private
       - impact
       - datahub_shahlab

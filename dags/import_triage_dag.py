@@ -66,7 +66,7 @@ _TRIAGE_CONFIG = ImporterConfig(
         "data_repos": Param(
             [
                 "datahub",
-                "cmo-argos",
+                "cdsi-bic",
                 "private",
                 "impact"
             ],
@@ -76,7 +76,7 @@ _TRIAGE_CONFIG = ImporterConfig(
             examples=[
                 "datahub",
                 "bic-mskcc-legacy",
-                "cmo-argos",
+                "cdsi-bic",
                 "private",
                 "impact",
                 "knowledge-systems-curated-studies",
