@@ -117,6 +117,7 @@ function main() {
     if ! create_derived_tables_in_target_clickhouse_database $destination_database_color ; then
         return 1
     fi
+    sleep 120
     if ! make_all_studies_available $destination_database_color ; then
         return 1
     fi
