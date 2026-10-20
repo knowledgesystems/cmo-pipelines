@@ -12,7 +12,7 @@ if [ -z $PORTAL_SCRIPTS_DIRECTORY ]; then
     PORTAL_SCRIPTS_DIRECTORY="/data/portal-cron/scripts"
 fi
 AUTOMATION_ENV_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh"
-if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
+if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ]; then
     echo "`date`: Unable to locate $AUTOMATION_ENV_SCRIPT_FILEPATH, exiting..."
     exit 1
 fi
@@ -23,13 +23,13 @@ tmp=$PORTAL_HOME/tmp/import-cron-$PORTAL_DATABASE
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
 current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
 DESTINATION_DATABASE_COLOR="unset"
-if [ ${current_production_database_color:0:4} == "blue" ] ; then
+if [ ${current_production_database_color:0:4} == "blue" ]; then
     DESTINATION_DATABASE_COLOR="green"
 fi
-if [ ${current_production_database_color:0:5} == "green" ] ; then
+if [ ${current_production_database_color:0:5} == "green" ]; then
     DESTINATION_DATABASE_COLOR="blue"
 fi
-if [ "$DESTINATION_DATABASE_COLOR" == "unset" ] ; then
+if [ "$DESTINATION_DATABASE_COLOR" == "unset" ]; then
     echo "Error during determination of the destination database color" >&2
     exit 1
 fi
@@ -40,8 +40,8 @@ CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/c
 # Check if derived table sql script dirpath exists
 # If not, try to create it
 derived_table_sql_script_dirpath="$tmp/create_derived_clickhouse_tables"
-if ! [ -e "$derived_table_sql_script_dirpath" ] ; then
-    if ! mkdir -p "$derived_table_sql_script_dirpath" ; then
+if ! [ -e "$derived_table_sql_script_dirpath" ]; then
+    if ! mkdir -p "$derived_table_sql_script_dirpath"; then
         echo "Error: could not create target directory '$derived_table_sql_script_dirpath'" >&2
         exit 1
     fi
@@ -55,11 +55,11 @@ fi
 # Attempt to download the derived table SQL files from github
 clickhouse_schema_branch_name="master" # default
 importer_jar_filepath="UNSET" # needed for later step
-if [ "$PORTAL_DATABASE" == "public" ] ; then
+if [ "$PORTAL_DATABASE" == "public" ]; then
     clickhouse_schema_branch_name="public-portal-db-clickhouse-sql-for-import"
     importer_jar_filepath="/data/portal-cron/lib/public-importer-$DESTINATION_DATABASE_COLOR.jar"
 fi
-if [ "$PORTAL_DATABASE" == "genie" ] ; then
+if [ "$PORTAL_DATABASE" == "genie" ]; then
     clickhouse_schema_branch_name="genie-portal-db-clickhouse-sql-for-import"
     importer_jar_filepath="/data/portal-cron/lib/genie-importer-$DESTINATION_DATABASE_COLOR.jar"
 fi
@@ -67,14 +67,18 @@ if [ "$PORTAL_DATABASE" == "triage" ]; then
     clickhouse_schema_branch_name="triage-portal-db-clickhouse-sql-for-import"
     importer_jar_filepath="/data/portal-cron/lib/triage-importer-$DESTINATION_DATABASE_COLOR.jar"
 fi
-if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name "$clickhouse_schema_branch_name" "$derived_table_sql_script_dirpath" ; then
+if [ "$PORTAL_DATABASE" == "msk" ]; then
+    clickhouse_schema_branch_name="msk-portal-db-clickhouse-sql-for-import"
+    importer_jar_filepath="/data/portal-cron/lib/msk-importer-$DESTINATION_DATABASE_COLOR.jar"
+fi
+if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name "$clickhouse_schema_branch_name" "$derived_table_sql_script_dirpath"; then
     echo "Error during download of derived table construction .sql files from github" >&2
     exit 1
 fi
 
 # Create the additional derived tables inside of non-production Clickhouse DB
 echo "creating derived tables in clickhouse database $DESTINATION_DATABASE_COLOR"
-if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $DESTINATION_DATABASE_COLOR "$derived_table_sql_script_dirpath"/* ; then
+if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $DESTINATION_DATABASE_COLOR "$derived_table_sql_script_dirpath"/*; then
     echo "Error during derivation of clickhouse tables in clickhouse database $DESTINATION_DATABASE_COLOR" >&2
     exit 1
 fi
@@ -83,13 +87,17 @@ sleep 120
 
 # Update status of all studies in destination database as AVAILABLE
 echo "setting all studies to status AVAILABLE in clickhouse database $PORTAL_DATABASE $DESTINATION_DATABASE_COLOR"
-if [ "$importer_jar_filepath" == "UNSET" ] ; then
+if [ "$importer_jar_filepath" == "UNSET" ]; then
     echo "Error : unable to set study status to AVAILABLE because importer jar filename is unknown for this database" >&2
+    exit 1
 fi
 JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -Dlog4j.appender.a.File=$tmp/make-studies-available-importer.log -ea -cp $importer_jar_filepath org.mskcc.cbio.importer.Admin"
 $JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --make-all-studies-available true
-if [ $? -ne 0 ] ; then
+if [ $? -ne 0 ]; then
     echo "failed to set all studies to status AVAILABLE" >&2
+    echo "log contents for make-studies-available effort:" >&2
+    echo "-----------------------------------------------" >&2
+    cat $tmp/make-studies-available-importer.log >&2
     exit 1
 fi
 
