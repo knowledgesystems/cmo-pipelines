@@ -19,8 +19,9 @@ if [ -z "$PORTAL_HOME" ] ; then
     exit 1
 fi
 # import needed for s3 functionality (e.g. try_download_from_s3)
-if ! source $PORTAL_HOME/scripts/s3_functions.sh ; then
-    echo "Error : could not source $PORTAL_HOME/scripts/s3_functions.sh" >&2
+source $PORTAL_HOME/scripts/s3_functions.sh
+if ! declare -f try_download_from_s3 > /dev/null 2>&1 ; then
+    echo "Error : the function try_download_from_s3 (normally defined in $PORTAL_HOME/scripts/s3_functions.sh) is needed but is not defined" >&2
     exit 1
 fi
 
