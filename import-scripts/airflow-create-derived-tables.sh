@@ -54,14 +54,18 @@ fi
 
 # Attempt to download the derived table SQL files from github
 clickhouse_schema_branch_name="master" # default
+importer_jar_filepath="UNSET" # needed for later step
 if [ "$PORTAL_DATABASE" == "public" ] ; then
     clickhouse_schema_branch_name="public-portal-db-clickhouse-sql-for-import"
+    importer_jar_filepath="/data/portal-cron/lib/public-importer-$DESTINATION_DATABASE_COLOR.jar"
 fi
 if [ "$PORTAL_DATABASE" == "genie" ] ; then
     clickhouse_schema_branch_name="genie-portal-db-clickhouse-sql-for-import"
+    importer_jar_filepath="/data/portal-cron/lib/genie-importer-$DESTINATION_DATABASE_COLOR.jar"
 fi
 if [ "$PORTAL_DATABASE" == "triage" ]; then
     clickhouse_schema_branch_name="triage-portal-db-clickhouse-sql-for-import"
+    importer_jar_filepath="/data/portal-cron/lib/triage-importer-$DESTINATION_DATABASE_COLOR.jar"
 fi
 if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name "$clickhouse_schema_branch_name" "$derived_table_sql_script_dirpath" ; then
     echo "Error during download of derived table construction .sql files from github" >&2
@@ -74,3 +78,19 @@ if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_
     echo "Error during derivation of clickhouse tables in clickhouse database $DESTINATION_DATABASE_COLOR" >&2
     exit 1
 fi
+
+sleep 120
+
+# Update status of all studies in destination database as AVAILABLE
+echo "setting all studies to status AVAILABLE in clickhouse database $PORTAL_DATABASE $DESTINATION_DATABASE_COLOR"
+if [ "$importer_jar_filepath" == "UNSET" ] ; then
+    echo "Error : unable to set study status to AVAILABLE because importer jar filename is unknown for this database" >&2
+fi
+JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $JAVA_SSL_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$tmp -Dlog4j.appender.a.File=$tmp/make-studies-available-importer.log -ea -cp $importer_jar_filepath org.mskcc.cbio.importer.Admin"
+$JAVA_BINARY -Xmx16g $JAVA_IMPORTER_ARGS --make-all-studies-available true
+if [ $? -ne 0 ] ; then
+    echo "failed to set all studies to status AVAILABLE" >&2
+    exit 1
+fi
+
+echo "airflow-create-derived-tables.sh complete"
