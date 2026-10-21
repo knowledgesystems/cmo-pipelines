@@ -61,7 +61,7 @@ export GITHUB_CRONTAB_URL="https://api.github.com/repos/knowledgesystems/cmo-pip
 # environment variables for top level data repositories
 #######################
 export BIC_LEGACY_DATA_HOME=$PORTAL_DATA_HOME/bic-mskcc-legacy
-export CMO_ARGOS_DATA_HOME="$PORTAL_DATA_HOME/cmo-argos"
+export CDSI_BIC_DATA_HOME="$PORTAL_DATA_HOME/cdsi-bic"
 export PDX_DATA_HOME=$PORTAL_DATA_HOME/crdb_pdx
 export PRIVATE_DATA_HOME=$PORTAL_DATA_HOME/private
 export DMP_DATA_HOME=$PORTAL_DATA_HOME/dmp

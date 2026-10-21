@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# data_source_repo_clone_manager.sh : a script which uses git operations to
-#     manage (update, cleanup) source data repositories for cBioPortal import.
+# data_source_repo_clone_manager.sh : a script which uses git operations (or s3
+#     sync operations for s3 backed repositories) to manage (update, cleanup)
+#     source data repositories for cBioPortal import.
 #
 #     Positional arguments:
 #     The first argument is the filepath to a config file which identifies
@@ -12,6 +13,17 @@
 #     The second argument is a command keyword {'pull' or 'cleanup'}
 #     The third argument identifies the destination database for import
 #     All remaining arguments identify the specific repositories to manage
+
+if [ -z "$PORTAL_HOME" ] ; then
+    echo "Error : data_source_repo_clone_manager.sh cannot be run without setting the PORTAL_HOME environment variable." >&2
+    exit 1
+fi
+# import needed for s3 functionality (e.g. try_download_from_s3)
+source $PORTAL_HOME/scripts/s3_functions.sh
+if ! declare -f try_download_from_s3 > /dev/null 2>&1 ; then
+    echo "Error : the function try_download_from_s3 (normally defined in $PORTAL_HOME/scripts/s3_functions.sh) is needed but is not defined" >&2
+    exit 1
+fi
 
 ########################################
 # script global variables
@@ -38,6 +50,7 @@ unset host_id_to_ssh_private_key_local_filepath
 unset all_repositories
 unset repository_id_to_local_path_for_remote_rsync
 unset repository_id_to_limited_scope_subdirectory
+unset repository_id_to_s3_bucket
 unset repository_and_host_to_clone_dirpath
 unset destination_database_id_to_importer_host
 unset destination_database_id_to_source_repo_list
@@ -48,6 +61,7 @@ declare -A host_id_to_incoming_ssh_username
 declare -A host_id_to_ssh_private_key_local_filepath
 declare -A all_repositories
 declare -A repository_id_to_limited_scope_subdirectory
+declare -A repository_id_to_s3_bucket
 declare -A repository_and_host_to_clone_dirpath
 declare -A repository_id_to_local_path_for_remote_rsync
 declare -A destination_database_id_to_importer_host
@@ -64,6 +78,7 @@ unset host_object_buffer_ssh_private_key_local_filepath
 unset repository_object_buffer_repository_id
 unset repository_object_buffer_local_path_for_remote_rsync
 unset repository_object_buffer_limited_scope_subdirectory
+unset repository_object_buffer_s3_bucket
 unset repository_object_buffer_host_to_clone_dirpath_map
 unset database_destination_object_buffer_database_destination_id
 unset database_destination_object_buffer_importer_host
@@ -77,6 +92,7 @@ host_object_buffer_ssh_private_key_local_filepath=""
 repository_object_buffer_repository_id=""
 repository_object_buffer_local_path_for_remote_rsync=""
 repository_object_buffer_limited_scope_subdirectory=""
+repository_object_buffer_s3_bucket=""
 declare -A repository_object_buffer_host_to_clone_dirpath_map
 database_destination_object_buffer_database_destination_id=""
 database_destination_object_buffer_importer_host=""
@@ -237,6 +253,7 @@ function record_object_in_buffer() {
         all_repositories[$repository_object_buffer_repository_id]=1
         repository_id_to_local_path_for_remote_rsync[$repository_object_buffer_repository_id]="$repository_object_buffer_local_path_for_remote_rsync"
         repository_id_to_limited_scope_subdirectory[$repository_object_buffer_repository_id]="$repository_object_buffer_limited_scope_subdirectory"
+        repository_id_to_s3_bucket[$repository_object_buffer_repository_id]="$repository_object_buffer_s3_bucket"
         local host_list=${!repository_object_buffer_host_to_clone_dirpath_map[*]}
         for host in $host_list ; do
             clone_dirpath="${repository_object_buffer_host_to_clone_dirpath_map[$host]}"
@@ -278,6 +295,7 @@ function clear_object_buffer() {
         repository_object_buffer_repository_id=""
         repository_object_buffer_local_path_for_remote_rsync=""
         repository_object_buffer_limited_scope_subdirectory=""
+        repository_object_buffer_s3_bucket=""
         unset repository_object_buffer_host_to_clone_dirpath_map
         declare -Ag repository_object_buffer_host_to_clone_dirpath_map
         return 0
@@ -382,6 +400,12 @@ function capture_setting_in_object_buffer() {
         if [ "$key" == 'repository_clone_limited_scope_subdirectory' ] ; then
             if ! [ "$trimmed_val" == "none" ] ; then
                 repository_object_buffer_limited_scope_subdirectory="$trimmed_val"
+            fi
+            return 0
+        fi
+        if [ "$key" == 'repository_s3_bucket' ] ; then
+            if ! [ "$trimmed_val" == "none" ] ; then
+                repository_object_buffer_s3_bucket="$trimmed_val"
             fi
             return 0
         fi
@@ -695,6 +719,29 @@ function execute_command_for_repository() {
     local repository_id=$1
     local composite_key="$repository_id:$determined_importer_host_id"
     local destination_repository_path="${repository_and_host_to_clone_dirpath[$composite_key]}"
+    local s3_bucket="${repository_id_to_s3_bucket[$repository_id]}"
+    if [ -n "$s3_bucket" ] ; then
+        # s3 backed repositories are pull-only and must be synced on the importer host
+        if ! import_will_run_locally ; then
+            echo "Error: repository $repository_id is s3 backed and must be synced on importer host $determined_importer_host_id" >&2
+            return 1
+        fi
+        if ! [ -d "$destination_repository_path" ] ; then
+            echo "Error: directory $destination_repository_path for repository $repository_id does not exist" >&2
+            return 1
+        fi
+        # both pull and cleanup reset the local copy to match the bucket (sync with --delete discards untracked files)
+        if ! try_download_from_s3 "$destination_repository_path" "" "$s3_bucket" ; then
+            echo "Error: could not sync s3 bucket $s3_bucket to $destination_repository_path" >&2
+            return 1
+        fi
+        local in_progress_filepath="$destination_repository_path/.S3_update_in_progress"
+        if [ -f "$in_progress_filepath" ] && [ "$(head -n1 "$in_progress_filepath")" == "true" ] ; then
+            echo "Error: s3 bucket $s3_bucket is in the process of being updated and is not yet in a consistent state" >&2
+            return 1
+        fi
+        return 0
+    fi
     if import_will_run_locally ; then
         if ! repository_is_fully_cloned_locally "$destination_repository_path" ; then
             echo "Local data for repository $repository_id contains no '.git' subdirectory."
