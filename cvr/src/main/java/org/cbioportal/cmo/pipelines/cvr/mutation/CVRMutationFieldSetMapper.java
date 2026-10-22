@@ -34,8 +34,8 @@ package org.cbioportal.cmo.pipelines.cvr.mutation;
 
 import org.cbioportal.models.MutationRecord;
 import java.util.*;
-import org.springframework.batch.item.file.mapping.FieldSetMapper;
-import org.springframework.batch.item.file.transform.FieldSet;
+import org.springframework.batch.infrastructure.item.file.mapping.FieldSetMapper;
+import org.springframework.batch.infrastructure.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;
 
 /**

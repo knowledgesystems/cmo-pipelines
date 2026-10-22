@@ -37,7 +37,7 @@ import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import org.mskcc.cmo.ks.ddp.source.composite.DDPCompositeRecord;
 
 import org.apache.log4j.Logger;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 
 /**
