@@ -133,6 +133,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     MSK_RIKENGENESISJAPAN_SUBSET_FAIL=0
     SCLC_MSKIMPACT_SUBSET_FAIL=0
 
+    # Set if the CDM data download or any cohort's CDM merge fails. CDM clinical data is
+    # required: if set, all DMP portal imports are blocked (see CDM MERGE GATE below).
+    CDM_MERGE_FAIL=0
+    CDM_MERGE_FAILED_STEPS=""
+
     GENERATE_MASTERLIST_FAIL=0
 
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"
@@ -763,17 +768,23 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     #--------------------------------------------------------------
-    # CDM Fetch is optional -- does not break import if it fails, but will send notif
+    # CDM Fetch and merge are required: a failure here does not stop processing, but sets
+    # CDM_MERGE_FAIL, which blocks all DMP portal imports (see CDM MERGE GATE below) so the
+    # portal keeps its current studies instead of importing them without CDM columns
 
     echo "fetching CDM clinical demographics & timeline updates from S3..."
     download_from_s3 "$MSK_CHORD_DATA_HOME" "msk-chord" "cdm-deliverable"
 
     if [ $? -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
+        CDM_MERGE_FAIL=1
+        CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS CDM-download"
     else
         sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact $MSK_CHORD_DATA_HOME/mskimpact $MSK_IMPACT_DATA_HOME $MSK_IMPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
+            CDM_MERGE_FAIL=1
+            CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS MSKIMPACT"
         else
             echo "pushing mskimpact CDM data to S3"
             upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
@@ -782,6 +793,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme $MSK_CHORD_DATA_HOME/mskimpact_heme $MSK_HEMEPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
+            CDM_MERGE_FAIL=1
+            CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS HEMEPACT"
         else
             echo "pushing hemepact CDM data to S3"
             upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
@@ -790,6 +803,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher $MSK_CHORD_DATA_HOME/mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
+            CDM_MERGE_FAIL=1
+            CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS ARCHER"
         else
             echo "pushing mskarcher CDM data to S3"
             upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
@@ -798,6 +813,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess $MSK_CHORD_DATA_HOME/mskaccess $MSK_ACCESS_DATA_HOME $MSK_ACCESS_DATA_HOME
         if [ $? -gt 0 ] ; then
             sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
+            CDM_MERGE_FAIL=1
+            CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS ACCESS"
         else
             echo "pushing mskaccess CDM data to S3"
             upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
@@ -1196,6 +1213,21 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     #--------------------------------------------------------------
+    # CDM MERGE GATE
+    # Every DMP portal study carries CDM clinical columns, merged in from the cohorts above.
+    # If the CDM download or any cohort's merge failed, importing would drop those columns,
+    # so remove all import triggers: the importer then leaves the current portal studies in
+    # place until a run where the CDM merge succeeds. Runs after every trigger is set.
+    if [ $CDM_MERGE_FAIL -gt 0 ] ; then
+        echo "CDM merge failed for:$CDM_MERGE_FAILED_STEPS -- blocking all DMP portal imports"
+        rm -f $MSK_SOLID_HEME_IMPORT_TRIGGER $MSK_ARCHER_IMPORT_TRIGGER \
+            $MSK_KINGS_IMPORT_TRIGGER $MSK_LEHIGH_IMPORT_TRIGGER $MSK_QUEENS_IMPORT_TRIGGER \
+            $MSK_MCI_IMPORT_TRIGGER $MSK_HARTFORD_IMPORT_TRIGGER $MSK_RALPHLAUREN_IMPORT_TRIGGER \
+            $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER $MSK_SCLC_IMPORT_TRIGGER
+        sendPreImportFailureMessageMskPipelineLogsSlack "CDM merge failed for:$CDM_MERGE_FAILED_STEPS. All DMP portal imports blocked; the portal keeps its current studies :fire: - address ASAP!"
+    fi
+
+    #--------------------------------------------------------------
     # S3 PUSH
     deleteS3IgnoredFiles "$PORTAL_DATA_HOME/dmp"
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to s3 bucket"
@@ -1216,6 +1248,13 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $S3_BUCKET_PUSH_FAIL -gt 0 ] ; then
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "[URGENT] S3 PUSH FAILURE" $PIPELINES_EMAIL_LIST
+    fi
+
+    EMAIL_BODY="CDM merge failed for:$CDM_MERGE_FAILED_STEPS. All DMP portal imports were blocked so that studies are not imported without CDM clinical columns; the original studies will remain on the portal. Check the fetch log and the 'CDM merge' Slack alerts, fix the cause, and re-run the fetch and import."
+    # send email if the CDM download or any CDM merge failed
+    if [ $CDM_MERGE_FAIL -gt 0 ] ; then
+        echo -e "Sending email $EMAIL_BODY"
+        echo -e "$EMAIL_BODY" | mail -s "[URGENT] CDM MERGE FAILURE: DMP imports blocked" $PIPELINES_EMAIL_LIST
     fi
 
     EMAIL_BODY="The MSKIMPACT study failed fetch. The original study will remain on the portal."
