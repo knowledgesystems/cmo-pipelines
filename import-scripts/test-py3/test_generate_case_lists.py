@@ -82,24 +82,8 @@ class TestGenerateCaseLists(unittest.TestCase):
         for expected_file in expected_files:
             actual_file_full_path = os.path.join(self.temp_dir, expected_file)
             expected_file_full_path = os.path.join(self.study_dir, "expected_" + expected_file)
-            with open(actual_file_full_path) as actual_file:
-                actual_lines = actual_file.read().splitlines()
-            with open(expected_file_full_path) as expected_stream:
-                expected_lines = expected_stream.read().splitlines()
-            self.assertEqual(expected_lines[:-1], actual_lines[:-1])
-            # Legacy fixtures were generated from unordered Python 2 sets.
-            expected_ids = expected_lines[-1].split(": ", 1)[1].split("\t")
-            actual_ids = actual_lines[-1].split(": ", 1)[1].split("\t")
-            self.assertCountEqual(expected_ids, actual_ids)
-            first_seen = {
-                "cases_cna.txt": ["C1", "C2", "C3"],
-                "cases_cnaseq.txt": ["C1", "C2"],
-                "cases_sequenced.txt": ["A", "B", "C", "C1", "E", "C2", "G", "H", "I"],
-                "cases_all.txt": ["C1", "C2", "C3", "A", "B", "C", "E", "G", "H", "I"] +
-                    ["P-0000001-T01-XXX", "P-0000002-T02-XYZ", "P-0000003-T01-YYY",
-                     "P-0000004-T02-ZZZ", "P-0000005-T02-ZYZ", "P-0000006-T02-XXX"],
-            }
-            self.assertEqual(first_seen[expected_file], actual_ids)
+            with open(actual_file_full_path) as actual_file, open(expected_file_full_path) as expected_file:
+                self.assertEqual(expected_file.read(), actual_file.read())
 
     @classmethod
     def tearDownClass(cls):

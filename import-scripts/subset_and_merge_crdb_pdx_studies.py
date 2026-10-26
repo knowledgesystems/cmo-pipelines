@@ -663,7 +663,7 @@ def generate_destination_study_case_lists(lib, destination_to_source_mapping, ro
             validation_utils.call_generate_case_lists(case_lists_config_file, destination_case_lists_directory, destination_directory, destination, True)
             DESTINATION_STUDY_STATUS_FLAGS[destination][GENERATE_CASE_LISTS_SUCCESS] = True
         except:
-            print >> OUTPUT_FILE, "Error generating case lists for study %s" % (destination)
+            print >> OUTPUT_FILE, "Error normalizing TCGA barcodes or generating case lists for study %s" % (destination)
             continue
 
 def standardize_destination_study_cna_data(destination_to_source_mapping, root_directory):

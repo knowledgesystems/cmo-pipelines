@@ -13,7 +13,11 @@ def is_clinical_file(filename):
     return (re.match('data_clinical[_a-z]*.txt', os.path.basename(filename)) != None)
 
 def split_tab_fields(line):
-    """Trim trailing field whitespace while preserving empty TSV columns."""
+    """Trim trailing whitespace from headers, metadata and data fields.
+
+    Leading whitespace and empty TSV columns are intentionally preserved;
+    sample-ID trimming is handled by normalize_tcga_barcodes.py.
+    """
     return [field.rstrip() for field in line.rstrip("\r\n").split("\t")]
 
 def parse_file(data_file, allow_empty_values):

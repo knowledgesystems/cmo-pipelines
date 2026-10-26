@@ -16,6 +16,7 @@ SAMPLE_COLUMNS = {"sample_id", "sample", "sampleid", "tumor_sample_barcode",
 
 def get_sample_id(barcode):
     """Match the Java importer's StableIdUtil.getSampleId rules."""
+    barcode = barcode.strip()
     if not barcode.startswith("TCGA"):
         return barcode
     if "Tumor" in barcode:
@@ -48,13 +49,14 @@ def normalized_lines(path):
             body = line.rstrip("\r\n")
             ending = line[len(body):]
             if path.name == "sequenced_samples.txt":
-                body = re.sub(r"\S+", lambda match: get_sample_id(match.group()), body)
+                body = re.sub(r"\S+", lambda match: get_sample_id(match.group()), body.strip())
             elif body.startswith(("#sequenced_samples:", "case_list_ids:")):
                 prefix, values = body.split(":", 1)
                 body = prefix + ":" + re.sub(r"\S+", lambda match: get_sample_id(match.group()), values)
             elif body and not body.startswith("#"):
                 fields = body.split("\t")
                 if indexes is None:
+                    fields = [field.strip() for field in fields]
                     names = [field.lower() for field in fields]
                     indexes = [i for i, name in enumerate(names) if name in SAMPLE_COLUMNS
                                or (path.suffix == ".seg" and name == "id")]
@@ -113,7 +115,7 @@ def normalize_study(study_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, epilog=
         "Updates top-level .txt/.tsv/.maf/.seg files and case_lists/*.txt in place. "
-        "Patient IDs and non-TCGA IDs are unchanged; records are not merged.")
+        "Sample IDs are trimmed; TCGA IDs are normalized. Patient IDs are unchanged; records are not merged.")
     parser.add_argument("-s", "--study-dir", required=True)
     args = parser.parse_args()
     try:

@@ -13,6 +13,8 @@ class TestNormalizeTcgaBarcodes(unittest.TestCase):
             ('TCGA-A1-A0SB-Normal', 'TCGA-A1-A0SB-11'),
             ('TCGA-A1-A0SB', 'TCGA-A1-A0SB-01'),
             ('P-0000001-T01-XXX', 'P-0000001-T01-XXX'),
+            (' TCGA-A1-A0SB-01A ', 'TCGA-A1-A0SB-01'),
+            (' MSK-1 ', 'MSK-1'),
         ]:
             self.assertEqual(expected, get_sample_id(original))
 
@@ -49,6 +51,21 @@ class TestNormalizeTcgaBarcodes(unittest.TestCase):
             timestamps = {p: p.stat().st_mtime_ns for p in root.rglob('*.txt')}
             self.assertEqual(0, normalize_study(root))
             self.assertEqual(timestamps, {p: p.stat().st_mtime_ns for p in timestamps})
+
+    def test_trims_sample_ids_preserving_other_fields_and_line_endings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            clinical = root / 'data_clinical_sample.txt'
+            clinical.write_bytes(b'SAMPLE_ID\tPATIENT_ID\tNOTE\r\n TCGA-A1-A0SB-01A \t patient \t note \r\n MSK-1 \tP2\tNA\r\n')
+            matrix = root / 'data_CNA.txt'
+            matrix.write_text('Hugo_Symbol\t TCGA-A1-A0SB-01A \t MSK-1 \nTP53\t0\t1\n')
+            sequenced = root / 'sequenced_samples.txt'
+            sequenced.write_text(' MSK-1 \n TCGA-A1-A0SB-01A \n')
+            self.assertEqual(3, normalize_study(root))
+            self.assertEqual(b'SAMPLE_ID\tPATIENT_ID\tNOTE\r\nTCGA-A1-A0SB-01\t patient \t note \r\nMSK-1\tP2\tNA\r\n', clinical.read_bytes())
+            self.assertEqual('Hugo_Symbol\tTCGA-A1-A0SB-01\tMSK-1\nTP53\t0\t1\n', matrix.read_text())
+            self.assertEqual('MSK-1\nTCGA-A1-A0SB-01\n', sequenced.read_text())
+            self.assertEqual(0, normalize_study(root))
 
     def test_collisions_leave_all_sources_unchanged(self):
         for filename, body in [

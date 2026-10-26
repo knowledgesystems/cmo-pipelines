@@ -86,6 +86,7 @@ def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, stu
     header = []
     with open(case_list_config_filename, 'r') as case_list_config_file:
         # get header and validate
+        # Config values intentionally trim both ends, including names and descriptions.
         header = [field.strip() for field in case_list_config_file.readline().split('\t')]
         # check full header matches what we expect
         for column in CASE_LIST_CONFIG_HEADER_COLUMNS:
@@ -94,7 +95,6 @@ def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, stu
                 sys.exit(2)
 
         for line in case_list_config_file:
-            line = line.rstrip('\n').rstrip('\r')
             if not line.strip():
                 continue
             config_fields = [field.strip() for field in line.split('\t')]
@@ -131,7 +131,6 @@ def generate_case_lists(case_list_config_filename, case_list_dir, study_dir, stu
                 if verbose:
                     print("LOG: generate_case_lists(), processing staging file '%s'" % (staging_filename))
                 # compute the case set
-                case_list = []
                 case_list = get_case_list_from_staging_file(study_dir, staging_filename, verbose)
 
                 if len(case_list) == 0:

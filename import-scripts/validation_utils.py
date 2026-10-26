@@ -329,6 +329,7 @@ def call_normalize_tcga_barcodes(study_dir):
 
 def call_generate_case_lists(case_list_config_file, case_list_dir, study_dir, study_id, overwrite = False, verbose = False):
     """
+        Preprocessing wrapper: modifies study files rather than validating them.
         Runs generate_case_lists python script and generates standard case lists
         for a specified study.
         i.e., cases_all.txt, cases_sequenced.txt, etc.
