@@ -3,7 +3,7 @@
 import argparse
 from clinicalfile_utils import (
     add_metadata_for_attribute, parse_file, get_all_metadata_lines,
-    get_header, get_metadata_header_line_order, has_metadata_headers, split_tab_fields,
+    get_header, get_metadata_header_line_order, has_metadata_headers,
 )
 import fileinput
 import json
@@ -37,7 +37,7 @@ def audit_clinical_file(oncotree_mappings, clinical_filename):
         (CANCER_TYPE_DETAILED, "cancer_type_detailed_mismatches"),
     ]
     for data in parse_file(clinical_filename, allow_empty_values=True):
-        oncotree_code = data.get(ONCOTREE_CODE, "").strip()
+        oncotree_code = data.get(ONCOTREE_CODE, "")
         if existing_data_is_not_available(oncotree_code):
             continue
         if oncotree_code not in oncotree_mappings:
@@ -45,7 +45,7 @@ def audit_clinical_file(oncotree_mappings, clinical_filename):
             continue
         oncotree_code_info = oncotree_mappings[oncotree_code]
         for attribute, bucket in attributes:
-            existing_data = data.get(attribute, "").strip()
+            existing_data = data.get(attribute, "")
             if existing_data_is_not_available(existing_data):
                 continue
             expected = oncotree_code_info[attribute]
@@ -147,14 +147,14 @@ def process_clinical_file(oncotree_mappings, clinical_filename, force_cancer_typ
                 continue
             if first:
                 first = False
-                header = split_tab_fields(line)
+                header = original_header[:]
                 if CANCER_TYPE not in header:
                     header.append(CANCER_TYPE)
                 if CANCER_TYPE_DETAILED not in header:
                     header.append(CANCER_TYPE_DETAILED)
                 print('\t'.join(header))
                 continue
-            data = split_tab_fields(line)
+            data = line.split('\t')
             oncotree_code = data[header.index(ONCOTREE_CODE)]
             if not oncotree_code or not oncotree_code in oncotree_mappings:
                 samples_that_have_undefined_oncotree_codes.append(data[header.index(SAMPLE_ID)])

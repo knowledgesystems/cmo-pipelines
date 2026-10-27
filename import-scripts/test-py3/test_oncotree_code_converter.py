@@ -84,7 +84,7 @@ class TestOncotreeCodeConverter(unittest.TestCase):
         # make sure we didn't lose any lines (data is deleted if there is a problem)
         self.assertEqual(len(original_clinical_data.split("\n")), len(processed_clinical_data.split("\n")))
 
-    def test_metadata_survives_extra_comments(self):
+    def test_metadata_preserved_and_extra_comments_discarded(self):
         for legacy in (False, True):
             for extra_count in (0, 1, 2, 4):
                 with self.subTest(legacy=legacy, extra_count=extra_count):
@@ -100,6 +100,8 @@ class TestOncotreeCodeConverter(unittest.TestCase):
                     process_clinical_file(self.oncotree_mappings, stream.name, False)
                     with open(stream.name) as processed:
                         lines = processed.read().splitlines()
+                    # Metadata is rebuilt; ordinary # comments are discarded.
+                    self.assertNotIn("#extra comment", lines)
                     self.assertEqual(len(metadata) + 2, len(lines))
                     self.assertEqual([line.split("\t")[:2] for line in metadata],
                                      [line.split("\t")[:2] for line in lines[:len(metadata)]])
@@ -107,6 +109,16 @@ class TestOncotreeCodeConverter(unittest.TestCase):
                     self.assertEqual("SAMPLE_ID\tONCOTREE_CODE\tCANCER_TYPE\tCANCER_TYPE_DETAILED",
                                      lines[len(metadata)])
                     self.assertEqual("S1\tPRAD\tProstate Cancer\tProstate Adenocarcinoma", lines[-1])
+
+    def test_ordinary_comments_without_metadata_are_discarded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            filename = os.path.join(directory, 'clinical.txt')
+            with open(filename, 'w') as clinical:
+                clinical.write('#ordinary comment\nSAMPLE_ID\tONCOTREE_CODE\nS1\tPRAD\n')
+            process_clinical_file(self.oncotree_mappings, filename, False)
+            with open(filename) as clinical:
+                self.assertEqual('SAMPLE_ID\tONCOTREE_CODE\tCANCER_TYPE\tCANCER_TYPE_DETAILED\n'
+                                 'S1\tPRAD\tProstate Cancer\tProstate Adenocarcinoma\n', clinical.read())
 
     def call_process_clinical_file(self, data_clinical_filename):
         original_clinical_data = ""

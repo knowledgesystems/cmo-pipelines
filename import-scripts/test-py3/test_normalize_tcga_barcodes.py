@@ -67,10 +67,21 @@ class TestNormalizeTcgaBarcodes(unittest.TestCase):
             self.assertEqual('MSK-1\nTCGA-A1-A0SB-01\n', sequenced.read_text())
             self.assertEqual(0, normalize_study(root))
 
+    def test_non_sample_headers_and_values_keep_spaces(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            clinical = root / 'data_clinical_sample.txt'
+            clinical.write_bytes(b'SAMPLE_ID\tPATIENT_ID\t NOTE \r\n MSK-1 \t patient \t note \r\n')
+            self.assertEqual(1, normalize_study(root))
+            self.assertEqual(b'SAMPLE_ID\tPATIENT_ID\t NOTE \r\nMSK-1\t patient \t note \r\n',
+                             clinical.read_bytes())
+
     def test_collisions_leave_all_sources_unchanged(self):
         for filename, body in [
             ('data_clinical_sample.txt', 'SAMPLE_ID\nTCGA-A1-A0SB-01A\nTCGA-A1-A0SB-01B\n'),
             ('data_CNA.txt', 'Hugo_Symbol\tTCGA-A1-A0SB-01A\tTCGA-A1-A0SB-01B\n'),
+            ('data_CNA.txt', 'Hugo_Symbol\t MSK-1 \tMSK-1\n'),
+            ('data_CNA.txt', 'Hugo_Symbol\t TCGA-A1-A0SB-01A \tTCGA-A1-A0SB-01B\n'),
         ]:
             with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)

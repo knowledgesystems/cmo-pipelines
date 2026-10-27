@@ -7,6 +7,7 @@ import unittest
 import os.path
 import tempfile
 import shutil
+from pathlib import Path
 
 from generate_case_lists import *
 
@@ -84,6 +85,29 @@ class TestGenerateCaseLists(unittest.TestCase):
             expected_file_full_path = os.path.join(self.study_dir, "expected_" + expected_file)
             with open(actual_file_full_path) as actual_file, open(expected_file_full_path) as expected_file:
                 self.assertEqual(expected_file.read(), actual_file.read())
+
+    def test_configuration_names_and_descriptions_trim_surrounding_spaces(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'data.txt').write_text('SAMPLE_ID\nS1\n')
+            config = root / 'config.tsv'
+            config.write_text('\t'.join(CASE_LIST_CONFIG_HEADER_COLUMNS) + '\n' +
+                              'cases.txt\tdata.txt\t<CANCER_STUDY>_all\tall_cases_in_study\t'
+                              '<CANCER_STUDY>\t Name \t Description \n')
+            generate_case_lists(str(config), str(root), str(root), 'study')
+            self.assertIn('case_list_name: Name\n', (root / 'cases.txt').read_text())
+            self.assertIn('case_list_description: Description\n', (root / 'cases.txt').read_text())
+
+    def test_staging_filename_spaces_are_trimmed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'data.txt').write_text('SAMPLE_ID\nS1\n')
+            config = root / 'config.tsv'
+            config.write_text('\t'.join(CASE_LIST_CONFIG_HEADER_COLUMNS) + '\n' +
+                              'cases.txt\t data.txt \t<CANCER_STUDY>_all\tall_cases_in_study\t'
+                              '<CANCER_STUDY>\tName\tDescription\n')
+            generate_case_lists(str(config), str(root), str(root), 'study')
+            self.assertIn('case_list_ids: S1\n', (root / 'cases.txt').read_text())
 
     @classmethod
     def tearDownClass(cls):

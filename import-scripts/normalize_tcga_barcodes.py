@@ -10,6 +10,9 @@ import shutil
 import tempfile
 
 TCGA_SAMPLE_BARCODE_REGEX = re.compile(r"^(TCGA-\w\w-\w\w\w\w-\d\d).*$")
+MATRIX_ANNOTATION_COLUMNS = {"hugo_symbol", "entrez_gene_id", "gene", "common", "cytoband",
+                             "mirna", "locus", "id", "gene symbol", "locus id",
+                             "composite.element.ref", "hybridization ref"}
 SAMPLE_COLUMNS = {"sample_id", "sample", "sampleid", "tumor_sample_barcode",
                   "matched_norm_sample_barcode"}
 
@@ -56,7 +59,6 @@ def normalized_lines(path):
             elif body and not body.startswith("#"):
                 fields = body.split("\t")
                 if indexes is None:
-                    fields = [field.strip() for field in fields]
                     names = [field.lower() for field in fields]
                     indexes = [i for i, name in enumerate(names) if name in SAMPLE_COLUMNS
                                or (path.suffix == ".seg" and name == "id")]
@@ -64,8 +66,10 @@ def normalized_lines(path):
                         clinical_sample_index = names.index("sample_id")
                     # Matrix sample IDs are column headers, not row values.
                     matrix_seen = {}
+                    is_matrix = not indexes and names[0] in MATRIX_ANNOTATION_COLUMNS
                     for i, field in enumerate(fields):
-                        if field.startswith("TCGA"):
+                        if field.strip().startswith("TCGA") or (is_matrix and field and
+                                names[i] not in MATRIX_ANNOTATION_COLUMNS):
                             normalized = get_sample_id(field)
                             check_collision(matrix_seen, field, normalized, path)
                             fields[i] = normalized
