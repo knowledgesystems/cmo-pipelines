@@ -99,17 +99,21 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     # CDM merge with fallback to the last CDM data that merged successfully.
     #
-    # Each successful merge snapshots the CDM data it used to $CDM_LAST_GOOD_HOME/<cohort>.
-    # If the CDM download or the merge fails, the merge is retried with that snapshot, as
-    # long as it is newer than $CDM_LAST_GOOD_MAX_AGE_DAYS days. merge-cdm-data.sh only
-    # writes to the study directory on success, so a failed attempt leaves nothing behind.
+    # Each successful merge snapshots the CDM data it used, plus the cdm_metadata.json it was
+    # merged with, to $CDM_LAST_GOOD_HOME/<cohort>. If the CDM download or the merge fails,
+    # the merge is retried with that snapshot's data and metadata, as long as it is newer
+    # than $CDM_LAST_GOOD_MAX_AGE_DAYS days; a bad cdm_metadata.json is therefore covered
+    # too. merge-cdm-data.sh only writes to the study directory on success, so a failed
+    # attempt leaves nothing behind.
     # If there is no usable snapshot or the retry also fails, CDM_MERGE_FAIL is set and
     # the CDM MERGE GATE blocks all DMP portal imports.
     #
     # The snapshots live outside $MSK_CHORD_DATA_HOME because the msk-chord S3 download
     # syncs that directory with --delete. Until the first successful merge on a server,
     # there is no snapshot to fall back on; seed $CDM_LAST_GOOD_HOME/<cohort> by hand from
-    # a known-good CDM deliverable (and write the date to .snapshot_date) if needed.
+    # a known-good CDM deliverable, with a known-good cdm_metadata.json, and write the date
+    # to .snapshot_date, if needed. A snapshot without a cdm_metadata.json copy falls back
+    # to the live $PORTAL_HOME/scripts/cdm_metadata.json.
     #
     # Override the age limit by exporting CDM_LAST_GOOD_MAX_AGE_DAYS (e.g. in
     # automation-environment.sh); it must be a positive integer.
@@ -127,12 +131,15 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         local current_cdm_dir="$MSK_CHORD_DATA_HOME/$cohort"
         local last_good_dir="$CDM_LAST_GOOD_HOME/$cohort"
         local snapshot_date_file="$last_good_dir/.snapshot_date"
+        local live_metadata_file="$PORTAL_HOME/scripts/cdm_metadata.json"
+        local snapshot_metadata_file="$last_good_dir/cdm_metadata.json"
 
         if [ $CDM_DOWNLOAD_FAIL -eq 0 ] ; then
-            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$current_cdm_dir" "$study_home" "$study_home" ; then
+            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$current_cdm_dir" "$study_home" "$study_home" "$live_metadata_file" ; then
                 # Snapshot the CDM data that merged successfully. A failed snapshot is not
                 # fatal: tonight's merge succeeded, only a future fallback is affected.
-                if mkdir -p "$last_good_dir" && rsync -a --delete "$current_cdm_dir/" "$last_good_dir/" ; then
+                if mkdir -p "$last_good_dir" && rsync -a --delete "$current_cdm_dir/" "$last_good_dir/" \
+                        && cp -p "$live_metadata_file" "$snapshot_metadata_file" ; then
                     date +%F > "$snapshot_date_file"
                 else
                     sendPreImportFailureMessageMskPipelineLogsSlack "Warning: could not snapshot last-good CDM data for $label"
@@ -146,8 +153,12 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
         if [ -f "$snapshot_date_file" ] && [ -n "$(find "$snapshot_date_file" -mtime -$CDM_LAST_GOOD_MAX_AGE_DAYS)" ] ; then
             local snapshot_date=$(cat "$snapshot_date_file")
-            echo "retrying CDM merge for $label with last-good CDM data from $snapshot_date"
-            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$last_good_dir" "$study_home" "$study_home" ; then
+            local fallback_metadata_file="$snapshot_metadata_file"
+            if [ ! -f "$fallback_metadata_file" ] ; then
+                fallback_metadata_file="$live_metadata_file"
+            fi
+            echo "retrying CDM merge for $label with last-good CDM data from $snapshot_date (metadata: $fallback_metadata_file)"
+            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$last_good_dir" "$study_home" "$study_home" "$fallback_metadata_file" ; then
                 CDM_FALLBACK_USED="$CDM_FALLBACK_USED $label($snapshot_date)"
                 sendPreImportFailureMessageMskPipelineLogsSlack "CDM merge for $label used last-good CDM data from $snapshot_date - fix the CDM data before it is more than $CDM_LAST_GOOD_MAX_AGE_DAYS days old"
                 echo "pushing $cohort CDM data (last-good fallback) to S3"
