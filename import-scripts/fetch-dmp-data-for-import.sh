@@ -97,6 +97,147 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         return 0
     }
 
+    # CDM merge with fallback to the last CDM data that merged successfully.
+    #
+    # Each successful merge snapshots the CDM data it used, plus the cdm_metadata.json it was
+    # merged with, to $CDM_LAST_GOOD_HOME/<cohort>. If the CDM download or the merge fails,
+    # the merge is retried with that snapshot's data, as long as the date in its
+    # .snapshot_date is at most $CDM_LAST_GOOD_MAX_AGE_DAYS days old. merge-cdm-data.sh only
+    # writes to the study directory on success, so a failed attempt leaves nothing behind.
+    # If there is no usable snapshot or the retry also fails, CDM_MERGE_FAIL is set and
+    # the CDM MERGE GATE blocks all DMP portal imports.
+    #
+    # Every step that adds CDM metadata headers (these merges, MSKSOLIDHEME, the affiliate
+    # and SCLC subsets) uses $CDM_METADATA_FILE, chosen once by select_cdm_metadata_file:
+    # the live cdm_metadata.json if it is usable, otherwise the newest usable snapshot copy.
+    #
+    # The snapshots live outside $MSK_CHORD_DATA_HOME because the msk-chord S3 download
+    # syncs that directory with --delete. Until the first successful merge on a server,
+    # there is no snapshot to fall back on; seed $CDM_LAST_GOOD_HOME/<cohort> by hand from
+    # a known-good CDM deliverable, with a known-good cdm_metadata.json, and write the
+    # date of that CDM data (YYYY-MM-DD) to .snapshot_date, if needed.
+    #
+    # Override the age limit by exporting CDM_LAST_GOOD_MAX_AGE_DAYS (e.g. in
+    # automation-environment.sh); it must be a positive integer.
+    #
+    # Args:
+    #   $1  cohort       CDM cohort name (directory under $MSK_CHORD_DATA_HOME)
+    #   $2  study_home   Study directory to merge CDM data into
+    #   $3  s3_path      S3 prefix for the study in mskimpact-databricks
+    #   $4  label        Name used in alerts (e.g. MSKIMPACT)
+    function merge_cdm_with_fallback() {
+        local cohort="$1"
+        local study_home="$2"
+        local s3_path="$3"
+        local label="$4"
+        local current_cdm_dir="$MSK_CHORD_DATA_HOME/$cohort"
+        local last_good_dir="$CDM_LAST_GOOD_HOME/$cohort"
+        local snapshot_date_file="$last_good_dir/.snapshot_date"
+
+        if [ $CDM_DOWNLOAD_FAIL -eq 0 ] ; then
+            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$current_cdm_dir" "$study_home" "$study_home" "$CDM_METADATA_FILE" ; then
+                # Snapshot the CDM data that merged successfully. A failed snapshot is not
+                # fatal: tonight's merge succeeded, only a future fallback is affected.
+                if ! snapshot_last_good_cdm "$current_cdm_dir" "$last_good_dir" ; then
+                    sendPreImportFailureMessageMskPipelineLogsSlack "Warning: could not snapshot last-good CDM data for $label"
+                fi
+                echo "pushing $cohort CDM data to S3"
+                upload_to_s3 "$study_home" "$s3_path" "mskimpact-databricks"
+                return 0
+            fi
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for $label"
+        fi
+
+        local snapshot_date=$(cat "$snapshot_date_file" 2>/dev/null)
+        local snapshot_age_days=$(cdm_snapshot_age_days "$snapshot_date")
+        if [ -n "$snapshot_date" ] && [ -z "$snapshot_age_days" ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Could not compute the age of the last-good CDM snapshot for $label (date '$snapshot_date', using $PYTHON3_BINARY); not using it"
+        fi
+        if [ -n "$snapshot_age_days" ] && [ $snapshot_age_days -le $CDM_LAST_GOOD_MAX_AGE_DAYS ] ; then
+            echo "retrying CDM merge for $label with last-good CDM data from $snapshot_date"
+            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$last_good_dir" "$study_home" "$study_home" "$CDM_METADATA_FILE" ; then
+                CDM_FALLBACK_USED="$CDM_FALLBACK_USED $label($snapshot_date)"
+                sendPreImportFailureMessageMskPipelineLogsSlack "CDM merge for $label used last-good CDM data from $snapshot_date - fix the CDM data before it is more than $CDM_LAST_GOOD_MAX_AGE_DAYS days old"
+                echo "pushing $cohort CDM data (last-good fallback) to S3"
+                upload_to_s3 "$study_home" "$s3_path" "mskimpact-databricks"
+                return 0
+            fi
+            echo "CDM merge for $label also failed with last-good CDM data from $snapshot_date"
+        else
+            echo "no last-good CDM data at most $CDM_LAST_GOOD_MAX_AGE_DAYS days old for $label (snapshot date: ${snapshot_date:-none})"
+        fi
+
+        CDM_MERGE_FAIL=1
+        CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS $label"
+        return 1
+    }
+
+    # Replace $2 with a snapshot of the CDM data in $1 plus $CDM_METADATA_FILE, dated today.
+    # The new snapshot is built next to the old one and swapped in only once complete, so a
+    # failure partway leaves the previous snapshot untouched.
+    function snapshot_last_good_cdm() {
+        local source_dir="$1"
+        local last_good_dir="$2"
+        local tmp_dir="$last_good_dir.tmp"
+        local old_dir="$last_good_dir.old"
+        rm -rf "$tmp_dir" "$old_dir"
+        mkdir -p "$tmp_dir" \
+            && rsync -a "$source_dir/" "$tmp_dir/" \
+            && cp -p "$CDM_METADATA_FILE" "$tmp_dir/cdm_metadata.json" \
+            && date +%F > "$tmp_dir/.snapshot_date" \
+            || { rm -rf "$tmp_dir" ; return 1 ; }
+        if [ -d "$last_good_dir" ] ; then
+            mv "$last_good_dir" "$old_dir" || { rm -rf "$tmp_dir" ; return 1 ; }
+        fi
+        mv "$tmp_dir" "$last_good_dir" || return 1
+        rm -rf "$old_dir"
+    }
+
+    # Print how many days old a YYYY-MM-DD date is; print nothing if it is not a valid date or
+    # python3 fails (needs 3.7+ for fromisoformat). Errors go to the log, not /dev/null.
+    function cdm_snapshot_age_days() {
+        [ -n "$1" ] || return 0
+        $PYTHON3_BINARY -c 'import datetime, sys; print((datetime.date.today() - datetime.date.fromisoformat(sys.argv[1])).days)' "$1"
+    }
+
+    # True if $1 is a usable cdm_metadata.json: ASCII only (the metadata header script runs
+    # on Python 2 and cannot write anything else), valid JSON, every entry has the fields
+    # add_clinical_attribute_metadata_headers.py reads, and every DATATYPE is one cBioPortal
+    # accepts.
+    function cdm_metadata_file_is_valid() {
+        [ -f "$1" ] || return 1
+        $PYTHON3_BINARY -c 'import json, sys; raw = open(sys.argv[1], "rb").read(); raw.decode("ascii"); d = json.loads(raw); fields = {"DISPLAY_NAME", "DESCRIPTIONS", "DATATYPE", "ATTRIBUTE_TYPE", "PRIORITY"}; ok = isinstance(d, dict) and len(d) > 0 and all(isinstance(v, dict) and fields <= set(v) and v["DATATYPE"] in ("STRING", "NUMBER", "BOOLEAN") for v in d.values()); sys.exit(0 if ok else 1)' "$1" > /dev/null 2>&1
+    }
+
+    # Set CDM_METADATA_FILE for every CDM metadata header step in this run: the live
+    # cdm_metadata.json if usable, otherwise a copy of the newest usable snapshot copy
+    # (copied out, because snapshots are replaced during the run).
+    function select_cdm_metadata_file() {
+        local live_metadata_file="$PORTAL_HOME/scripts/cdm_metadata.json"
+        CDM_METADATA_FILE="$live_metadata_file"
+        if cdm_metadata_file_is_valid "$live_metadata_file" ; then
+            return 0
+        fi
+        local best_file=""
+        local best_date=""
+        local candidate candidate_date
+        for candidate in "$CDM_LAST_GOOD_HOME"/*/cdm_metadata.json ; do
+            [ -f "$candidate" ] || continue
+            candidate_date=$(cat "$(dirname "$candidate")/.snapshot_date" 2>/dev/null)
+            if cdm_metadata_file_is_valid "$candidate" && [[ "$candidate_date" > "$best_date" ]] ; then
+                best_file="$candidate"
+                best_date="$candidate_date"
+            fi
+        done
+        if [ -n "$best_file" ] && cp -p "$best_file" "$MSK_DMP_TMPDIR/cdm_metadata.selected.json" ; then
+            CDM_METADATA_FILE="$MSK_DMP_TMPDIR/cdm_metadata.selected.json"
+            CDM_METADATA_FALLBACK="$best_date"
+            sendPreImportFailureMessageMskPipelineLogsSlack "$live_metadata_file is not usable (not ASCII-only, invalid JSON, missing fields, or an invalid DATATYPE); using its last-good copy from $best_date for this run - fix it ASAP"
+        else
+            sendPreImportFailureMessageMskPipelineLogsSlack "$live_metadata_file is not usable and there is no usable last-good copy; CDM merges will fail"
+        fi
+    }
+
     ## STATUS FLAGS
 
     # Flags indicating whether a study can be updated
@@ -132,6 +273,22 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     MSK_RALPHLAUREN_SUBSET_FAIL=0
     MSK_RIKENGENESISJAPAN_SUBSET_FAIL=0
     SCLC_MSKIMPACT_SUBSET_FAIL=0
+
+    # CDM merge status (see merge_cdm_with_fallback). CDM clinical data is required:
+    # CDM_MERGE_FAIL is set when a cohort could not be merged with current or last-good
+    # CDM data, and then all DMP portal imports are blocked (see CDM MERGE GATE below).
+    CDM_DOWNLOAD_FAIL=0
+    CDM_MERGE_FAIL=0
+    CDM_MERGE_FAILED_STEPS=""
+    CDM_FALLBACK_USED=""
+    CDM_METADATA_FILE="$PORTAL_HOME/scripts/cdm_metadata.json"
+    CDM_METADATA_FALLBACK=""
+    CDM_LAST_GOOD_HOME="$PORTAL_DATA_HOME/cdm-last-good"
+    CDM_LAST_GOOD_MAX_AGE_DAYS="${CDM_LAST_GOOD_MAX_AGE_DAYS:-7}"
+    if ! [[ "$CDM_LAST_GOOD_MAX_AGE_DAYS" =~ ^[1-9][0-9]*$ ]] ; then
+        echo "Invalid CDM_LAST_GOOD_MAX_AGE_DAYS '$CDM_LAST_GOOD_MAX_AGE_DAYS' (must be a positive integer), using 7"
+        CDM_LAST_GOOD_MAX_AGE_DAYS=7
+    fi
 
     GENERATE_MASTERLIST_FAIL=0
 
@@ -763,46 +920,24 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     #--------------------------------------------------------------
-    # CDM Fetch is optional -- does not break import if it fails, but will send notif
+    # CDM Fetch and merge are required: a failure here does not stop processing. Each cohort
+    # falls back to its last-good CDM data (see merge_cdm_with_fallback); a cohort with no
+    # usable fallback sets CDM_MERGE_FAIL, which blocks all DMP portal imports (see CDM MERGE
+    # GATE below) so the portal keeps its current studies instead of dropping CDM columns.
+
+    select_cdm_metadata_file
 
     echo "fetching CDM clinical demographics & timeline updates from S3..."
-    download_from_s3 "$MSK_CHORD_DATA_HOME" "msk-chord" "cdm-deliverable"
-
-    if [ $? -gt 0 ] ; then
+    # try_download_from_s3 returns nonzero on failure; download_from_s3 would exit the whole fetch
+    if ! try_download_from_s3 "$MSK_CHORD_DATA_HOME" "msk-chord" "cdm-deliverable" ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
-    else
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact $MSK_CHORD_DATA_HOME/mskimpact $MSK_IMPACT_DATA_HOME $MSK_IMPACT_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
-        else
-            echo "pushing mskimpact CDM data to S3"
-            upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme $MSK_CHORD_DATA_HOME/mskimpact_heme $MSK_HEMEPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
-        else
-            echo "pushing hemepact CDM data to S3"
-            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher $MSK_CHORD_DATA_HOME/mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
-        else
-            echo "pushing mskarcher CDM data to S3"
-            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess $MSK_CHORD_DATA_HOME/mskaccess $MSK_ACCESS_DATA_HOME $MSK_ACCESS_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
-        else
-            echo "pushing mskaccess CDM data to S3"
-            upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
-        fi
+        CDM_DOWNLOAD_FAIL=1
     fi
+
+    merge_cdm_with_fallback mskimpact $MSK_IMPACT_DATA_HOME "mskimpact" "MSKIMPACT"
+    merge_cdm_with_fallback mskimpact_heme $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "HEMEPACT"
+    merge_cdm_with_fallback mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "ARCHER"
+    merge_cdm_with_fallback mskaccess $MSK_ACCESS_DATA_HOME "mskaccess" "ACCESS"
 
     downloadFromS3AllStudies
 
@@ -830,7 +965,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 merge_biobank_clinical_data "$MSK_ARCHER_DATA_HOME"
 
                 # add metadata headers and overrides before importing
-                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical* -i $PORTAL_HOME/scripts/cdm_metadata.json
+                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical* -i "$CDM_METADATA_FILE"
                 if [ $? -gt 0 ] ; then
                     echo "Error: Adding metadata headers for UNLINKED_ARCHER failed! Study will not be updated in portal."
                     downloadFromS3AllStudies
@@ -906,8 +1041,8 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         merge_biobank_clinical_data "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme"
 
         # add metadata headers and overrides before importing
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -i "$CDM_METADATA_FILE"
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt -i "$CDM_METADATA_FILE"
         if [ $? -gt 0 ] ; then
           echo "Error: Adding metadata headers for MSKSOLIDHEME failed! Study will not be updated in portal."
         else
@@ -969,7 +1104,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # subset the mixedpact study for Queens Cancer Center, Lehigh Valley, Kings County Cancer Center, Miami Cancer Institute, and Hartford Health Care
 
     # KINGSCOUNTY subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_kingscounty -o=$MSK_KINGS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Kings County Cancer Center" -s=$MSK_DMP_TMPDIR/kings_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_kingscounty -o=$MSK_KINGS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Kings County Cancer Center" -s=$MSK_DMP_TMPDIR/kings_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Kings County subset failed! Study will not be updated in the portal."
         MSK_KINGS_SUBSET_FAIL=1
@@ -997,7 +1132,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # LEHIGHVALLEY subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_lehighvalley -o=$MSK_LEHIGH_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Lehigh Valley Health Network" -s=$MSK_DMP_TMPDIR/lehigh_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_lehighvalley -o=$MSK_LEHIGH_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Lehigh Valley Health Network" -s=$MSK_DMP_TMPDIR/lehigh_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Lehigh Valley subset failed! Study will not be updated in the portal."
         MSK_LEHIGH_SUBSET_FAIL=1
@@ -1025,7 +1160,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # QUEENSCANCERCENTER subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_queenscancercenter -o=$MSK_QUEENS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Queens Cancer Center,Queens Hospital Cancer Center" -s=$MSK_DMP_TMPDIR/queens_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_queenscancercenter -o=$MSK_QUEENS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Queens Cancer Center,Queens Hospital Cancer Center" -s=$MSK_DMP_TMPDIR/queens_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Queens Cancer Center subset failed! Study will not be updated in the portal."
         MSK_QUEENS_SUBSET_FAIL=1
@@ -1053,7 +1188,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # MIAMICANCERINSTITUTE subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_miamicancerinstitute -o=$MSK_MCI_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Miami Cancer Institute" -s=$MSK_DMP_TMPDIR/mci_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_miamicancerinstitute -o=$MSK_MCI_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Miami Cancer Institute" -s=$MSK_DMP_TMPDIR/mci_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Miami Cancer Institute subset failed! Study will not be updated in the portal."
         MSK_MCI_SUBSET_FAIL=1
@@ -1081,7 +1216,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # HARTFORDHEALTHCARE subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_hartfordhealthcare -o=$MSK_HARTFORD_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Hartford Healthcare" -s=$MSK_DMP_TMPDIR/hartford_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_hartfordhealthcare -o=$MSK_HARTFORD_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Hartford Healthcare" -s=$MSK_DMP_TMPDIR/hartford_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Hartford Healthcare subset failed! Study will not be updated in the portal."
         MSK_HARTFORD_SUBSET_FAIL=1
@@ -1109,7 +1244,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # RALPHLAUREN subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_ralphlauren -o=$MSK_RALPHLAUREN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Ralph Lauren Center" -s=$MSK_DMP_TMPDIR/ralphlauren_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_ralphlauren -o=$MSK_RALPHLAUREN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Ralph Lauren Center" -s=$MSK_DMP_TMPDIR/ralphlauren_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Ralph Lauren subset failed! Study will not be updated in the portal."
         MSK_RALPHLAUREN_SUBSET_FAIL=1
@@ -1137,7 +1272,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     # RIKENGENESISJAPAN subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_rikengenesisjapan -o=$MSK_RIKENGENESISJAPAN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Riken Genesis" -s=$MSK_DMP_TMPDIR/rikengenesisjapan_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_rikengenesisjapan -o=$MSK_RIKENGENESISJAPAN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Riken Genesis" -s=$MSK_DMP_TMPDIR/rikengenesisjapan_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Tailor Med Japan subset failed! Study will not be updated in the portal."
         MSK_RIKENGENESISJAPAN_SUBSET_FAIL=1
@@ -1168,7 +1303,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "subset of mskimpact for sclc cohort"
     # Subset MSKIMPACT on ONCOTREE_CODE for SCLC cohort
 
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=sclc_mskimpact_2017 -o=$MSK_SCLC_DATA_HOME -d=$MSK_IMPACT_DATA_HOME -f="ONCOTREE_CODE=SCLC" -s=$MSK_DMP_TMPDIR/sclc_subset.txt -c=$MSK_IMPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=sclc_mskimpact_2017 -o=$MSK_SCLC_DATA_HOME -d=$MSK_IMPACT_DATA_HOME -f="ONCOTREE_CODE=SCLC" -s=$MSK_DMP_TMPDIR/sclc_subset.txt -c=$MSK_IMPACT_DATA_HOME/data_clinical_sample.txt
     if [ $? -gt 0 ] ; then
         echo "MSKIMPACT SCLC subset failed! Study will not be updated in the portal."
         SCLC_MSKIMPACT_SUBSET_FAIL=1
@@ -1196,6 +1331,22 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     #--------------------------------------------------------------
+    # CDM MERGE GATE
+    # Every DMP portal study carries CDM clinical columns, merged in from the cohorts above.
+    # If a cohort could not be merged with either current or last-good CDM data (see
+    # merge_cdm_with_fallback), importing would drop those columns, so remove all import
+    # triggers: the importer then leaves the current portal studies in place until a run
+    # where the CDM merge succeeds. Runs after every trigger is set.
+    if [ $CDM_MERGE_FAIL -gt 0 ] ; then
+        echo "CDM merge failed for:$CDM_MERGE_FAILED_STEPS -- blocking all DMP portal imports"
+        rm -f $MSK_SOLID_HEME_IMPORT_TRIGGER $MSK_ARCHER_IMPORT_TRIGGER \
+            $MSK_KINGS_IMPORT_TRIGGER $MSK_LEHIGH_IMPORT_TRIGGER $MSK_QUEENS_IMPORT_TRIGGER \
+            $MSK_MCI_IMPORT_TRIGGER $MSK_HARTFORD_IMPORT_TRIGGER $MSK_RALPHLAUREN_IMPORT_TRIGGER \
+            $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER $MSK_SCLC_IMPORT_TRIGGER
+        sendPreImportFailureMessageMskPipelineLogsSlack "CDM merge failed for:$CDM_MERGE_FAILED_STEPS. All DMP portal imports blocked; the portal keeps its current studies :fire: - address ASAP!"
+    fi
+
+    #--------------------------------------------------------------
     # S3 PUSH
     deleteS3IgnoredFiles "$PORTAL_DATA_HOME/dmp"
     printTimeStampedDataProcessingStepMessage "push of dmp data updates to s3 bucket"
@@ -1216,6 +1367,26 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $S3_BUCKET_PUSH_FAIL -gt 0 ] ; then
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "[URGENT] S3 PUSH FAILURE" $PIPELINES_EMAIL_LIST
+    fi
+
+    EMAIL_BODY="CDM merge failed for:$CDM_MERGE_FAILED_STEPS, with both the current CDM data and any last-good CDM data newer than $CDM_LAST_GOOD_MAX_AGE_DAYS days. All DMP portal imports were blocked so that studies are not imported without CDM clinical columns; the original studies will remain on the portal. Check the fetch log and the 'CDM merge' Slack alerts, fix the cause, and re-run the fetch and import."
+    # send email if any cohort could not be merged with current or last-good CDM data
+    if [ $CDM_MERGE_FAIL -gt 0 ] ; then
+        echo -e "Sending email $EMAIL_BODY"
+        echo -e "$EMAIL_BODY" | mail -s "[URGENT] CDM MERGE FAILURE: DMP imports blocked" $PIPELINES_EMAIL_LIST
+    fi
+
+    EMAIL_BODY=""
+    if [ -n "$CDM_FALLBACK_USED" ] ; then
+        EMAIL_BODY="CDM merge failed with the current CDM data for:$CDM_FALLBACK_USED (date of the last-good CDM data used in parentheses). These cohorts were merged with that last-good CDM data instead, so their CDM clinical values are not current and patients added since then have no CDM values. Fix the CDM data before the last-good data is more than $CDM_LAST_GOOD_MAX_AGE_DAYS days old; after that, DMP portal imports are blocked. "
+    fi
+    if [ -n "$CDM_METADATA_FALLBACK" ] ; then
+        EMAIL_BODY="${EMAIL_BODY}$PORTAL_HOME/scripts/cdm_metadata.json was not usable (not ASCII-only, invalid JSON, missing fields, or an invalid DATATYPE), so the last-good copy from $CDM_METADATA_FALLBACK was used for all CDM metadata headers. Fix the live file."
+    fi
+    # send email if any cohort fell back to last-good CDM data, or the metadata file did
+    if [ -n "$EMAIL_BODY" ] ; then
+        echo -e "Sending email $EMAIL_BODY"
+        echo -e "$EMAIL_BODY" | mail -s "CDM MERGE FALLBACK: imported with last-good CDM data" $PIPELINES_EMAIL_LIST
     fi
 
     EMAIL_BODY="The MSKIMPACT study failed fetch. The original study will remain on the portal."

@@ -16,6 +16,8 @@ COHORT="$1"
 CDM_DATA_DIR="$2"
 MERGE_DIR="$3"
 OUTPUT_DIR="$4"
+# Optional: clinical attribute metadata file used for the merged files' metadata headers
+CDM_METADATA_FILE="${5:-$PORTAL_HOME/scripts/cdm_metadata.json}"
 
 function check_args() {
     if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
@@ -28,14 +30,20 @@ function check_args() {
         echo "`date`: Unable to locate required data directories, exiting..."
         exit 1
     fi
+
+    if [ ! -f "$CDM_METADATA_FILE" ] ; then
+        echo "`date`: Unable to locate CDM metadata file $CDM_METADATA_FILE, exiting..."
+        exit 1
+    fi
 }
 
 function usage {
-    echo "merge-cdm-data.sh \$COHORT_ID \$CDM_DATA_DIR \$MERGE_DIR \$OUTPUT_DIR"
+    echo "merge-cdm-data.sh \$COHORT_ID \$CDM_DATA_DIR \$MERGE_DIR \$OUTPUT_DIR [\$CDM_METADATA_FILE]"
     echo -e "\t\$COHORT_ID                      one of: ['mskimpact', 'mskimpact_heme', 'mskaccess', 'mskarcher']"
     echo -e "\t\$CDM_DATA_DIR                   path to directory containing CDM data for given cohort"
     echo -e "\t\$MERGE_DIR                      path to directory containing study to merge with"
     echo -e "\t\$OUTPUT_DIR                     merged output will be written to this directory"
+    echo -e "\t\$CDM_METADATA_FILE              optional: clinical attribute metadata json (default: \$PORTAL_HOME/scripts/cdm_metadata.json)"
 }
 
 function validate_sample_file() {
@@ -57,7 +65,7 @@ function merge_cdm_data() {
         echo "Error: Unable to merge CDM and $COHORT clinical files"
         exit 1
     else
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $TMP_PROCESSING_DIRECTORY/data_clinical*.txt -i "$CDM_METADATA_FILE"
         if [ $? -gt 0 ] ; then
             echo "Unable to add metadata headers to merged CDM and $COHORT clinical files"
             exit 1
