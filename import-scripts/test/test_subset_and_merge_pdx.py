@@ -344,7 +344,9 @@ class TestSubsetAndMergePDXStudies(unittest.TestCase):
             for case_list_filename in expected_case_lists:
                 expected_file = expected_case_lists[case_list_filename]
                 actual_file = actual_case_lists[case_list_filename]
-                self.assertTrue(self.sort_and_compare_files(actual_file, expected_file), "Expected and actual case list files differ for destination study '%s': %s" % (destination, case_list_filename))
+                with open(actual_file) as actual, open(expected_file) as expected:
+                    self.assertEqual(expected.read(), actual.read(),
+                                     "Case list differs for %s: %s" % (destination, case_list_filename))
 
     def get_all_case_list_files_in_directory(self, case_list_directory):
         case_list_files = {}

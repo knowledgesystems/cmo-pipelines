@@ -1,5 +1,5 @@
 # run all unit tests with:
-#     import-scripts> python -m unittest discover test
+#     import-scripts> python3 -m unittest discover test-py3
 #
 # Author: Manda Wilson
 
@@ -7,7 +7,7 @@ import unittest
 import os.path
 import tempfile
 import shutil
-import filecmp
+from pathlib import Path
 
 from generate_case_lists import *
 
@@ -66,7 +66,7 @@ class TestGenerateCaseLists(unittest.TestCase):
     def test_generate_case_lists(self):
         # confirm we don't have any files in temp directory yet
         all_files_in_temp_dir = [f for f in os.listdir(self.temp_dir) if os.path.isfile(os.path.join(self.temp_dir, f))]
-        self.assertEquals(0, len(all_files_in_temp_dir), msg="Expecting no files in '%s' but found %d" % (self.temp_dir, len(all_files_in_temp_dir)))
+        self.assertEqual(0, len(all_files_in_temp_dir), msg="Expecting no files in '%s' but found %d" % (self.temp_dir, len(all_files_in_temp_dir)))
 
         # generate case files in temporary directory
         generate_case_lists(self.case_list_config_file, self.temp_dir, self.study_dir, "TESTING_STUDY", False, False)
@@ -77,16 +77,37 @@ class TestGenerateCaseLists(unittest.TestCase):
             "cases_sequenced.txt", # generally union of cases but in this case it is only sequenced_samples.txt (which replaces data_mutations_extended.txt)
             "cases_cna.txt", # single file data_CNA.txt
             "cases_cnaseq.txt"] # intersection of cases from data_CNA.txt and sequenced_samples.txt
-        self.assertEquals(sorted(expected_files), sorted(all_files_in_temp_dir))
+        self.assertEqual(sorted(expected_files), sorted(all_files_in_temp_dir))
 
         # check each file against expected version
         for expected_file in expected_files:
             actual_file_full_path = os.path.join(self.temp_dir, expected_file)
             expected_file_full_path = os.path.join(self.study_dir, "expected_" + expected_file)
-            actual_file_contents = ""
-            with open(actual_file_full_path, 'r') as actual_file:
-                actual_file_contents = actual_file.read()
-            self.assertTrue(filecmp.cmp(actual_file_full_path, expected_file_full_path), msg="Actual file '%s' differs from '%s' expected file.  Actual file contains: \"%s\"" % (actual_file_full_path, expected_file_full_path, actual_file_contents))
+            with open(actual_file_full_path) as actual_file, open(expected_file_full_path) as expected_file:
+                self.assertEqual(expected_file.read(), actual_file.read())
+
+    def test_configuration_names_and_descriptions_trim_surrounding_spaces(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'data.txt').write_text('SAMPLE_ID\nS1\n')
+            config = root / 'config.tsv'
+            config.write_text('\t'.join(CASE_LIST_CONFIG_HEADER_COLUMNS) + '\n' +
+                              'cases.txt\tdata.txt\t<CANCER_STUDY>_all\tall_cases_in_study\t'
+                              '<CANCER_STUDY>\t Name \t Description \n')
+            generate_case_lists(str(config), str(root), str(root), 'study')
+            self.assertIn('case_list_name: Name\n', (root / 'cases.txt').read_text())
+            self.assertIn('case_list_description: Description\n', (root / 'cases.txt').read_text())
+
+    def test_staging_filename_spaces_are_trimmed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'data.txt').write_text('SAMPLE_ID\nS1\n')
+            config = root / 'config.tsv'
+            config.write_text('\t'.join(CASE_LIST_CONFIG_HEADER_COLUMNS) + '\n' +
+                              'cases.txt\t data.txt \t<CANCER_STUDY>_all\tall_cases_in_study\t'
+                              '<CANCER_STUDY>\tName\tDescription\n')
+            generate_case_lists(str(config), str(root), str(root), 'study')
+            self.assertIn('case_list_ids: S1\n', (root / 'cases.txt').read_text())
 
     @classmethod
     def tearDownClass(cls):
