@@ -150,6 +150,9 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
         local snapshot_date=$(cat "$snapshot_date_file" 2>/dev/null)
         local snapshot_age_days=$(cdm_snapshot_age_days "$snapshot_date")
+        if [ -n "$snapshot_date" ] && [ -z "$snapshot_age_days" ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Could not compute the age of the last-good CDM snapshot for $label (date '$snapshot_date', using $PYTHON3_BINARY); not using it"
+        fi
         if [ -n "$snapshot_age_days" ] && [ $snapshot_age_days -le $CDM_LAST_GOOD_MAX_AGE_DAYS ] ; then
             echo "retrying CDM merge for $label with last-good CDM data from $snapshot_date"
             if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$last_good_dir" "$study_home" "$study_home" "$CDM_METADATA_FILE" ; then
@@ -190,10 +193,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         rm -rf "$old_dir"
     }
 
-    # Print how many days old a YYYY-MM-DD date is; print nothing if it is not a valid date.
+    # Print how many days old a YYYY-MM-DD date is; print nothing if it is not a valid date or
+    # python3 fails (needs 3.7+ for fromisoformat). Errors go to the log, not /dev/null.
     function cdm_snapshot_age_days() {
         [ -n "$1" ] || return 0
-        $PYTHON3_BINARY -c 'import datetime, sys; print((datetime.date.today() - datetime.date.fromisoformat(sys.argv[1])).days)' "$1" 2>/dev/null
+        $PYTHON3_BINARY -c 'import datetime, sys; print((datetime.date.today() - datetime.date.fromisoformat(sys.argv[1])).days)' "$1"
     }
 
     # True if $1 is a usable cdm_metadata.json: ASCII only (the metadata header script runs
