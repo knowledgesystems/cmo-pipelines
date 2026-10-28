@@ -97,6 +97,73 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         return 0
     }
 
+    # CDM merge with fallback to the last CDM data that merged successfully.
+    #
+    # Each successful merge snapshots the CDM data it used to $CDM_LAST_GOOD_HOME/<cohort>.
+    # If the CDM download or the merge fails, the merge is retried with that snapshot, as
+    # long as it is newer than $CDM_LAST_GOOD_MAX_AGE_DAYS days. merge-cdm-data.sh only
+    # writes to the study directory on success, so a failed attempt leaves nothing behind.
+    # If there is no usable snapshot or the retry also fails, CDM_MERGE_FAIL is set and
+    # the CDM MERGE GATE blocks all DMP portal imports.
+    #
+    # The snapshots live outside $MSK_CHORD_DATA_HOME because the msk-chord S3 download
+    # syncs that directory with --delete. Until the first successful merge on a server,
+    # there is no snapshot to fall back on; seed $CDM_LAST_GOOD_HOME/<cohort> by hand from
+    # a known-good CDM deliverable (and write the date to .snapshot_date) if needed.
+    #
+    # Override the age limit by exporting CDM_LAST_GOOD_MAX_AGE_DAYS (e.g. in
+    # automation-environment.sh); it must be a positive integer.
+    #
+    # Args:
+    #   $1  cohort       CDM cohort name (directory under $MSK_CHORD_DATA_HOME)
+    #   $2  study_home   Study directory to merge CDM data into
+    #   $3  s3_path      S3 prefix for the study in mskimpact-databricks
+    #   $4  label        Name used in alerts (e.g. MSKIMPACT)
+    function merge_cdm_with_fallback() {
+        local cohort="$1"
+        local study_home="$2"
+        local s3_path="$3"
+        local label="$4"
+        local current_cdm_dir="$MSK_CHORD_DATA_HOME/$cohort"
+        local last_good_dir="$CDM_LAST_GOOD_HOME/$cohort"
+        local snapshot_date_file="$last_good_dir/.snapshot_date"
+
+        if [ $CDM_DOWNLOAD_FAIL -eq 0 ] ; then
+            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$current_cdm_dir" "$study_home" "$study_home" ; then
+                # Snapshot the CDM data that merged successfully. A failed snapshot is not
+                # fatal: tonight's merge succeeded, only a future fallback is affected.
+                if mkdir -p "$last_good_dir" && rsync -a --delete "$current_cdm_dir/" "$last_good_dir/" ; then
+                    date +%F > "$snapshot_date_file"
+                else
+                    sendPreImportFailureMessageMskPipelineLogsSlack "Warning: could not snapshot last-good CDM data for $label"
+                fi
+                echo "pushing $cohort CDM data to S3"
+                upload_to_s3 "$study_home" "$s3_path" "mskimpact-databricks"
+                return 0
+            fi
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for $label"
+        fi
+
+        if [ -f "$snapshot_date_file" ] && [ -n "$(find "$snapshot_date_file" -mtime -$CDM_LAST_GOOD_MAX_AGE_DAYS)" ] ; then
+            local snapshot_date=$(cat "$snapshot_date_file")
+            echo "retrying CDM merge for $label with last-good CDM data from $snapshot_date"
+            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$last_good_dir" "$study_home" "$study_home" ; then
+                CDM_FALLBACK_USED="$CDM_FALLBACK_USED $label($snapshot_date)"
+                sendPreImportFailureMessageMskPipelineLogsSlack "CDM merge for $label used last-good CDM data from $snapshot_date - fix the CDM data before it is more than $CDM_LAST_GOOD_MAX_AGE_DAYS days old"
+                echo "pushing $cohort CDM data (last-good fallback) to S3"
+                upload_to_s3 "$study_home" "$s3_path" "mskimpact-databricks"
+                return 0
+            fi
+            echo "CDM merge for $label also failed with last-good CDM data from $snapshot_date"
+        else
+            echo "no last-good CDM data newer than $CDM_LAST_GOOD_MAX_AGE_DAYS days for $label"
+        fi
+
+        CDM_MERGE_FAIL=1
+        CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS $label"
+        return 1
+    }
+
     ## STATUS FLAGS
 
     # Flags indicating whether a study can be updated
@@ -133,10 +200,19 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     MSK_RIKENGENESISJAPAN_SUBSET_FAIL=0
     SCLC_MSKIMPACT_SUBSET_FAIL=0
 
-    # Set if the CDM data download or any cohort's CDM merge fails. CDM clinical data is
-    # required: if set, all DMP portal imports are blocked (see CDM MERGE GATE below).
+    # CDM merge status (see merge_cdm_with_fallback). CDM clinical data is required:
+    # CDM_MERGE_FAIL is set when a cohort could not be merged with current or last-good
+    # CDM data, and then all DMP portal imports are blocked (see CDM MERGE GATE below).
+    CDM_DOWNLOAD_FAIL=0
     CDM_MERGE_FAIL=0
     CDM_MERGE_FAILED_STEPS=""
+    CDM_FALLBACK_USED=""
+    CDM_LAST_GOOD_HOME="$PORTAL_DATA_HOME/cdm-last-good"
+    CDM_LAST_GOOD_MAX_AGE_DAYS="${CDM_LAST_GOOD_MAX_AGE_DAYS:-7}"
+    if ! [[ "$CDM_LAST_GOOD_MAX_AGE_DAYS" =~ ^[1-9][0-9]*$ ]] ; then
+        echo "Invalid CDM_LAST_GOOD_MAX_AGE_DAYS '$CDM_LAST_GOOD_MAX_AGE_DAYS' (must be a positive integer), using 7"
+        CDM_LAST_GOOD_MAX_AGE_DAYS=7
+    fi
 
     GENERATE_MASTERLIST_FAIL=0
 
@@ -768,58 +844,22 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     fi
 
     #--------------------------------------------------------------
-    # CDM Fetch and merge are required: a failure here does not stop processing, but sets
-    # CDM_MERGE_FAIL, which blocks all DMP portal imports (see CDM MERGE GATE below) so the
-    # portal keeps its current studies instead of importing them without CDM columns
+    # CDM Fetch and merge are required: a failure here does not stop processing. Each cohort
+    # falls back to its last-good CDM data (see merge_cdm_with_fallback); a cohort with no
+    # usable fallback sets CDM_MERGE_FAIL, which blocks all DMP portal imports (see CDM MERGE
+    # GATE below) so the portal keeps its current studies instead of dropping CDM columns.
 
     echo "fetching CDM clinical demographics & timeline updates from S3..."
     download_from_s3 "$MSK_CHORD_DATA_HOME" "msk-chord" "cdm-deliverable"
-
     if [ $? -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
-        CDM_MERGE_FAIL=1
-        CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS CDM-download"
-    else
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact $MSK_CHORD_DATA_HOME/mskimpact $MSK_IMPACT_DATA_HOME $MSK_IMPACT_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
-            CDM_MERGE_FAIL=1
-            CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS MSKIMPACT"
-        else
-            echo "pushing mskimpact CDM data to S3"
-            upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme $MSK_CHORD_DATA_HOME/mskimpact_heme $MSK_HEMEPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
-            CDM_MERGE_FAIL=1
-            CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS HEMEPACT"
-        else
-            echo "pushing hemepact CDM data to S3"
-            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher $MSK_CHORD_DATA_HOME/mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
-            CDM_MERGE_FAIL=1
-            CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS ARCHER"
-        else
-            echo "pushing mskarcher CDM data to S3"
-            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess $MSK_CHORD_DATA_HOME/mskaccess $MSK_ACCESS_DATA_HOME $MSK_ACCESS_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
-            CDM_MERGE_FAIL=1
-            CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS ACCESS"
-        else
-            echo "pushing mskaccess CDM data to S3"
-            upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
-        fi
+        CDM_DOWNLOAD_FAIL=1
     fi
+
+    merge_cdm_with_fallback mskimpact $MSK_IMPACT_DATA_HOME "mskimpact" "MSKIMPACT"
+    merge_cdm_with_fallback mskimpact_heme $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "HEMEPACT"
+    merge_cdm_with_fallback mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "ARCHER"
+    merge_cdm_with_fallback mskaccess $MSK_ACCESS_DATA_HOME "mskaccess" "ACCESS"
 
     downloadFromS3AllStudies
 
@@ -1215,9 +1255,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     #--------------------------------------------------------------
     # CDM MERGE GATE
     # Every DMP portal study carries CDM clinical columns, merged in from the cohorts above.
-    # If the CDM download or any cohort's merge failed, importing would drop those columns,
-    # so remove all import triggers: the importer then leaves the current portal studies in
-    # place until a run where the CDM merge succeeds. Runs after every trigger is set.
+    # If a cohort could not be merged with either current or last-good CDM data (see
+    # merge_cdm_with_fallback), importing would drop those columns, so remove all import
+    # triggers: the importer then leaves the current portal studies in place until a run
+    # where the CDM merge succeeds. Runs after every trigger is set.
     if [ $CDM_MERGE_FAIL -gt 0 ] ; then
         echo "CDM merge failed for:$CDM_MERGE_FAILED_STEPS -- blocking all DMP portal imports"
         rm -f $MSK_SOLID_HEME_IMPORT_TRIGGER $MSK_ARCHER_IMPORT_TRIGGER \
@@ -1250,11 +1291,18 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo -e "$EMAIL_BODY" | mail -s "[URGENT] S3 PUSH FAILURE" $PIPELINES_EMAIL_LIST
     fi
 
-    EMAIL_BODY="CDM merge failed for:$CDM_MERGE_FAILED_STEPS. All DMP portal imports were blocked so that studies are not imported without CDM clinical columns; the original studies will remain on the portal. Check the fetch log and the 'CDM merge' Slack alerts, fix the cause, and re-run the fetch and import."
-    # send email if the CDM download or any CDM merge failed
+    EMAIL_BODY="CDM merge failed for:$CDM_MERGE_FAILED_STEPS, with both the current CDM data and any last-good CDM data newer than $CDM_LAST_GOOD_MAX_AGE_DAYS days. All DMP portal imports were blocked so that studies are not imported without CDM clinical columns; the original studies will remain on the portal. Check the fetch log and the 'CDM merge' Slack alerts, fix the cause, and re-run the fetch and import."
+    # send email if any cohort could not be merged with current or last-good CDM data
     if [ $CDM_MERGE_FAIL -gt 0 ] ; then
         echo -e "Sending email $EMAIL_BODY"
         echo -e "$EMAIL_BODY" | mail -s "[URGENT] CDM MERGE FAILURE: DMP imports blocked" $PIPELINES_EMAIL_LIST
+    fi
+
+    EMAIL_BODY="CDM merge failed with the current CDM data for:$CDM_FALLBACK_USED (date of the last-good CDM data used in parentheses). These cohorts were merged with that last-good CDM data instead, so their CDM clinical values are not current and patients added since then have no CDM values. Fix the CDM data before the last-good data is more than $CDM_LAST_GOOD_MAX_AGE_DAYS days old; after that, DMP portal imports are blocked."
+    # send email if any cohort fell back to last-good CDM data
+    if [ -n "$CDM_FALLBACK_USED" ] ; then
+        echo -e "Sending email $EMAIL_BODY"
+        echo -e "$EMAIL_BODY" | mail -s "CDM MERGE FALLBACK: imported with last-good CDM data" $PIPELINES_EMAIL_LIST
     fi
 
     EMAIL_BODY="The MSKIMPACT study failed fetch. The original study will remain on the portal."
