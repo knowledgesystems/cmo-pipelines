@@ -56,6 +56,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -347,5 +348,19 @@ public class BatchConfiguration {
         factory.setTransactionManager(getTransactionManager());
         factory.afterPropertiesSet();
         return factory.getObject();
+    }
+
+    /**
+     * Launch jobs against the SQLite-backed redcapJobRepository that the jobs and steps use.
+     * Spring Boot 4 batch auto-configuration without spring-boot-batch-jdbc supplies a launcher
+     * backed by an in-memory repository, so step updates could not find the job execution.
+     */
+    @Primary
+    @Bean(name = "redcapJobLauncher")
+    public JobLauncher getJobLauncher(@Qualifier("redcapJobRepository") JobRepository jobRepository) throws Exception {
+        TaskExecutorJobLauncher jobLauncher = new TaskExecutorJobLauncher();
+        jobLauncher.setJobRepository(jobRepository);
+        jobLauncher.afterPropertiesSet();
+        return jobLauncher;
     }
 }
