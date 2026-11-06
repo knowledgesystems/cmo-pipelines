@@ -28,7 +28,7 @@ declare -A HOST_TO_SERVICE_MAP_GREEN=() # see prior comment
 declare -A HOST_TO_INGRESS_NAME_MAP=() # for each host connected to the database, the name of the ingress resource it uses
 declare -A HOST_TO_INGRESS_TYPE_MAP=() # the type of each ingress resource mapped (either 'ingress' or 'ingressroute')
 declare -A HOST_TO_INGRESS_YAML_FILEPATH_MAP=() # relative path from KS_K8S_DEPL_REPO_DIRPATH to a yaml file specifying the primary ingress resource related to the host
-declare -a POST_SWAP_CRONJOB_LIST=() # kubernetes cronjobs to run once right after the switch, e.g. jobs that follow the newly live database
+declare -a POST_SWAP_HOOKS=() # cronjobs whose job template is run once, without waiting, right after the switch, e.g. jobs that follow the newly live database
 #######################################
 # Other Global Variable List
 #######################################
@@ -127,11 +127,11 @@ function load_color_swap_config() {
     else
         ARGOCD_APP_LIST=()
     fi
-    # optional : cronjobs started once right after the switch.
-    if [ "$("$YQ_BINARY" -r '.post_swap_cronjob_list | type' "$config_path")" == "!!seq" ] ; then
-        read_array_from_yaml POST_SWAP_CRONJOB_LIST "$config_path" '.post_swap_cronjob_list'
+    # optional : hooks run right after the switch, each a cronjob whose job template is run once.
+    if [ "$("$YQ_BINARY" -r '.post_swap_hooks | type' "$config_path")" == "!!seq" ] ; then
+        read_array_from_yaml POST_SWAP_HOOKS "$config_path" '.post_swap_hooks'
     else
-        POST_SWAP_CRONJOB_LIST=()
+        POST_SWAP_HOOKS=()
     fi
     if [ "$WARM_CACHES" == "true" ]; then
         CACHE_WARMING_POD_LIST_FILEPATH=$(read_scalar_from_yaml "$config_path" '.cache_warming_pod_list_filepath')
@@ -1019,18 +1019,19 @@ function check_in_changes_to_kubernetes_into_github() {
 #   once the ingress traffic switch is going to happen, problems are reported but script completion is attempted despite errors
 #######################################
 #######################################
-# start one job from each cronjob in POST_SWAP_CRONJOB_LIST, so work that
-# follows the live database (such as cbioportal-go's mirror of it) starts
-# now instead of at the cronjob's next scheduled run. A failure to start a
+# run the post-swap hooks: start one job from the template of each cronjob in
+# POST_SWAP_HOOKS, without waiting for it, so work that follows the live
+# database (such as cbioportal-go's mirror of it) starts now instead of at the
+# cronjob's next scheduled run. A failure to start a
 # job is reported but does not fail the swap.
 # Globals:
 #   CLUSTER_KUBECONFIG
-#   POST_SWAP_CRONJOB_LIST
+#   POST_SWAP_HOOKS
 #######################################
-function start_post_swap_cronjobs() {
+function run_post_swap_hooks() {
     local cronjob
     local job_name
-    for cronjob in "${POST_SWAP_CRONJOB_LIST[@]}" ; do
+    for cronjob in "${POST_SWAP_HOOKS[@]}" ; do
         job_name="${cronjob:0:45}-swap-$(date +%s)"
         if kubectl --kubeconfig $CLUSTER_KUBECONFIG create job --from=cronjob/"$cronjob" "$job_name" ; then
             echo "started job $job_name from cronjob $cronjob"
@@ -1093,7 +1094,7 @@ function main() {
     fi
     switchover_ingress_rules_to_destination_database_deployment $DESTINATION_COLOR
     /data/portal-cron/scripts/set_update_process_state.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" complete
-    start_post_swap_cronjobs
+    run_post_swap_hooks
     local SET_EXTRA_CONFIGMAP_COLOR_SCRIPT="/data/portal-cron/scripts/set_extra_cbioportal_configmap_color.sh"
     local portal_db_name=''
     for db_name in msk triage genie public ; do

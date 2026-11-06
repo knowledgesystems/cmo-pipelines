@@ -47,11 +47,12 @@ host_to_ingress_type_map:
     www.cbioportal.org: ingressroute
     beta.cbioportal.org: ingress
     master.cbioportal.org: ingress
-# optional : cronjobs to start once right after the switch. cbioportal-go's mirror
-# rebuilds go's databases from the newly live public database (about 5 minutes),
-# instead of waiting for its next hourly run.
-post_swap_cronjob_list:
-  - cbioportal-go-mirror-daily
+# optional : hooks run right after the switch. Each names a cronjob, and runs as one
+# job from that cronjob's template; the swap does not wait for it. cbioportal-go's
+# mirror rebuilds go's databases from the newly live public database (about 5
+# minutes), instead of waiting for its next hourly run.
+post_swap_hooks:
+  - cbioportal-go-mirror
 host_to_ingress_yaml_filepath_map:
     www.cbioportal.org: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbio-www-ingressroute.yml
     beta.cbioportal.org: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbio-ingress.yml
