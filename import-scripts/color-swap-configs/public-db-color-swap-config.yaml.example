@@ -4,22 +4,17 @@ cluster_cfg: /data/portal-cron/pipelines-credentials/publicargocd-cluster-kubeco
 # re-enabled afterward. Omit this key for portals not yet managed by ArgoCD auto-sync.
 argocd_app_list:
   - cbioportal
-  - cbioportal-api
 blue_deployment_list:
   - cbioportal-backend-public-blue
-  - cbioportal-backend-public-api-blue
   - cbioportal-backend-public-beta-blue
   - cbioportal-backend-master-blue
 green_deployment_list:
   - cbioportal-backend-public-green
-  - cbioportal-backend-public-api-green
   - cbioportal-backend-public-beta-green
   - cbioportal-backend-master-green
 deployment_to_full_replica_count_map:
   cbioportal-backend-public-blue: 2
   cbioportal-backend-public-green: 2
-  cbioportal-backend-public-api-blue: 2
-  cbioportal-backend-public-api-green: 2
 #  cbioportal-backend-public-beta-blue: 1
 #  cbioportal-backend-public-beta-green: 1
   cbioportal-backend-public-beta-blue: 0
@@ -28,39 +23,32 @@ deployment_to_full_replica_count_map:
   cbioportal-backend-master-green: 1
 deployment_to_yaml_filepath_map:
   cbioportal-backend-public-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_blue.yaml
-  cbioportal-backend-public-api-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal-api/cbioportal_backend_public_api_blue.yaml
   cbioportal-backend-public-beta-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_beta_blue.yaml
   cbioportal-backend-master-blue: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_master_blue.yaml
   cbioportal-backend-public-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_green.yaml
-  cbioportal-backend-public-api-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal-api/cbioportal_backend_public_api_green.yaml
   cbioportal-backend-public-beta-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_public_beta_green.yaml
   cbioportal-backend-master-green: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbioportal_backend_master_green.yaml
 host_to_service_map:
   blue:
     www.cbioportal.org: cbioportal-backend-public-blue
-    api.cbioportal.org: cbioportal-backend-public-api-blue
 #    beta.cbioportal.org: cbioportal-backend-public-beta-blue
     beta.cbioportal.org: cbioportal-backend-public-beta-offline
     master.cbioportal.org: cbioportal-backend-master-blue
   green:
     www.cbioportal.org: cbioportal-backend-public-green
-    api.cbioportal.org: cbioportal-backend-public-api-green
 #    beta.cbioportal.org: cbioportal-backend-public-beta-green
     beta.cbioportal.org: cbioportal-backend-public-beta-offline
     master.cbioportal.org: cbioportal-backend-master-green
 host_to_ingress_name_map:
     www.cbioportal.org: cbioportal-www-ingressroute
-    api.cbioportal.org: cbioportal-api-ingress
     beta.cbioportal.org: cbioportal-ingress
     master.cbioportal.org: cbioportal-ingress
 host_to_ingress_type_map:
     www.cbioportal.org: ingressroute
-    api.cbioportal.org: ingress
     beta.cbioportal.org: ingress
     master.cbioportal.org: ingress
 host_to_ingress_yaml_filepath_map:
     www.cbioportal.org: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbio-www-ingressroute.yml
-    api.cbioportal.org: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal-api/cbioportal-api-ingress.yaml
     beta.cbioportal.org: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbio-ingress.yml
     master.cbioportal.org: argocd/aws/203403084713/clusters/cbioportal-prod/apps/cbioportal/cbio-ingress.yml
 replica_ready_check_pause_seconds: 20
