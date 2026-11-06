@@ -1064,6 +1064,9 @@ function main() {
     fi
     switchover_ingress_rules_to_destination_database_deployment $DESTINATION_COLOR
     /data/portal-cron/scripts/set_update_process_state.sh "$MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH" complete
+    # The new color goes into the cbioportal-db-status ConfigMap. Services in the
+    # cluster that follow the switch watch it with Reloader, instead of adding
+    # steps to this script.
     local SET_EXTRA_CONFIGMAP_COLOR_SCRIPT="/data/portal-cron/scripts/set_extra_cbioportal_configmap_color.sh"
     local portal_db_name=''
     for db_name in msk triage genie public ; do

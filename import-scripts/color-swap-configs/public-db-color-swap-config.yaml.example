@@ -1,3 +1,11 @@
+# Services in the cluster that must follow the switch (such as cbioportal-go's
+# database mirror) should not be added here. After the switch,
+# transfer-deployment-color.sh sets public_db.active_color in the
+# cbioportal-db-status ConfigMap (set_extra_cbioportal_configmap_color.sh). Have
+# Reloader watch that ConfigMap instead, with the annotation
+#   configmap.reloader.stakater.com/reload: "cbioportal-db-status"
+# on the Deployment or CronJob. Reloader restarts a Deployment, or starts a Job
+# from a CronJob's template, when it changes.
 service_account: public
 cluster_cfg: /data/portal-cron/pipelines-credentials/publicargocd-cluster-kubeconfig
 # ArgoCD apps whose auto-sync/self-heal are disabled during the deployment transfer and
