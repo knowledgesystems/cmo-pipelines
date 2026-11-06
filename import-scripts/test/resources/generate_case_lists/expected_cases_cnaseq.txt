@@ -3,4 +3,4 @@ stable_id: TESTING_STUDY_cnaseq
 case_list_name: Tumor Samples with sequencing and CNA data
 case_list_description: All tumor samples that have CNA and sequencing data (2 samples)
 case_list_category: all_cases_with_mutation_and_cna_data
-case_list_ids: C2	C1
+case_list_ids: C1	C2

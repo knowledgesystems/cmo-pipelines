@@ -1,9 +1,16 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
-""" remove-duplicate-maf-variants.py
-Script to remove duplicate maf records based on the 8 key columns.
-Calculates VAF for each record and picks the record with high VAF
-Formula for VAF = t_alt_count / (t_ref_count + t_alt_count)
+"""Legacy MAF preprocessing used by Sophia and AZ before Java import.
+
+Groups records by an exact, case-sensitive match of KEY_COLUMNS. Singletons
+are copied unchanged. For duplicates, the running maximum starts at zero and
+uses Python 2 integer division: alt // (alt + ref). Each new maximum is emitted
+immediately; ties and zero quotients are omitted. Invalid counts and zero
+denominators are reported and their rows are emitted. Centers are not merged.
+
+This preserves the deployed algorithm, including its loss of duplicate groups
+with positive reference counts. It does not reliably select the largest VAF.
+Changing selection requires agreement with Calla on Sophia's intended behavior.
 """
 
 import sys
@@ -28,24 +35,24 @@ def remove_duplicate_variants(out_filename, comments, header, t_refc_index, t_al
 				#calculate VAF for each duplicate record.
 				columns = val.rstrip('\n').split('\t')
 				try:
-					VAF = int(columns[t_altc_index])/(int(columns[t_altc_index])+int(columns[t_refc_index]))
+					VAF = int(columns[t_altc_index])//(int(columns[t_altc_index])+int(columns[t_refc_index]))
 					if VAF > vaf_value:
 						vaf_value = VAF
 						vaf_ind = MAF_DATA[key].index(val)
 						outfile.append(MAF_DATA[key][vaf_ind])
 				except:
-					print >> ERROR_FILE, 'ERROR: VAF cannot be calculated for the variant : ' + key
-					print >> ERROR_FILE, 'The t_ref_count is: '+ columns[t_refc_index]+ ' and t_alt_count is: '+ columns[t_altc_index]
+					print('ERROR: VAF cannot be calculated for the variant : ' + key, file=ERROR_FILE)
+					print('The t_ref_count is: '+ columns[t_refc_index]+ ' and t_alt_count is: '+ columns[t_altc_index], file=ERROR_FILE)
 					outfile.append(val)
 		else:
 			outfile.append(MAF_DATA[key][0])
-			
+
 	datafile = open(out_filename, 'w')
 	for line in outfile:
 		datafile.write(line)
 	datafile.close()
-	print >> OUTPUT_FILE, 'MAF file with duplicate variants removed is written to: ' + out_filename +'\n'
-		
+	print('MAF file with duplicate variants removed is written to: ' + out_filename +'\n', file=OUTPUT_FILE)
+
 
 def main():
 	# get command line arguments
@@ -59,7 +66,7 @@ def main():
 
 	comments = ""
 	header = ""
-	
+
 	with open(maf_filename,'r') as maf_file:
 		for line in maf_file:
 			if line.startswith('#'):
@@ -82,7 +89,7 @@ def main():
 					MAF_DATA[reference_key] = [line]
 				else:
 					MAF_DATA[reference_key].append(line)
-	
+
 	remove_duplicate_variants(out_filename, comments, header, t_refc_index, t_altc_index)
 
 if __name__ == '__main__':
