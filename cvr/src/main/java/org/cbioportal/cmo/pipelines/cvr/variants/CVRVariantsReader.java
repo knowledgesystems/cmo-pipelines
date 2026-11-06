@@ -37,7 +37,7 @@ import org.cbioportal.cmo.pipelines.cvr.model.*;
 import java.util.*;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
-import org.springframework.batch.item.*;
+import org.springframework.batch.infrastructure.item.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**

@@ -36,9 +36,9 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXClinicalSampleDataset;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.*;
+import org.springframework.batch.infrastructure.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.*;
 
@@ -57,12 +57,12 @@ public class CRDBPDXClinicalSampleWriter implements ItemStreamWriter<String> {
     private String pdxClinicalSampleDatasetFilename;
 
     private List<String> CRDB_PDX_CLINICAL_SAMPLE_FIELD_ORDER = CRDBPDXClinicalSampleDataset.getFieldNames();
-    private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
+    private FlatFileItemWriter<String> flatFileItemWriter;
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
-        flatFileItemWriter.setLineAggregator(aggr);
+        flatFileItemWriter = new FlatFileItemWriter<>(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {

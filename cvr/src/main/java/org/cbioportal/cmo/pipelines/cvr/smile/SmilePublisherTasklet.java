@@ -13,11 +13,11 @@ import org.cbioportal.cmo.pipelines.cvr.model.CVRMergedResult;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRMetaData;
 import org.cbioportal.cmo.pipelines.cvr.model.CVRSnp;
 import org.mskcc.cmo.messaging.Gateway;
-import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.ItemStreamException;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.item.ItemStreamException;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 

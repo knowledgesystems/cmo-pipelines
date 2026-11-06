@@ -35,7 +35,7 @@ package org.mskcc.cmo.ks.crdb.pipeline;
 import java.util.*;
 import org.mskcc.cmo.ks.crdb.pipeline.model.CRDBPDXSourceToDestinationMapping;
 import org.mskcc.cmo.ks.crdb.pipeline.util.CRDBUtils;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**

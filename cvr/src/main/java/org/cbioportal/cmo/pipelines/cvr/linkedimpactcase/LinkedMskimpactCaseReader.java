@@ -42,10 +42,10 @@ import java.util.*;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.common.util.EmailUtil;
 
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -155,7 +155,7 @@ public class LinkedMskimpactCaseReader implements ItemStreamReader<LinkedMskimpa
         mapper.setLineTokenizer(tokenizer);
         mapper.setFieldSetMapper(new LinkedImpactCaseFieldSetMapper());
 
-        FlatFileItemReader<LinkedMskimpactCaseRecord> reader = new FlatFileItemReader<>();
+        FlatFileItemReader<LinkedMskimpactCaseRecord> reader = new FlatFileItemReader<>(mapper);
         reader.setResource(new FileSystemResource(stagingFile));
         reader.setLineMapper(mapper);
         reader.setLinesToSkip(1);

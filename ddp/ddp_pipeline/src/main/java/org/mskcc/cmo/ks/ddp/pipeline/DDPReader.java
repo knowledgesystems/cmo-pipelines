@@ -43,7 +43,7 @@ import jakarta.annotation.Resource;
 import java.io.*;
 import java.util.*;
 import org.apache.log4j.Logger;
-import org.springframework.batch.item.*;
+import org.springframework.batch.infrastructure.item.*;
 import org.springframework.beans.factory.annotation.*;
 
 import java.util.concurrent.CompletableFuture;

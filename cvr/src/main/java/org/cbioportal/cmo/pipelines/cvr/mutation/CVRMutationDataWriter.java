@@ -36,9 +36,9 @@ import org.cbioportal.cmo.pipelines.cvr.*;
 
 import java.io.*;
 import java.util.*;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.*;
+import org.springframework.batch.infrastructure.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
 
@@ -66,14 +66,14 @@ public class CVRMutationDataWriter implements ItemStreamWriter<String> {
     @Autowired
     private CvrSampleListUtil cvrSampleListUtil;
 
-    private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+    private FlatFileItemWriter<String> flatFileItemWriter;
 
     // Set up the writer and print the json from CVR to a file
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         File stagingFile = new File(stagingDirectory, mafFilename);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
-        flatFileItemWriter.setLineAggregator(aggr);
+        flatFileItemWriter = new FlatFileItemWriter<>(aggr);
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {

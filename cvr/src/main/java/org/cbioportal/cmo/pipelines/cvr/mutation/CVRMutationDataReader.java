@@ -42,10 +42,10 @@ import java.io.*;
 import java.util.*;
 import org.apache.log4j.Logger;
 
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.*;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
 
@@ -168,7 +168,7 @@ public class CVRMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         mapper.setLineTokenizer(tokenizer);
         mapper.setFieldSetMapper(new CVRMutationFieldSetMapper());
 
-        FlatFileItemReader<MutationRecord> reader = new FlatFileItemReader<>();
+        FlatFileItemReader<MutationRecord> reader = new FlatFileItemReader<>(mapper);
         reader.setResource(new FileSystemResource(mutationFile));
         reader.setLineMapper(mapper);
         reader.setLinesToSkip(1);

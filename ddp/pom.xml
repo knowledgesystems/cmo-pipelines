@@ -20,8 +20,9 @@
   <dependencies>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
+      <!-- version managed by spring-boot-starter-parent: jackson-annotations now
+           versions independently of jackson-core/jackson-databind -->
       <artifactId>jackson-annotations</artifactId>
-      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

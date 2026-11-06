@@ -41,10 +41,10 @@ import org.cbioportal.cmo.pipelines.cvr.model.*;
 import java.io.*;
 import java.util.*;
 import org.apache.log4j.Logger;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
 
@@ -191,7 +191,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
         DefaultLineMapper<MskimpactSeqDate> mapper = new DefaultLineMapper<>();
         mapper.setLineTokenizer(tokenizer);
         mapper.setFieldSetMapper(new MskimpactSeqDateFieldSetMapper());
-        FlatFileItemReader<MskimpactSeqDate> reader = new FlatFileItemReader<>();
+        FlatFileItemReader<MskimpactSeqDate> reader = new FlatFileItemReader<>(mapper);
         reader.setResource(new FileSystemResource(mskimpactSeqDateFile));
         reader.setLineMapper(mapper);
         reader.setLinesToSkip(1);
