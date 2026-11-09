@@ -474,6 +474,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             else
                 echo "pushing CVR germline data to s3"
                 upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
+                echo "pushing CVR germline data to mpath volume"
+                if ! aws s3 cp "$MSK_IMPACT_DATA_HOME/cvr_gml_data.json" "s3://cdsi-mpath/impact/cvr_gml_data_$(date -u +%Y%m%dT%H%M%SZ).json" --profile saml ; then
+                    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR germline upload to s3://cdsi-mpath/impact failed"
+                fi
             fi
             # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
             $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt -m $MSK_IMPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_impact.json -i mskimpact -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
@@ -545,6 +549,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             else
                 echo "uploading CVR germline data to s3"
                 upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
+                echo "pushing CVR germline data to mpath volume"
+                if ! aws s3 cp "$MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json" "s3://cdsi-mpath/heme/cvr_gml_data_$(date -u +%Y%m%dT%H%M%SZ).json" --profile saml ; then
+                    sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR germline upload to s3://cdsi-mpath/heme failed"
+                fi
             fi
             # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
             $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt -m $MSK_HEMEPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_heme.json -i mskimpact_heme -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
