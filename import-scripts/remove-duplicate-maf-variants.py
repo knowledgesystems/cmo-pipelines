@@ -10,7 +10,6 @@ denominators are reported and their rows are emitted. Centers are not merged.
 
 This preserves the deployed algorithm, including its loss of duplicate groups
 with positive reference counts. It does not reliably select the largest VAF.
-Changing selection requires agreement with Calla on Sophia's intended behavior.
 """
 
 import sys
