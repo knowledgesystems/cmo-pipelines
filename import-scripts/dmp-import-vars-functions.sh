@@ -100,12 +100,12 @@ function addCancerTypeCaseLists {
             return 1
         fi
     fi
-    # remove current case lists and run oncotree converter before creating new cancer case lists
-    rm -f $STUDY_DATA_DIRECTORY/case_lists/*
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/oncotree_code_converter.py --oncotree-url "https://oncotree.mskcc.org/" --oncotree-version $ONCOTREE_VERSION_TO_USE --clinical-file $FILEPATH_1 --force
-    $PYTHON_BINARY $PORTAL_HOME/scripts/create_case_lists_by_cancer_type.py --clinical-file-list="$CLINICAL_FILE_LIST" --output-directory="$STUDY_DATA_DIRECTORY/case_lists" --study-id="$STUDY_ID" --attribute="CANCER_TYPE"
+    # Keep existing case lists if conversion fails, and stop on any failed step.
+    "$PYTHON3_BINARY" "$PORTAL_HOME/scripts/oncotree_code_converter.py" --oncotree-url "https://oncotree.mskcc.org/" --oncotree-version "$ONCOTREE_VERSION_TO_USE" --clinical-file "$FILEPATH_1" --force || return $?
+    rm -f "$STUDY_DATA_DIRECTORY"/case_lists/* || return $?
+    "$PYTHON_BINARY" "$PORTAL_HOME/scripts/create_case_lists_by_cancer_type.py" --clinical-file-list="$CLINICAL_FILE_LIST" --output-directory="$STUDY_DATA_DIRECTORY/case_lists" --study-id="$STUDY_ID" --attribute="CANCER_TYPE" || return $?
     if [ "$STUDY_ID" == "mskimpact" ] || [ "$STUDY_ID" == "mixedpact" ] || [ "$STUDY_ID" == "msk_solid_heme" ] ; then
-       $PYTHON_BINARY $PORTAL_HOME/scripts/create_case_lists_by_cancer_type.py --clinical-file-list="$CLINICAL_FILE_LIST" --output-directory="$STUDY_DATA_DIRECTORY/case_lists" --study-id="$STUDY_ID" --attribute="PARTC_CONSENTED_12_245"
+       "$PYTHON_BINARY" "$PORTAL_HOME/scripts/create_case_lists_by_cancer_type.py" --clinical-file-list="$CLINICAL_FILE_LIST" --output-directory="$STUDY_DATA_DIRECTORY/case_lists" --study-id="$STUDY_ID" --attribute="PARTC_CONSENTED_12_245" || return $?
     fi
 }
 
