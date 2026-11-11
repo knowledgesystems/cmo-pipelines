@@ -113,7 +113,10 @@ def normalize_study(study_dir):
         return len(staged)
     finally:
         for _, temporary in staged:
-            temporary.unlink(missing_ok=True)
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
 
 
 if __name__ == "__main__":

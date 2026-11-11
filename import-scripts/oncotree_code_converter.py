@@ -135,7 +135,9 @@ def process_clinical_file(oncotree_mappings, clinical_filename, force_cancer_typ
     # Python docs: "if the keyword argument inplace=1 is passed to fileinput.input()
     # or to the FileInput constructor, the file is moved to a backup
     # file and standard output is directed to the input file"
-    f = fileinput.input(clinical_filename, inplace = 1, encoding="utf-8")
+    # Use the same locale encoding as clinicalfile_utils. Python 3.7 on the
+    # pipeline servers does not support fileinput's encoding argument.
+    f = fileinput.input(clinical_filename, inplace = 1)
     try:
         for line in f:
             line = line.rstrip('\n')
