@@ -54,18 +54,19 @@ public class SmilePublisherTasklet implements Tasklet {
         }
 
         try {
-            messagingGateway.connect();
-        } catch (Exception e) {
-            log.info("Unable to connect to SMILE, samples will not be published.");
-            return RepeatStatus.FINISHED;
-        }
-
-        try {
             // nothing to do if our reference list is empty
             if (cvrSampleListUtil.getSmileSamplesToPublishList().isEmpty()) {
                 log.info("No samples to publish to SMILE");
                 return RepeatStatus.FINISHED;
             }
+
+            try {
+                messagingGateway.connect();
+            } catch (Exception e) {
+                log.info("Unable to connect to SMILE, samples will not be published.");
+                return RepeatStatus.FINISHED;
+            }
+
             // iterate through json file and if sample id is in list of samples that were
             // consumed successfully then publish its metadata to smile
             Integer samplesPublished = loadAndPublishDmpSamplesFromJson();
