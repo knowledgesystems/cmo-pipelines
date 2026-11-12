@@ -114,11 +114,11 @@ public class BatchConfiguration {
 
     @Bean
     public Gateway messagingGateway() throws Exception {
-        try {
-            messagingGateway.connect();
-        } catch (Exception e) {
-            log.warn("Unable to connect to NATS server, no samples will be published.");
-        }
+        // NATS connection is established on demand (immediately before publishing) and
+        // closed right after, rather than held open for the lifetime of the application
+        // context - see SmilePublisherTasklet. This avoids leaving the non-daemon NATS
+        // publisher thread running (and the JVM unable to exit) if the pipeline fails
+        // before ever reaching the publish step.
         return messagingGateway;
     }
 

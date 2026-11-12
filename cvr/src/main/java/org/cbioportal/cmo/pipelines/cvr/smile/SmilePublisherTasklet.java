@@ -53,22 +53,33 @@ public class SmilePublisherTasklet implements Tasklet {
             return RepeatStatus.FINISHED;
         }
 
-        if (!messagingGateway.isConnected()) {
-            log.info("Unable to connect to SMILE, samples will not be published.");
-            return RepeatStatus.FINISHED;
-        }
+        try {
+            // nothing to do if our reference list is empty
+            if (cvrSampleListUtil.getSmileSamplesToPublishList().isEmpty()) {
+                log.info("No samples to publish to SMILE");
+                return RepeatStatus.FINISHED;
+            }
 
-        // nothing to do if our reference list is empty
-        if (cvrSampleListUtil.getSmileSamplesToPublishList().isEmpty()) {
-            log.info("No samples to publish to SMILE");
-            return RepeatStatus.FINISHED;
-        }
-        // iterate through json file and if sample id is in list of samples that were
-        // consumed successfully then publish its metadata to smile
-        Integer samplesPublished = loadAndPublishDmpSamplesFromJson();
-        log.info("Total samples published to SMILE: " + samplesPublished);
+            try {
+                messagingGateway.connect();
+            } catch (Exception e) {
+                log.info("Unable to connect to SMILE, samples will not be published.");
+                return RepeatStatus.FINISHED;
+            }
 
-        return RepeatStatus.FINISHED;
+            // iterate through json file and if sample id is in list of samples that were
+            // consumed successfully then publish its metadata to smile
+            Integer samplesPublished = loadAndPublishDmpSamplesFromJson();
+            log.info("Total samples published to SMILE: " + samplesPublished);
+
+            return RepeatStatus.FINISHED;
+        } finally {
+            // always close the NATS connection right after publishing so its non-daemon
+            // publisher thread does not stay alive for the rest of the pipeline run
+            if (messagingGateway.isConnected()) {
+                messagingGateway.shutdown();
+            }
+        }
     }
 
     private Integer loadAndPublishDmpSamplesFromJson() throws JsonProcessingException, Exception {
