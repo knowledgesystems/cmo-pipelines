@@ -27,6 +27,7 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="triage-importer.log"
     PORTAL_NAME="triage-portal"
     ONCOTREE_VERSION="oncotree_candidate_release"
+    TRANSCRIPT_OVERRIDES_SOURCE="uniprot"
     ;;
   public)
     TMP_DIR_NAME="import-cron-public"
@@ -34,6 +35,7 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="public-importer.log"
     PORTAL_NAME="public-portal"
     ONCOTREE_VERSION="oncotree_latest_stable"
+    TRANSCRIPT_OVERRIDES_SOURCE="uniprot"
     ;;
   genie)
     TMP_DIR_NAME="import-cron-genie"
@@ -41,6 +43,7 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="genie-importer.log"
     PORTAL_NAME="genie-portal"
     ONCOTREE_VERSION="oncotree_2019_12_01"
+    TRANSCRIPT_OVERRIDES_SOURCE="uniprot"
     ;;
   msk)
     TMP_DIR_NAME="import-cron-msk-cmo"
@@ -48,6 +51,7 @@ case "$PORTAL_DATABASE" in
     LOG_FILE_NAME="msk-cmo-importer.log"
     PORTAL_NAME="msk-automation-portal"
     ONCOTREE_VERSION="oncotree_candidate_release"
+    TRANSCRIPT_OVERRIDES_SOURCE="mskcc"
     ;;
   *)
     echo "Unsupported portal database: $PORTAL_DATABASE" >&2
@@ -112,7 +116,7 @@ if [ $? -gt 0 ]; then
 fi
 
 echo "Importing $PORTAL_DATABASE study data into $destination_database_color clickhouse database"
-$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source uniprot --disable-redcap-export --notification-file="$notification_file"
+$JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source $TRANSCRIPT_OVERRIDES_SOURCE --disable-redcap-export --notification-file="$notification_file"
 exitcode=$?
 
 if [ -f "$notification_file" ]; then
