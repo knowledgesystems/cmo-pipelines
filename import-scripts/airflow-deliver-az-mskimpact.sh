@@ -12,6 +12,9 @@
 #   sftp            upload az_mskimpact/, gene_panels/ and README.md to AstraZeneca's SFTP server
 #   mark-delivered  write <run>/_DELIVERED to S3 (the next export's changelog diffs against it)
 #   cleanup         remove the local copy of the run
+#
+# AZ_S3_PREFIX, AZ_DELIVERY_HOME and AZ_SFTP_REMOTE_DIR can be overridden, e.g. to test against
+# the dev export (AZ_S3_PREFIX=dev) without uploading to AstraZeneca's real directory.
 
 if ! [ -n "$PORTAL_HOME" ] ; then
     echo "Error : airflow-deliver-az-mskimpact.sh cannot be run without setting the PORTAL_HOME environment variable."
@@ -31,7 +34,7 @@ AZ_S3_BUCKET="${AZ_S3_BUCKET:-az-mskimpact}"
 AZ_S3_PREFIX="${AZ_S3_PREFIX:-delivery}"
 AZ_DELIVERY_HOME="${AZ_DELIVERY_HOME:-$PORTAL_DATA_HOME/az-mskimpact-delivery}"
 AZ_SFTP_KEY="/home/cbioportal_importer/.ssh/id_rsa_astrazeneca_sftp"
-AZ_SFTP_REMOTE_DIR="az-data"
+AZ_SFTP_REMOTE_DIR="${AZ_SFTP_REMOTE_DIR:-az-data}"
 AZ_STUDY_DIR="az_mskimpact"
 CDD_URL="https://cdd.cbioportal.mskcc.org/api/"
 
