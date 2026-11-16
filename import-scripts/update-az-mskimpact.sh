@@ -26,6 +26,11 @@ function report_error() {
     echo -e "Sending email $error_message"
     echo -e "$error_message" |  mail -s "[URGENT] AstraZeneca data delivery failure" $PIPELINES_EMAIL_LIST
 
+    # Remove the stashed previous clinical files, if any
+    if [ -n "$PREVIOUS_CLINICAL_DIR" ] && [ -d "$PREVIOUS_CLINICAL_DIR" ] ; then
+        rm -rf "$PREVIOUS_CLINICAL_DIR"
+    fi
+
     # Reset the local git repo and exit
     cd $AZ_DATA_HOME ; $GIT_BINARY reset HEAD --hard
     exit 1
@@ -40,6 +45,31 @@ function pull_latest_data_from_az_git_repo() {
         $GIT_BINARY lfs pull &&
         $GIT_BINARY clean -f -d
     )
+}
+
+function stash_previous_clinical_files() {
+    # Capture the previously delivered clinical files (the az-data working tree was
+    # just reset to origin/main) before generate_subset overwrites them in place.
+    # These are the "previous" (v1) inputs for the changelog. The stash lives outside
+    # $AZ_MSK_IMPACT_DATA_HOME so filter_files_in_delivery_directory does not remove it
+    # before generate_changelog runs.
+    PREVIOUS_CLINICAL_DIR=$(mktemp -d "${TMPDIR:-/tmp}/az_mskimpact_changelog_prev.XXXXXX")
+    if [ $? -gt 0 ] || [ -z "$PREVIOUS_CLINICAL_DIR" ] ; then
+        echo "Failed to create temporary directory for previously delivered clinical files"
+        return 1
+    fi
+
+    for clinical_file in data_clinical_patient.txt data_clinical_sample.txt ; do
+        # On a first-ever delivery these files will not exist yet - that is fine,
+        # the changelog will then report every patient/sample as new.
+        if [ -f "$AZ_MSK_IMPACT_DATA_HOME/$clinical_file" ] ; then
+            if ! cp "$AZ_MSK_IMPACT_DATA_HOME/$clinical_file" "$PREVIOUS_CLINICAL_DIR/$clinical_file" ; then
+                echo "Failed to stash previously delivered $clinical_file"
+                return 1
+            fi
+        fi
+    done
+    return 0
 }
 
 function setup_data_directories() {
@@ -290,8 +320,24 @@ function filter_files_in_delivery_directory() {
 }
 
 function generate_changelog() {
-    # Generate report summary of new patients and samples 
-    $PYTHON3_BINARY $PORTAL_HOME/scripts/generate_az_study_changelog_py3.py $AZ_MSK_IMPACT_DATA_HOME
+    # Generate report summary of new patients and samples by comparing the newly
+    # delivered clinical files against the previously delivered ones stashed by
+    # stash_previous_clinical_files.
+    previous_clinical_args=()
+    if [ -n "$PREVIOUS_CLINICAL_DIR" ] &&
+       [ -f "$PREVIOUS_CLINICAL_DIR/data_clinical_patient.txt" ] &&
+       [ -f "$PREVIOUS_CLINICAL_DIR/data_clinical_sample.txt" ] ; then
+        previous_clinical_args=(
+            --previous-patient "$PREVIOUS_CLINICAL_DIR/data_clinical_patient.txt"
+            --previous-sample "$PREVIOUS_CLINICAL_DIR/data_clinical_sample.txt"
+        )
+    fi
+
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/generate_az_study_changelog_py3.py \
+        --current-patient "$AZ_MSK_IMPACT_DATA_HOME/data_clinical_patient.txt" \
+        --current-sample "$AZ_MSK_IMPACT_DATA_HOME/data_clinical_sample.txt" \
+        "${previous_clinical_args[@]}" \
+        --output-dir "$AZ_MSK_IMPACT_DATA_HOME"
 }
 
 function generate_case_lists() {
@@ -342,6 +388,11 @@ function cleanup_repo() {
         rm -rf "$AZ_TMPDIR" "$AZ_MSK_IMPACT_DATA_HOME/part_a_subset.txt"
     fi
 
+    # Remove the stashed previously delivered clinical files used by the changelog
+    if [ -n "$PREVIOUS_CLINICAL_DIR" ] && [ -d "$PREVIOUS_CLINICAL_DIR" ] ; then
+        rm -rf "$PREVIOUS_CLINICAL_DIR"
+    fi
+
     # Clean up untracked files and LFS objects
     bash $PORTAL_HOME/scripts/datasource-repo-cleanup.sh $AZ_DATA_HOME
 }
@@ -354,8 +405,13 @@ if ! pull_latest_data_from_az_git_repo ; then
     report_error "Failed git pull"
 fi
 
+# Stash the previously delivered clinical files (for the changelog) before generate_subset overwrites them
+if ! stash_previous_clinical_files ; then
+    report_error "Failed to stash previously delivered clinical files"
+fi
+
 # Create temporary directories and create a copy of MSKSOLIDHEME
-if ! setup_data_directories ; then 
+if ! setup_data_directories ; then
     report_error "Failed to set up data directories"
 fi
 
