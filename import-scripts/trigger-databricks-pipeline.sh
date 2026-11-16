@@ -17,12 +17,16 @@ done
 
 source /data/portal-cron/scripts/automation-environment.sh
 
+# Per-run temp dir so concurrent runs on the same host do not clobber each other's responses
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+
 # Read Databricks credentials from creds file
 DATABRICKS_SERVER_HOSTNAME=`grep server_hostname $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
 DATABRICKS_TOKEN=`grep access_token $DATABRICKS_CREDS_FILE | sed 's/^.*=//g'`
 
 # Trigger the Databricks job
-HTTP_CODE=$(curl -s -o /tmp/databricks_response.json -w "%{http_code}" \
+HTTP_CODE=$(curl -s -o $TMP_DIR/response.json -w "%{http_code}" \
     -X POST \
     -H "Authorization: Bearer $DATABRICKS_TOKEN" \
     -H "Content-Type: application/json" \
@@ -36,26 +40,26 @@ HTTP_CODE=$(curl -s -o /tmp/databricks_response.json -w "%{http_code}" \
 
 if [ "$HTTP_CODE" -ne 200 ]; then
     echo "Error triggering Databricks job. HTTP status: $HTTP_CODE"
-    cat /tmp/databricks_response.json
+    cat $TMP_DIR/response.json
     exit 1
 fi
 
-RUN_ID=$(python3 -c "import json; print(json.load(open('/tmp/databricks_response.json'))['run_id'])")
+RUN_ID=$(python3 -c "import json; print(json.load(open('$TMP_DIR/response.json'))['run_id'])")
 echo "Successfully triggered Databricks job. Run ID: $RUN_ID"
 
 # Get run details including the URL
-curl -s -o /tmp/databricks_run_details.json \
+curl -s -o $TMP_DIR/run_details.json \
     -X GET \
     -H "Authorization: Bearer $DATABRICKS_TOKEN" \
     "https://$DATABRICKS_SERVER_HOSTNAME/api/2.1/jobs/runs/get?run_id=$RUN_ID"
 
-RUN_URL=$(python3 -c "import json; print(json.load(open('/tmp/databricks_run_details.json'))['run_page_url'])")
+RUN_URL=$(python3 -c "import json; print(json.load(open('$TMP_DIR/run_details.json'))['run_page_url'])")
 echo "View run details at: $RUN_URL"
 
 # Poll until the job is complete
 echo "Polling for job completion..."
 while true; do
-    HTTP_CODE=$(curl -s -o /tmp/databricks_run_status.json -w "%{http_code}" \
+    HTTP_CODE=$(curl -s -o $TMP_DIR/run_status.json -w "%{http_code}" \
         -X GET \
         -H "Authorization: Bearer $DATABRICKS_TOKEN" \
         "https://$DATABRICKS_SERVER_HOSTNAME/api/2.1/jobs/runs/get?run_id=$RUN_ID")
@@ -63,11 +67,11 @@ while true; do
     if [ "$HTTP_CODE" -ne 200 ]; then
         echo "URL: https://$DATABRICKS_SERVER_HOSTNAME/api/2.1/jobs/runs/get?run_id=$RUN_ID"
         echo "Error polling Databricks job status. HTTP status: $HTTP_CODE"
-        cat /tmp/databricks_run_status.json
+        cat $TMP_DIR/run_status.json
         exit 1
     fi
 
-    LIFE_CYCLE_STATE=$(python3 -c "import json; print(json.load(open('/tmp/databricks_run_status.json'))['state']['life_cycle_state'])")
+    LIFE_CYCLE_STATE=$(python3 -c "import json; print(json.load(open('$TMP_DIR/run_status.json'))['state']['life_cycle_state'])")
     echo "Job state: $LIFE_CYCLE_STATE"
 
     if [ "$LIFE_CYCLE_STATE" == "TERMINATED" ] || [ "$LIFE_CYCLE_STATE" == "SKIPPED" ] || [ "$LIFE_CYCLE_STATE" == "INTERNAL_ERROR" ]; then
@@ -76,12 +80,12 @@ while true; do
         RESULT_STATE=""
         result_state_check_count=0
         while [ $result_state_check_count -lt $RESULT_STATE_CHECK_MAX_ATTEMPTS ]; do
-            RESULT_STATE=$(python3 -c "import json; print(json.load(open('/tmp/databricks_run_status.json'))['state'].get('result_state', ''))")
+            RESULT_STATE=$(python3 -c "import json; print(json.load(open('$TMP_DIR/run_status.json'))['state'].get('result_state', ''))")
             if [ -n "$RESULT_STATE" ]; then
                 break
             fi
             sleep $RESULT_STATE_CHECK_PAUSE_SECONDS
-            curl -s -o /tmp/databricks_run_status.json \
+            curl -s -o $TMP_DIR/run_status.json \
                 -X GET \
                 -H "Authorization: Bearer $DATABRICKS_TOKEN" \
                 "https://$DATABRICKS_SERVER_HOSTNAME/api/2.1/jobs/runs/get?run_id=$RUN_ID"
@@ -90,7 +94,7 @@ while true; do
 
         if [ -z "$RESULT_STATE" ]; then
             echo "Error: Databricks job reached life_cycle_state=$LIFE_CYCLE_STATE but result_state was not available after $RESULT_STATE_CHECK_MAX_ATTEMPTS attempts with a period of $RESULT_STATE_CHECK_PAUSE_SECONDS seconds. Exiting" >&2
-            cat /tmp/databricks_run_status.json
+            cat $TMP_DIR/run_status.json
             exit 1
         fi
 
