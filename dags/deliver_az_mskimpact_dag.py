@@ -3,13 +3,14 @@ deliver_az_mskimpact_dag.py
 Delivers the AstraZeneca MSK-IMPACT study exported to S3 by the Databricks bundle
 data-partnerships-databricks-pipelines/astrazeneca-mskimpact-v1.
 
-The Databricks job (Sundays 14:00 ET) builds the delivery views and writes the cBioPortal
-study to s3://az-mskimpact/delivery/<run date>/, marked _READY. This DAG adds the clinical
-attribute metadata header rows (CDD), uploads the study to AstraZeneca's SFTP server, and
-marks the run _DELIVERED. Each step runs airflow-deliver-az-mskimpact.sh on the pipelines node.
+On Sundays, deng's msk_impact_public_job runs the Databricks job after it refreshes the MSK-IMPACT
+data product (no fixed time). That job builds the delivery views and writes the cBioPortal study
+to s3://az-mskimpact/delivery/<run date>/, marked _READY. This DAG adds the clinical attribute
+metadata header rows (CDD), uploads the study to AstraZeneca's SFTP server, and marks the run
+_DELIVERED. Each step runs airflow-deliver-az-mskimpact.sh on the pipelines node.
 
-find_ready_run retries until the export is _READY, and skips the run (and all later tasks)
-when the latest export was already delivered.
+find_ready_run retries until today's export is _READY and fails (alerting) if it never appears.
+It skips the run (and all later tasks) when today's export was already delivered.
 """
 import os
 import sys
@@ -52,8 +53,8 @@ with DAG(
     dag_id="deliver_az_mskimpact",
     default_args=_DEFAULT_ARGS,
     description="Adds clinical metadata headers to the exported AstraZeneca MSK-IMPACT study and delivers it over SFTP",
-    # Sundays 16:00 ET, two hours after the Databricks export job.
-    schedule="0 16 * * 0",
+    # Sundays 12:00 ET; find_ready_run waits for the export. Tune both to the public job's Sunday finish times.
+    schedule="0 12 * * 0",
     start_date=pendulum.datetime(2026, 10, 1, tz="America/New_York"),
     catchup=False,
     max_active_runs=1,
@@ -61,11 +62,11 @@ with DAG(
     on_success_callback=[dag_success_slack_webhook_notification],
 ) as dag:
 
-    # Waits for the export: retries every 30 minutes for up to 6 hours.
+    # Waits for the export: retries every 30 minutes for up to 12 hours (until midnight ET).
     find_ready_run = _step(
         "find_ready_run",
         "find-run",
-        retries=12,
+        retries=24,
         retry_delay=timedelta(minutes=30),
         skip_on_exit_code=ALREADY_DELIVERED_EXIT_CODE,
     )

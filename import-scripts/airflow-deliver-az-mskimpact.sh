@@ -4,9 +4,10 @@
 # data-partnerships-databricks-pipelines/astrazeneca-mskimpact-v1 (replaces the delivery half
 # of update-az-mskimpact.sh). Run one step at a time by the deliver_az_mskimpact DAG:
 #
-#   find-run        select the latest exported run (s3://<bucket>/<prefix>/_LATEST) that is
-#                   marked _READY and not yet _DELIVERED. Exits 1 if it is not ready yet
-#                   (the DAG retries) and 99 if it was already delivered (the DAG skips).
+#   find-run        select the latest exported run (s3://<bucket>/<prefix>/_LATEST) if it is from
+#                   AZ_RUN_DATE (default: today, ET) or later and marked _READY. Exits 1 if that
+#                   run doesn't exist yet (the DAG retries) and 99 if it was already delivered
+#                   (the DAG skips).
 #   fetch           download the run to $AZ_DELIVERY_HOME/<run date>/
 #   add-headers     add the clinical attribute metadata header rows (CDD)
 #   sftp            upload az_mskimpact/, gene_panels/ and README.md to AstraZeneca's SFTP server
@@ -15,6 +16,7 @@
 #
 # AZ_S3_PREFIX, AZ_DELIVERY_HOME and AZ_SFTP_REMOTE_DIR can be overridden, e.g. to test against
 # the dev export (AZ_S3_PREFIX=dev) without uploading to AstraZeneca's real directory.
+# AZ_RUN_DATE (YYYY-MM-DD) sets the earliest run date to accept, e.g. to deliver the latest run on a later day.
 
 if ! [ -n "$PORTAL_HOME" ] ; then
     echo "Error : airflow-deliver-az-mskimpact.sh cannot be run without setting the PORTAL_HOME environment variable."
@@ -78,6 +80,12 @@ function find_run() {
         exit $EXIT_NOT_READY
     fi
     RUN_DATE=$(basename "$LATEST_RUN_PATH")
+    # Runs are named by UTC date, so a run from late on AZ_RUN_DATE (ET) may be named the next day.
+    EXPECTED_RUN_DATE="${AZ_RUN_DATE:-$(TZ=America/New_York date +%Y-%m-%d)}"
+    if [[ "$RUN_DATE" < "$EXPECTED_RUN_DATE" ]] ; then
+        echo "`date`: Latest run is $RUN_DATE; waiting for the $EXPECTED_RUN_DATE export"
+        exit $EXIT_NOT_READY
+    fi
 
     if s3_exists "$S3_BASE/$RUN_DATE/_DELIVERED" ; then
         echo "`date`: Latest run $RUN_DATE was already delivered, nothing to do"
