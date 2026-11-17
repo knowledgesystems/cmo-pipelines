@@ -53,8 +53,8 @@ with DAG(
     dag_id="deliver_az_mskimpact",
     default_args=_DEFAULT_ARGS,
     description="Adds clinical metadata headers to the exported AstraZeneca MSK-IMPACT study and delivers it over SFTP",
-    # Sundays 12:00 ET; find_ready_run waits for the export. Tune both to the public job's Sunday finish times.
-    schedule="0 12 * * 0",
+    # Sundays 09:00 ET: the public job usually reaches the AZ export around 08:00 ET.
+    schedule="0 9 * * 0",
     start_date=pendulum.datetime(2026, 10, 1, tz="America/New_York"),
     catchup=False,
     max_active_runs=1,
@@ -62,7 +62,8 @@ with DAG(
     on_success_callback=[dag_success_slack_webhook_notification],
 ) as dag:
 
-    # Waits for the export: retries every 30 minutes for up to 12 hours (until midnight ET).
+    # Waits for the export: retries every 30 minutes for up to 12 hours (until 21:00 ET),
+    # past the latest Sunday start (about 19:00 ET) that the UTC Sunday check allows.
     find_ready_run = _step(
         "find_ready_run",
         "find-run",
