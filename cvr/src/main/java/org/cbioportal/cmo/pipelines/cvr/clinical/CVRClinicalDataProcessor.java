@@ -103,7 +103,6 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
             case "CVR_TMB_COHORT_PERCENTILE": return record.getCVR_TMB_COHORT_PERCENTILE();
             case "CVR_TMB_SCORE": return record.getCVR_TMB_SCORE();
             case "CVR_TMB_TT_COHORT_PERCENTILE": return record.getCVR_TMB_TT_COHORT_PERCENTILE();
-            case "PATH_SLIDE_EXISTS": return record.getPATH_SLIDE_EXISTS();
             case "MSK_SLIDE_ID": return record.getMSK_SLIDE_ID();
             case "DNA_ELUTION_BUFFER_VOLUME": return record.getDNA_ELUTION_BUFFER_VOLUME();
             case "PLASMA_USED_VOLUME": return record.getPLASMA_USED_VOLUME();

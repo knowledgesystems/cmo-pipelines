@@ -141,7 +141,7 @@ public class CVRClinicalFieldSetMapper implements  FieldSetMapper<CVRClinicalRec
                 record.setCVR_TMB_TT_COHORT_PERCENTILE(value);
                 break;
             case "PATH_SLIDE_EXISTS":
-                record.setPATH_SLIDE_EXISTS(value);
+                // no longer produced; ignore the column in staging files written by earlier runs
                 break;
             case "MSK_SLIDE_ID":
                 record.setMSK_SLIDE_ID(value);

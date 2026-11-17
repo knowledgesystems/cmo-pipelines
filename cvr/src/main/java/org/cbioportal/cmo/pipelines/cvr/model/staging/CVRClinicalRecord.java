@@ -72,7 +72,6 @@ public class CVRClinicalRecord {
     private String cvrTmbCohortPercentile;
     private String cvrTmbScore;
     private String cvrTmbTtPercentile;
-    private String pathSlideExists;
     private String mskSlideID;
     private String dnaElutionBufferVolume;
     private String plasmaUsedVolume;
@@ -110,7 +109,6 @@ public class CVRClinicalRecord {
         this.cvrTmbCohortPercentile = (metaData.getTmbCohortPercentile()!= null) ? String.valueOf(metaData.getTmbCohortPercentile()) : "NA";
         this.cvrTmbScore = (metaData.getTmbScore()!= null) ? String.valueOf(metaData.getTmbScore()) : "NA";
         this.cvrTmbTtPercentile = (metaData.getTmbTtPercentile()!= null) ? String.valueOf(metaData.getTmbTtPercentile()) : "NA";
-        this.pathSlideExists = (wholeSlideViewerIdIsValid(metaData.getWholeSlideViewerId())) ? "YES" : "NO";
         this.mskSlideID = (wholeSlideViewerIdIsValid(metaData.getWholeSlideViewerId())) ? metaData.getWholeSlideViewerId() : "NA";
         if (metaData.getExtraction() != null) {
             CVRExtraction cvrExtration = metaData.getExtraction();
@@ -376,14 +374,6 @@ public class CVRClinicalRecord {
         this.cvrTmbTtPercentile = tmbTtPercentile;
     }
 
-    public String getPATH_SLIDE_EXISTS() {
-        return !Strings.isNullOrEmpty(this.pathSlideExists) ? this.pathSlideExists : "NO";
-    }
-
-    public void setPATH_SLIDE_EXISTS(String pathSlideExists) {
-        this.pathSlideExists = pathSlideExists;
-    }
-
     public String getMSK_SLIDE_ID() {
         return !Strings.isNullOrEmpty(this.mskSlideID) ? this.mskSlideID : "NA";
     }
@@ -465,7 +455,6 @@ public class CVRClinicalRecord {
         fieldNames.add("CVR_TMB_COHORT_PERCENTILE");
         fieldNames.add("CVR_TMB_SCORE");
         fieldNames.add("CVR_TMB_TT_COHORT_PERCENTILE");
-        fieldNames.add("PATH_SLIDE_EXISTS");
         fieldNames.add("MSK_SLIDE_ID");
         fieldNames.add("CYCLE_THRESHOLD");
         fieldNames.add("DNA_ELUTION_BUFFER_VOLUME");
