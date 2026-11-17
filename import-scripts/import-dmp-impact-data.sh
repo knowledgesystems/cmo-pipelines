@@ -102,6 +102,13 @@ function import_and_validate() {
     return $?
 }
 
+SCALE_CLICKHOUSE_CONFIG_FILEPATH="${PORTAL_HOME}/pipelines-credentials/scale_clickhouse_service_config.json"
+
+function scale_clickhouse_up() {
+    # Scale clickhouse up before imports
+    ${PORTAL_HOME}/scripts/scale_clickhouse_service.py ${SCALE_CLICKHOUSE_CONFIG_FILEPATH} -d msk --large
+}
+
 DB_VERSION_FAIL=0
 
 # Imports assumed to fail until imported successfully
@@ -136,14 +143,14 @@ if [ $DB_VERSION_FAIL -eq 0 ] ; then
     fi
 fi
 
-CLEAR_CACHES_AFTER_IMPACT_IMPORT=0
+scale_clickhouse_up
+
 # IMPORT: MSKSOLIDHEME
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SOLID_HEME_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import of MSKSOLIDHEME (will be renamed MSKIMPACT) study"
     if import_and_validate "mskimpact" "msk-solid-heme-portal" "$msk_solid_heme_notification_file" ; then
         IMPORT_FAIL_MSKSOLIDHEME=0
         consumeSamplesAfterSolidHemeImport
-        CLEAR_CACHES_AFTER_IMPACT_IMPORT=1
     else
         IMPORT_FAIL_MSKSOLIDHEME=1
     fi
@@ -161,27 +168,12 @@ else
     sendImportSuccessMessageMskPipelineLogsSlack "MSKSOLIDHEME"
 fi
 
-#### ROB : 2025_08_17 - persistence cache reset will now happen at the color transition instead
-##### clear persistence cache only if the MSKSOLIDHEME update was succesful
-####if [ $CLEAR_CACHES_AFTER_IMPACT_IMPORT -eq 0 ] ; then
-####    echo "Failed to update MSKSOLIDHEME - we will clear the persistence cache after successful updates to MSK affiliate studies..."
-####    echo $(date)
-####else
-####    if ! clearPersistenceCachesForMskPortals ; then
-####        sendClearCacheFailureMessage msk import-dmp-impact-data.sh
-####    fi
-####fi
-####
-##### set 'CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT' flag to 1 if ARCHER succesfully updates
-####CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT=0
-
 # IMPORT: MSKARCHER
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_ARCHER_IMPORT_TRIGGER ] ; then
     printTimeStampedDataProcessingStepMessage "import for mskarcher"
     if import_and_validate "mskarcher" "mskarcher-portal" "$mskarcher_notification_file" ; then
         IMPORT_FAIL_ARCHER=0
         consumeSamplesAfterArcherImport
-####        CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT=1
     else
         IMPORT_FAIL_ARCHER=1
     fi
@@ -199,21 +191,9 @@ else
     sendImportSuccessMessageMskPipelineLogsSlack "ARCHER"
 fi
 
-##### clear persistence cache only if MSKARCHER update was successful
-####if [ $CLEAR_CACHES_AFTER_DMP_PIPELINES_IMPORT -eq 0 ] ; then
-####    echo "Failed to update ARCHER - we will clear the persistence cache after successful updates to MSK affiliate studies..."
-####    echo $(date)
-####else
-####    if ! clearPersistenceCachesForMskPortals ; then
-####        sendClearCacheFailureMessage msk import-dmp-impact-data.sh
-####    fi
-####fi
-
 ## END MSK DMP cohorts imports
 
 #-------------------------------------------------------------------------------------------------------------------------------------
-##### set 'CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT' flag to 1 if Kings County, Lehigh Valley, Queens Cancer Center, Miami Cancer Institute, or MSKIMPACT Ped succesfully update
-####CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT=0
 
 if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
     # IMPORT: KINGSCOUNTY
@@ -374,7 +354,6 @@ if ! [[ $SKIP_AFFILIATE_STUDIES_IMPORT == '1' ]] ; then
 fi
 
 #-------------------------------------------------------------------------------------------------------------------------------------
-####CLEAR_CACHES_AFTER_SCLC_IMPORT=0
 
 if ! [[ $SKIP_SCLC_MSKIMPACT_IMPORT == '1' ]] ; then
     # IMPORT: SCLCMSKIMPACT
@@ -401,31 +380,6 @@ if ! [[ $SKIP_SCLC_MSKIMPACT_IMPORT == '1' ]] ; then
 fi
 
 # END SCLCMSKIMPACT import
-
-##### clear persistence cache only if at least one of these studies succesfully updated.
-#####   MSK_KINGSCOUNTY
-#####   MSK_LEHIGHVALLEY
-#####   MSK_QUEENSCANCERCENTER
-#####   MSK_MIAMICANCERINSTITUTE
-#####   MSK_HARTFORDHEALTHCARE
-#####   MSK_RALPHLAUREN
-#####   SCLCMSKIMPACT
-####if [ $CLEAR_CACHES_AFTER_MSK_AFFILIATE_IMPORT -eq 0 ] ; then
-####    echo "Failed to update all MSK affiliate studies"
-####else
-####    if ! clearPersistenceCachesForMskPortals ; then
-####        sendClearCacheFailureMessage msk import-dmp-impact-data.sh
-####    fi
-####fi
-
-##### clear persistence cache only if sclc_mskimpact_2017 update was successful
-####if [ $CLEAR_CACHES_AFTER_SCLC_IMPORT -eq 0 ] ; then
-####    echo "Failed to update SCLC MSKIMPCAT cohort"
-####else
-####    if ! clearPersistenceCachesForExternalPortals ; then
-####        sendClearCacheFailureMessage external import-dmp-impact-data.sh
-####    fi
-####fi
 
 ### FAILURE EMAIL ###
 # send email if db version isn't compatible

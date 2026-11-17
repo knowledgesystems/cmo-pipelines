@@ -78,12 +78,19 @@ fi
 
 # Create the additional derived tables inside of non-production Clickhouse DB
 echo "creating derived tables in clickhouse database $DESTINATION_DATABASE_COLOR"
-if ! $CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $DESTINATION_DATABASE_COLOR "$derived_table_sql_script_dirpath"/*; then
+$CREATE_DERIVED_TABLES_IN_CLICKHOUSE_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $DESTINATION_DATABASE_COLOR "$derived_table_sql_script_dirpath"/*
+create_derived_tables_status=$?
+
+sleep 120
+
+# Scale clickhouse back down now that heavy database operations are complete
+SCALE_CLICKHOUSE_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/scale_clickhouse_service_config.json"
+${PORTAL_SCRIPTS_DIRECTORY}/scale_clickhouse_service.py ${SCALE_CLICKHOUSE_CONFIG_FILEPATH} -d ${PORTAL_DATABASE} --small -w 0
+
+if [ $create_derived_tables_status -ne 0 ] ; then
     echo "Error during derivation of clickhouse tables in clickhouse database $DESTINATION_DATABASE_COLOR" >&2
     exit 1
 fi
-
-sleep 120
 
 # Update status of all studies in destination database as AVAILABLE
 echo "setting all studies to status AVAILABLE in clickhouse database $PORTAL_DATABASE $DESTINATION_DATABASE_COLOR"
