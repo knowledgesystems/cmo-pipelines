@@ -32,10 +32,13 @@
 
 package org.cbioportal.cmo.pipelines.cvr;
 
+import java.util.List;
+import org.cbioportal.cmo.pipelines.cvr.clinical.CVRClinicalFieldSetMapper;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.batch.infrastructure.item.file.transform.DefaultFieldSet;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 /**
@@ -67,6 +70,22 @@ public class CVRClinicalRecordTest {
         Assert.assertTrue(localRecurrenceSampleType.equalsIgnoreCase("local recurrence"));
         Assert.assertTrue(unknownSampleType.equalsIgnoreCase("unknown"));
         Assert.assertTrue(defaultSampleType.isEmpty());
+    }
+
+    @Test
+    public void testFieldNamesExcludeSlideAttributes() throws Exception {
+        List<String> fieldNames = CVRClinicalRecord.getFieldNames();
+        Assert.assertFalse(fieldNames.contains("PATH_SLIDE_EXISTS"));
+        Assert.assertFalse(fieldNames.contains("MSK_SLIDE_ID"));
+    }
+
+    @Test
+    public void testFieldSetMapperIgnoresSlideAttributeColumns() throws Exception {
+        String[] names = {"SAMPLE_ID", "PATH_SLIDE_EXISTS", "MSK_SLIDE_ID", "SAMPLE_TYPE"};
+        String[] values = {"P-0000001-T01-IM3", "YES", "123456", "Primary"};
+        CVRClinicalRecord record = new CVRClinicalFieldSetMapper().mapFieldSet(new DefaultFieldSet(values, names));
+        Assert.assertEquals("P-0000001-T01-IM3", record.getSAMPLE_ID());
+        Assert.assertEquals("Primary", record.getSAMPLE_TYPE());
     }
 
 }
