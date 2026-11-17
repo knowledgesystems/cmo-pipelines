@@ -53,9 +53,6 @@ import org.springframework.core.io.FileSystemResource;
  * @author heinsz
  */
 public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord> {
-    @Value("${comppath.wsv.baseurl}")
-    private String wholeSlideViewerBaseURL;
-
     @Value("#{jobParameters[stagingDirectory]}")
     private String stagingDirectory;
 
@@ -84,12 +81,6 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
-        // validate url
-        if (Strings.isNullOrEmpty(wholeSlideViewerBaseURL) || !wholeSlideViewerBaseURL.contains("IMAGE_ID")) {
-            String message = "wholeSlideViewerBaseURL is empty or does not contain 'IMAGE_ID'  - please check value of 'comppath.wsv.baseurl' in application.properties: " + wholeSlideViewerBaseURL;
-            log.error(message);
-            throw new RuntimeException(message);
-        }
         processClinicalFile(ec);
         if (CVRUtilities.SUPPORTED_SEQ_DATE_STUDY_IDS.contains(studyId)) {
             processSeqDateFile(ec);
@@ -172,7 +163,7 @@ public class CVRClinicalDataReader implements ItemStreamReader<CVRClinicalRecord
             throw new ItemStreamException(e);
         }
         for (CVRMergedResult result : cvrData.getResults()) {
-            CVRClinicalRecord record = new CVRClinicalRecord(result.getMetaData(), wholeSlideViewerBaseURL, studyId);
+            CVRClinicalRecord record = new CVRClinicalRecord(result.getMetaData(), studyId);
             List<CVRClinicalRecord> records = patientToRecordMap.getOrDefault(record.getPATIENT_ID(), new ArrayList<CVRClinicalRecord>());
             records.add(record);
             patientToRecordMap.put(record.getPATIENT_ID(), records);

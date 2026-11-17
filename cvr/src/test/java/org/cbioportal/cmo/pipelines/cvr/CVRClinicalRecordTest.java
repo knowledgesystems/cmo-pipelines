@@ -73,19 +73,19 @@ public class CVRClinicalRecordTest {
     }
 
     @Test
-    public void testFieldNamesExcludePathSlideExists() throws Exception {
+    public void testFieldNamesExcludeSlideAttributes() throws Exception {
         List<String> fieldNames = CVRClinicalRecord.getFieldNames();
         Assert.assertFalse(fieldNames.contains("PATH_SLIDE_EXISTS"));
-        Assert.assertTrue(fieldNames.contains("MSK_SLIDE_ID"));
+        Assert.assertFalse(fieldNames.contains("MSK_SLIDE_ID"));
     }
 
     @Test
-    public void testFieldSetMapperIgnoresPathSlideExistsColumn() throws Exception {
-        String[] names = {"SAMPLE_ID", "PATH_SLIDE_EXISTS", "MSK_SLIDE_ID"};
-        String[] values = {"P-0000001-T01-IM3", "YES", "123456"};
+    public void testFieldSetMapperIgnoresSlideAttributeColumns() throws Exception {
+        String[] names = {"SAMPLE_ID", "PATH_SLIDE_EXISTS", "MSK_SLIDE_ID", "SAMPLE_TYPE"};
+        String[] values = {"P-0000001-T01-IM3", "YES", "123456", "Primary"};
         CVRClinicalRecord record = new CVRClinicalFieldSetMapper().mapFieldSet(new DefaultFieldSet(values, names));
         Assert.assertEquals("P-0000001-T01-IM3", record.getSAMPLE_ID());
-        Assert.assertEquals("123456", record.getMSK_SLIDE_ID());
+        Assert.assertEquals("Primary", record.getSAMPLE_TYPE());
     }
 
 }
