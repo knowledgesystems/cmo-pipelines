@@ -19,6 +19,18 @@ if [ ! -f "$AUTOMATION_ENV_SCRIPT_FILEPATH" ] ; then
 fi
 source "$AUTOMATION_ENV_SCRIPT_FILEPATH"
 
+SCALE_CLICKHOUSE_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/scale_clickhouse_service_config.json"
+
+function scale_clickhouse_up() {
+    # Scale clickhouse up before the import
+    ${PORTAL_SCRIPTS_DIRECTORY}/scale_clickhouse_service.py ${SCALE_CLICKHOUSE_CONFIG_FILEPATH} -d ${PORTAL_DATABASE} --large
+}
+
+function scale_clickhouse_down() {
+    # Scale clickhouse back down if the import process has failed
+    ${PORTAL_SCRIPTS_DIRECTORY}/scale_clickhouse_service.py ${SCALE_CLICKHOUSE_CONFIG_FILEPATH} -d ${PORTAL_DATABASE} --small -w 0
+}
+
 # Set needed paths/filenames for import
 case "$PORTAL_DATABASE" in
   triage)
@@ -115,6 +127,8 @@ if [ $? -gt 0 ]; then
     exit 1
 fi
 
+scale_clickhouse_up
+
 echo "Importing $PORTAL_DATABASE study data into $destination_database_color clickhouse database"
 $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source $TRANSCRIPT_OVERRIDES_SOURCE --disable-redcap-export --notification-file="$notification_file"
 exitcode=$?
@@ -125,6 +139,7 @@ if [ -f "$notification_file" ]; then
     echo "========== END NOTIFICATION FILE =========="
     if grep -q "The following studies had errors during import" "$notification_file"; then
         echo "Error: one or more studies had errors during import" >&2
+        scale_clickhouse_down
         exit 1
     fi
 else
@@ -133,6 +148,7 @@ fi
 
 if [ $exitcode -gt 0 ]; then
     echo "Error: $PORTAL_DATABASE import failed!" >&2
+    scale_clickhouse_down
     exit 1
 fi
 
@@ -143,6 +159,7 @@ if [ -r "$num_studies_updated_filename" ] ; then
 fi
 if [[ -z $num_studies_updated ]] || [[ $num_studies_updated == "0" ]] ; then
     echo "Error: No studies updated, either due to error or failure to mark a study in the spreadsheet" >&2
+    scale_clickhouse_down
     exit 1
 fi
 echo "$num_studies_updated number of studies were updated"

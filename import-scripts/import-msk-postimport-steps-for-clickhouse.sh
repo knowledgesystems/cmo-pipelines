@@ -18,6 +18,12 @@ COLOR_SWAP_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/msk-db-color
 CREATE_DERIVED_TABLES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
 CREATE_DERIVED_TABLES_SQL_FILE_DIRPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/create_clickhouse_derived_tables_download"
 CLICKHOUSE_SCHEMA_BRANCH_NAME="msk-portal-db-clickhouse-sql-for-import"
+SCALE_CLICKHOUSE_CONFIG_FILEPATH="${PORTAL_HOME}/pipelines-credentials/scale_clickhouse_service_config.json"
+
+function scale_clickhouse_down() {
+    # Scale clickhouse back down
+    ${PORTAL_HOME}/scripts/scale_clickhouse_service.py ${SCALE_CLICKHOUSE_CONFIG_FILEPATH} -d msk --small -w 0
+}
 
 function output_source_database_color() {
     # Get the current production database color
@@ -82,6 +88,7 @@ function create_temp_dir_if_necessary() {
     if ! [ -d "$MSK_DMP_TMPDIR" ] ; then
         if ! mkdir -p "$MSK_DMP_TMPDIR" ; then
             echo "Error : could not create tmp directory '$MSK_DMP_TMPDIR'" >&2
+            scale_clickhouse_down
             exit 1
         fi
     fi
@@ -114,10 +121,13 @@ function main() {
     destination_database_color=$(output_destination_database_color $source_database_color)
     echo "Source DB color: $source_database_color"
     echo "Destination DB color: $destination_database_color"
-    if ! create_derived_tables_in_target_clickhouse_database $destination_database_color ; then
+    create_derived_tables_in_target_clickhouse_database $destination_database_color
+    create_derived_tables_status=$?
+    sleep 120
+    scale_clickhouse_down
+    if [ $create_derived_tables_status -ne 0 ] ; then
         return 1
     fi
-    sleep 120
     if ! make_all_studies_available $destination_database_color ; then
         return 1
     fi
