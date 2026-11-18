@@ -89,15 +89,19 @@ function trigger_cdm_dags() {
 
     # Trigger CDM DAG to pull updated data_clinical_sample.txt from S3
     # This DAG will kick off the rest of the CDM pipeline when it completes
-    HTTP_STATUS_CODE=$(curl -X POST --write-out "%{http_code}" --silent --output $TMP_LOG_FILE --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --data "$DATA" $AIRFLOW_API_ENDPOINT)
+    # Capture curl's own error (e.g. DNS/connect/TLS failure) since HTTP code 000 alone doesn't say why
+    CURL_ERR_FILE=$(mktemp -q)
+    HTTP_STATUS_CODE=$(curl -X POST --write-out "%{http_code}" --silent --show-error --output $TMP_LOG_FILE --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --data "$DATA" $AIRFLOW_API_ENDPOINT 2>$CURL_ERR_FILE)
+    CURL_EXIT_CODE=$?
     if [ $HTTP_STATUS_CODE -ne 200 ] ; then
         # Send alert for HTTP status code if not 200
-        echo "`date`: Failed attempt to trigger DAG ${DAG_ID} on Airflow server ${AIRFLOW_URL}. HTTP status code = ${HTTP_STATUS_CODE}, exiting..."
-        # Write out failed HTTP response contents and exit with error
-        cat $TMP_LOG_FILE
-        rm $TMP_LOG_FILE
+        echo "`date`: Failed attempt to trigger DAG ${DAG_ID} on Airflow server ${AIRFLOW_URL}. HTTP status code = ${HTTP_STATUS_CODE}, curl exit code = ${CURL_EXIT_CODE}, exiting..."
+        # Write out curl error and failed HTTP response contents and exit with error
+        cat $CURL_ERR_FILE $TMP_LOG_FILE
+        rm $TMP_LOG_FILE $CURL_ERR_FILE
         exit 1
     fi
+    rm $TMP_LOG_FILE $CURL_ERR_FILE
 }
 
 date
