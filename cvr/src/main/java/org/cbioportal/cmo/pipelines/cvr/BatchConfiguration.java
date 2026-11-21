@@ -72,7 +72,6 @@ import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.dao.Jackson2ExecutionContextStringSerializer;
 import org.springframework.batch.core.repository.ExecutionContextSerializer;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.infrastructure.item.*;
@@ -861,34 +860,24 @@ public class BatchConfiguration {
     }
 
     /**
-     * Spring Batch job repository.
-     * @return JobRepository
-     * @throws Exception
+     * Required by {@code @EnableJdbcJobRepository(transactionManagerRef = "transactionManager")}.
+     * The repository bean cannot be created without it, so the CVR context fails at startup.
      */
-    private JobRepository getJobRepository() throws Exception {
-        JobRepositoryFactoryBean factory = new JobRepositoryFactoryBean();
-        factory.setDataSource(dataSource());
-        factory.setTransactionManager(getTransactionManager());
-        factory.afterPropertiesSet();
-        return (JobRepository) factory.getObject();
-    }
-
-    /**
-     * Spring Batch transaction manager.
-     * @return PlatformTransactionManager
-     */
-    private PlatformTransactionManager getTransactionManager() {
+    @Bean(name = "transactionManager")
+    public PlatformTransactionManager transactionManager() {
         return new ResourcelessTransactionManager();
     }
 
     /**
-     * Spring Batch job launcher.
-     * @return JobLauncher
-     * @throws Exception
+     * Launch jobs against the SQLite repository registered by {@code @EnableJdbcJobRepository}.
+     * Spring Boot 4 otherwise supplies a launcher backed by an in-memory repository, and the
+     * first step update cannot find the job execution.
      */
-    public JobLauncher getJobLauncher() throws Exception {
+    @Primary
+    @Bean
+    public JobLauncher jobLauncher(JobRepository jobRepository) throws Exception {
         TaskExecutorJobLauncher jobLauncher = new TaskExecutorJobLauncher();
-        jobLauncher.setJobRepository(getJobRepository());
+        jobLauncher.setJobRepository(jobRepository);
         jobLauncher.afterPropertiesSet();
         return jobLauncher;
     }
