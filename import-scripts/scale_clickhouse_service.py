@@ -14,7 +14,7 @@ def make_parser():
     parser.add_argument("-d", "--database", type=str, required=True, help="short name of database for import {public, genie, msk, triage}")
     parser.add_argument("-l", "--large", action="store_true", help="scale database to import(larger) size")
     parser.add_argument("-s", "--small", action="store_true", help="scale database to non-import(standard) size")
-    parser.add_argument("-w", "--max-wait-seconds", type=int, default=600, help="maximum wait time for scaling to complete before returning. expired time does not result in error")
+    parser.add_argument("-w", "--max-wait-seconds", type=int, default=600, help="maximum seconds to wait for scaling (0 skips the check). scale-up fails on timeout")
     return parser
 
 def read_config(config_filepath):
@@ -37,37 +37,60 @@ def validate_args_or_exit(config, args):
     validate_config_or_exit(config)
     if not args.database in config['database_identifier_list'] or not args.database in config['database_to_clickhouse_service_map']:
         raise RuntimeError(f"the passed in database {args.database} is not defined in the config_file")
+    if args.max_wait_seconds < 0:
+        raise ValueError("--max-wait-seconds must be nonnegative")
     if not (args.large ^ args.small):
         raise RuntimeError(f"it is required to choose either --small or --large")
 
-def service_is_scaled(config, args, target_max_memory_gb):
+def scaled_hosts(config, args, target, timeout):
     service = config['database_to_clickhouse_service_map'][args.database]
     url = config['clickhouse_service_to_max_memory_query_url'][service]
-    api_key_id = config['conf_map']['api_key_id']
-    api_key_secret = config['conf_map']['api_key_secret']
-    response = requests.get(url, auth=(api_key_id, api_key_secret), timeout=30)
-    if response.ok:
-        data = response.json()['data']
-        for host in data:
-            current_max_memory_bytes = int(host['value'])
-            target_max_memory_bytes = target_max_memory_gb * 1024 * 1024 * 1024
-            difference_factor = float(abs(current_max_memory_bytes - target_max_memory_bytes)) / float(target_max_memory_bytes)
-            print(f"replica response max memory bytes {current_max_memory_bytes}, target_max_memory_bytes {target_max_memory_bytes}, dfact {difference_factor}")
-            if difference_factor > 0.15:
-                print("scaling not done yet")
-                return False
-        print("scaling done")
-        return True
-    return False
+    auth = (config['conf_map']['api_key_id'], config['conf_map']['api_key_secret'])
+    try:
+        response = requests.get(url, auth=auth, timeout=timeout)
+    except (requests.Timeout, requests.ConnectionError) as error:
+        print(f"Replica query failed ({type(error).__name__})")
+        return set()
+    if not response.ok:
+        print(f"Replica query returned HTTP {response.status_code}")
+        return set()
 
-def wait_for_scaling_to_complete(config, args, target_max_memory_gb):
-    wait_start_time = int(time.time())
-    wait_exit_time = wait_start_time + args.max_wait_seconds
-    polling_period = 10
-    while int(time.time()) + polling_period < wait_exit_time:
-        time.sleep(polling_period)
-        if service_is_scaled(config, args, target_max_memory_gb):
-            return
+    # The saved clusterAllReplicas query returns one memory setting per host.
+    rows = response.json()['data']
+    hosts = {row['host'] for row in rows}
+    if len(hosts) != target['replica_count'] or len(rows) != len(hosts):
+        print(f"Expected {target['replica_count']} distinct replicas, received {len(hosts)} in {len(rows)} rows")
+        return set()
+    target_bytes = target['memory_gb'] * 1024 ** 3
+    for row in rows:
+        memory = int(row['value'])
+        if abs(memory - target_bytes) > 0.15 * target_bytes:
+            print(f"Replica {row['host']} reports {memory} bytes, target {target_bytes}")
+            return set()
+    return hosts
+
+def wait_for_scaling_to_complete(config, args, target):
+    if args.max_wait_seconds == 0:
+        return
+    deadline = time.monotonic() + args.max_wait_seconds
+    previous_hosts = set()
+    consecutive_polls = 0
+    required_polls = 3 if args.large else 1
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        hosts = scaled_hosts(config, args, target, timeout=min(30, remaining))
+        consecutive_polls = consecutive_polls + 1 if hosts == previous_hosts else 1
+        previous_hosts = hosts
+        if hosts:
+            print(f"Ready replicas {sorted(hosts)} (poll {consecutive_polls}/{required_polls})")
+            if consecutive_polls >= required_polls and time.monotonic() <= deadline:
+                print("scaling done")
+                return
+        time.sleep(max(0, min(10, deadline - time.monotonic())))
+    if args.large:
+        raise RuntimeError(f"ClickHouse replicas for {args.database} were not ready within {args.max_wait_seconds}s")
 
 def clickhouse_cloud_service_url(config, args):
     service = config['database_to_clickhouse_service_map'][args.database]
@@ -106,7 +129,7 @@ def scale_service(config, args):
         timeout=30,
     )
     response.raise_for_status()
-    wait_for_scaling_to_complete(config, args, service_parameters['memory_gb'])
+    wait_for_scaling_to_complete(config, args, service_parameters)
 
 if __name__ == "__main__":
     parser = make_parser()

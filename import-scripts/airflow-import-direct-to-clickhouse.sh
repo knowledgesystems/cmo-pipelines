@@ -127,7 +127,11 @@ if [ $? -gt 0 ]; then
     exit 1
 fi
 
-scale_clickhouse_up
+if ! scale_clickhouse_up; then
+    echo "Error: ClickHouse scale-up failed, stopping before study import" >&2
+    scale_clickhouse_down
+    exit 1
+fi
 
 echo "Importing $PORTAL_DATABASE study data into $destination_database_color clickhouse database"
 $JAVA_BINARY -Xmx64g $JAVA_IMPORTER_ARGS --update-study-data --portal $PORTAL_NAME --update-worksheet --oncotree-version $ONCOTREE_VERSION --transcript-overrides-source $TRANSCRIPT_OVERRIDES_SOURCE --disable-redcap-export --notification-file="$notification_file"

@@ -143,7 +143,10 @@ if [ $DB_VERSION_FAIL -eq 0 ] ; then
     fi
 fi
 
-scale_clickhouse_up
+if ! scale_clickhouse_up; then
+    echo "Error: ClickHouse scale-up failed, stopping before study import" >&2
+    exit 1
+fi
 
 # IMPORT: MSKSOLIDHEME
 if [ $DB_VERSION_FAIL -eq 0 ] && [ -f $MSK_SOLID_HEME_IMPORT_TRIGGER ] ; then
