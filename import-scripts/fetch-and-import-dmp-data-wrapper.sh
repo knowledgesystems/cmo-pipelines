@@ -91,8 +91,12 @@ function output_whether_preimport_steps_successfully_completed() {
         if [ "$databases_are_prepared_for_import" == "yes" ] ; then
             # cmo data msk imports now start after dmp imports are done
             echo "executing import-cmo-data-msk.sh"
-            $PORTAL_HOME/scripts/import-cmo-data-msk.sh
-            if [ $? -ne 0 ] ; then IMPORT_FAIL=1 ; fi
+            if "$PORTAL_HOME/scripts/import-cmo-data-msk.sh" ; then
+                send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import success: CMO import step completed"
+            else
+                IMPORT_FAIL=1
+                send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import process failed :tired_face: : CMO import. See msk-cmo-importer.log and the nightly wrapper log."
+            fi
             # Only run pdx updates on Friday->Saturday
             # if [ "$day_of_week_at_process_start" -eq 5 ] ; then
             #     date
@@ -115,13 +119,16 @@ function output_whether_preimport_steps_successfully_completed() {
                 $PORTAL_HOME/scripts/import-msk-postimport-steps-for-clickhouse.sh
             else
                 echo "one or more imports failed, marking import as abandoned"
+                send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK ClickHouse publication skipped because an import failed."
                 "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned
             fi
         else
+            send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK CMO import and ClickHouse publication skipped because database preparation failed. See preimport-steps-for-clickhouse.out."
             echo "skipping all imports because $MSK_PREIMPORT_STEPS_SCRIPT_FILEPATH failed to prepare the database"
             "$SET_UPDATE_PROCESS_STATE_SCRIPT_FILEPATH" "$MSK_PORTAL_MANAGE_DATABASE_UPDATE_STATUS_PROPERTIES_FILEPATH" abandoned
         fi
     else
+        send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK CMO import and ClickHouse publication skipped because the database management state check failed."
         echo "skipping all imports into cgds_gdac database because update state is not valid"
     fi
     # Only run AstraZeneca updates on Sunday->Monday

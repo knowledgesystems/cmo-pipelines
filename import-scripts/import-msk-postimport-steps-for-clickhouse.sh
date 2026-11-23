@@ -9,6 +9,7 @@ if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
     exit 1
 fi
 source $AUTOMATION_ENV_SCRIPT_FILEPATH
+source "$PORTAL_SCRIPTS_DIRECTORY/slack-message-functions.sh"
 
 SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process_state.sh"
 GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
@@ -89,14 +90,14 @@ function create_temp_dir_if_necessary() {
         if ! mkdir -p "$MSK_DMP_TMPDIR" ; then
             echo "Error : could not create tmp directory '$MSK_DMP_TMPDIR'" >&2
             scale_clickhouse_down
-            exit 1
+            return 1
         fi
     fi
 }
 
 function make_all_studies_available() {
     destination_database_color="$1"
-    create_temp_dir_if_necessary
+    create_temp_dir_if_necessary || return 1
     echo "setting all studies to status AVAILABLE in database color $destination_database_color"
     JAVA_DD_AGENT_ARGS=''
     MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-importer-$destination_database_color.jar"
@@ -126,15 +127,19 @@ function main() {
     sleep 120
     scale_clickhouse_down
     if [ $create_derived_tables_status -ne 0 ] ; then
+        send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import process failed :tired_face: : ClickHouse derived tables ($destination_database_color)"
         return 1
     fi
     if ! make_all_studies_available $destination_database_color ; then
+        send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import process failed :tired_face: : Marking studies available ($destination_database_color)"
         return 1
     fi
     if ! transfer_color_to_new_database $destination_database_color ; then
+        send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import process failed :tired_face: : Transfer to $destination_database_color. Check deployment state before retrying."
         echo "Error : failed to transfer color to $destination_database_color --- manual adjustment needed"
         return 1
     fi
+    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK cBio pipelines import success: ClickHouse publication completed ($destination_database_color)"
     return 0
 }
 
