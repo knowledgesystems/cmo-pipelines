@@ -60,6 +60,8 @@ with DAG(
     start_date=pendulum.datetime(2026, 10, 1, tz="America/New_York"),
     catchup=False,
     max_active_runs=1,
+    # Starts paused for the parallel run with the legacy delivery; unpause at cutover.
+    is_paused_upon_creation=True,
     tags=["astrazeneca", "delivery"],
     on_success_callback=[dag_success_slack_webhook_notification],
 ) as dag:
