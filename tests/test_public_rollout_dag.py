@@ -222,3 +222,12 @@ class FailureReportingTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'import tasks failed'):
             self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'target': 'public'})
         self.run_command.assert_not_called()
+
+    def test_partially_failed_transfer_preserves_management_for_reconciliation(self):
+        run = Mock()
+        run.get_task_instances.return_value = [SimpleNamespace(state="failed")]
+        run.get_task_instance.side_effect = lambda name: SimpleNamespace(
+            state="failed" if name == "transfer_deployment_color" else "success")
+        with self.assertRaisesRegex(RuntimeError, "import tasks failed"):
+            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={"target": "public"})
+        self.run_command.assert_not_called()
