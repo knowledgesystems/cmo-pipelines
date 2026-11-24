@@ -17,14 +17,13 @@ from dags.public_rollout import (checked_path, read_manifest, selected_entries,
 
 from dags.public_v7_tasks import build_v7_tasks
 from dags.containerized_workflow import wire_import
-from dags.study_sources import (DEFAULT_BUCKET, S3_SOURCES, STUDY_LIST_VARIABLE_KEY,
+from dags.study_sources import (DEFAULT_BUCKET, S3_SOURCES,
                                bucket_mount, parse_study_source, resolve_studies, search_buckets, verified_study_directory)
 
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.operators.bash import BashOperator
 from airflow.exceptions import AirflowException, AirflowSkipException
-from airflow.models import Variable
 from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
 from kubernetes.client import models as k8s
@@ -232,17 +231,6 @@ def _study_data_path(study_id: str) -> str | None:
 
     logger.error("Study '%s' not found at %s (neither .tar.gz nor directory)", study_id, mount)
     return None
-
-
-def _available_study_ids() -> list[str]:
-    """Read the study-list Variable at parse time to populate the Param enum."""
-    try:
-        catalog = Variable.get(STUDY_LIST_VARIABLE_KEY, default_var=None)
-        choices = json.loads(catalog if catalog is not None else
-                             Variable.get('available_study_ids', default_var='[]'))
-        return sorted({parse_study_source(choice)[1] for choice in choices})
-    except Exception:
-        return []
 
 
 def _script(script_name: str, *args: object, source_automation_env: bool = False) -> str:
@@ -458,8 +446,8 @@ def _activate_standby_properties(env: str) -> str:
         "cancer_study_ids": Param(
             [],
             type="array",
-            examples=_available_study_ids(),
-            description="Select study IDs to import. Each must exist in exactly one location in the selected buckets. Run refresh_study_list to update the list.",
+            items={"type": "string"},
+            description="Enter one study ID per line. HGNC uses its dedicated prefix. Other targets resolve IDs at the selected bucket roots.",
             title="Studies to Import",
         ),
         "buckets": Param(
