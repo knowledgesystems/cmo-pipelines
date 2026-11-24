@@ -738,7 +738,9 @@ def import_containerized_dag():
 
         clone = run.get_task_instance("clone_live_database_into_standby")
         transfer = run.get_task_instance("transfer_deployment_color")
-        if clone and clone.state == "success" and (not transfer or transfer.state != "success"):
+        # A failed transfer may already have changed ingress. Only release our
+        # clone when Airflow confirms the transfer never executed.
+        if clone and clone.state == "success" and transfer and transfer.state in ("skipped", "upstream_failed"):
             _run_and_stream(
                 ["bash", "-c", _script(
                     "set_update_process_state.sh",
