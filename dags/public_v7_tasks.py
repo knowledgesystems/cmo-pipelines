@@ -66,7 +66,7 @@ def build_v7_tasks():
     def selected(plan):
         return list(plan["studies"])
 
-    @task(executor_config=VALIDATE)
+    @task(executor_config=VALIDATE, max_active_tis_per_dag=4)
     def validate(study, plan):
         return runtime.validate_study(study, plan)
 
