@@ -138,11 +138,11 @@ def references(client, database):
 
 
 def validate_cancer_types(rows):
-    # The portal recursively follows parents to 'tissue' during startup.
+    # The portal stops at 'tissue', even when the seed omits a row for it.
     # Reject malformed input here instead of discovering it after promotion.
     parents = {row["cancerTypeId"]: row["parent"] for row in rows}
-    if len(parents) != len(rows) or "tissue" not in parents:
-        raise ValueError("Cancer types need unique IDs and a tissue root")
+    if not parents or len(parents) != len(rows):
+        raise ValueError("Expected a nonempty cancer type hierarchy with unique IDs")
     for start in parents:
         current = start
         visited = set()
