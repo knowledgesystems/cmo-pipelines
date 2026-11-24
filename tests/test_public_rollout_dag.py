@@ -43,7 +43,8 @@ class TaskTests(unittest.TestCase):
         nodes = []
         wanted = {'_rollout_manifest', '_rollout_entry', 'pull_and_validate_study',
                   '_selected_rollout_entries', '_input_root',
-                  'collect_valid_studies', 'import_into_standby_database'}
+                  'collect_valid_studies', 'import_into_standby_database',
+                  'create_derived_tables_in_standby_database', 'verify_studies_exist'}
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name in wanted:
                 node.decorator_list = []
@@ -111,6 +112,36 @@ class TaskTests(unittest.TestCase):
         self.env['_run_and_stream'].return_value.returncode = 1
         with self.assertRaisesRegex(RuntimeError, 'Validator-passing study failed import'):
             self.env['import_into_standby_database'](['study'], {'database': 'public'})
+
+    def test_marks_only_imported_ids_available_after_rebuild(self):
+        run = self.env['_run_and_stream']
+        self.env['create_derived_tables_in_standby_database'](
+            ['study', 's3://cdsi-testing/other'], {'database': 'public'})
+        self.env['_activate_standby_properties'].assert_called_once_with('public')
+        self.assertEqual([c.args[0] for c in run.call_args_list], [
+            ['python', '/importer/metaImport.py', 'derive-tables', '--derived-table-sql', '/tmp/clickhouse.sql'],
+            ['python', '/importer/cbioportalImporter.py', 'make-studies-available', '-ids', 'study,other']])
+
+    def test_rebuild_and_availability_errors_fail_task(self):
+        for codes, message in [([1], 'rebuild failed'), ([0, 1], 'mark studies available')]:
+            with self.subTest(codes=codes):
+                run = self.env['_run_and_stream']
+                run.reset_mock()
+                run.side_effect = [SimpleNamespace(returncode=c) for c in codes]
+                with self.assertRaisesRegex(Exception, message):
+                    self.env['create_derived_tables_in_standby_database'](['study'], {'database': 'public'})
+                self.assertEqual(run.call_count, len(codes))
+
+    def test_skipped_import_does_not_publish_selected_studies(self):
+        self.env['create_derived_tables_in_standby_database'](
+            ['study'], {'database': 'public', 'skip_tasks': ['import_into_standby_database']})
+        self.env['_run_and_stream'].assert_called_once()
+
+    def test_transfer_after_import_requires_rebuild(self):
+        task_id = 'create_derived_tables_in_standby_database'
+        self.env['SKIPPABLE_TASK_IDS'] = [task_id]
+        with self.assertRaisesRegex(RuntimeError, 'before transferring traffic'):
+            self.env['verify_studies_exist'](['study'], {'skip_tasks': [task_id]})
 
     def test_reference_failure_prevents_importer_activation(self):
         self.env['reference_input'] = Mock(side_effect=ValueError('Reference mismatch'))

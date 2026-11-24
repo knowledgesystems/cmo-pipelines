@@ -497,6 +497,12 @@ def import_public_containerized():
         if unknown:
             raise AirflowException(f"skip_tasks contains unknown task ids: {sorted(unknown)}")
 
+        skipped = (params or {}).get("skip_tasks") or []
+        if ("create_derived_tables_in_standby_database" in skipped
+                and "import_into_standby_database" not in skipped
+                and "transfer_deployment_color" not in skipped):
+            raise AirflowException("After importing studies, rebuild derived tables before transferring traffic")
+
         # render_template_as_native_obj may render the array Param as its string repr
         if isinstance(study_ids, str):
             import ast
@@ -641,7 +647,7 @@ def import_public_containerized():
             raise Exception(f"Import failed for {len(failed)} study/studies: {failed}")
 
     @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
-    def create_derived_tables_in_standby_database(params: dict | None = None):
+    def create_derived_tables_in_standby_database(valid_studies: list[str], params: dict | None = None):
         _skip_if_requested("create_derived_tables_in_standby_database", params)
         _activate_standby_properties(params["database"])
         rebuild = _run_and_stream(
@@ -650,6 +656,18 @@ def import_public_containerized():
         )
         if rebuild.returncode != 0:
             raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode})")
+
+        if "import_into_standby_database" in (params.get("skip_tasks") or []):
+            return
+        study_ids = [parse_study_source(selection)[1] for selection in valid_studies]
+        if not study_ids:
+            raise AirflowException("Expected imported study IDs after rebuilding derived tables")
+        importer = Path(IMPORT_SCRIPT_PATH).with_name("cbioportalImporter.py")
+        result = _run_and_stream([
+            sys.executable, str(importer), "make-studies-available", "-ids", ",".join(study_ids),
+        ])
+        if result.returncode:
+            raise AirflowException(f"Failed to mark studies available on standby (exit {result.returncode})")
 
     t_transfer_deployment_color = BashOperator(
         task_id="transfer_deployment_color",
@@ -712,7 +730,7 @@ def import_public_containerized():
     t_pull_and_validate = pull_and_validate_study.partial().expand(study_id=t_found_studies)
     t_collect_valid  = collect_valid_studies(t_pull_and_validate)
     t_import         = import_into_standby_database(t_collect_valid)
-    t_create_derived_tables = create_derived_tables_in_standby_database()
+    t_create_derived_tables = create_derived_tables_in_standby_database(t_collect_valid)
     t_finalize       = finalize_import_state()
     t_report_failure = report_failure()
 
