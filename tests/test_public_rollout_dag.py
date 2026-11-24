@@ -17,7 +17,7 @@ from dags.study_sources import DEFAULT_BUCKET, bucket_mount, parse_study_source
 
 class TaskTests(unittest.TestCase):
     def test_diagnostic_image_and_import_only_tracing(self):
-        source = Path(__file__).resolve().parents[1] / 'dags/import_public_containerized.py'
+        source = Path(__file__).resolve().parents[1] / 'dags/import_containerized_dag.py'
         wanted = {'K8S_IMAGE_VALIDATE', '_POD_OVERRIDE_VALIDATE', '_POD_OVERRIDE_IMPORT'}
         nodes = [node for node in ast.parse(source.read_text()).body
                  if (isinstance(node, ast.FunctionDef) and node.name == '_make_cbioportal_pod_override')
@@ -38,7 +38,7 @@ class TaskTests(unittest.TestCase):
         self.assertEqual(env['_POD_OVERRIDE_IMPORT']['resources'].limits, {'memory': '26Gi'})
 
     def setUp(self):
-        source = Path(__file__).resolve().parents[1] / 'dags/import_public_containerized.py'
+        source = Path(__file__).resolve().parents[1] / 'dags/import_containerized_dag.py'
         tree = ast.parse(source.read_text())
         nodes = []
         wanted = {'_rollout_manifest', '_rollout_entry', 'pull_and_validate_study',
@@ -75,19 +75,19 @@ class TaskTests(unittest.TestCase):
 
     def test_public_requires_manifest(self):
         with self.assertRaisesRegex(RuntimeError, 'require a pinned'):
-            self.load_manifest({'database': 'public'})
-        self.assertIsNone(self.load_manifest({'database': 'containerized'}))
+            self.load_manifest({'target': 'public'})
+        self.assertIsNone(self.load_manifest({'target': 'containerized'}))
 
 
     def test_public_allows_color_swap(self):
         self.env['_study_prefix'] = lambda params: 'staging'
         self.env['checked_path'] = lambda root, key: key
         self.env['read_manifest'] = Mock(return_value=self.manifest)
-        self.assertIs(self.load_manifest({'database': 'public', 'rollout_manifest_key': 'manifest.json'}),
+        self.assertIs(self.load_manifest({'target': 'public', 'rollout_manifest_key': 'manifest.json'}),
                       self.manifest)
 
     def test_command_streaming_and_timeout(self):
-        source = Path(__file__).resolve().parents[1] / 'dags/import_public_containerized.py'
+        source = Path(__file__).resolve().parents[1] / 'dags/import_containerized_dag.py'
         node = next(n for n in ast.parse(source.read_text()).body
                     if isinstance(n, ast.FunctionDef) and n.name == '_run_and_stream')
         env = dict(os=os, signal=signal, subprocess=subprocess,
@@ -100,23 +100,23 @@ class TaskTests(unittest.TestCase):
 
     def test_collection_cannot_drop_a_preselected_study(self):
         with self.assertRaises(ValueError):
-            self.env['collect_valid_studies']([None], params={'database': 'public'})
+            self.env['collect_valid_studies']([None], params={'target': 'public'})
         self.assertEqual(['study'], self.env['collect_valid_studies'](['study']))
 
     def test_import_uses_references_and_failure_is_not_ignored(self):
-        self.env['import_into_standby_database'](['study'], {'database': 'public'})
+        self.env['import_into_standby_database'](['study'], {'target': 'public'})
         command = self.env['_run_and_stream'].call_args.args[0]
         self.assertNotIn('-n', command)
         self.assertIn('-p', command)
         self.assertNotIn('--oncotree-file', command)
         self.env['_run_and_stream'].return_value.returncode = 1
         with self.assertRaisesRegex(RuntimeError, 'Validator-passing study failed import'):
-            self.env['import_into_standby_database'](['study'], {'database': 'public'})
+            self.env['import_into_standby_database'](['study'], {'target': 'public'})
 
     def test_marks_only_imported_ids_available_after_rebuild(self):
         run = self.env['_run_and_stream']
         self.env['create_derived_tables_in_standby_database'](
-            ['study', 's3://cdsi-testing/other'], {'database': 'public'})
+            ['study', 's3://cdsi-testing/other'], {'target': 'public'})
         self.env['_activate_standby_properties'].assert_called_once_with('public')
         self.assertEqual([c.args[0] for c in run.call_args_list], [
             ['python', '/importer/metaImport.py', 'derive-tables', '--derived-table-sql', '/tmp/clickhouse.sql'],
@@ -129,12 +129,12 @@ class TaskTests(unittest.TestCase):
                 run.reset_mock()
                 run.side_effect = [SimpleNamespace(returncode=c) for c in codes]
                 with self.assertRaisesRegex(Exception, message):
-                    self.env['create_derived_tables_in_standby_database'](['study'], {'database': 'public'})
+                    self.env['create_derived_tables_in_standby_database'](['study'], {'target': 'public'})
                 self.assertEqual(run.call_count, len(codes))
 
     def test_skipped_import_does_not_publish_selected_studies(self):
         self.env['create_derived_tables_in_standby_database'](
-            ['study'], {'database': 'public', 'skip_tasks': ['import_into_standby_database']})
+            ['study'], {'target': 'public', 'skip_tasks': ['import_into_standby_database']})
         self.env['_run_and_stream'].assert_called_once()
 
     def test_transfer_after_import_requires_rebuild(self):
@@ -146,7 +146,7 @@ class TaskTests(unittest.TestCase):
     def test_reference_failure_prevents_importer_activation(self):
         self.env['reference_input'] = Mock(side_effect=ValueError('Reference mismatch'))
         with self.assertRaisesRegex(ValueError, 'Reference mismatch'):
-            self.env['import_into_standby_database'](['study'], {'database': 'public'})
+            self.env['import_into_standby_database'](['study'], {'target': 'public'})
         self.env['_activate_standby_properties'].assert_not_called()
         self.env['_run_and_stream'].assert_not_called()
 
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
 class FailureReportingTests(unittest.TestCase):
     def setUp(self):
-        source = Path(__file__).resolve().parents[1] / 'dags/import_public_containerized.py'
+        source = Path(__file__).resolve().parents[1] / 'dags/import_containerized_dag.py'
         tree = ast.parse(source.read_text())
         node = next(n for n in ast.walk(tree)
                     if isinstance(n, ast.FunctionDef) and n.name == 'report_failure')
@@ -186,7 +186,7 @@ class FailureReportingTests(unittest.TestCase):
 
         # WHEN / THEN the DAG fails and shared state is not modified
         with self.assertRaisesRegex(RuntimeError, 'import tasks failed'):
-            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'database': 'public'})
+            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'target': 'public'})
         self.run_command.assert_not_called()
 
     def test_failed_import_after_clone_marks_abandoned_and_fails_run(self):
@@ -198,7 +198,7 @@ class FailureReportingTests(unittest.TestCase):
 
         # WHEN / THEN cleanup runs and the DAG still fails
         with self.assertRaisesRegex(RuntimeError, 'import tasks failed'):
-            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'database': 'public'})
+            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'target': 'public'})
         self.run_command.assert_called_once_with(['bash', '-c', 'mark-abandoned'], check=True)
 
     def test_failed_clone_does_not_overwrite_unknown_lock_owner(self):
@@ -209,7 +209,7 @@ class FailureReportingTests(unittest.TestCase):
 
         # WHEN / THEN the DAG fails without changing shared state
         with self.assertRaisesRegex(RuntimeError, 'import tasks failed'):
-            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'database': 'public'})
+            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'target': 'public'})
         self.run_command.assert_not_called()
 
     def test_failure_after_transfer_does_not_mark_switched_database_abandoned(self):
@@ -220,5 +220,5 @@ class FailureReportingTests(unittest.TestCase):
 
         # WHEN / THEN the DAG fails without changing the switched state
         with self.assertRaisesRegex(RuntimeError, 'import tasks failed'):
-            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'database': 'public'})
+            self.report_failure(ti=SimpleNamespace(get_dagrun=lambda: run), params={'target': 'public'})
         self.run_command.assert_not_called()
