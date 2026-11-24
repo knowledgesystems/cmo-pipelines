@@ -117,7 +117,7 @@ def _run_and_stream(
         stderr=captured_stderr,
     )
 
-K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:d67fe65687d66cb5ce4f7f2bebd96bc8bc144a82c02e47b40814a15814af9ad6"
+K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:fcc3506549bf5607283dc991ef064ad1091157be94ad3b9aac78931f3de76158"
 # Core image combining PRs #183 and #203 with Airflow-compatible template dependencies.
 K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:b0b9f7b30db842a20dfbf145aeadaeb04419e6854b4a6b8c4633948219e83d98"
 VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
