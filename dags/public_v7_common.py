@@ -12,7 +12,7 @@ PORTAL = "public_v7"
 DATABASES = {color: "cbioportal_public_v7_" + color for color in ("blue", "green")}
 MANAGEMENT = "publicdb_update_management_database"
 HOST = "dl96orhu96.us-east-1.aws.clickhouse.cloud"
-PREVIEW_HOST = "public-v7.cbioportal.org"
+PREVIEW_HOST = "hgnc.cbioportal.aws.mskcc.org"
 
 
 def load_properties(path):

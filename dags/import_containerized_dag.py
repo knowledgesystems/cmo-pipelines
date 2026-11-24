@@ -1,0 +1,782 @@
+"""Blue/green ClickHouse import of public cancer studies from S3. Infrastructure
+tasks run the production import-scripts/ via BashOperator (in-cluster, not SSH);
+validation/import tasks run the cbioportal-core scripts directly."""
+import json
+import logging
+import os
+import signal
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dags.public_rollout import (checked_path, read_manifest, selected_entries,
+                                require_hash, reference_input, study_input,
+                                validation_command, standby_target)
+
+from dags.public_v7_tasks import build_v7_tasks
+from dags.containerized_workflow import wire_import
+from dags.study_sources import (DEFAULT_BUCKET, S3_SOURCES, STUDY_LIST_VARIABLE_KEY,
+                               bucket_mount, parse_study_source, resolve_studies, search_buckets, verified_study_directory)
+
+from datetime import datetime, timedelta
+from airflow.decorators import dag, task
+from airflow.operators.bash import BashOperator
+from airflow.exceptions import AirflowException, AirflowSkipException
+from airflow.models import Variable
+from airflow.models.param import Param
+from airflow.utils.trigger_rule import TriggerRule
+from kubernetes.client import models as k8s
+
+logger = logging.getLogger(__name__)
+
+
+def _run_and_stream(
+    cmd: list[str],
+    check: bool = False,
+    timeout: int | None = 21600,
+    **kwargs,
+) -> "subprocess.CompletedProcess":
+    """Run a command, streaming its stdout/stderr via ``logging`` in real time, then
+    return a ``CompletedProcess`` with full captured output for post-hoc inspection.
+
+    Uses two daemon threads to drain stdout and stderr concurrently, which avoids
+    deadlocks on pipe buffers while preserving the distinction between the two streams.
+    For Python subprocesses the ``-u`` flag is automatically appended so output is
+    unbuffered (no long silences during import).
+    """
+    import subprocess
+    import sys as _sys
+    import threading
+
+    # If running a Python script, add -u for unbuffered output.
+    # Check only the first flag position to avoid matching a path argument.
+    if cmd and cmd[0] == _sys.executable and (len(cmd) < 2 or cmd[1] != "-u"):
+        cmd = [cmd[0], "-u"] + cmd[1:]
+
+    logger.info("Running: %s", " ".join(str(c) for c in cmd))
+
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+        start_new_session=True,
+        **kwargs,
+    )
+
+    stdout_lines: list[str] = []
+    stderr_lines: list[str] = []
+
+    def _drain(stream, log_fn, lines):
+        for raw in iter(stream.readline, ""):
+            line = raw.rstrip("\n\r")
+            lines.append(line)
+            log_fn("%s", line)
+        stream.close()
+
+    t_out = threading.Thread(
+        target=_drain, args=(process.stdout, logger.info, stdout_lines), daemon=True
+    )
+    t_err = threading.Thread(
+        target=_drain, args=(process.stderr, logger.warning, stderr_lines), daemon=True
+    )
+    t_out.start()
+    t_err.start()
+
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+        t_out.join()
+        t_err.join()
+        raise
+
+    # Readers drain through EOF and close their own streams.
+    t_out.join()
+    t_err.join()
+
+    rc = process.returncode
+    captured_stdout = "\n".join(stdout_lines)
+    captured_stderr = "\n".join(stderr_lines)
+    logger.info("Exit code: %d", rc)
+    if rc != 0:
+        logger.warning("stderr was:\n%s", captured_stderr)
+
+    if check and rc != 0:
+        raise subprocess.CalledProcessError(rc, cmd)
+
+    return subprocess.CompletedProcess(
+        args=cmd,
+        returncode=rc,
+        stdout=captured_stdout,
+        stderr=captured_stderr,
+    )
+
+K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:fcc3506549bf5607283dc991ef064ad1091157be94ad3b9aac78931f3de76158"
+# Core image combining PRs #183 and #203 with Airflow-compatible template dependencies.
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:b0b9f7b30db842a20dfbf145aeadaeb04419e6854b4a6b8c4633948219e83d98"
+VALIDATE_SCRIPT_PATH = "/scripts/importer/validateStudies.py"
+IMPORT_SCRIPT_PATH   = "/scripts/importer/metaImport.py"
+SCRIPTS_DIR = "/data/portal-cron/scripts"
+IMPORTER = "public"
+CREDS_DIR = "/data/portal-cron/pipelines-credentials"
+CREDS_SECRET_NAME = "pipelines-credentials"
+CREDS_VOLUME_NAME = "pipelines-credentials"
+GET_DB_IN_PROD_SCRIPT       = f"{SCRIPTS_DIR}/get_database_currently_in_production.sh"
+
+# Both environments' config files live in the pipelines-credentials secret under
+# env-prefixed keys; params.target ('containerized' or 'public') selects the set.
+MANAGE_PROPS_TEMPLATE = f"{CREDS_DIR}/{{{{ params.target }}}}.manage.properties"
+COLOR_SWAP_TEMPLATE   = f"{CREDS_DIR}/{{{{ params.target }}}}.color-swap.yaml"
+
+
+def _manage_props_path(env: str) -> str:
+    return f"{CREDS_DIR}/{env}.manage.properties"
+
+S3_MOUNT_PATH = "/mnt/s3-data"
+
+
+def _rollout_manifest(params):
+    params = params or {}
+    key = params.get('rollout_manifest_key')
+    if not key:
+        if params.get('target') == 'public':
+            raise AirflowException('Public imports require a pinned rollout manifest')
+        return None
+    return read_manifest(checked_path(S3_MOUNT_PATH, key), params.get('rollout_manifest_sha256'))
+
+
+def _rollout_entry(manifest, study_id):
+    for entry in selected_entries(manifest, root_only=True):
+        if entry['study_id'] == parse_study_source(study_id)[1]:
+            return entry
+    raise AirflowException(f'Study is not in pinned selection: {study_id}')
+
+def _selected_rollout_entries(manifest, selections):
+    sources = [parse_study_source(selection) for selection in selections]
+    entries = selected_entries(manifest, [study_id for _, study_id in sources], root_only=True)
+    for entry, (bucket, _) in zip(entries, sources):
+        if entry.get('bucket', DEFAULT_BUCKET) != bucket:
+            raise AirflowException(f"Selected bucket differs from pinned input for {entry['study_id']}")
+    return entries
+
+
+def _input_root(entry):
+    return bucket_mount(entry.get('bucket', DEFAULT_BUCKET))
+
+# Task IDs that may be listed in the skip_tasks param (dry-run support).
+SKIPPABLE_TASK_IDS = (
+    "clone_live_database_into_standby",
+    "import_into_standby_database",
+    "create_derived_tables_in_standby_database",
+    "transfer_deployment_color",
+)
+
+
+def _bash_skip_guard(task_id: str) -> str:
+    """Jinja prefix for a BashOperator command: exit 99 (BashOperator's skip exit
+    code) when the task is listed in params.skip_tasks."""
+    return (
+        f"{{% if '{task_id}' in params.skip_tasks %}}"
+        f"echo '{task_id} listed in skip_tasks - skipping'; exit 99"
+        f"{{% endif %}}\n"
+    )
+
+
+def _skip_if_requested(task_id: str, params: dict | None) -> None:
+    if task_id in ((params or {}).get("skip_tasks") or []):
+        raise AirflowSkipException(f"{task_id} listed in skip_tasks - skipping")
+
+
+def _study_data_path(study_id: str) -> str | None:
+    """Read a study directory or archive at its bucket root. None if absent."""
+    import pathlib
+    import tarfile
+    import tempfile
+    import shutil
+
+    bucket, study_id = parse_study_source(study_id)
+    mount = bucket_mount(bucket)
+    mount_tar = mount / f"{study_id}.tar.gz"
+    mount_dir = mount / study_id
+
+    if mount_dir.is_dir():
+        return verified_study_directory(mount_dir, study_id)
+
+    if mount_tar.is_file():
+        tmp = tempfile.mkdtemp(prefix=f"{study_id}_")
+        try:
+            with tarfile.open(str(mount_tar), mode="r:gz") as tf:
+                tf.extractall(tmp)
+
+            # flatten single top-level dir
+            entries = list(pathlib.Path(tmp).iterdir())
+            if len(entries) == 1 and entries[0].is_dir():
+                inner = entries[0]
+                for child in inner.iterdir():
+                    child.rename(pathlib.Path(tmp) / child.name)
+                inner.rmdir()
+
+            return verified_study_directory(tmp, study_id)
+        except Exception as e:
+            logger.error("Failed to extract %s: %s", mount_tar, e)
+            shutil.rmtree(tmp, ignore_errors=True)
+            return None
+
+    logger.error("Study '%s' not found at %s (neither .tar.gz nor directory)", study_id, mount)
+    return None
+
+
+def _available_study_ids() -> list[str]:
+    """Read the study-list Variable at parse time to populate the Param enum."""
+    try:
+        catalog = Variable.get(STUDY_LIST_VARIABLE_KEY, default_var=None)
+        choices = json.loads(catalog if catalog is not None else
+                             Variable.get('available_study_ids', default_var='[]'))
+        return sorted({parse_study_source(choice)[1] for choice in choices})
+    except Exception:
+        return []
+
+
+def _script(script_name: str, *args: object, source_automation_env: bool = False) -> str:
+    """Builds a ``{SCRIPTS_DIR}/{script} {args...}`` command, mirroring import_base._script."""
+    parts = [f"{SCRIPTS_DIR}/{script_name}"]
+    parts.extend(str(arg) for arg in args)
+    cmd = " ".join(parts)
+    if source_automation_env:
+        return f"source {SCRIPTS_DIR}/automation-environment.sh && {cmd}"
+    return cmd
+
+
+_SAML2AWS_ENV = k8s.V1EnvVar(name="SAML2AWS_CONFIGFILE", value=f"{CREDS_DIR}/.saml2aws")
+
+
+def _load_properties(path: str) -> dict[str, str]:
+    """Parse a simple key=value properties file (comments and blank lines ignored)."""
+    props: dict[str, str] = {}
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            props[key.strip()] = value.strip()
+    return props
+
+
+def _pod_override(
+    image: str,
+    env: list,
+    resources: k8s.V1ResourceRequirements | None = None,
+    extra_volumes: list | None = None,
+    extra_mounts: list | None = None,
+) -> dict:
+    return {
+        "pod_override": k8s.V1Pod(
+            spec=k8s.V1PodSpec(
+                service_account_name="airflow-worker",
+                image_pull_secrets=[k8s.V1LocalObjectReference(name="ghcr-pull")],
+                # fsGroup so the mounted Secret volume is readable with the S3 CSI driver v2
+                security_context=k8s.V1PodSecurityContext(fs_group=1000),
+                node_selector={"workload": "airflow-importer-dag"},
+                tolerations=[
+                    k8s.V1Toleration(
+                        key="workload",
+                        operator="Equal",
+                        value="airflow-importer-dag",
+                        effect="NoSchedule",
+                    ),
+                ],
+                containers=[k8s.V1Container(
+                    name="base",
+                    image=image,
+                    image_pull_policy="Always",
+                    resources=resources,
+                    env=env,
+                    volume_mounts=(extra_mounts or []) + [
+                        k8s.V1VolumeMount(
+                            name=CREDS_VOLUME_NAME,
+                            mount_path=CREDS_DIR,
+                            read_only=True,
+                        ),
+                    ] + [
+                        k8s.V1VolumeMount(name=f"study-source-{i}", mount_path=source['mount'], read_only=True)
+                        for i, source in enumerate(S3_SOURCES.values())
+                    ],
+                )],
+                volumes=(extra_volumes or []) + [
+                    k8s.V1Volume(
+                        name=CREDS_VOLUME_NAME,
+                        secret=k8s.V1SecretVolumeSource(
+                            secret_name=CREDS_SECRET_NAME,
+                            default_mode=0o400,
+                        ),
+                    ),
+                ] + [
+                    k8s.V1Volume(name=f"study-source-{i}", persistent_volume_claim=
+                        k8s.V1PersistentVolumeClaimVolumeSource(claim_name=source['claim'], read_only=True))
+                    for i, source in enumerate(S3_SOURCES.values())
+                ],
+            )
+        )
+    }
+
+
+_POD_OVERRIDE = _pod_override(
+    image=K8S_IMAGE,
+    env=[
+        _SAML2AWS_ENV,
+        # blank so the Airflow cluster kubeconfig does not leak into kubectl calls
+        k8s.V1EnvVar(name="KUBECONFIG", value=""),
+    ],
+)
+
+
+def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: str = "2Gi", memory_limit: str = "3Gi", jdbc_diagnostics: bool = False) -> dict:
+    env = [
+        k8s.V1EnvVar(name="PORTAL_HOME", value="/"),
+        _SAML2AWS_ENV,
+    ]
+    if java_opts:
+        env.append(k8s.V1EnvVar(name="JAVA_OPTS", value=java_opts))
+    if jdbc_diagnostics:
+        # Reaches Java subprocesses launched by the Python importer, too.
+        env.append(k8s.V1EnvVar(name="JAVA_TOOL_OPTIONS", value="-Dcbio.jdbc.diagnostics=true"))
+
+    # application.properties, clickhouse.sql and manage properties for both
+    # environments come from the pipelines-credentials secret (mounted at
+    # CREDS_DIR) under env-prefixed keys — no extra per-environment mounts.
+    return _pod_override(
+        image=K8S_IMAGE_VALIDATE,
+        env=env,
+        resources=k8s.V1ResourceRequirements(
+            requests={"memory": memory_request, "cpu": "1"},
+            limits={"memory": memory_limit},
+        ),
+    )
+
+
+_POD_OVERRIDE_VALIDATE = _make_cbioportal_pod_override(memory_request="2Gi", memory_limit="3Gi")
+_POD_OVERRIDE_IMPORT   = _make_cbioportal_pod_override(java_opts="-Xmx22g", memory_request="24Gi", memory_limit="26Gi", jdbc_diagnostics=True)
+
+_DEFAULT_ARGS = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "email_on_failure": True,
+    "email_on_retry": False,
+    "retries": 0,
+    "retry_delay": timedelta(minutes=5),
+    "execution_timeout": timedelta(hours=24),
+}
+
+
+def _activate_standby_properties(env: str) -> str:
+    """Determine the standby color for the given environment ('containerized' or
+    'public') and copy the matching application.properties + derived-table SQL into
+    /tmp, pointing PORTAL_HOME and the CLICKHOUSE_* env vars at the standby database.
+
+    Calls get_database_currently_in_production.sh from the cbioportal-core scripts
+    (available at /scripts/clickhouse_import_support/ in the core image).
+
+    Returns the standby color string ('blue' or 'green').
+    """
+    import shutil
+    manage_props_path = _manage_props_path(env)
+    # The core image has cbioportal-core scripts at /scripts/clickhouse_import_support/
+    result = _run_and_stream([
+        "/scripts/clickhouse_import_support/get_database_currently_in_production.sh",
+        manage_props_path,
+    ], timeout=120)
+    if result.returncode != 0:
+        raise Exception(f"get_database_currently_in_production failed (exit {result.returncode})")
+    ch_props = _load_properties(manage_props_path)
+    live_db = result.stdout.strip().split(':', 1)[0].strip()
+    blue_db = ch_props['clickhouse_blue_database_name']
+    green_db = ch_props['clickhouse_green_database_name']
+    live_db = {'blue': blue_db, 'green': green_db}.get(live_db, live_db)
+    if blue_db == green_db or live_db not in (blue_db, green_db):
+        raise AirflowException('Management returned an unknown or ambiguous production database')
+    live_color = 'blue' if live_db == blue_db else 'green'
+    standby_color = "green" if live_color == "blue" else "blue"
+    src_path = f"{CREDS_DIR}/{env}.application.properties.{standby_color}"
+    if env == 'public':
+        if (ch_props.get('portal_database_name') != 'public'
+                or ch_props.get('clickhouse_update_management_database') != 'publicdb_update_management_database'
+                or blue_db != 'cbioportal_public_blue' or green_db != 'cbioportal_public_green'):
+            raise AirflowException('Public management configuration targets unexpected databases')
+        standby_target(ch_props, result.stdout, _load_properties(src_path))
+    dest_path = "/tmp/application.properties"
+    shutil.copy(src_path, dest_path)
+    shutil.copy(f"{CREDS_DIR}/{env}.clickhouse.sql", "/tmp/clickhouse.sql")
+    os.environ["PORTAL_HOME"] = "/tmp"
+
+    # Point the derive-tables clickhouse client at the standby database.
+    # rebuild_derived_tables.py reads CLICKHOUSE_* env vars; a fixed value would
+    # ignore the blue/green color, so derive them from the manage properties here.
+    standby_db = ch_props[f"clickhouse_{standby_color}_database_name"]
+    os.environ["CLICKHOUSE_HOST"] = ch_props["clickhouse_server_host_name"]
+    os.environ["CLICKHOUSE_NATIVE_PORT"] = ch_props["clickhouse_server_port"]
+    os.environ["CLICKHOUSE_USER"] = ch_props["clickhouse_server_username"]
+    os.environ["CLICKHOUSE_PASSWORD"] = ch_props["clickhouse_server_password"]
+    os.environ["CLICKHOUSE_DB"] = standby_db
+    logging.info(
+        "=== TARGET ENVIRONMENT: %s | live=%s standby=%s | standby db=%s ===",
+        env, live_color, standby_color, standby_db,
+    )
+    return standby_color
+
+
+@dag(
+    dag_id="import_containerized_dag",
+    default_args=_DEFAULT_ARGS,
+    start_date=datetime(2026, 1, 1),
+    schedule=None,  # trigger-only: a run swaps production traffic
+    catchup=False,
+    is_paused_upon_creation=True,
+    max_active_runs=1,
+    render_template_as_native_obj=True,
+    params={
+        "target": Param(
+            "containerized",
+            type="string",
+            enum=["containerized", "public", "public_v7"],
+            description=(
+                "Which database environment to import into. 'containerized' targets the "
+                "test databases and containerized.cbioportal.org; 'public' targets the "
+                "REAL public databases — its traffic swap moves www.cbioportal.org. "
+                "Select public_v7 for the HGNC preview."
+            ),
+            title="Target",
+        ),
+        "cancer_study_ids": Param(
+            [],
+            type="array",
+            examples=_available_study_ids(),
+            description="Select study IDs to import. Each must exist in exactly one location in the selected buckets. Run refresh_study_list to update the list.",
+            title="Studies to Import",
+        ),
+        "buckets": Param(
+            [DEFAULT_BUCKET],
+            type="array",
+            examples=list(S3_SOURCES),
+            items={"type": "string", "enum": list(S3_SOURCES)},
+            minItems=1,
+            uniqueItems=True,
+            description="Search the roots of these buckets for each selected study. Multiple matching locations fail preflight.",
+            title="Buckets to Search",
+        ),
+        "skip_tasks": Param(
+            [],
+            type="array",
+            examples=list(SKIPPABLE_TASK_IDS),
+            description=(
+                "Task IDs to skip this run (dry-run support). Skipping "
+                "transfer_deployment_color imports into the standby database without "
+                "swapping production traffic; the run then finishes in the 'abandoned' "
+                "management state so the next run re-clones the standby database."
+            ),
+            title="Skip Tasks",
+        ),
+        "rollout_manifest_key": Param("", type="string", description="S3 key of the pinned public validation/selection manifest."),
+        "rollout_manifest_sha256": Param("", type="string", description="SHA-256 of the exact manifest bytes; mandatory for public."),
+    },
+)
+def import_containerized_dag():
+    # KubernetesExecutor fixes the worker image and secret mounts at DAG parse
+    # time. Skip the entire unselected path, including its cleanup tasks.
+    @task.short_circuit()
+    def select_workers(preview, params=None, dag_run=None):
+        target = params["target"]
+        if (target == "public_v7") != preview:
+            return False
+        if "database" in (dag_run.conf or {}):
+            raise AirflowException("Use target instead of database on import_containerized_dag")
+        if target == "public_v7" and (params["skip_tasks"] or params["rollout_manifest_key"]
+                                      or params["rollout_manifest_sha256"]
+                                      or params["buckets"] != [DEFAULT_BUCKET]):
+            raise AirflowException("HGNC uses its configured study prefix and requires every import stage")
+        return True
+
+    @task(executor_config=_POD_OVERRIDE)
+    def verify_studies_exist(study_ids: list[str], params: dict | None = None) -> list[str]:
+        """Resolve every requested study at a selected bucket's root or fail."""
+
+        # Fail fast on typos: a misspelled skip_tasks entry would silently NOT skip
+        # its task, which for transfer_deployment_color means an unintended traffic swap.
+        unknown = set((params or {}).get("skip_tasks") or []) - set(SKIPPABLE_TASK_IDS)
+        if unknown:
+            raise AirflowException(f"skip_tasks contains unknown task ids: {sorted(unknown)}")
+
+        skipped = (params or {}).get("skip_tasks") or []
+        if ("create_derived_tables_in_standby_database" in skipped
+                and "import_into_standby_database" not in skipped
+                and "transfer_deployment_color" not in skipped):
+            raise AirflowException("After importing studies, rebuild derived tables before transferring traffic")
+
+        # render_template_as_native_obj may render the array Param as its string repr
+        if isinstance(study_ids, str):
+            import ast
+            try:
+                study_ids = json.loads(study_ids)
+            except (json.JSONDecodeError, ValueError):
+                study_ids = ast.literal_eval(study_ids)
+        if (params or {}).get('study_prefix'):
+            raise AirflowException('Subdirectory imports are unsupported; place studies at the bucket root')
+        buckets = search_buckets((params or {}).get('buckets', [DEFAULT_BUCKET]))
+        manifest = _rollout_manifest(params)
+        if manifest is not None:
+            selected_entries(manifest, study_ids, root_only=True)
+            study_ids = resolve_studies(study_ids, buckets)
+            for entry in _selected_rollout_entries(manifest, study_ids):
+                require_hash(checked_path(_input_root(entry), entry['key']), entry['sha256'])
+            refs = manifest['references']
+            require_hash(checked_path(_input_root(refs), refs['key']), refs['sha256'])
+            return study_ids
+
+        return resolve_studies(study_ids, buckets)
+
+    t_verify_cluster_state = BashOperator(
+        task_id="verify_cluster_state",
+        # unset IRSA vars so aws uses the saml2aws profile
+        bash_command="unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
+            "airflow-verify-management.sh",
+            SCRIPTS_DIR,
+            MANAGE_PROPS_TEMPLATE,
+            COLOR_SWAP_TEMPLATE,
+        ),
+        executor_config=_POD_OVERRIDE,
+    )
+
+    t_clone_live_database = BashOperator(
+        task_id="clone_live_database_into_standby",
+        bash_command=_bash_skip_guard("clone_live_database_into_standby") + _script(
+            "airflow-clone-db.sh",
+            IMPORTER,
+            SCRIPTS_DIR,
+            MANAGE_PROPS_TEMPLATE,
+        ),
+        executor_config=_POD_OVERRIDE,
+    )
+
+    @task(executor_config=_POD_OVERRIDE_VALIDATE)
+    def pull_and_validate_study(study_id: str, params: dict | None = None) -> str | None:
+        import pathlib
+
+        manifest = _rollout_manifest(params)
+        if manifest is not None:
+            importer = Path(VALIDATE_SCRIPT_PATH).parent
+            entry = _rollout_entry(manifest, study_id)
+            log_dir = Path('/tmp/validate_logs') / parse_study_source(study_id)[1]
+            log_dir.mkdir(parents=True, exist_ok=True)
+            with reference_input(_input_root(manifest['references']), manifest, importer) as refs:
+                with study_input(_input_root(entry), entry) as study:
+                    result = _run_and_stream(validation_command(
+                        sys.executable, importer, study, refs, log_dir / 'report.html'))
+            if result.returncode not in (0, 3):
+                raise AirflowException(f'Previously passing study {study_id} failed pinned validation: {result.returncode}')
+            return study_id
+
+        try:
+            local_dir = _study_data_path(study_id)
+            if local_dir is None:
+                return None
+
+            log_dir = f"/tmp/validate_logs/{parse_study_source(study_id)[1]}"
+            os.makedirs(log_dir, exist_ok=True)
+            result = _run_and_stream(
+                [sys.executable, VALIDATE_SCRIPT_PATH, "-l", local_dir, "-n", "-html", log_dir],
+            )
+            for log_file in pathlib.Path(log_dir).glob("log-validate-studies-*.txt"):
+                logging.info("=== Validation log: %s ===\n%s", log_file.name, log_file.read_text())
+            if result.returncode not in (0, 3):
+                logging.error("Validation failed for %s (exit %d)", study_id, result.returncode)
+                return None
+            return study_id
+        except Exception as e:
+            logging.error("Validation failed for %s: %s", study_id, e)
+            return None
+
+    @task(executor_config=_POD_OVERRIDE)
+    def collect_valid_studies(results: list, params: dict | None = None) -> list[str]:
+        manifest = _rollout_manifest(params)
+        if manifest is not None:
+            _selected_rollout_entries(manifest, results)
+            return results
+        valid = [sid for sid in (results or []) if sid is not None]
+        if not valid:
+            # Fail (not skip): downstream tasks use NONE_FAILED so that explicit
+            # skip_tasks skips flow through them — a skip here would let
+            # transfer_deployment_color swap traffic onto an unmodified clone.
+            raise AirflowException("No studies passed validation")
+        logging.info("Studies passing validation: %s", valid)
+        return valid
+
+    @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
+    def import_into_standby_database(valid_studies: list[str], params: dict | None = None):
+        _skip_if_requested("import_into_standby_database", params)
+        manifest = _rollout_manifest(params)
+        if manifest is not None:
+            _selected_rollout_entries(manifest, valid_studies)
+            importer = Path(IMPORT_SCRIPT_PATH).parent
+            with reference_input(_input_root(manifest['references']), manifest, importer) as refs:
+                _activate_standby_properties(params['target'])
+                for study_id in valid_studies:
+                    entry = _rollout_entry(manifest, study_id)
+                    with study_input(_input_root(entry), entry) as study:
+                        result = _run_and_stream([
+                            sys.executable, IMPORT_SCRIPT_PATH, '-s', str(study),
+                            '-p', str(refs),
+                            '-o', '--no-derive-tables'])
+                        if result.returncode != 0:
+                            raise AirflowException(f'Validator-passing study failed import: {study_id} (exit {result.returncode})')
+            return
+        _activate_standby_properties(params["target"])
+        if not valid_studies:
+            logging.info("No valid studies to import — exiting.")
+            return
+
+        failed = []
+        for study_id in valid_studies:
+            local_dir = _study_data_path(study_id)
+            if local_dir is None:
+                failed.append(study_id)
+                continue
+
+            result = _run_and_stream(
+                [sys.executable, IMPORT_SCRIPT_PATH,
+                 "-s", local_dir,
+                 "-n",
+                 "-o",
+                 "--no-derive-tables"],
+            )
+            if result.returncode != 0:
+                logging.error("Import failed for %s (exit %d)", study_id, result.returncode)
+                failed.append(study_id)
+
+        if failed:
+            raise Exception(f"Import failed for {len(failed)} study/studies: {failed}")
+
+    @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
+    def create_derived_tables_in_standby_database(valid_studies: list[str], params: dict | None = None):
+        _skip_if_requested("create_derived_tables_in_standby_database", params)
+        _activate_standby_properties(params["target"])
+        rebuild = _run_and_stream(
+            [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables",
+             "--derived-table-sql", "/tmp/clickhouse.sql"],
+        )
+        if rebuild.returncode != 0:
+            raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode})")
+
+        if "import_into_standby_database" in (params.get("skip_tasks") or []):
+            return
+        study_ids = [parse_study_source(selection)[1] for selection in valid_studies]
+        if not study_ids:
+            raise AirflowException("Expected imported study IDs after rebuilding derived tables")
+        importer = Path(IMPORT_SCRIPT_PATH).with_name("cbioportalImporter.py")
+        result = _run_and_stream([
+            sys.executable, str(importer), "make-studies-available", "-ids", ",".join(study_ids),
+        ])
+        if result.returncode:
+            raise AirflowException(f"Failed to mark studies available on standby (exit {result.returncode})")
+
+    t_transfer_deployment_color = BashOperator(
+        task_id="transfer_deployment_color",
+        bash_command=_bash_skip_guard("transfer_deployment_color")
+        + "unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
+            "airflow-transfer-deployment.sh",
+            SCRIPTS_DIR,
+            MANAGE_PROPS_TEMPLATE,
+            COLOR_SWAP_TEMPLATE,
+        ),
+        executor_config=_POD_OVERRIDE,
+        trigger_rule=TriggerRule.NONE_FAILED,
+    )
+
+    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.NONE_FAILED)
+    def finalize_import_state(ti=None, params: dict | None = None):
+        """Set the management DB end state: 'complete' only if production traffic was
+        actually swapped, otherwise 'abandoned' so the next run re-clones standby."""
+        transfer_state = ti.get_dagrun().get_task_instance("transfer_deployment_color").state
+        state = "complete" if transfer_state == "success" else "abandoned"
+        logging.info(
+            "transfer_deployment_color finished in state %r -> setting update process state %r",
+            transfer_state, state,
+        )
+        _run_and_stream(
+            ["bash", "-c", _script(
+                "set_update_process_state.sh",
+                _manage_props_path(params["target"]),
+                state,
+                source_automation_env=True,
+            )],
+            check=True,
+        )
+
+        if state == "complete":
+            target = params["target"]
+            _run_and_stream(
+                ["bash", "-c", "unset AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE; " + _script(
+                    "airflow-verify-management.sh", SCRIPTS_DIR, _manage_props_path(target),
+                    f"{CREDS_DIR}/{target}.color-swap.yaml")],
+                check=True,
+            )
+
+    @task(executor_config=_POD_OVERRIDE, trigger_rule=TriggerRule.ALL_DONE)
+    def report_failure(ti=None, params: dict | None = None):
+        """Report upstream failures without resetting another import's state."""
+        run = ti.get_dagrun()
+        instances = run.get_task_instances()
+        if not any(instance.state in ("failed", "upstream_failed") for instance in instances):
+            return
+
+        clone = run.get_task_instance("clone_live_database_into_standby")
+        transfer = run.get_task_instance("transfer_deployment_color")
+        if clone and clone.state == "success" and (not transfer or transfer.state != "success"):
+            _run_and_stream(
+                ["bash", "-c", _script(
+                    "set_update_process_state.sh",
+                    _manage_props_path(params["target"]),
+                    "abandoned",
+                    source_automation_env=True,
+                )],
+                check=True,
+            )
+        else:
+            logging.error("Import state left unchanged; check clone and transfer state manually")
+        raise AirflowException("One or more import tasks failed")
+
+    t_found_studies  = verify_studies_exist("{{ params.cancer_study_ids }}")
+    t_pull_and_validate = pull_and_validate_study.partial().expand(study_id=t_found_studies)
+    t_collect_valid  = collect_valid_studies(t_pull_and_validate)
+    t_import         = import_into_standby_database(t_collect_valid)
+    t_create_derived_tables = create_derived_tables_in_standby_database(t_collect_valid)
+    t_finalize       = finalize_import_state()
+    t_report_failure = report_failure()
+
+    select_workers.override(task_id="select_public_workers")(False) >> t_found_studies
+    select_workers.override(task_id="select_hgnc_workers")(True) >> build_v7_tasks()
+    t_found_studies >> t_verify_cluster_state >> t_pull_and_validate
+    wire_import(t_collect_valid, t_clone_live_database, t_import, t_create_derived_tables,
+                t_transfer_deployment_color, t_finalize)
+
+    [
+        t_found_studies,
+        t_verify_cluster_state,
+        t_clone_live_database,
+        t_pull_and_validate,
+        t_collect_valid,
+        t_import,
+        t_create_derived_tables,
+        t_transfer_deployment_color,
+        t_finalize,
+    ] >> t_report_failure
+
+
+import_containerized_dag()

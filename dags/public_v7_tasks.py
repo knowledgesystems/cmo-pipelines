@@ -1,13 +1,12 @@
 """Manual containerized imports for the public v7 preview."""
 
-from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 
-from airflow.decorators import dag, task
+from airflow.decorators import task
 from airflow.exceptions import AirflowException
-from airflow.models.param import Param
 from airflow.utils.trigger_rule import TriggerRule
+from dags.containerized_workflow import wire_import
 from kubernetes.client import models as k8s
 
 # Airflow may discover this DAG below the git-sync root. Ensure its companion
@@ -40,8 +39,8 @@ def pod(image, memory, java_opts=None):
             volume_mounts=[k8s.V1VolumeMount(name=n, mount_path=p, read_only=ro) for n, p, ro in mounts],
         )],
         volumes=[
-            k8s.V1Volume(name="v7-credentials", secret=k8s.V1SecretVolumeSource(secret_name="public-v7-import-credentials", default_mode=0o440)),
-            k8s.V1Volume(name="v7-config", config_map=k8s.V1ConfigMapVolumeSource(name="public-v7-config")),
+            k8s.V1Volume(name="v7-credentials", secret=k8s.V1SecretVolumeSource(secret_name="public-v7-import-credentials", default_mode=0o440, optional=True)),
+            k8s.V1Volume(name="v7-config", config_map=k8s.V1ConfigMapVolumeSource(name="public-v7-config", optional=True)),
             k8s.V1Volume(name="studies", persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(claim_name="databricks-s3-pvc", read_only=True)),
             # The deployed worker template supplies airflow-logs at
             # /opt/airflow/logs. Airflow extends these lists during merging;
@@ -51,23 +50,14 @@ def pod(image, memory, java_opts=None):
 
 
 # The scheduler needs the images before task pods can read the ConfigMap.
-# Publish the v7 core image and replace its staging tag with the digest before enabling promotion.
 CMO = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:1286f2d45ca7dfdf4643eb3c3bad560af94e941647a06e4fedbafcdae5e6dc9b"
-CORE = "ghcr.io/cbioportal/containerized-importer-core:public-v7-7139589c0d02"
+CORE = "ghcr.io/cbioportal/containerized-importer-core@sha256:f6ca4431f401ff737f2330d7dd760dfc3e85f552ddd1a3b53807d32a953c2b35"
 INFRA = pod(CMO, "3Gi")
 VALIDATE = pod(CORE, "3Gi")
 IMPORT = pod(CORE, "26Gi", "-Xmx22g")
 
 
-@dag(
-    dag_id="import_public_v7", schedule=None, catchup=False,
-    start_date=datetime(2026, 1, 1), max_active_runs=1, max_active_tasks=4, is_paused_upon_creation=True,
-    default_args={"owner": "airflow", "retries": 0, "execution_timeout": timedelta(hours=12)},
-    render_template_as_native_obj=True,
-    params={"cancer_study_ids": Param([], type="array", items={"type": "string"}, title="V7 study IDs")},
-    tags=["public-v7", "curation"],
-)
-def import_public_v7():
+def build_v7_tasks():
     @task(executor_config=INFRA)
     def prepare(params=None, run_id=None):
         return runtime.prepare(params["cancer_study_ids"], run_id, CORE, CMO)
@@ -76,7 +66,7 @@ def import_public_v7():
     def selected(plan):
         return list(plan["studies"])
 
-    @task(executor_config=VALIDATE)
+    @task(executor_config=VALIDATE, max_active_tis_per_dag=4)
     def validate(study, plan):
         return runtime.validate_study(study, plan)
 
@@ -126,8 +116,7 @@ def import_public_v7():
     derived = derive(plan)
     transferred = transfer(plan)
     completed = complete(plan)
-    checked >> verified >> cloned >> imported >> derived >> transferred >> completed
+    checked >> verified
+    wire_import(verified, cloned, imported, derived, transferred, completed)
     [plan, studies, checked, verified, cloned, imported, derived, transferred, completed] >> failure_cleanup()
-
-
-import_public_v7()
+    return plan

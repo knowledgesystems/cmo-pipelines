@@ -29,6 +29,8 @@ REPORTS = Path("/opt/airflow/logs/public_v7")
 
 
 def settings():
+    if not CONFIG.is_file() or not MANAGE.is_file():
+        raise ValueError("HGNC imports require public-v7-config and public-v7-import-credentials in Airflow")
     cfg = json.loads(CONFIG.read_text())
     if cfg["portal"] != "public_v7" or cfg["databases"] != DATABASES or cfg["preview_host"] != PREVIEW_HOST:
         raise ValueError("Unexpected environment mapping")
@@ -344,6 +346,9 @@ def transfer(plan):
 def complete(plan):
     check_plan(plan, "running")
     support("set_update_process_state.sh", MANAGE, "complete")
+    authenticate_portal()
+    if route() != "cbioportal-backend-public-v7-" + plan["target_color"]:
+        raise ValueError("Preview ingress no longer routes to the promoted target")
     _, _, client = settings()
     if active_color(client.management()) != plan["target_color"]:
         raise ValueError("Management finalization did not match the promoted target")
