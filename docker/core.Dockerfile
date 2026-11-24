@@ -47,6 +47,8 @@ USER airflow
 # hard-conflict with the Airflow constraints file
 COPY requirements.txt /tmp/cbioportal_requirements.txt
 RUN pip install --no-cache-dir -r /tmp/cbioportal_requirements.txt
+# Airflow and Flask require newer template libraries than core's legacy pins.
+RUN pip install --no-cache-dir 'Jinja2==3.1.5' 'MarkupSafe==3.0.2'
 # boto3 constrained so it resolves Airflow-compatible
 RUN pip install --no-cache-dir boto3 \
       --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
