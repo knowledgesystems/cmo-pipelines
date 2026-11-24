@@ -609,7 +609,7 @@ def import_public_containerized():
                     with study_input(_input_root(entry), entry) as study:
                         result = _run_and_stream([
                             sys.executable, IMPORT_SCRIPT_PATH, '-s', str(study),
-                            '-p', str(refs), '--oncotree-file', str(refs / 'oncotree.json'),
+                            '-p', str(refs),
                             '-o', '--no-derive-tables'])
                         if result.returncode != 0:
                             raise AirflowException(f'Validator-passing study failed import: {study_id} (exit {result.returncode})')

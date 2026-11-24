@@ -170,8 +170,7 @@ def reference_input(root, manifest, importer):
 def validation_command(python, importer, study, references, html):
     # Direct entry point preserves INVALID vs PROBLEMS OCCURRED exit codes.
     return [str(python), str(Path(importer) / 'validateData.py'), '-s', str(study),
-            '-p', str(references), '--oncotree-file', str(Path(references) / 'oncotree.json'),
-            '--html', str(html), '-v']
+            '-p', str(references), '--html', str(html), '-v']
 
 
 def selected_entries(manifest, requested=None, *, root_only=False):

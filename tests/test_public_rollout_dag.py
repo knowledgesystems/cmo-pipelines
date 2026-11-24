@@ -107,7 +107,7 @@ class TaskTests(unittest.TestCase):
         command = self.env['_run_and_stream'].call_args.args[0]
         self.assertNotIn('-n', command)
         self.assertIn('-p', command)
-        self.assertIn('--oncotree-file', command)
+        self.assertNotIn('--oncotree-file', command)
         self.env['_run_and_stream'].return_value.returncode = 1
         with self.assertRaisesRegex(RuntimeError, 'Validator-passing study failed import'):
             self.env['import_into_standby_database'](['study'], {'database': 'public'})

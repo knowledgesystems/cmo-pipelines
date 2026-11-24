@@ -149,7 +149,7 @@ class RolloutTests(unittest.TestCase):
         command = rollout.validation_command('python', '/importer', '/study', '/refs', '/report.html')
         self.assertNotIn('-n', command)
         self.assertIn('-p', command)
-        self.assertEqual('/refs/oncotree.json', command[command.index('--oncotree-file') + 1])
+        self.assertNotIn('--oncotree-file', command)
 
 
 if __name__ == '__main__':
