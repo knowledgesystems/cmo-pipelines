@@ -437,6 +437,7 @@ def _activate_standby_properties(env: str) -> str:
     start_date=datetime(2026, 1, 1),
     schedule=None,  # trigger-only: a run swaps production traffic
     catchup=False,
+    is_paused_upon_creation=True,
     max_active_runs=1,
     render_template_as_native_obj=True,
     params={
