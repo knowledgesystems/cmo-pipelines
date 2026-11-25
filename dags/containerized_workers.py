@@ -4,8 +4,8 @@ from dags import public_v7_workers
 from dags.study_sources import S3_SOURCES
 
 K8S_IMAGE            = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:fcc3506549bf5607283dc991ef064ad1091157be94ad3b9aac78931f3de76158"
-# Core image combining PRs #183 and #203 with Airflow-compatible template dependencies.
-K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:b0b9f7b30db842a20dfbf145aeadaeb04419e6854b4a6b8c4633948219e83d98"
+# Core image combining PRs #183 and #203 with Airflow-compatible dependencies and the derived OPTIMIZE retry from core PR #229.
+K8S_IMAGE_VALIDATE   = "ghcr.io/cbioportal/containerized-importer-core@sha256:c7677619303911d726fa900c5210ba01819d5f9d0c73c6691f22ad4b61fa145d"
 CREDS_DIR = "/data/portal-cron/pipelines-credentials"
 CREDS_SECRET_NAME = "pipelines-credentials"
 CREDS_VOLUME_NAME = "pipelines-credentials"
