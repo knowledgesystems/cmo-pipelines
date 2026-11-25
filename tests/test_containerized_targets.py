@@ -45,4 +45,29 @@ class ContainerizedTargetsTest(unittest.TestCase):
         self.assertIn("collect_valid_studies",
                       self.dag.get_task("clone_live_database_into_standby").upstream_task_ids)
         self.assertIn("validate", self.dag.get_task("verify_portal").upstream_task_ids)
-        self.assertIn("verify_portal", self.dag.get_task("clone").upstream_task_ids)
+        self.assertIn("verify_portal", self.dag.get_task("begin").upstream_task_ids)
+
+    def test_hgnc_skips_transfer_and_releases_management_without_promotion(self):
+        from airflow.exceptions import AirflowSkipException
+        params = dict(self.dag.params, target="public_v7", skip_tasks=["transfer_deployment_color"])
+        selector = self.dag.get_task("select_hgnc_workers").python_callable
+        self.assertTrue(selector(True, params=params, dag_run=SimpleNamespace(conf={})))
+        with patch("dags.public_v7_tasks.runtime") as runtime:
+            with self.assertRaises(AirflowSkipException):
+                self.dag.get_task("transfer").python_callable({}, params=params)
+            self.dag.get_task("complete").python_callable({}, params=params)
+            runtime.abandon.assert_called_once_with({})
+            runtime.transfer.assert_not_called()
+            runtime.complete.assert_not_called()
+
+    def test_hgnc_validation_only_leaves_management_untouched(self):
+        from dags.containerized_workflow import SKIPPABLE_TASK_IDS
+        from airflow.exceptions import AirflowSkipException
+        params = {"skip_tasks": list(SKIPPABLE_TASK_IDS)}
+        with patch("dags.public_v7_tasks.runtime") as runtime:
+            self.assertFalse(self.dag.get_task("begin").python_callable({}, params=params))
+            for task_id in ("clone", "import_studies", "derive", "transfer"):
+                with self.assertRaises(AirflowSkipException):
+                    self.dag.get_task(task_id).python_callable({}, params=params)
+            self.dag.get_task("complete").python_callable({}, params=params)
+            self.assertEqual(runtime.mock_calls, [])

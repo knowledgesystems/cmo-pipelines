@@ -41,7 +41,7 @@ class TaskTests(unittest.TestCase):
         source = Path(__file__).resolve().parents[1] / 'dags/import_containerized_dag.py'
         tree = ast.parse(source.read_text())
         nodes = []
-        wanted = {'_public_reference_manifest', 'pull_and_validate_study',
+        wanted = {'_validate_skips', '_public_reference_manifest', 'pull_and_validate_study',
                   '_public_study_entries', '_input_root',
                   'collect_valid_studies', 'import_into_standby_database',
                   'create_derived_tables_in_standby_database', 'verify_studies_exist'}
@@ -142,7 +142,7 @@ class TaskTests(unittest.TestCase):
         task_id = 'create_derived_tables_in_standby_database'
         self.env['SKIPPABLE_TASK_IDS'] = [task_id]
         with self.assertRaisesRegex(RuntimeError, 'before transferring traffic'):
-            self.env['verify_studies_exist'](['study'], {'skip_tasks': [task_id]})
+            self.env['_validate_skips']({'skip_tasks': [task_id]})
 
     def test_reference_failure_prevents_importer_activation(self):
         self.env['reference_input'] = Mock(side_effect=ValueError('Reference mismatch'))
