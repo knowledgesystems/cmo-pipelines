@@ -371,16 +371,11 @@ def _activate_standby_properties(env: str) -> str:
             type="string",
             enum=["containerized", "public", "public_v7"],
             values_display={
-                "containerized": f"Containerized test (default bucket: {DEFAULT_BUCKET})",
-                "public": f"Public (default bucket: {DEFAULT_BUCKET})",
-                "public_v7": f"HGNC preview (bucket: {HGNC_BUCKET})",
+                "containerized": "Containerized test",
+                "public": "Public",
+                "public_v7": "HGNC preview",
             },
-            description=(
-                "Which database environment to import into. 'containerized' targets the "
-                "test databases and containerized.cbioportal.org; 'public' targets the "
-                "REAL public databases — its traffic swap moves www.cbioportal.org. "
-                "Select public_v7 for the HGNC preview."
-            ),
+            description="Choose the portal to update. Selecting Public promotes the import to www.cbioportal.org when the traffic transfer runs.",
             title="Target",
         ),
         "cancer_study_ids": Param(
