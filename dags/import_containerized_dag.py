@@ -367,7 +367,7 @@ def _activate_standby_properties(env: str) -> str:
     render_template_as_native_obj=True,
     params={
         "target": Param(
-            "containerized",
+            "public",
             type="string",
             enum=["containerized", "public", "public_v7"],
             values_display={
