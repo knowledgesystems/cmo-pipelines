@@ -50,7 +50,7 @@ class ContainerizedTargetsTest(unittest.TestCase):
                     hgnc = target == "public_v7"
                     self.assertEqual(secret_names, {"public-v7-import-credentials" if hgnc else "pipelines-credentials"})
                     claims = {v.persistent_volume_claim.claim_name for v in pod.spec.volumes if v.persistent_volume_claim}
-                    self.assertEqual(claims, {"cdsi-curation-hgnc-s3-pvc"} if hgnc else
+                    self.assertEqual(claims, {"cdsi-curation-unpublished-s3-pvc"} if hgnc else
                                      {"testing-studies-s3-pvc", "cdsi-curation-unpublished-s3-pvc", "databricks-s3-pvc"})
 
     def test_validation_only_hgnc_run(self):
@@ -94,6 +94,7 @@ class ContainerizedTargetsTest(unittest.TestCase):
 
     def test_bucket_defaults_and_overrides(self):
         from dags.study_sources import DEFAULT_BUCKET, HGNC_BUCKET, target_buckets
+        self.assertEqual(HGNC_BUCKET, "cdsi-curation-unpublished")
         self.assertEqual(self.dag.params["buckets"], [])
         # Airflow renders the multiselect as required unless the schema accepts null.
         for key in ("buckets", "skip_tasks"):
@@ -104,8 +105,7 @@ class ContainerizedTargetsTest(unittest.TestCase):
         for target in ("public", "containerized"):
             self.assertEqual(target_buckets(target, []), [DEFAULT_BUCKET])
             self.assertEqual(target_buckets(target, ["cdsi-testing"]), ["cdsi-testing"])
-            with self.assertRaises(ValueError):
-                target_buckets(target, [HGNC_BUCKET])
+            self.assertEqual(target_buckets(target, [HGNC_BUCKET]), [HGNC_BUCKET])
         with self.assertRaises(ValueError):
             target_buckets("public_v7", ["cdsi-testing"])
 
