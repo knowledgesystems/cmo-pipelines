@@ -11,8 +11,8 @@ from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dags.public_rollout import (checked_path, read_manifest, selected_entries,
-                                require_hash, reference_input, study_input,
+from dags.public_rollout import (checked_path, read_manifest, sha256,
+                                reference_input, study_input,
                                 validation_command, standby_target)
 
 from dags.public_v7_tasks import build_v7_tasks
@@ -142,29 +142,16 @@ def _manage_props_path(env: str) -> str:
 S3_MOUNT_PATH = "/mnt/s3-data"
 
 
-def _rollout_manifest(params):
-    params = params or {}
-    key = params.get('rollout_manifest_key')
-    if not key:
-        if params.get('target') == 'public':
-            raise AirflowException('Public imports require a pinned rollout manifest')
-        return None
-    return read_manifest(checked_path(S3_MOUNT_PATH, key), params.get('rollout_manifest_sha256'))
+def _public_reference_manifest():
+    # Use only the reference and validator metadata from the published snapshot.
+    return read_manifest(
+        checked_path(S3_MOUNT_PATH, 'staging/_batches/public-impact-20261124-02b25cc/manifest.json'),
+        '4b63273a9fc80307cd66ea33225c7f678f468838d3faabdfc9dfe604d86b1966',
+    )
 
 
-def _rollout_entry(manifest, study_id):
-    for entry in selected_entries(manifest, root_only=True):
-        if entry['study_id'] == parse_study_source(study_id)[1]:
-            return entry
-    raise AirflowException(f'Study is not in pinned selection: {study_id}')
-
-def _selected_rollout_entries(manifest, selections):
-    sources = [parse_study_source(selection) for selection in selections]
-    entries = selected_entries(manifest, [study_id for _, study_id in sources], root_only=True)
-    for entry, (bucket, _) in zip(entries, sources):
-        if entry.get('bucket', DEFAULT_BUCKET) != bucket:
-            raise AirflowException(f"Selected bucket differs from pinned input for {entry['study_id']}")
-    return entries
+def _public_study_entries(ti):
+    return ti.xcom_pull(task_ids='verify_studies_exist', key='public_study_entries')
 
 
 def _input_root(entry):
@@ -472,8 +459,6 @@ def _activate_standby_properties(env: str) -> str:
             ),
             title="Skip Tasks",
         ),
-        "rollout_manifest_key": Param("", type="string", description="S3 key of the pinned public validation/selection manifest."),
-        "rollout_manifest_sha256": Param("", type="string", description="SHA-256 of the exact manifest bytes; mandatory for public."),
     },
 )
 def import_containerized_dag():
@@ -484,16 +469,18 @@ def import_containerized_dag():
         target = params["target"]
         if (target == "public_v7") != preview:
             return False
-        if "database" in (dag_run.conf or {}):
+        conf = dag_run.conf or {}
+        if conf.get("rollout_manifest_key") or conf.get("rollout_manifest_sha256"):
+            raise AirflowException("Remove the retired rollout manifest inputs before triggering this DAG")
+        if "database" in conf:
             raise AirflowException("Use target instead of database on import_containerized_dag")
-        if target == "public_v7" and (params["skip_tasks"] or params["rollout_manifest_key"]
-                                      or params["rollout_manifest_sha256"]
+        if target == "public_v7" and (params["skip_tasks"]
                                       or params["buckets"] != [DEFAULT_BUCKET]):
             raise AirflowException("HGNC uses its configured study prefix and requires every import stage")
         return True
 
     @task(executor_config=_POD_OVERRIDE)
-    def verify_studies_exist(study_ids: list[str], params: dict | None = None) -> list[str]:
+    def verify_studies_exist(study_ids: list[str], params: dict | None = None, ti=None) -> list[str]:
         """Resolve every requested study at a selected bucket's root or fail."""
 
         # Fail fast on typos: a misspelled skip_tasks entry would silently NOT skip
@@ -518,17 +505,18 @@ def import_containerized_dag():
         if (params or {}).get('study_prefix'):
             raise AirflowException('Subdirectory imports are unsupported; place studies at the bucket root')
         buckets = search_buckets((params or {}).get('buckets', [DEFAULT_BUCKET]))
-        manifest = _rollout_manifest(params)
-        if manifest is not None:
-            selected_entries(manifest, study_ids, root_only=True)
-            study_ids = resolve_studies(study_ids, buckets)
-            for entry in _selected_rollout_entries(manifest, study_ids):
-                require_hash(checked_path(_input_root(entry), entry['key']), entry['sha256'])
-            refs = manifest['references']
-            require_hash(checked_path(_input_root(refs), refs['key']), refs['sha256'])
-            return study_ids
-
-        return resolve_studies(study_ids, buckets)
+        resolved = resolve_studies(study_ids, buckets)
+        if (params or {}).get('target') == 'public':
+            entries = {}
+            for source in resolved:
+                bucket, study_id = parse_study_source(source)
+                key = f'{study_id}.tar.gz'
+                archive = checked_path(bucket_mount(bucket), key)
+                if not archive.is_file():
+                    raise AirflowException(f'Public imports require a study archive: {key}')
+                entries[source] = dict(study_id=study_id, bucket=bucket, key=key, sha256=sha256(archive))
+            ti.xcom_push(key='public_study_entries', value=entries)
+        return resolved
 
     t_verify_cluster_state = BashOperator(
         task_id="verify_cluster_state",
@@ -554,13 +542,13 @@ def import_containerized_dag():
     )
 
     @task(executor_config=_POD_OVERRIDE_VALIDATE)
-    def pull_and_validate_study(study_id: str, params: dict | None = None) -> str | None:
+    def pull_and_validate_study(study_id: str, params: dict | None = None, ti=None) -> str | None:
         import pathlib
 
-        manifest = _rollout_manifest(params)
-        if manifest is not None:
+        if (params or {}).get('target') == 'public':
+            manifest = _public_reference_manifest()
             importer = Path(VALIDATE_SCRIPT_PATH).parent
-            entry = _rollout_entry(manifest, study_id)
+            entry = _public_study_entries(ti)[study_id]
             log_dir = Path('/tmp/validate_logs') / parse_study_source(study_id)[1]
             log_dir.mkdir(parents=True, exist_ok=True)
             with reference_input(_input_root(manifest['references']), manifest, importer) as refs:
@@ -568,7 +556,7 @@ def import_containerized_dag():
                     result = _run_and_stream(validation_command(
                         sys.executable, importer, study, refs, log_dir / 'report.html'))
             if result.returncode not in (0, 3):
-                raise AirflowException(f'Previously passing study {study_id} failed pinned validation: {result.returncode}')
+                raise AirflowException(f'Selected study {study_id} failed pinned validation: {result.returncode}')
             return study_id
 
         try:
@@ -592,10 +580,11 @@ def import_containerized_dag():
             return None
 
     @task(executor_config=_POD_OVERRIDE)
-    def collect_valid_studies(results: list, params: dict | None = None) -> list[str]:
-        manifest = _rollout_manifest(params)
-        if manifest is not None:
-            _selected_rollout_entries(manifest, results)
+    def collect_valid_studies(results: list, params: dict | None = None, ti=None) -> list[str]:
+        if (params or {}).get('target') == 'public':
+            results = list(results or [])
+            if not results or set(results) != set(_public_study_entries(ti)) or len(set(results)) != len(results):
+                raise AirflowException("Every selected public study must pass validation")
             return results
         valid = [sid for sid in (results or []) if sid is not None]
         if not valid:
@@ -607,16 +596,16 @@ def import_containerized_dag():
         return valid
 
     @task(executor_config=_POD_OVERRIDE_IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
-    def import_into_standby_database(valid_studies: list[str], params: dict | None = None):
+    def import_into_standby_database(valid_studies: list[str], params: dict | None = None, ti=None):
         _skip_if_requested("import_into_standby_database", params)
-        manifest = _rollout_manifest(params)
-        if manifest is not None:
-            _selected_rollout_entries(manifest, valid_studies)
+        if (params or {}).get('target') == 'public':
+            entries = _public_study_entries(ti)
+            manifest = _public_reference_manifest()
             importer = Path(IMPORT_SCRIPT_PATH).parent
             with reference_input(_input_root(manifest['references']), manifest, importer) as refs:
                 _activate_standby_properties(params['target'])
                 for study_id in valid_studies:
-                    entry = _rollout_entry(manifest, study_id)
+                    entry = entries[study_id]
                     with study_input(_input_root(entry), entry) as study:
                         result = _run_and_stream([
                             sys.executable, IMPORT_SCRIPT_PATH, '-s', str(study),
