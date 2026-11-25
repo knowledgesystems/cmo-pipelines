@@ -41,8 +41,8 @@ class TaskTests(unittest.TestCase):
         source = Path(__file__).resolve().parents[1] / 'dags/import_containerized_dag.py'
         tree = ast.parse(source.read_text())
         nodes = []
-        wanted = {'_rollout_manifest', '_rollout_entry', 'pull_and_validate_study',
-                  '_selected_rollout_entries', '_input_root',
+        wanted = {'_public_reference_manifest', 'pull_and_validate_study',
+                  '_public_study_entries', '_input_root',
                   'collect_valid_studies', 'import_into_standby_database',
                   'create_derived_tables_in_standby_database', 'verify_studies_exist'}
         for node in ast.walk(tree):
@@ -70,21 +70,22 @@ class TaskTests(unittest.TestCase):
         exec(compile(ast.Module(body=nodes, type_ignores=[]), str(source), 'exec'), self.env)
         self.manifest = dict(selected_study_ids=['study'], references={}, studies=[dict(study_id='study',
             key='study.tar.gz', sha256='a' * 64, status='passed', validator_exit_code=0)])
-        self.load_manifest = self.env['_rollout_manifest']
-        self.env['_rollout_manifest'] = Mock(return_value=self.manifest)
+        self.env['_public_reference_manifest'] = Mock(return_value=self.manifest)
+        self.env['_public_study_entries'] = Mock(return_value={'study': self.manifest['studies'][0]})
 
-    def test_public_requires_manifest(self):
-        with self.assertRaisesRegex(RuntimeError, 'require a pinned'):
-            self.load_manifest({'target': 'public'})
-        self.assertIsNone(self.load_manifest({'target': 'containerized'}))
-
-
-    def test_public_allows_color_swap(self):
-        self.env['_study_prefix'] = lambda params: 'staging'
-        self.env['checked_path'] = lambda root, key: key
-        self.env['read_manifest'] = Mock(return_value=self.manifest)
-        self.assertIs(self.load_manifest({'target': 'public', 'rollout_manifest_key': 'manifest.json'}),
-                      self.manifest)
+    def test_public_preflight_pins_selected_archive_without_manifest_parameters(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as tmp:
+            archive = Path(tmp) / 'study.tar.gz'
+            archive.write_bytes(b'selected archive')
+            source = f's3://{DEFAULT_BUCKET}/study'
+            self.env.update(search_buckets=list, resolve_studies=Mock(return_value=[source]),
+                            bucket_mount=lambda bucket: Path(tmp), SKIPPABLE_TASK_IDS=[],
+                            checked_path=public_rollout.checked_path, sha256=public_rollout.sha256)
+            ti = Mock()
+            self.assertEqual(self.env['verify_studies_exist'](['study'], {'target': 'public'}, ti), [source])
+            entry = ti.xcom_push.call_args.kwargs['value'][source]
+            self.assertEqual(entry['sha256'], public_rollout.sha256(archive))
 
     def test_command_streaming_and_timeout(self):
         source = Path(__file__).resolve().parents[1] / 'dags/import_containerized_dag.py'
@@ -99,9 +100,9 @@ class TaskTests(unittest.TestCase):
             env['_run_and_stream']([sys.executable, '-c', 'import time; time.sleep(10)'], timeout=0.1)
 
     def test_collection_cannot_drop_a_preselected_study(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(RuntimeError, 'Every selected'):
             self.env['collect_valid_studies']([None], params={'target': 'public'})
-        self.assertEqual(['study'], self.env['collect_valid_studies'](['study']))
+        self.assertEqual(['study'], self.env['collect_valid_studies'](['study'], {'target': 'public'}))
 
     def test_import_uses_references_and_failure_is_not_ignored(self):
         self.env['import_into_standby_database'](['study'], {'target': 'public'})
@@ -153,10 +154,10 @@ class TaskTests(unittest.TestCase):
     def test_validation_failure_cannot_filter_out_a_selected_study(self):
         with patch.object(Path, 'mkdir'):
             self.env['_run_and_stream'].return_value.returncode = 3
-            self.assertEqual('study', self.env['pull_and_validate_study']('study'))
+            self.assertEqual('study', self.env['pull_and_validate_study']('study', {'target': 'public'}))
             self.env['_run_and_stream'].return_value.returncode = 1
-            with self.assertRaisesRegex(RuntimeError, 'Previously passing study'):
-                self.env['pull_and_validate_study']('study')
+            with self.assertRaisesRegex(RuntimeError, 'Selected study'):
+                self.env['pull_and_validate_study']('study', {'target': 'public'})
 
 
 if __name__ == '__main__':

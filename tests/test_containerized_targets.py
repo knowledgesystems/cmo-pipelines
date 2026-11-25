@@ -21,6 +21,9 @@ class ContainerizedTargetsTest(unittest.TestCase):
         cls.dag = bag.dags["import_containerized_dag"]
         SerializedDAG.to_dict(cls.dag)
 
+    def test_trigger_parameters(self):
+        self.assertEqual(set(self.dag.params), {"target", "cancer_study_ids", "buckets", "skip_tasks"})
+
     def test_targets_only_schedule_their_own_worker_tasks(self):
         public = self.dag.get_task("select_public_workers")
         preview = self.dag.get_task("select_hgnc_workers")
