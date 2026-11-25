@@ -22,6 +22,7 @@ class ContainerizedTargetsTest(unittest.TestCase):
         SerializedDAG.to_dict(cls.dag)
 
     def test_trigger_parameters(self):
+        self.assertEqual(self.dag.params["target"], "public")
         self.assertEqual(set(self.dag.params), {"target", "cancer_study_ids", "buckets", "skip_tasks"})
 
     def test_one_workflow_for_every_target(self):
