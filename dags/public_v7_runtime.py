@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dags.public_rollout import sha256, study_input
-from dags.study_sources import verified_study_directory
+from dags.study_sources import HGNC_BUCKET, verified_study_directory
 from public_v7_common import (
     ClickHouse, DATABASES, PREVIEW_HOST, active_color, load_properties,
     study_ids, validate_application, validate_management,
@@ -33,8 +33,8 @@ def settings():
     cfg = json.loads(CONFIG.read_text())
     if cfg["portal"] != "public_v7" or cfg["databases"] != DATABASES or cfg["preview_host"] != PREVIEW_HOST:
         raise ValueError("Unexpected environment mapping")
-    if cfg.get("study_bucket") != "cdsi-curation-hgnc":
-        raise ValueError("Expected the dedicated HGNC study bucket")
+    if cfg.get("study_bucket") != HGNC_BUCKET:
+        raise ValueError(f"Expected HGNC study source {HGNC_BUCKET}")
     props = load_properties(MANAGE)
     validate_management(props)
     for color in DATABASES:

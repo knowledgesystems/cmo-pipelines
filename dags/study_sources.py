@@ -4,11 +4,11 @@ import re
 from urllib.parse import urlsplit
 
 DEFAULT_BUCKET = 'sc-203403084713-pp-4rxlzd426npxu-bucket-kswubqqre3jr'
-HGNC_BUCKET = 'cdsi-curation-hgnc'
+HGNC_BUCKET = 'cdsi-curation-unpublished'
 STUDY_LIST_VARIABLE_KEY = 'available_study_sources'
 S3_SOURCES = {
     DEFAULT_BUCKET: {'mount': '/mnt/s3-data', 'claim': 'databricks-s3-pvc'},
-    'cdsi-curation-unpublished': {
+    HGNC_BUCKET: {
         'mount': '/mnt/import-studies', 'claim': 'cdsi-curation-unpublished-s3-pvc'},
     'cdsi-testing': {
         'mount': '/mnt/testing-studies', 'claim': 'testing-studies-s3-pvc'},
