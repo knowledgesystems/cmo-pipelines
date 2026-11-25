@@ -220,15 +220,15 @@ def validate_study(study, plan):
     return study
 
 
-def clone(plan):
-    _, _, _, _ = check_plan(plan)
+def begin(plan):
+    check_plan(plan)
     support("set_update_process_state.sh", MANAGE, "running")
-    try:
-        support("drop_tables_in_clickhouse_database.sh", MANAGE, plan["target_color"])
-        support("clone_clickhouse_database.sh", MANAGE, plan["source_color"], plan["target_color"])
-    except Exception:
-        support("set_update_process_state.sh", MANAGE, "abandoned")
-        raise
+
+
+def clone(plan):
+    check_plan(plan, "running")
+    support("drop_tables_in_clickhouse_database.sh", MANAGE, plan["target_color"])
+    support("clone_clickhouse_database.sh", MANAGE, plan["source_color"], plan["target_color"])
 
 
 def activate(props, color, directory):
@@ -262,7 +262,7 @@ def import_studies(plan):
                     str(Path(plan["report_dir"]) / (study + ".import.log")), env)
 
 
-def derive(plan):
+def derive(plan, publish=True):
     _, props, _, _ = check_plan(plan, "running")
     with tempfile.TemporaryDirectory(prefix="v7-derive-") as tmp:
         env = activate(props, plan["target_color"], Path(tmp))
@@ -283,6 +283,8 @@ def derive(plan):
             str(Path(plan["report_dir"]) / "derived.log"), env)
         # Current core keeps imported studies unavailable until their derived
         # tables exist. Do not expose a partial batch if derivation fails.
+        if not publish:
+            return
         run([sys.executable, "-u", str(IMPORTER / "cbioportalImporter.py"),
              "make-studies-available", "-ids", ",".join(plan["studies"])],
             str(Path(plan["report_dir"]) / "availability.log"), env)
@@ -354,10 +356,14 @@ def complete(plan):
         raise ValueError("Management finalization did not match the promoted target")
 
 
-def failure_cleanup(plan, clone_succeeded, transfer_started):
-    if not clone_succeeded:
+def failure_cleanup(plan, began, transfer_started):
+    if not began:
         return
     if transfer_started:
         raise RuntimeError("Promotion may have changed routing. Leave management state untouched and follow recovery runbook.")
+    abandon(plan)
+
+
+def abandon(plan):
     check_plan(plan, "running")
     support("set_update_process_state.sh", MANAGE, "abandoned")

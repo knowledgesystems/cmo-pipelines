@@ -4,9 +4,9 @@ from pathlib import Path
 import sys
 
 from airflow.decorators import task
-from airflow.exceptions import AirflowException
+from airflow.exceptions import AirflowException, AirflowSkipException
 from airflow.utils.trigger_rule import TriggerRule
-from dags.containerized_workflow import wire_import
+from dags.containerized_workflow import SKIPPABLE_TASK_IDS as STAGES, wire_import
 from kubernetes.client import models as k8s
 
 # Airflow may discover this DAG below the git-sync root. Ensure its companion
@@ -57,6 +57,11 @@ VALIDATE = pod(CORE, "3Gi")
 IMPORT = pod(CORE, "26Gi", "-Xmx22g")
 
 
+def skip_stage(stage, params):
+    if stage in params["skip_tasks"]:
+        raise AirflowSkipException(f"{stage} listed in skip_tasks - skipping")
+
+
 def build_v7_tasks():
     @task(executor_config=INFRA)
     def prepare(params=None, run_id=None):
@@ -75,24 +80,41 @@ def build_v7_tasks():
         runtime.verify_portal(plan)
 
     @task(executor_config=INFRA)
-    def clone(plan):
+    def begin(plan, params=None):
+        if set(params["skip_tasks"]) != set(STAGES):
+            runtime.begin(plan)
+            return True
+        return False
+
+    @task(executor_config=INFRA)
+    def clone(plan, params=None):
+        skip_stage("clone_live_database_into_standby", params)
         runtime.clone(plan)
 
-    @task(executor_config=IMPORT)
-    def import_studies(plan):
+    @task(executor_config=IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
+    def import_studies(plan, params=None):
+        skip_stage("import_into_standby_database", params)
         runtime.import_studies(plan)
 
-    @task(executor_config=IMPORT)
-    def derive(plan):
-        runtime.derive(plan)
+    @task(executor_config=IMPORT, trigger_rule=TriggerRule.NONE_FAILED)
+    def derive(plan, params=None):
+        skip_stage("create_derived_tables_in_standby_database", params)
+        runtime.derive(plan, publish="import_into_standby_database" not in params["skip_tasks"])
 
-    @task(executor_config=INFRA)
-    def transfer(plan):
+    @task(executor_config=INFRA, trigger_rule=TriggerRule.NONE_FAILED)
+    def transfer(plan, params=None):
+        skip_stage("transfer_deployment_color", params)
         runtime.transfer(plan)
 
-    @task(executor_config=INFRA)
-    def complete(plan):
-        runtime.complete(plan)
+    @task(executor_config=INFRA, trigger_rule=TriggerRule.NONE_FAILED)
+    def complete(plan, params=None):
+        skipped = set(params["skip_tasks"])
+        if skipped == set(STAGES):
+            return
+        if "transfer_deployment_color" in skipped:
+            runtime.abandon(plan)
+        else:
+            runtime.complete(plan)
 
     @task(executor_config=INFRA, trigger_rule=TriggerRule.ONE_FAILED)
     def failure_cleanup(dag_run=None, ti=None):
@@ -101,7 +123,7 @@ def build_v7_tasks():
             raise AirflowException("V7 import failed before a run plan was created")
         states = {x.task_id: x.state for x in dag_run.get_task_instances()}
         runtime.failure_cleanup(
-            plan, clone_succeeded=states.get("clone") == "success",
+            plan, began=states.get("begin") == "success" and ti.xcom_pull(task_ids="begin"),
             transfer_started=states.get("transfer") not in {None, "upstream_failed", "skipped", "scheduled", "queued"},
         )
         # A successful cleanup leaf must not mask an upstream task failure.
@@ -111,12 +133,14 @@ def build_v7_tasks():
     studies = selected(plan)
     checked = validate.partial(plan=plan).expand(study=studies)
     verified = verify_portal(plan)
+    started = begin(plan)
     cloned = clone(plan)
     imported = import_studies(plan)
     derived = derive(plan)
     transferred = transfer(plan)
     completed = complete(plan)
     checked >> verified
-    wire_import(verified, cloned, imported, derived, transferred, completed)
-    [plan, studies, checked, verified, cloned, imported, derived, transferred, completed] >> failure_cleanup()
+    verified >> started
+    wire_import(started, cloned, imported, derived, transferred, completed)
+    [plan, studies, checked, verified, started, cloned, imported, derived, transferred, completed] >> failure_cleanup()
     return plan

@@ -16,7 +16,7 @@ from dags.public_rollout import (checked_path, read_manifest, sha256,
                                 validation_command, standby_target)
 
 from dags.public_v7_tasks import build_v7_tasks
-from dags.containerized_workflow import wire_import
+from dags.containerized_workflow import SKIPPABLE_TASK_IDS, wire_import
 from dags.study_sources import (DEFAULT_BUCKET, S3_SOURCES,
                                bucket_mount, parse_study_source, resolve_studies, search_buckets, verified_study_directory)
 
@@ -157,13 +157,19 @@ def _public_study_entries(ti):
 def _input_root(entry):
     return bucket_mount(entry.get('bucket', DEFAULT_BUCKET))
 
-# Task IDs that may be listed in the skip_tasks param (dry-run support).
-SKIPPABLE_TASK_IDS = (
-    "clone_live_database_into_standby",
-    "import_into_standby_database",
-    "create_derived_tables_in_standby_database",
-    "transfer_deployment_color",
-)
+
+def _validate_skips(params):
+    # Fail fast on typos: a misspelled skip_tasks entry would silently NOT skip
+    # its task, which for transfer_deployment_color means an unintended traffic swap.
+    skipped = (params or {}).get("skip_tasks") or []
+    unknown = set(skipped) - set(SKIPPABLE_TASK_IDS)
+    if unknown:
+        raise AirflowException(f"skip_tasks contains unknown task ids: {sorted(unknown)}")
+
+    if ("create_derived_tables_in_standby_database" in skipped
+            and "import_into_standby_database" not in skipped
+            and "transfer_deployment_color" not in skipped):
+        raise AirflowException("After importing studies, rebuild derived tables before transferring traffic")
 
 
 def _bash_skip_guard(task_id: str) -> str:
@@ -474,26 +480,14 @@ def import_containerized_dag():
             raise AirflowException("Remove the retired rollout manifest inputs before triggering this DAG")
         if "database" in conf:
             raise AirflowException("Use target instead of database on import_containerized_dag")
-        if target == "public_v7" and (params["skip_tasks"]
-                                      or params["buckets"] != [DEFAULT_BUCKET]):
-            raise AirflowException("HGNC uses its configured study prefix and requires every import stage")
+        _validate_skips(params)
+        if target == "public_v7" and params["buckets"] != [DEFAULT_BUCKET]:
+            raise AirflowException("HGNC uses its configured study prefix in the default bucket")
         return True
 
     @task(executor_config=_POD_OVERRIDE)
     def verify_studies_exist(study_ids: list[str], params: dict | None = None, ti=None) -> list[str]:
         """Resolve every requested study at a selected bucket's root or fail."""
-
-        # Fail fast on typos: a misspelled skip_tasks entry would silently NOT skip
-        # its task, which for transfer_deployment_color means an unintended traffic swap.
-        unknown = set((params or {}).get("skip_tasks") or []) - set(SKIPPABLE_TASK_IDS)
-        if unknown:
-            raise AirflowException(f"skip_tasks contains unknown task ids: {sorted(unknown)}")
-
-        skipped = (params or {}).get("skip_tasks") or []
-        if ("create_derived_tables_in_standby_database" in skipped
-                and "import_into_standby_database" not in skipped
-                and "transfer_deployment_color" not in skipped):
-            raise AirflowException("After importing studies, rebuild derived tables before transferring traffic")
 
         # render_template_as_native_obj may render the array Param as its string repr
         if isinstance(study_ids, str):
