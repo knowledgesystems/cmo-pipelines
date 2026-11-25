@@ -13,6 +13,231 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # localize global variables / jar names and functions
     source $PORTAL_HOME/scripts/dmp-import-vars-functions.sh
 
+    # Merge biobank/biofluid patient clinical supplements when present.
+    # Clinical merge failure is non-fatal. Timeline files are kept separate for CDM import.
+    # Requires combine_files_py3.py --prefer-right-columns (-p).
+    #
+    # Args:
+    #   $1  study_data_home  Local directory for the study.
+    #   $2  s3_prefix        Optional. If provided, biobank/biofluid clinical (and timeline)
+    #                        files are fetched fresh from S3 at this prefix before merging.
+    #                        Must match the local study directory basename (S3 download suffix
+    #                        check), e.g. "msk_solid_heme". Use when files are
+    #                        written externally (e.g. Databricks) and clinical supplements are
+    #                        deleted locally after each successful merge.
+    function merge_biobank_clinical_data() {
+        local study_data_home="$1"
+        local s3_prefix="$2"
+
+        local input_clinical_file="$study_data_home/data_clinical_patient.txt"
+        local biobank_clinical_file="$study_data_home/data_clinical_patient_biobank.txt"
+        local biofluid_clinical_file="$study_data_home/data_clinical_patient_biofluid.txt"
+        local biobank_timeline_file="$study_data_home/data_timeline_biobank_specimen.txt"
+        local biofluid_timeline_file="$study_data_home/data_timeline_biofluid_specimen.txt"
+        local merged_clinical_file="$study_data_home/data_clinical_patient_merged.txt"
+
+        if [ -n "$s3_prefix" ]; then
+            # Re-fetch Databricks supplements. Clinical files are deleted after merge;
+            # timeline files stay in the study dir for CDM/portal import. Study merge/subset
+            # wipes the dest dir, so these must be pulled after that step.
+            # touch creates the file so try_download_from_s3 can accept a file path;
+            # the -s check ensures we clean up if S3 had no file to download.
+            fetch_s3_supplement() {
+                local dest="$1"
+                local s3_key="$2"
+                local label="$3"
+                touch "$dest"
+                if ! try_download_from_s3 "$dest" "$s3_key" "mskimpact-databricks" \
+                    || [ ! -s "$dest" ] ; then
+                    rm -f "$dest"
+                    echo "`date`: Warning: could not fetch ${label} from S3 for ${study_data_home}; ${label} will be skipped."
+                fi
+            }
+            fetch_s3_supplement "$biobank_clinical_file" "${s3_prefix}/data_clinical_patient_biobank.txt" "biobank clinical patient file"
+            fetch_s3_supplement "$biofluid_clinical_file" "${s3_prefix}/data_clinical_patient_biofluid.txt" "biofluid clinical patient file"
+            fetch_s3_supplement "$biobank_timeline_file" "${s3_prefix}/data_timeline_biobank_specimen.txt" "biobank timeline file"
+            fetch_s3_supplement "$biofluid_timeline_file" "${s3_prefix}/data_timeline_biofluid_specimen.txt" "biofluid timeline file"
+        fi
+
+        merge_clinical_supplement() {
+            local label="$1"
+            local supplemental_file="$2"
+
+            if [ ! -f "$supplemental_file" ]; then
+                echo "`date`: Warning: ${label} patient clinical file not found in ${study_data_home}; skipping ${label} clinical merge for this import."
+                return 0
+            fi
+
+            # -p / --prefer-right-columns: supplemental file wins on overlapping columns
+            # (e.g. BIOBANK_TISSUE_STATUS, BIOBANK_BIOFLUID_STATUS) when
+            # data_clinical_patient.txt already has them from a prior S3 round-trip.
+            $PYTHON3_BINARY $PORTAL_HOME/scripts/combine_files_py3.py -i "$input_clinical_file" "$supplemental_file" -o "$merged_clinical_file" -c "PATIENT_ID" -m left -p
+            if [ $? -gt 0 ]; then
+                echo "`date`: Warning: failed to merge ${label} patient clinical data for ${study_data_home}; skipping ${label} clinical merge for this import."
+                rm -f "$merged_clinical_file"
+                return 0
+            fi
+
+            mv "$merged_clinical_file" "$input_clinical_file"
+            rm -f "$supplemental_file"
+            return 0
+        }
+
+        merge_clinical_supplement "biobank" "$biobank_clinical_file"
+        merge_clinical_supplement "biofluid" "$biofluid_clinical_file"
+
+        if [ -f "$biobank_timeline_file" ]; then
+            echo "`date`: Biobank timeline data present in ${study_data_home}."
+        fi
+
+        if [ -f "$biofluid_timeline_file" ]; then
+            echo "`date`: Biofluid timeline data present in ${study_data_home}."
+        fi
+
+        return 0
+    }
+
+    # CDM merge with fallback to the last CDM data that merged successfully.
+    #
+    # Each successful merge snapshots the CDM data it used, plus the cdm_metadata.json it was
+    # merged with, to $CDM_LAST_GOOD_HOME/<cohort>. If the CDM download or the merge fails,
+    # the merge is retried with that snapshot's data, as long as the date in its
+    # .snapshot_date is at most $CDM_LAST_GOOD_MAX_AGE_DAYS days old. merge-cdm-data.sh only
+    # writes to the study directory on success, so a failed attempt leaves nothing behind.
+    # If there is no usable snapshot or the retry also fails, CDM_MERGE_FAIL is set and
+    # the CDM MERGE GATE blocks all DMP portal imports.
+    #
+    # Every step that adds CDM metadata headers (these merges, MSKSOLIDHEME, the affiliate
+    # and SCLC subsets) uses $CDM_METADATA_FILE, chosen once by select_cdm_metadata_file:
+    # the live cdm_metadata.json if it is usable, otherwise the newest usable snapshot copy.
+    #
+    # The snapshots live outside $MSK_CHORD_DATA_HOME because the msk-chord S3 download
+    # syncs that directory with --delete. Until the first successful merge on a server,
+    # there is no snapshot to fall back on; seed $CDM_LAST_GOOD_HOME/<cohort> by hand from
+    # a known-good CDM deliverable, with a known-good cdm_metadata.json, and write the
+    # date of that CDM data (YYYY-MM-DD) to .snapshot_date, if needed.
+    #
+    # Override the age limit by exporting CDM_LAST_GOOD_MAX_AGE_DAYS (e.g. in
+    # automation-environment.sh); it must be a positive integer.
+    #
+    # Args:
+    #   $1  cohort       CDM cohort name (directory under $MSK_CHORD_DATA_HOME)
+    #   $2  study_home   Study directory to merge CDM data into
+    #   $3  s3_path      S3 prefix for the study in mskimpact-databricks
+    #   $4  label        Name used in alerts (e.g. MSKIMPACT)
+    function merge_cdm_with_fallback() {
+        local cohort="$1"
+        local study_home="$2"
+        local s3_path="$3"
+        local label="$4"
+        local current_cdm_dir="$MSK_CHORD_DATA_HOME/$cohort"
+        local last_good_dir="$CDM_LAST_GOOD_HOME/$cohort"
+        local snapshot_date_file="$last_good_dir/.snapshot_date"
+
+        if [ $CDM_DOWNLOAD_FAIL -eq 0 ] ; then
+            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$current_cdm_dir" "$study_home" "$study_home" "$CDM_METADATA_FILE" ; then
+                # Snapshot the CDM data that merged successfully. A failed snapshot is not
+                # fatal: tonight's merge succeeded, only a future fallback is affected.
+                if ! snapshot_last_good_cdm "$current_cdm_dir" "$last_good_dir" ; then
+                    sendPreImportFailureMessageMskPipelineLogsSlack "Warning: could not snapshot last-good CDM data for $label"
+                fi
+                echo "pushing $cohort CDM data to S3"
+                upload_to_s3 "$study_home" "$s3_path" "mskimpact-databricks"
+                return 0
+            fi
+            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for $label"
+        fi
+
+        local snapshot_date=$(cat "$snapshot_date_file" 2>/dev/null)
+        local snapshot_age_days=$(cdm_snapshot_age_days "$snapshot_date")
+        if [ -n "$snapshot_date" ] && [ -z "$snapshot_age_days" ] ; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "Could not compute the age of the last-good CDM snapshot for $label (date '$snapshot_date', using $PYTHON3_BINARY); not using it"
+        fi
+        if [ -n "$snapshot_age_days" ] && [ $snapshot_age_days -le $CDM_LAST_GOOD_MAX_AGE_DAYS ] ; then
+            echo "retrying CDM merge for $label with last-good CDM data from $snapshot_date"
+            if sh $PORTAL_HOME/scripts/merge-cdm-data.sh $cohort "$last_good_dir" "$study_home" "$study_home" "$CDM_METADATA_FILE" ; then
+                CDM_FALLBACK_USED="$CDM_FALLBACK_USED $label($snapshot_date)"
+                sendPreImportFailureMessageMskPipelineLogsSlack "CDM merge for $label used last-good CDM data from $snapshot_date - fix the CDM data before it is more than $CDM_LAST_GOOD_MAX_AGE_DAYS days old"
+                echo "pushing $cohort CDM data (last-good fallback) to S3"
+                upload_to_s3 "$study_home" "$s3_path" "mskimpact-databricks"
+                return 0
+            fi
+            echo "CDM merge for $label also failed with last-good CDM data from $snapshot_date"
+        else
+            echo "no last-good CDM data at most $CDM_LAST_GOOD_MAX_AGE_DAYS days old for $label (snapshot date: ${snapshot_date:-none})"
+        fi
+
+        CDM_MERGE_FAIL=1
+        CDM_MERGE_FAILED_STEPS="$CDM_MERGE_FAILED_STEPS $label"
+        return 1
+    }
+
+    # Replace $2 with a snapshot of the CDM data in $1 plus $CDM_METADATA_FILE, dated today.
+    # The new snapshot is built next to the old one and swapped in only once complete, so a
+    # failure partway leaves the previous snapshot untouched.
+    function snapshot_last_good_cdm() {
+        local source_dir="$1"
+        local last_good_dir="$2"
+        local tmp_dir="$last_good_dir.tmp"
+        local old_dir="$last_good_dir.old"
+        rm -rf "$tmp_dir" "$old_dir"
+        mkdir -p "$tmp_dir" \
+            && rsync -a "$source_dir/" "$tmp_dir/" \
+            && cp -p "$CDM_METADATA_FILE" "$tmp_dir/cdm_metadata.json" \
+            && date +%F > "$tmp_dir/.snapshot_date" \
+            || { rm -rf "$tmp_dir" ; return 1 ; }
+        if [ -d "$last_good_dir" ] ; then
+            mv "$last_good_dir" "$old_dir" || { rm -rf "$tmp_dir" ; return 1 ; }
+        fi
+        mv "$tmp_dir" "$last_good_dir" || return 1
+        rm -rf "$old_dir"
+    }
+
+    # Print how many days old a YYYY-MM-DD date is; print nothing if it is not a valid date or
+    # python3 fails (needs 3.7+ for fromisoformat). Errors go to the log, not /dev/null.
+    function cdm_snapshot_age_days() {
+        [ -n "$1" ] || return 0
+        $PYTHON3_BINARY -c 'import datetime, sys; print((datetime.date.today() - datetime.date.fromisoformat(sys.argv[1])).days)' "$1"
+    }
+
+    # True if $1 is a usable cdm_metadata.json: ASCII only (the metadata header script runs
+    # on Python 2 and cannot write anything else), valid JSON, every entry has the fields
+    # add_clinical_attribute_metadata_headers.py reads, and every DATATYPE is one cBioPortal
+    # accepts.
+    function cdm_metadata_file_is_valid() {
+        [ -f "$1" ] || return 1
+        $PYTHON3_BINARY -c 'import json, sys; raw = open(sys.argv[1], "rb").read(); raw.decode("ascii"); d = json.loads(raw); fields = {"DISPLAY_NAME", "DESCRIPTIONS", "DATATYPE", "ATTRIBUTE_TYPE", "PRIORITY"}; ok = isinstance(d, dict) and len(d) > 0 and all(isinstance(v, dict) and fields <= set(v) and v["DATATYPE"] in ("STRING", "NUMBER", "BOOLEAN") for v in d.values()); sys.exit(0 if ok else 1)' "$1" > /dev/null 2>&1
+    }
+
+    # Set CDM_METADATA_FILE for every CDM metadata header step in this run: the live
+    # cdm_metadata.json if usable, otherwise a copy of the newest usable snapshot copy
+    # (copied out, because snapshots are replaced during the run).
+    function select_cdm_metadata_file() {
+        local live_metadata_file="$PORTAL_HOME/scripts/cdm_metadata.json"
+        CDM_METADATA_FILE="$live_metadata_file"
+        if cdm_metadata_file_is_valid "$live_metadata_file" ; then
+            return 0
+        fi
+        local best_file=""
+        local best_date=""
+        local candidate candidate_date
+        for candidate in "$CDM_LAST_GOOD_HOME"/*/cdm_metadata.json ; do
+            [ -f "$candidate" ] || continue
+            candidate_date=$(cat "$(dirname "$candidate")/.snapshot_date" 2>/dev/null)
+            if cdm_metadata_file_is_valid "$candidate" && [[ "$candidate_date" > "$best_date" ]] ; then
+                best_file="$candidate"
+                best_date="$candidate_date"
+            fi
+        done
+        if [ -n "$best_file" ] && cp -p "$best_file" "$MSK_DMP_TMPDIR/cdm_metadata.selected.json" ; then
+            CDM_METADATA_FILE="$MSK_DMP_TMPDIR/cdm_metadata.selected.json"
+            CDM_METADATA_FALLBACK="$best_date"
+            sendPreImportFailureMessageMskPipelineLogsSlack "$live_metadata_file is not usable (not ASCII-only, invalid JSON, missing fields, or an invalid DATATYPE); using its last-good copy from $best_date for this run - fix it ASAP"
+        else
+            sendPreImportFailureMessageMskPipelineLogsSlack "$live_metadata_file is not usable and there is no usable last-good copy; CDM merges will fail"
+        fi
+    }
+
     ## STATUS FLAGS
 
     # Flags indicating whether a study can be updated
@@ -48,7 +273,22 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     MSK_RALPHLAUREN_SUBSET_FAIL=0
     MSK_RIKENGENESISJAPAN_SUBSET_FAIL=0
     SCLC_MSKIMPACT_SUBSET_FAIL=0
-    LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=0
+
+    # CDM merge status (see merge_cdm_with_fallback). CDM clinical data is required:
+    # CDM_MERGE_FAIL is set when a cohort could not be merged with current or last-good
+    # CDM data, and then all DMP portal imports are blocked (see CDM MERGE GATE below).
+    CDM_DOWNLOAD_FAIL=0
+    CDM_MERGE_FAIL=0
+    CDM_MERGE_FAILED_STEPS=""
+    CDM_FALLBACK_USED=""
+    CDM_METADATA_FILE="$PORTAL_HOME/scripts/cdm_metadata.json"
+    CDM_METADATA_FALLBACK=""
+    CDM_LAST_GOOD_HOME="$PORTAL_DATA_HOME/cdm-last-good"
+    CDM_LAST_GOOD_MAX_AGE_DAYS="${CDM_LAST_GOOD_MAX_AGE_DAYS:-7}"
+    if ! [[ "$CDM_LAST_GOOD_MAX_AGE_DAYS" =~ ^[1-9][0-9]*$ ]] ; then
+        echo "Invalid CDM_LAST_GOOD_MAX_AGE_DAYS '$CDM_LAST_GOOD_MAX_AGE_DAYS' (must be a positive integer), using 7"
+        CDM_LAST_GOOD_MAX_AGE_DAYS=7
+    fi
 
     GENERATE_MASTERLIST_FAIL=0
 
@@ -60,54 +300,45 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     # -----------------------------------------------------------------------------------------------------------
     # START DMP DATA FETCHING
+
     echo $(date)
 
     if [[ -d "$MSK_DMP_TMPDIR" && "$MSK_DMP_TMPDIR" != "/" ]] ; then
         rm -rf "$MSK_DMP_TMPDIR"/*
     fi
 
-    if [ -z $JAVA_BINARY ] | [ -z $GIT_BINARY ] | [ -z $PORTAL_HOME ] | [ -z $MSK_IMPACT_DATA_HOME ] ; then
-        message="test could not run import-dmp-impact.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
+    if [ -z $JAVA_BINARY ] || [ -z $PORTAL_HOME ] || [ -z $MSK_IMPACT_DATA_HOME ] ; then
+        message="Could not run fetch-dmp-data-for-import.sh: automation-environment.sh script must be run in order to set needed environment variables (like MSK_IMPACT_DATA_HOME, ...)"
         echo $message
         echo -e "$message" |  mail -s "fetch-dmp-data-for-import failed to run." $PIPELINES_EMAIL_LIST
         sendPreImportFailureMessageMskPipelineLogsSlack "$message"
         exit 2
     fi
 
-    if ! [ -z $INHIBIT_RECACHING_FROM_TOPBRAID ] ; then
-        # refresh cdd and oncotree cache - by default this script will attempt to
-        # refresh the CDD and ONCOTREE cache but we should check both exit codes
-        # independently because of the various dependencies we have for both services
-        CDD_RECACHE_FAIL=0;
-        ONCOTREE_RECACHE_FAIL=0
-        bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh --cdd-only
-        if [ $? -gt 0 ]; then
-            message="Failed to refresh CDD cache!"
-            echo $message
-            echo -e "$message" | mail -s "CDD cache failed to refresh" $PIPELINES_EMAIL_LIST
-            sendPreImportFailureMessageMskPipelineLogsSlack "$message"
-            CDD_RECACHE_FAIL=1
+    # -----------------------------------------------------------------------------------------------------------
+    # reset dmp staging directory to match s3 bucket contents (and remove any residual unwanted temp files from a prior partial run)
+
+    echo $(date)
+    echo "cleaning contents of staging data source directory $PORTAL_DATA_HOME/dmp to discard any unwanted temp files"
+    deleteS3IgnoredFiles "$PORTAL_DATA_HOME/dmp"
+    echo "downloading full content from s3 bucket mskimpact-databricks to $DMP_DATA_HOME"
+    if ! downloadFromS3AllStudies ; then
+        message="s3 fetch failure: DMP repository update"
+        sendPreImportFailureMessageMskPipelineLogsSlack "$message"
+        if ! declare -f download_from_s3 > /dev/null; then
+            sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch failure: function downloadFromS3AllStudies is undefined - s3_functions.sh must be sourced"
         fi
-        bash $PORTAL_HOME/scripts/refresh-cdd-oncotree-cache.sh --oncotree-only
-        if [ $? -gt 0 ]; then
-            message="Failed to refresh ONCOTREE cache!"
-            echo $message
-            echo -e "$message" | mail -s "ONCOTREE cache failed to refresh" $PIPELINES_EMAIL_LIST
-            sendPreImportFailureMessageMskPipelineLogsSlack "$message"
-            ONCOTREE_RECACHE_FAIL=1
-        fi
-        if [[ $CDD_RECACHE_FAIL -gt 0 || $ONCOTREE_RECACHE_FAIL -gt 0 ]] ; then
-            echo "Oncotree and/or CDD recache failed! Exiting..."
+        echo -e "$message" |  mail -s "fetch-dmp-data-for-import failed to run." $PIPELINES_EMAIL_LIST
+        exit 2
+    fi
+    in_progress_filename="$PORTAL_DATA_HOME/dmp/.S3_update_in_progress"
+    if [ -f "$in_progress_filename" ] ; then
+        in_progress_status="$(head -n1 "$in_progress_filename")"
+        if [ "true" == "$in_progress_status" ] ; then
+            # we could instead wait here for a limited time to see if the update completes .. but for now, just exit
+            sendPreImportFailureMessageMskPipelineLogsSlack "s3 fetch canceled : the s3 content is in the process of being updated and is not yet in a consistent state."
             exit 2
         fi
-    fi
-
-    # fetch clinical data from data repository
-    echo "fetching updates from dmp repository..."
-    $JAVA_BINARY $JAVA_IMPORTER_ARGS --fetch-data --data-source dmp --run-date latest
-    if [ $? -gt 0 ] ; then
-        sendPreImportFailureMessageMskPipelineLogsSlack "Git Failure: DMP repository update"
-        exit 2
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -182,17 +413,16 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "MSKIMPACT data processing"
 
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] ; then
-        # fetch new/updated IMPACT samples using CVR Web service   (must come after git fetching)
+        # fetch new/updated IMPACT samples using CVR Web service   (must come after s3 fetching)
         drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
         bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskimpact
         printTimeStampedDataProcessingStepMessage "CVR fetch for mskimpact"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_PRIVATE_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -i mskimpact -r 150 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR fetch failed!"
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Fetch"
             IMPORT_STATUS_IMPACT=1
         else
@@ -200,27 +430,22 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             bash $PORTAL_HOME/scripts/test_if_impact_has_lost_allele_count.sh
             if [ $? -gt 0 ] ; then
                 echo "Empty allele count sanity check failed! MSK-IMPACT will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+                downloadFromS3AllStudies
                 sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT empty allele count sanity check"
                 IMPORT_STATUS_IMPACT=1
             else
                 # check for PHI
-                $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json
+                $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_data.json
                 if [ $? -gt 0 ] ; then
-                    echo "PHI attributes found in $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json! MSK-IMPACT will not be imported!"
-                    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                    cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_data.json"
+                    echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_data.json! MSK-IMPACT will not be imported!"
+                    downloadFromS3AllStudies
+                    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_data.json"
                     IMPORT_STATUS_IMPACT=1
                 else
                     FETCH_CVR_IMPACT_FAIL=0
-                    echo "committing cvr data"
-                    cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR"
-                    cd $MSK_IMPACT_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR"
+                    echo "pushing cvr data to s3"
+                    upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
                 fi
-                # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
-                $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt -m $MSK_IMPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD
             fi
         fi
 
@@ -228,31 +453,39 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR germline fetch for mskimpact"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_PRIVATE_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_IMPACT_DATA_HOME -p $MSK_IMPACT_DATA_HOME -n data_clinical_mskimpact_data_clinical_cvr.txt -g -i mskimpact $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR Germline fetch failed!"
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR Germline Fetch"
             IMPORT_STATUS_IMPACT=1
             #override the success of the tumor sample cvr fetch with a failed status
             FETCH_CVR_IMPACT_FAIL=1
         else
             # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json
+            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_IMPACT_DATA_HOME/cvr_gml_data.json
             if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json! MSK-IMPACT will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_PRIVATE_DATA_HOME/cvr_gml_data.json"
+                echo "PHI attributes found in $MSK_IMPACT_DATA_HOME/cvr_gml_data.json! MSK-IMPACT will not be imported!"
+                downloadFromS3AllStudies
+                sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT PHI attributes scan failed on $MSK_IMPACT_DATA_HOME/cvr_gml_data.json"
                 IMPORT_STATUS_IMPACT=1
                 #override the success of the tumor sample cvr fetch with a failed status
                 FETCH_CVR_IMPACT_FAIL=1
             else
-                echo "committing CVR germline data"
-                cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR Germline"
-                cd $MSK_IMPACT_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: CVR Germline"
+                echo "pushing CVR germline data to s3"
+                upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
+                echo "pushing CVR germline data to mpath volume"
+                # try_upload_to_s3 needs the local path to end with the S3 key, so stage a timestamped copy
+                GML_FILENAME="cvr_gml_data_$(date -u +%Y%m%dT%H%M%SZ).json"
+                GML_STAGING_DIR="$MSK_DMP_TMPDIR/mpath_germline/impact"
+                mkdir -p "$GML_STAGING_DIR"
+                cp "$MSK_IMPACT_DATA_HOME/cvr_gml_data.json" "$GML_STAGING_DIR/$GML_FILENAME"
+                if ! try_upload_to_s3 "$GML_STAGING_DIR/$GML_FILENAME" "impact/$GML_FILENAME" "cdsi-mpath" ; then
+                    sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT CVR germline upload to s3://cdsi-mpath/impact failed"
+                fi
             fi
+            # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt -m $MSK_IMPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_impact.json -i mskimpact -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
         fi
 
         # Upload MSKIMPACT sample list to S3 for CDM use
@@ -269,65 +502,70 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "HEMEPACT data processing"
 
     if [ $IMPORT_STATUS_HEME -eq 0 ] ; then
-        # fetch new/updated heme samples using CVR Web service (must come after git fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
+        # fetch new/updated heme samples using CVR Web service (must come after s3 fetching). Threshold is set to 50 since heme contains only 190 samples (07/12/2017)
         drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
         bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskimpact_heme
         printTimeStampedDataProcessingStepMessage "CVR fetch for hemepact"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_PRIVATE_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -i mskimpact_heme -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR heme fetch failed!"
             echo "This will not affect importing of mskimpact"
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Fetch"
             IMPORT_STATUS_HEME=1
         else
             # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json
+            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_DATA_HOME/cvr_data.json
             if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json! HEMEPACT will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_data.json"
+                echo "PHI attributes found in $MSK_HEMEPACT_DATA_HOME/cvr_data.json! HEMEPACT will not be imported!"
+                downloadFromS3AllStudies
+                sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_DATA_HOME/cvr_data.json"
                 IMPORT_STATUS_HEME=1
             else
                 FETCH_CVR_HEME_FAIL=0
-                echo "committing cvr data for heme"
-                cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT dataset"
-                cd $MSK_HEMEPACT_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT dataset"
+                echo "pushing cvr data for heme to s3"
+                upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
             fi
         fi
         # fetch new/updated HEMEPACT germline samples using CVR Web service   (must come after normal cvr fetching)
         drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         printTimeStampedDataProcessingStepMessage "CVR germline fetch for hemepact"
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_PRIVATE_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_HEMEPACT_DATA_HOME -p $MSK_HEMEPACT_DATA_HOME -n data_clinical_hemepact_data_clinical.txt -g -i mskimpact_heme $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR Germline fetch failed!"
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR Germline Fetch"
             IMPORT_STATUS_HEME=1
             #override the success of the tumor sample cvr fetch with a failed status
             FETCH_CVR_HEME_FAIL=1
         else
             # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_gml_data.json
+            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json
             if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_gml_data.json! HEMEPACT will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_PRIVATE_DATA_HOME/cvr_gml_data.json"
+                echo "PHI attributes found in $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json! HEMEPACT will not be imported!"
+                downloadFromS3AllStudies
+                sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT PHI attributes scan failed on $MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json"
                 IMPORT_STATUS_HEME=1
                 #override the success of the tumor sample cvr fetch with a failed status
                 FETCH_CVR_HEME_FAIL=1
             else
-                echo "committing CVR germline data"
-                cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: CVR Germline"
-                cd $MSK_HEMEPACT_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: CVR Germline"
+                echo "uploading CVR germline data to s3"
+                upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
+                echo "pushing CVR germline data to mpath volume"
+                # try_upload_to_s3 needs the local path to end with the S3 key, so stage a timestamped copy
+                GML_FILENAME="cvr_gml_data_$(date -u +%Y%m%dT%H%M%SZ).json"
+                GML_STAGING_DIR="$MSK_DMP_TMPDIR/mpath_germline/heme"
+                mkdir -p "$GML_STAGING_DIR"
+                cp "$MSK_HEMEPACT_DATA_HOME/cvr_gml_data.json" "$GML_STAGING_DIR/$GML_FILENAME"
+                if ! try_upload_to_s3 "$GML_STAGING_DIR/$GML_FILENAME" "heme/$GML_FILENAME" "cdsi-mpath" ; then
+                    sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT CVR germline upload to s3://cdsi-mpath/heme failed"
+                fi
             fi
+            # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt -m $MSK_HEMEPACT_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_heme.json -i mskimpact_heme -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
         fi
 
         # Upload HEMEPACT sample list to S3 for CDM use
@@ -343,35 +581,35 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "ARCHER data processing"
 
     if [ $IMPORT_STATUS_ARCHER -eq 0 ] ; then
-        # fetch new/updated archer samples using CVR Web service (must come after git fetching).
+        # fetch new/updated archer samples using CVR Web service (must come after s3 fetching).
         drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
         bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskarcher
         printTimeStampedDataProcessingStepMessage "CVR fetch for archer"
         # archer has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -p $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ARCHER_UNFILTERED_DATA_HOME -p $MSK_ARCHER_UNFILTERED_DATA_HOME -n data_clinical_mskarcher_data_clinical.txt -i mskarcher -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR Archer fetch failed!"
             echo "This will not affect importing of mskimpact"
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED CVR Fetch"
             IMPORT_STATUS_ARCHER=1
         else
             # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json
+            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json
             if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json! UNLINKED_ARCHER will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER PHI attributes scan failed on $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME/cvr_data.json"
+                echo "PHI attributes found in $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json! UNLINKED_ARCHER will not be imported!"
+                downloadFromS3AllStudies
+                sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER PHI attributes scan failed on $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr_data.json"
                 IMPORT_STATUS_ARCHER=1
             else
                 FETCH_CVR_ARCHER_FAIL=0
-                cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED dataset"
-                cd $MSK_ARCHER_UNFILTERED_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED dataset"
+                echo "pushing archer unfiltered data to s3"
+                upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
             fi
+            # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_archer.json -i mskarcher -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
         fi
 
         # Upload ARCHER sample list to S3 for CDM use
@@ -388,35 +626,35 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     printTimeStampedDataProcessingStepMessage "ACCESS data processing"
 
     if [ $IMPORT_STATUS_ACCESS -eq 0 ] ; then
-        # fetch new/updated access samples using CVR Web service (must come after git fetching).
+        # fetch new/updated access samples using CVR Web service (must come after s3 fetching).
         drop_dead_instant_step=$(date --date="+6hours" -Iseconds) # nearly 6 hours from now
         drop_dead_instant_string=$(find_earlier_instant "$drop_dead_instant_step" "$DROP_DEAD_INSTANT_END_TO_END")
         # pre-consume any samples missing values for normal_ad/tumor_dp/ad fields, or having UNKNOWN gene-panel
         bash $PORTAL_HOME/scripts/preconsume_problematic_samples.sh mskaccess
         printTimeStampedDataProcessingStepMessage "CVR fetch for access"
         # access has -b option to block warnings for samples with zero variants (all samples will have zero variants)
-        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -p $MSK_ACCESS_PRIVATE_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
+        $JAVA_BINARY $JAVA_CVR_FETCHER_ARGS -d $MSK_ACCESS_DATA_HOME -p $MSK_ACCESS_DATA_HOME -n data_clinical_mskaccess_data_clinical.txt -i mskaccess -s -b -r 50 $CVR_TEST_MODE_ARGS -z $drop_dead_instant_string
         if [ $? -gt 0 ] ; then
             echo "CVR ACCESS fetch failed!"
             echo "This will not affect importing of mskimpact"
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-            cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS CVR Fetch"
             IMPORT_STATUS_ACCESS=1
         else
             # check for PHI
-            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json
+            $PYTHON_BINARY $PORTAL_HOME/scripts/phi-scanner.py -a $PIPELINES_CONFIG_HOME/properties/fetch-cvr/phi-scanner-attributes.txt -j $MSK_ACCESS_DATA_HOME/cvr_data.json
             if [ $? -gt 0 ] ; then
-                echo "PHI attributes found in $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json! ACCESS will not be imported!"
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-                sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS PHI attributes scan failed on $MSK_ACCESS_PRIVATE_DATA_HOME/cvr_data.json"
+                echo "PHI attributes found in $MSK_ACCESS_DATA_HOME/cvr_data.json! ACCESS will not be imported!"
+                downloadFromS3AllStudies
+                sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS PHI attributes scan failed on $MSK_ACCESS_DATA_HOME/cvr_data.json"
                 IMPORT_STATUS_ACCESS=1
             else
                 FETCH_CVR_ACCESS_FAIL=0
-                cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS dataset"
-                cd $MSK_ACCESS_PRIVATE_DATA_HOME ; $GIT_BINARY add ./* ; $GIT_BINARY commit -m "Latest ACCESS dataset"
+                echo "pushing access data to s3"
+                upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
             fi
+            # identify samples that need to be requeued or removed from data set due to CVR Part A or Part C consent status changes
+            $PYTHON_BINARY $PORTAL_HOME/scripts/cvr_consent_status_checker.py -c $MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt -m $MSK_ACCESS_DATA_HOME/data_mutations_extended.txt -u $GMAIL_USERNAME -p $GMAIL_PASSWORD -f $PIPELINES_CONFIG_HOME/properties/fetch-cvr/application.properties -s $MSK_DMP_TMPDIR/cvr_consent_checker_session_access.json -i mskaccess -e $MSK_DMP_TMPDIR/cvr_consent_status_cache.json
         fi
 
         # Upload ACCESS sample list to S3 for CDM use
@@ -430,53 +668,53 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
 
     # -----------------------------------------------------------------------------------------------------------
     # GENERATE CANCER TYPE CASE LISTS AND SUPP DATE ADDED FILES
-    # NOTE: Even though cancer type case lists are not needed for MSKIMPACT, HEMEPACT for the portal
-    # since they are imported as part of MSKSOLIDHEME - the LYMPHOMASUPERCOHORT subsets these source
-    # studies by CANCER_TYPE and ONCOTREE_CODE so we want to keep these fields up-to-date which is
-    # accomplished by running the 'addCancerTypeCaseLists' function
+    # NOTE: The maintenance of the cancer type case lists in the primary cohorts was needed for
+    # the subsetting and merging of samples into the constructed LYMPHOMASUPERCOHORT. Now that
+    # that study is no longer constructed this may no longer be needed, but it is still performed
+    # because it may be useful if we need to subset or import a primary cohort in the future.
 
-    # add "DATE ADDED" info to clinical data for MSK-IMPACT
+    # generate case lists by cancer type and add "DATE ADDED" info to clinical data for MSK-IMPACT
     if [ $IMPORT_STATUS_IMPACT -eq 0 ] && [ $FETCH_CVR_IMPACT_FAIL -eq 0 ] ; then
         addCancerTypeCaseLists $MSK_IMPACT_DATA_HOME "mskimpact" "data_clinical_mskimpact_data_clinical_cvr.txt"
-        cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Case Lists"
+        upload_to_s3 "$MSK_IMPACT_DATA_HOME/case_lists" "mskimpact/case_lists" "mskimpact-databricks"
         if [ $EXPORT_SUPP_DATE_IMPACT_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_IMPACT_DATA_HOME "data_clinical_mskimpact_data_clinical_cvr.txt" "data_clinical_mskimpact_supp_date_cbioportal_added.txt"
-            cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add data_clinical_mskimpact_supp_date_cbioportal_added.txt ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: SUPP DATE ADDED"
+            upload_to_s3 "$MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_supp_date_cbioportal_added.txt" "mskimpact/data_clinical_mskimpact_supp_date_cbioportal_added.txt" "mskimpact-databricks"
         fi
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        downloadFromS3AllStudies
     fi
 
-    # add "DATE ADDED" info to clinical data for HEMEPACT
+    # generate case lists by cancer type and add "DATE ADDED" info to clinical data for HEMEPACT
     if [ $IMPORT_STATUS_HEME -eq 0 ] && [ $FETCH_CVR_HEME_FAIL -eq 0 ] ; then
         addCancerTypeCaseLists $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "data_clinical_hemepact_data_clinical.txt"
-        cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: Case Lists"
+        upload_to_s3 "$MSK_HEMEPACT_DATA_HOME/case_lists" "mskimpact_heme/case_lists" "mskimpact-databricks"
         if [ $EXPORT_SUPP_DATE_HEME_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_HEMEPACT_DATA_HOME "data_clinical_hemepact_data_clinical.txt" "data_clinical_hemepact_data_clinical_supp_date.txt"
-            cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add data_clinical_hemepact_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: SUPP DATE ADDED"
+            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical_supp_date.txt" "mskimpact_heme/data_clinical_hemepact_data_clinical_supp_date.txt" "mskimpact-databricks"
         fi
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        downloadFromS3AllStudies
     fi
 
-    # add "DATE ADDED" info to clinical data for ARCHER
+    # generate case lists by cancer type and add "DATE ADDED" info to clinical data for ARCHER
     if [[ $IMPORT_STATUS_ARCHER -eq 0 && $FETCH_CVR_ARCHER_FAIL -eq 0 ]] ; then
         addCancerTypeCaseLists $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher" "data_clinical_mskarcher_data_clinical.txt"
-        cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Case Lists"
+        upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME/case_lists" "mskarcher_unfiltered/case_lists" "mskimpact-databricks"
         if [ $EXPORT_SUPP_DATE_ARCHER_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_ARCHER_UNFILTERED_DATA_HOME "data_clinical_mskarcher_data_clinical.txt" "data_clinical_mskarcher_data_clinical_supp_date.txt"
-            cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add data_clinical_mskarcher_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: SUPP DATE ADDED"
+            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical_supp_date.txt" "mskarcher_unfiltered/data_clinical_mskarcher_data_clinical_supp_date.txt" "mskimpact-databricks"
         fi
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        downloadFromS3AllStudies
     fi
 
     # generate case lists by cancer type and add "DATE ADDED" info to clinical data for ACCESS
     if [ $IMPORT_STATUS_ACCESS -eq 0 ] && [ $FETCH_CVR_ACCESS_FAIL -eq 0 ] ; then
         addCancerTypeCaseLists $MSK_ACCESS_DATA_HOME "mskaccess" "data_clinical_mskaccess_data_clinical.txt"
-        cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest ACCESS Dataset: Case Lists"
+        upload_to_s3 "$MSK_ACCESS_DATA_HOME/case_lists" "mskaccess/case_lists" "mskimpact-databricks"
         if [ $EXPORT_SUPP_DATE_ACCESS_FAIL -eq 0 ] ; then
             addDateAddedData $MSK_ACCESS_DATA_HOME "data_clinical_mskaccess_data_clinical.txt" "data_clinical_mskaccess_data_clinical_supp_date.txt"
-            cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add data_clinical_mskaccess_data_clinical_supp_date.txt ; $GIT_BINARY commit -m "Latest ACCESS Dataset: SUPP DATE ADDED"
+            upload_to_s3 "$MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical_supp_date.txt" "mskaccess/data_clinical_mskaccess_data_clinical_supp_date.txt" "mskimpact-databricks"
         fi
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        downloadFromS3AllStudies
     fi
 
     # -----------------------------------------------------------------------------------------------------------
@@ -493,9 +731,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         $PYTHON_BINARY $PORTAL_HOME/scripts/merge_archer_structural_variants.py --archer-structural-variants $MSK_ARCHER_UNFILTERED_DATA_HOME/data_sv.txt --linked-cases-filename $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/linked_cases.txt --structural-variants-filename $MSK_IMPACT_DATA_HOME/data_sv.txt --clinical-filename $MSK_IMPACT_DATA_HOME/data_clinical_mskimpact_data_clinical_cvr.txt --mapped-archer-samples-filename $MAPPED_ARCHER_SAMPLES_FILE --study-id "mskimpact" --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD
         if [ $? -gt 0 ] ; then
             ARCHER_MERGE_IMPACT_FAIL=1
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
         else
-            $GIT_BINARY add $MAPPED_ARCHER_SAMPLES_FILE $MSK_IMPACT_DATA_HOME ; $GIT_BINARY commit -m "Adding ARCHER_UNFILTERED structural variants to MSKIMPACT"
+            upload_to_s3 "$MAPPED_ARCHER_SAMPLES_FILE" "mskarcher_unfiltered/cvr/mapped_archer_samples.txt" "mskimpact-databricks"
+            upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
         fi
     fi
 
@@ -505,9 +744,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         $PYTHON_BINARY $PORTAL_HOME/scripts/merge_archer_structural_variants.py --archer-structural-variants $MSK_ARCHER_UNFILTERED_DATA_HOME/data_sv.txt --linked-cases-filename $MSK_ARCHER_UNFILTERED_DATA_HOME/cvr/linked_cases.txt --structural-variants-filename $MSK_HEMEPACT_DATA_HOME/data_sv.txt --clinical-filename $MSK_HEMEPACT_DATA_HOME/data_clinical_hemepact_data_clinical.txt --mapped-archer-samples-filename $MAPPED_ARCHER_SAMPLES_FILE --study-id "mskimpact_heme" --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD
         if [ $? -gt 0 ] ; then
             ARCHER_MERGE_HEME_FAIL=1
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
         else
-            $GIT_BINARY add $MAPPED_ARCHER_SAMPLES_FILE $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY commit -m "Adding ARCHER_UNFILTERED structural variants to HEMEPACT"
+            upload_to_s3 "$MAPPED_ARCHER_SAMPLES_FILE" "mskarcher_unfiltered/cvr/mapped_archer_samples.txt" "mskimpact-databricks"
+            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
         fi
     fi
 
@@ -614,7 +854,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     remove_raw_clinical_timeline_data_files $MSK_ACCESS_DATA_HOME
 
     # commit raw file cleanup - study staging directories should only contain files for portal import
-    $GIT_BINARY commit -m "Raw clinical and timeline file cleanup: MSKIMPACT, HEMEPACT, ARCHER, ACCESS"
+    upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
+    upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
+    upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
+    upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
 
     # -------------------------------------------------------------
     # REDCAP EXPORTS - CBIO STAGING FORMATS
@@ -627,15 +870,15 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         export_stable_id_from_redcap mskimpact $MSK_IMPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_IMPACT=1
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "MSKIMPACT Redcap Export"
         else
             if [ $GENERATE_MASTERLIST_FAIL -eq 0 ] ; then
                 $PYTHON_BINARY $PORTAL_HOME/scripts/filter_dropped_samples_patients.py -s $MSK_IMPACT_DATA_HOME/data_clinical_sample.txt -p $MSK_IMPACT_DATA_HOME/data_clinical_patient.txt -f $MSK_DMP_TMPDIR/sample_masterlist_for_filtering.txt -u $GMAIL_USERNAME -g $GMAIL_PASSWORD
                 if [ $? -gt 0 ] ; then
-                    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+                    downloadFromS3AllStudies
                 else
-                    cd $MSK_IMPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKIMPACT Dataset: Clinical and Timeline"
+                    upload_to_s3 "$MSK_IMPACT_DATA_HOME" "mskimpact" "mskimpact-databricks"
                 fi
             fi
             touch $MSK_IMPACT_CONSUME_TRIGGER
@@ -649,11 +892,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         export_stable_id_from_redcap mskimpact_heme $MSK_HEMEPACT_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_HEME=1
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "HEMEPACT Redcap Export"
         else
             touch $MSK_HEMEPACT_CONSUME_TRIGGER
-            cd $MSK_HEMEPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest HEMEPACT Dataset: Clinical and Timeline"
+            upload_to_s3 "$MSK_HEMEPACT_DATA_HOME" "mskimpact_heme" "mskimpact-databricks"
         fi
     fi
 
@@ -664,7 +907,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         export_stable_id_from_redcap mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_ARCHER=1
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "ARCHER_UNFILTERED Redcap Export"
         else
             # we want to remove MSI_COMMENT, MSI_SCORE, and MSI_TYPE from the data clinical file
@@ -675,7 +918,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
             fi
             touch $MSK_ARCHER_IMPORT_TRIGGER
             touch $MSK_ARCHER_CONSUME_TRIGGER
-            cd $MSK_ARCHER_UNFILTERED_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest ARCHER_UNFILTERED Dataset: Clinical and Timeline"
+            upload_to_s3 "$MSK_ARCHER_UNFILTERED_DATA_HOME" "mskarcher_unfiltered" "mskimpact-databricks"
         fi
     fi
 
@@ -686,45 +929,35 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         export_stable_id_from_redcap mskaccess $MSK_ACCESS_DATA_HOME
         if [ $? -gt 0 ] ; then
             IMPORT_STATUS_ACCESS=1
-            cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+            downloadFromS3AllStudies
             sendPreImportFailureMessageMskPipelineLogsSlack "ACCESS Redcap Export"
         else
             touch $MSK_ACCESS_CONSUME_TRIGGER
-            cd $MSK_ACCESS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest ACCESS Dataset: Clinical and Timeline"
+            upload_to_s3 "$MSK_ACCESS_DATA_HOME" "mskaccess" "mskimpact-databricks"
         fi
     fi
 
     #--------------------------------------------------------------
-    # CDM Fetch is optional -- does not break import if it fails, but will send notif
+    # CDM Fetch and merge are required: a failure here does not stop processing. Each cohort
+    # falls back to its last-good CDM data (see merge_cdm_with_fallback); a cohort with no
+    # usable fallback sets CDM_MERGE_FAIL, which blocks all DMP portal imports (see CDM MERGE
+    # GATE below) so the portal keeps its current studies instead of dropping CDM columns.
+
+    select_cdm_metadata_file
 
     echo "fetching CDM clinical demographics & timeline updates from S3..."
-    sh $PORTAL_HOME/scripts/pull-cdm-data.sh
-
-    if [ $? -gt 0 ] ; then
+    # try_download_from_s3 returns nonzero on failure; download_from_s3 would exit the whole fetch
+    if ! try_download_from_s3 "$MSK_CHORD_DATA_HOME" "msk-chord" "cdm-deliverable" ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "S3 Failure: CDM data update"
-    else
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for MSKIMPACT"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskimpact_heme
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for HEMEPACT"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskarcher
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ARCHER"
-        fi
-
-        sh $PORTAL_HOME/scripts/merge-cdm-data.sh mskaccess
-        if [ $? -gt 0 ] ; then
-            sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM merge for ACCESS"
-        fi
+        CDM_DOWNLOAD_FAIL=1
     fi
 
-    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+    merge_cdm_with_fallback mskimpact $MSK_IMPACT_DATA_HOME "mskimpact" "MSKIMPACT"
+    merge_cdm_with_fallback mskimpact_heme $MSK_HEMEPACT_DATA_HOME "mskimpact_heme" "HEMEPACT"
+    merge_cdm_with_fallback mskarcher $MSK_ARCHER_UNFILTERED_DATA_HOME "mskarcher_unfiltered" "ARCHER"
+    merge_cdm_with_fallback mskaccess $MSK_ACCESS_DATA_HOME "mskaccess" "ACCESS"
+
+    downloadFromS3AllStudies
 
     # -------------------------------------------------------------
     # UNLINKED ARCHER DATA PROCESSING
@@ -740,17 +973,20 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                 echo "UNLINKED_ARCHER subset failed! Study will not be updated in the portal."
                 sendPreImportFailureMessageMskPipelineLogsSlack "UNLINKED_ARCHER subset"
                 echo $(date)
-                cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+                downloadFromS3AllStudies
                 UNLINKED_ARCHER_SUBSET_FAIL=1
                 IMPORT_STATUS_ARCHER=1
             else
                 echo "UNLINKED_ARCHER subset successful! Creating cancer type case lists..."
                 echo $(date)
+
+                merge_biobank_clinical_data "$MSK_ARCHER_DATA_HOME"
+
                 # add metadata headers and overrides before importing
-                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical* -i $PORTAL_HOME/scripts/cdm_metadata.json
+                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskarcher -f $MSK_ARCHER_DATA_HOME/data_clinical* -i "$CDM_METADATA_FILE"
                 if [ $? -gt 0 ] ; then
                     echo "Error: Adding metadata headers for UNLINKED_ARCHER failed! Study will not be updated in portal."
-                    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+                    downloadFromS3AllStudies
                     IMPORT_STATUS_ARCHER=1
                 else
                     # Add CDM timeline files
@@ -759,10 +995,10 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
                         echo "Error: Adding CDM timeline files for UNLINKED_ARCHER failed!"
                     fi
                     # commit updates and generated case lists
-                    cd $MSK_ARCHER_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest UNLINKED_ARCHER Dataset"
+                    upload_to_s3 "$MSK_ARCHER_DATA_HOME" "mskarcher" "mskimpact-databricks"
                     addCancerTypeCaseLists $MSK_ARCHER_DATA_HOME "mskarcher" "data_clinical_sample.txt" "data_clinical_patient.txt"
-                    cd $MSK_ARCHER_DATA_HOME ; $GIT_BINARY add case_lists ; $GIT_BINARY commit -m "Latest UNLINKED_ARCHER Dataset: Case Lists"
-                    cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+                    upload_to_s3 "$MSK_ARCHER_DATA_HOME/case_lists" "mskarcher/case_lists" "mskimpact-databricks"
+                    downloadFromS3AllStudies
                 fi
             fi
         fi
@@ -802,7 +1038,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     else
         echo "MIXEDPACT merge successful!"
         echo $(date)
-        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mixedpact
+        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mixedpact $MSK_MIXEDPACT_DATA_HOME "$MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_RAINDANCE_DATA_HOME $MSK_ARCHER_UNFILTERED_DATA_HOME $MSK_ACCESS_DATA_HOME"
         if [ $? -gt 0 ] ; then
           sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM timeline file merge for MIXEDPACT"
         fi
@@ -815,13 +1051,16 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo "MSKSOLIDHEME merge failed! Study will not be updated in the portal."
         echo $(date)
         MSK_SOLID_HEME_MERGE_FAIL=1
-        # we rollback/clean git after the import of MSKSOLIDHEME (if merge or import fails)
+        # we rollback/clean s3 after the import of MSKSOLIDHEME (if merge or import fails)
     else
         echo "MSKSOLIDHEME merge successful! Creating cancer type case lists..."
         echo $(date)
+
+        merge_biobank_clinical_data "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme"
+
         # add metadata headers and overrides before importing
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
-        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt -i $PORTAL_HOME/scripts/cdm_metadata.json
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt -i "$CDM_METADATA_FILE"
+        $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -s mskimpact -f $MSK_SOLID_HEME_DATA_HOME/data_clinical_patient.txt -i "$CDM_METADATA_FILE"
         if [ $? -gt 0 ] ; then
           echo "Error: Adding metadata headers for MSKSOLIDHEME failed! Study will not be updated in portal."
         else
@@ -829,9 +1068,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         fi
         addCancerTypeCaseLists $MSK_SOLID_HEME_DATA_HOME "mskimpact" "data_clinical_sample.txt" "data_clinical_patient.txt"
         # Merge CDM timeline files
-        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mskimpact
+        sh $PORTAL_HOME/scripts/merge-cdm-timeline-files.sh mskimpact $MSK_SOLID_HEME_DATA_HOME "$MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $MSK_ACCESS_DATA_HOME"
         if [ $? -gt 0 ] ; then
           sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM timeline file merge for MSKSOLIDHEME"
+        fi
+        # Update CDM deliverable for the merged solid heme cohort
+        sh $PORTAL_HOME/scripts/update-cdm-deliverable.sh msk_solid_heme
+        if [ $? -gt 0 ] ; then
+          sendPreImportFailureMessageMskPipelineLogsSlack "Error: CDM deliverable generation for MSKSOLIDHEME"
         fi
     fi
 
@@ -853,20 +1097,20 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MIXEDPACT_MERGE_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "MIXEDPACT merge"
         echo "MIXEDPACT merge failed! Reverting data to last commit."
-        cd $MSK_MIXEDPACT_DATA_HOME ; $GIT_BINARY checkout -- .
+        download_from_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks"
     else
         echo "Committing MIXEDPACT data"
-        cd $MSK_MIXEDPACT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MIXEDPACT dataset"
+        upload_to_s3 "$MSK_MIXEDPACT_DATA_HOME" "mixedpact" "mskimpact-databricks"
     fi
 
     # commit or revert changes for MSKSOLIDHEME
     if [ $MSK_SOLID_HEME_MERGE_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "MSKSOLIDHEME merge"
         echo "MSKSOLIDHEME merge and/or updates failed! Reverting data to last commit."
-        cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY checkout -- .
+        download_from_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
     else
         echo "Committing MSKSOLIDHEME data"
-        cd $MSK_SOLID_HEME_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MSKSOLIDHEME dataset"
+        upload_to_s3 "$MSK_SOLID_HEME_DATA_HOME" "msk_solid_heme" "mskimpact-databricks"
     fi
 
     #--------------------------------------------------------------
@@ -878,7 +1122,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     # subset the mixedpact study for Queens Cancer Center, Lehigh Valley, Kings County Cancer Center, Miami Cancer Institute, and Hartford Health Care
 
     # KINGSCOUNTY subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_kingscounty -o=$MSK_KINGS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Kings County Cancer Center" -s=$MSK_DMP_TMPDIR/kings_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_kingscounty -o=$MSK_KINGS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Kings County Cancer Center" -s=$MSK_DMP_TMPDIR/kings_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Kings County subset failed! Study will not be updated in the portal."
         MSK_KINGS_SUBSET_FAIL=1
@@ -899,14 +1143,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_KINGS_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "KINGSCOUNTY subset"
         echo "KINGSCOUNTY subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        download_from_s3 "$MSK_KINGS_DATA_HOME" "msk_kingscounty" "mskimpact-databricks"
     else
         echo "Committing KINGSCOUNTY data"
-        cd $MSK_KINGS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest KINGSCOUNTY dataset"
+        upload_to_s3 "$MSK_KINGS_DATA_HOME" "msk_kingscounty" "mskimpact-databricks"
     fi
 
     # LEHIGHVALLEY subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_lehighvalley -o=$MSK_LEHIGH_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Lehigh Valley Health Network" -s=$MSK_DMP_TMPDIR/lehigh_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_lehighvalley -o=$MSK_LEHIGH_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Lehigh Valley Health Network" -s=$MSK_DMP_TMPDIR/lehigh_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Lehigh Valley subset failed! Study will not be updated in the portal."
         MSK_LEHIGH_SUBSET_FAIL=1
@@ -927,14 +1171,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_LEHIGH_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "LEHIGHVALLEY subset"
         echo "LEHIGHVALLEY subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        download_from_s3 "$MSK_LEHIGH_DATA_HOME" "msk_lehighvalley" "mskimpact-databricks"
     else
         echo "Committing LEHIGHVALLEY data"
-        cd $MSK_LEHIGH_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest LEHIGHVALLEY dataset"
+        upload_to_s3 "$MSK_LEHIGH_DATA_HOME" "msk_lehighvalley" "mskimpact-databricks"
     fi
 
     # QUEENSCANCERCENTER subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_queenscancercenter -o=$MSK_QUEENS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Queens Cancer Center,Queens Hospital Cancer Center" -s=$MSK_DMP_TMPDIR/queens_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_queenscancercenter -o=$MSK_QUEENS_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Queens Cancer Center,Queens Hospital Cancer Center" -s=$MSK_DMP_TMPDIR/queens_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Queens Cancer Center subset failed! Study will not be updated in the portal."
         MSK_QUEENS_SUBSET_FAIL=1
@@ -955,14 +1199,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_QUEENS_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "QUEENSCANCERCENTER subset"
         echo "QUEENSCANCERCENTER subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        download_from_s3 "$MSK_QUEENS_DATA_HOME" "msk_queenscancercenter" "mskimpact-databricks"
     else
         echo "Committing QUEENSCANCERCENTER data"
-        cd $MSK_QUEENS_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest QUEENSCANCERCENTER dataset"
+        upload_to_s3 "$MSK_QUEENS_DATA_HOME" "msk_queenscancercenter" "mskimpact-databricks"
     fi
 
     # MIAMICANCERINSTITUTE subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_miamicancerinstitute -o=$MSK_MCI_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Miami Cancer Institute" -s=$MSK_DMP_TMPDIR/mci_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_miamicancerinstitute -o=$MSK_MCI_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Miami Cancer Institute" -s=$MSK_DMP_TMPDIR/mci_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Miami Cancer Institute subset failed! Study will not be updated in the portal."
         MSK_MCI_SUBSET_FAIL=1
@@ -983,14 +1227,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_MCI_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "MIAMICANCERINSTITUTE subset"
         echo "MIAMICANCERINSTITUTE subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        download_from_s3 "$MSK_MCI_DATA_HOME" "msk_miamicancerinstitute" "mskimpact-databricks"
     else
         echo "Committing MIAMICANCERINSTITUTE data"
-        cd $MSK_MCI_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest MIAMICANCERINSTITUTE dataset"
+        upload_to_s3 "$MSK_MCI_DATA_HOME" "msk_miamicancerinstitute" "mskimpact-databricks"
     fi
 
     # HARTFORDHEALTHCARE subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_hartfordhealthcare -o=$MSK_HARTFORD_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Hartford Healthcare" -s=$MSK_DMP_TMPDIR/hartford_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_hartfordhealthcare -o=$MSK_HARTFORD_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Hartford Healthcare" -s=$MSK_DMP_TMPDIR/hartford_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Hartford Healthcare subset failed! Study will not be updated in the portal."
         MSK_HARTFORD_SUBSET_FAIL=1
@@ -1011,14 +1255,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_HARTFORD_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "HARTFORDHEALTHCARE subset"
         echo "HARTFORDHEALTHCARE subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        download_from_s3 "$MSK_HARTFORD_DATA_HOME" "msk_hartfordhealthcare" "mskimpact-databricks"
     else
         echo "Committing HARTFORDHEALTHCARE data"
-        cd $MSK_HARTFORD_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest HARTFORDHEALTHCARE dataset"
+        upload_to_s3 "$MSK_HARTFORD_DATA_HOME" "msk_hartfordhealthcare" "mskimpact-databricks"
     fi
 
     # RALPHLAUREN subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_ralphlauren -o=$MSK_RALPHLAUREN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Ralph Lauren Center" -s=$MSK_DMP_TMPDIR/ralphlauren_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_ralphlauren -o=$MSK_RALPHLAUREN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Ralph Lauren Center" -s=$MSK_DMP_TMPDIR/ralphlauren_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Ralph Lauren subset failed! Study will not be updated in the portal."
         MSK_RALPHLAUREN_SUBSET_FAIL=1
@@ -1039,14 +1283,14 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_RALPHLAUREN_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "RALPHLAUREN subset"
         echo "RALPHLAUREN subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        download_from_s3 "$MSK_RALPHLAUREN_DATA_HOME" "msk_ralphlauren" "mskimpact-databricks"
     else
         echo "Committing RALPHLAUREN data"
-        cd $MSK_RALPHLAUREN_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest RALPHLAUREN dataset"
+        upload_to_s3 "$MSK_RALPHLAUREN_DATA_HOME" "msk_ralphlauren" "mskimpact-databricks"
     fi
 
     # RIKENGENESISJAPAN subset
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=msk_rikengenesisjapan -o=$MSK_RIKENGENESISJAPAN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Riken Genesis" -s=$MSK_DMP_TMPDIR/rikengenesisjapan_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=msk_rikengenesisjapan -o=$MSK_RIKENGENESISJAPAN_DATA_HOME -d=$MSK_MIXEDPACT_DATA_HOME -f="INSTITUTE=Riken Genesis" -s=$MSK_DMP_TMPDIR/rikengenesisjapan_subset.txt -c=$MSK_MIXEDPACT_DATA_HOME/data_clinical_sample.txt --include-msk-chord-data
     if [ $? -gt 0 ] ; then
         echo "MSK Tailor Med Japan subset failed! Study will not be updated in the portal."
         MSK_RIKENGENESISJAPAN_SUBSET_FAIL=1
@@ -1067,17 +1311,17 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $MSK_RIKENGENESISJAPAN_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "RIKENGENESISJAPAN subset"
         echo "RIKENGENESISJAPAN subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        download_from_s3 "$MSK_RIKENGENESISJAPAN_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks"
     else
         echo "Committing RIKENGENESISJAPAN data"
-        cd $MSK_RIKENGENESISJAPAN_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest RIKENGENESISJAPAN dataset"
+        upload_to_s3 "$MSK_RIKENGENESISJAPAN_DATA_HOME" "msk_rikengenesisjapan" "mskimpact-databricks"
     fi
 
     #--------------------------------------------------------------
     printTimeStampedDataProcessingStepMessage "subset of mskimpact for sclc cohort"
     # Subset MSKIMPACT on ONCOTREE_CODE for SCLC cohort
 
-    bash $PORTAL_HOME/scripts/subset-impact-data.sh -i=sclc_mskimpact_2017 -o=$MSK_SCLC_DATA_HOME -d=$MSK_IMPACT_DATA_HOME -f="ONCOTREE_CODE=SCLC" -s=$MSK_DMP_TMPDIR/sclc_subset.txt -c=$MSK_IMPACT_DATA_HOME/data_clinical_sample.txt
+    bash $PORTAL_HOME/scripts/subset-impact-data.sh -m="$CDM_METADATA_FILE" -i=sclc_mskimpact_2017 -o=$MSK_SCLC_DATA_HOME -d=$MSK_IMPACT_DATA_HOME -f="ONCOTREE_CODE=SCLC" -s=$MSK_DMP_TMPDIR/sclc_subset.txt -c=$MSK_IMPACT_DATA_HOME/data_clinical_sample.txt
     if [ $? -gt 0 ] ; then
         echo "MSKIMPACT SCLC subset failed! Study will not be updated in the portal."
         SCLC_MSKIMPACT_SUBSET_FAIL=1
@@ -1098,151 +1342,69 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
     if [ $SCLC_MSKIMPACT_SUBSET_FAIL -gt 0 ] ; then
         sendPreImportFailureMessageMskPipelineLogsSlack "SCLCMSKIMPACT subset"
         echo "SCLCMSKIMPACT subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
+        download_from_s3 "$MSK_SCLC_DATA_HOME" "sclc_mskimpact_2017" "mskimpact-databricks"
     else
         echo "Committing SCLCMSKIMPACT data"
-        cd $MSK_SCLC_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest SCLCMSKIMPACT dataset"
+        upload_to_s3 "$MSK_SCLC_DATA_HOME" "sclc_mskimpact_2017" "mskimpact-databricks"
     fi
 
     #--------------------------------------------------------------
-    printTimeStampedDataProcessingStepMessage "subset and merge of mskimpact, hemepact for lymphoma_super_cohort_fmi_msk"
-    # Create lymphoma "super" cohort
-    # Subset MSK-IMPACT and HEMEPACT by Cancer Type
-
-    # first touch meta_sv.txt in mskimpact, hemepact if not already exists - need these to generate merged subsets
-    if [ ! -f $MSK_IMPACT_DATA_HOME/meta_sv.txt ] ; then
-        touch $MSK_IMPACT_DATA_HOME/meta_sv.txt
-    fi
-
-    if [ ! -f $MSK_HEMEPACT_DATA_HOME/meta_sv.txt ] ; then
-        touch $MSK_HEMEPACT_DATA_HOME/meta_sv.txt
-    fi
-
-    # **************************************** ORDER OF SUBSET
-    # now subset sample files with lymphoma cases from mskimpact and hemepact
-    LYMPHOMA_FILTER_CRITERIA="CANCER_TYPE=Blastic Plasmacytoid Dendritic Cell Neoplasm,Histiocytosis,Hodgkin Lymphoma,Leukemia,Mastocytosis,Mature B-Cell Neoplasms,Mature T and NK Neoplasms,Myelodysplastic Syndromes,Myelodysplastic/Myeloproliferative Neoplasms,Myeloproliferative Neoplasms,Non-Hodgkin Lymphoma;ONCOTREE_CODE=AITL,ALCL,ALCLALKN,ALCLALKP,AML,AMLCBFBMYH11,AMLCEBPA,AMLDEKNUP214,AMLGATA2MECOM,AMLMRC,AMLNOS,AMLNPM1,AMLRUNX1,AMLRUNX1RUNX1T1,AMML,APLPMLRARA,BCL,BIALCL,BL,CHL,CLLSLL,CLPDNK,CML,CMLBCRABL1,CMML,CMML0,CMML1,CMML2,DLBCL,DLBCLNOS,EBVDLBCLNOS,ECD,EMALT,ET,ETMF,FL,HCL,HDCN,HGBCLMYCBCL2,HS,LCH,LPL,MALTL,MBCL,MCBCL,MCL,MDS,MDSEB,MDSEB1,MDSEB2,MDSID5Q,MDSMD,MDSMPNU,MDSRS,MDSRSMD,MDSRSSLD,MDSSLD,MEITL,MGUS,MPALBNOS,MPALTNOS,MYCF,MZL,NLPHL,NPTLTFH,ONCOTREE_CODE,PCGDTCL,PCLPD,PCM,PCNSL,PLBL,PMBL,PMF,PTCL,PV,RDD,SEZS,SLL,SM,SMAHN,SMZL,SPB,SS,TAML,THRLBCL,TLGL,TMDS,TMN,TNKL,TPLL,WM"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py --study-id="lymphoma_super_cohort_fmi_msk" --clinical-file="$MSK_IMPACT_DATA_HOME/data_clinical_sample.txt" --filter-criteria="$LYMPHOMA_FILTER_CRITERIA" --subset-filename="$MSK_DMP_TMPDIR/mskimpact_lymphoma_subset.txt"
-    if [ $? -gt 0 ] ; then
-        echo "ERROR! Failed to generate subset of lymphoma samples from MSK-IMPACT. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from MSKIMPACT"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    fi
-    $PYTHON_BINARY $PORTAL_HOME/scripts/generate-clinical-subset.py --study-id="lymphoma_super_cohort_fmi_msk" --clinical-file="$MSK_HEMEPACT_DATA_HOME/data_clinical_sample.txt" --filter-criteria="$LYMPHOMA_FILTER_CRITERIA" --subset-filename="$MSK_DMP_TMPDIR/mskimpact_heme_lymphoma_subset.txt"
-    if [ $? -gt 0 ] ; then
-        echo "ERROR! Failed to generate subset of lymphoma samples from MSK-IMPACT Heme. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from HEMEPACT"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    fi
-
-    # check sizes of subset files before attempting to merge data using these subsets
-    grep -v '^#' $FMI_BATLEVI_DATA_HOME/data_clinical_sample.txt | awk -F '\t' '{if ($2 != "SAMPLE_ID") print $2;}' > $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt
-    if [[ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 && $(wc -l < $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt) -eq 0 ]] ; then
-        echo "ERROR! Subset list $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt is empty. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from source Foundation study"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    fi
-
-    if [[ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 && $(wc -l < $MSK_DMP_TMPDIR/mskimpact_lymphoma_subset.txt) -eq 0 ]] ; then
-        echo "ERROR! Subset list $MSK_DMP_TMPDIR/mskimpact_lymphoma_subset.txt is empty. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from MSKIMPACT produced empty list"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    else
-        cat $MSK_DMP_TMPDIR/mskimpact_lymphoma_subset.txt >> $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt
-    fi
-
-    if [[ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 && $(wc -l < $MSK_DMP_TMPDIR/mskimpact_heme_lymphoma_subset.txt) -eq 0 ]] ; then
-        echo "ERROR! Subset list $MSK_DMP_TMPDIR/mskimpact_heme_lymphoma_subset.txt is empty. Skipping merge and update of lymphoma super cohort!"
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT subset from HEMEPACT produced empty list"
-        LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-    else
-        cat $MSK_DMP_TMPDIR/mskimpact_heme_lymphoma_subset.txt >> $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt
-    fi
-
-    # merge data from mskimpact and hemepact lymphoma subsets with FMI BAT study
-    if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -eq 0 ] ; then
-        $PYTHON_BINARY $PORTAL_HOME/scripts/merge.py  -d $LYMPHOMA_SUPER_COHORT_DATA_HOME -i "lymphoma_super_cohort_fmi_msk" -m "true" -s $MSK_DMP_TMPDIR/lymphoma_subset_samples.txt $MSK_IMPACT_DATA_HOME $MSK_HEMEPACT_DATA_HOME $FMI_BATLEVI_DATA_HOME
-        if [ $? -gt 0 ] ; then
-            echo "Lymphoma super cohort subset failed! Lymphoma super cohort study will not be updated in the portal."
-            LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-        else
-            filter_derived_clinical_data $LYMPHOMA_SUPER_COHORT_DATA_HOME
-            if [ $? -gt 0 ] ; then
-                echo "Lymphoma super subset clinical attribute filtering step failed! Study will not be updated in the portal."
-                LYMPHOMA_SUPER_COHORT_SUBSET_FAIL=1
-            else
-                # add metadata headers before importing
-                $PYTHON_BINARY $PORTAL_HOME/scripts/add_clinical_attribute_metadata_headers.py -f $LYMPHOMA_SUPER_COHORT_DATA_HOME/data_clinical* -i $PORTAL_HOME/scripts/cdm_metadata.json
-                if [ $? -gt 0 ] ; then
-                    echo "Error: Adding metadata headers for LYMPHOMA_SUPER_COHORT failed! Study will not be updated in portal."
-                else
-                    # Subset Lymphoma super cohort timeline files
-                    sh $PORTAL_HOME/scripts/subset-cdm-timeline-files.sh lymphoma_super_cohort_fmi_msk $LYMPHOMA_SUPER_COHORT_DATA_HOME $MSK_SOLID_HEME_DATA_HOME
-                    if [ $? -gt 0 ] ; then
-                        echo "Error: CDM timeline file subset for LYMPHOMA_SUPER_COHORT"
-                    fi
-
-                    touch $LYMPHOMA_SUPER_COHORT_IMPORT_TRIGGER
-                fi
-            fi
-        fi
-        # remove files we don't need for lymphoma super cohort
-        rm -f $LYMPHOMA_SUPER_COHORT_DATA_HOME/*genie* $LYMPHOMA_SUPER_COHORT_DATA_HOME/seq_date.txt
-    fi
-
-    # check that meta_sv.txt is actually an empty file before deleting from IMPACT and HEMEPACT studies
-    if [ $(wc -l < $MSK_IMPACT_DATA_HOME/meta_sv.txt) -eq 0 ] ; then
-        rm $MSK_IMPACT_DATA_HOME/meta_sv.txt
-    fi
-
-    if [ $(wc -l < $MSK_HEMEPACT_DATA_HOME/meta_sv.txt) -eq 0 ] ; then
-        rm $MSK_HEMEPACT_DATA_HOME/meta_sv.txt
-    fi
-
-    # commit or revert changes for Lymphoma super cohort
-    if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
-        sendPreImportFailureMessageMskPipelineLogsSlack "LYMPHOMASUPERCOHORT merge"
-        echo "Lymphoma super cohort subset and/or updates failed! Reverting data to last commit."
-        cd $DMP_DATA_HOME ; $GIT_BINARY reset HEAD --hard
-    else
-        echo "Committing Lymphoma super cohort data"
-        cd $LYMPHOMA_SUPER_COHORT_DATA_HOME ; $GIT_BINARY add * ; $GIT_BINARY commit -m "Latest Lymphoma Super Cohort dataset"
+    # CDM MERGE GATE
+    # Every DMP portal study carries CDM clinical columns, merged in from the cohorts above.
+    # If a cohort could not be merged with either current or last-good CDM data (see
+    # merge_cdm_with_fallback), importing would drop those columns, so remove all import
+    # triggers: the importer then leaves the current portal studies in place until a run
+    # where the CDM merge succeeds. Runs after every trigger is set.
+    if [ $CDM_MERGE_FAIL -gt 0 ] ; then
+        echo "CDM merge failed for:$CDM_MERGE_FAILED_STEPS -- blocking all DMP portal imports"
+        rm -f $MSK_SOLID_HEME_IMPORT_TRIGGER $MSK_ARCHER_IMPORT_TRIGGER \
+            $MSK_KINGS_IMPORT_TRIGGER $MSK_LEHIGH_IMPORT_TRIGGER $MSK_QUEENS_IMPORT_TRIGGER \
+            $MSK_MCI_IMPORT_TRIGGER $MSK_HARTFORD_IMPORT_TRIGGER $MSK_RALPHLAUREN_IMPORT_TRIGGER \
+            $MSK_RIKENGENESISJAPAN_IMPORT_TRIGGER $MSK_SCLC_IMPORT_TRIGGER
+        sendPreImportFailureMessageMskPipelineLogsSlack "CDM merge failed for:$CDM_MERGE_FAILED_STEPS. All DMP portal imports blocked; the portal keeps its current studies :fire: - address ASAP!"
     fi
 
     #--------------------------------------------------------------
-    # GIT PUSH
-    printTimeStampedDataProcessingStepMessage "push of dmp data updates to git repository"
-    # check updated data back into git
-    GIT_PUSH_FAIL=0
-    cd $DMP_DATA_HOME ; $GIT_BINARY push origin
+    # S3 PUSH
+    deleteS3IgnoredFiles "$PORTAL_DATA_HOME/dmp"
+    printTimeStampedDataProcessingStepMessage "push of dmp data updates to s3 bucket"
+    echo "pushing data from $DMP_DATA_HOME to s3 bucket mskimpact-databricks"
+    S3_BUCKET_PUSH_FAIL=0
+    upload_to_s3 "$DMP_DATA_HOME" "" "mskimpact-databricks"
     if [ $? -gt 0 ] ; then
-        GIT_PUSH_FAIL=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (dmp) :fire: - address ASAP!"
-    fi
-
-    printTimeStampedDataProcessingStepMessage "push of dmp private data updates to git repository"
-    # check updated data back into git
-    GIT_PUSH_PRIVATE_FAIL=0
-    cd $DMP_PRIVATE_DATA_HOME ; $GIT_BINARY push origin
-    if [ $? -gt 0 ] ; then
-        GIT_PUSH_PRIVATE_FAIL=1
-        sendPreImportFailureMessageMskPipelineLogsSlack "GIT PUSH (dmp-private) :fire: - address ASAP!"
+        S3_BUCKET_PUSH_FAIL=1
+        echo "s3 push failed"
+        sendPreImportFailureMessageMskPipelineLogsSlack "S3 PUSH (dmp) :fire: - address ASAP!"
     fi
 
     #--------------------------------------------------------------
     # Emails for failed processes
 
-    EMAIL_BODY="Failed to push dmp outgoing changes to Git - address ASAP!"
-    # send email if failed to push outgoing changes to git
-    if [ $GIT_PUSH_FAIL -gt 0 ] ; then
+    EMAIL_BODY="Failed to push dmp outgoing changes to s3 - address ASAP!"
+    # send email if failed to push outgoing changes to s3
+    if [ $S3_BUCKET_PUSH_FAIL -gt 0 ] ; then
         echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "[URGENT] GIT PUSH FAILURE" $PIPELINES_EMAIL_LIST
+        echo -e "$EMAIL_BODY" | mail -s "[URGENT] S3 PUSH FAILURE" $PIPELINES_EMAIL_LIST
     fi
 
-    EMAIL_BODY="Failed to push dmp-private outgoing changes to Git - address ASAP!"
-    # send email if failed to push outgoing changes to git
-    if [ $GIT_PUSH_PRIVATE_FAIL -gt 0 ] ; then
+    EMAIL_BODY="CDM merge failed for:$CDM_MERGE_FAILED_STEPS, with both the current CDM data and any last-good CDM data newer than $CDM_LAST_GOOD_MAX_AGE_DAYS days. All DMP portal imports were blocked so that studies are not imported without CDM clinical columns; the original studies will remain on the portal. Check the fetch log and the 'CDM merge' Slack alerts, fix the cause, and re-run the fetch and import."
+    # send email if any cohort could not be merged with current or last-good CDM data
+    if [ $CDM_MERGE_FAIL -gt 0 ] ; then
         echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "[URGENT] GIT PUSH FAILURE" $PIPELINES_EMAIL_LIST
+        echo -e "$EMAIL_BODY" | mail -s "[URGENT] CDM MERGE FAILURE: DMP imports blocked" $PIPELINES_EMAIL_LIST
+    fi
+
+    EMAIL_BODY=""
+    if [ -n "$CDM_FALLBACK_USED" ] ; then
+        EMAIL_BODY="CDM merge failed with the current CDM data for:$CDM_FALLBACK_USED (date of the last-good CDM data used in parentheses). These cohorts were merged with that last-good CDM data instead, so their CDM clinical values are not current and patients added since then have no CDM values. Fix the CDM data before the last-good data is more than $CDM_LAST_GOOD_MAX_AGE_DAYS days old; after that, DMP portal imports are blocked. "
+    fi
+    if [ -n "$CDM_METADATA_FALLBACK" ] ; then
+        EMAIL_BODY="${EMAIL_BODY}$PORTAL_HOME/scripts/cdm_metadata.json was not usable (not ASCII-only, invalid JSON, missing fields, or an invalid DATATYPE), so the last-good copy from $CDM_METADATA_FALLBACK was used for all CDM metadata headers. Fix the live file."
+    fi
+    # send email if any cohort fell back to last-good CDM data, or the metadata file did
+    if [ -n "$EMAIL_BODY" ] ; then
+        echo -e "Sending email $EMAIL_BODY"
+        echo -e "$EMAIL_BODY" | mail -s "CDM MERGE FALLBACK: imported with last-good CDM data" $PIPELINES_EMAIL_LIST
     fi
 
     EMAIL_BODY="The MSKIMPACT study failed fetch. The original study will remain on the portal."
@@ -1351,9 +1513,6 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/fetch-dmp-data-for-import.lock"
         echo -e "$EMAIL_BODY" | mail -s "SCLCMSKIMPACT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
     fi
 
-    EMAIL_BODY="Failed to subset LYMPHOMASUPERCOHORT data. Subset study will not be updated."
-    if [ $LYMPHOMA_SUPER_COHORT_SUBSET_FAIL -gt 0 ] ; then
-        echo -e "Sending email $EMAIL_BODY"
-        echo -e "$EMAIL_BODY" | mail -s "LYMPHOMASUPERCOHORT Subset Failure: Study will not be updated." $PIPELINES_EMAIL_LIST
-    fi
+    exit 0
+
 ) {my_flock_fd}>$MY_FLOCK_FILEPATH

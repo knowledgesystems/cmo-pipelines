@@ -40,8 +40,8 @@ package org.cbioportal.cmo.pipelines.cvr.seg;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSegRecord;
-import org.springframework.batch.item.file.mapping.FieldSetMapper;
-import org.springframework.batch.item.file.transform.FieldSet;
+import org.springframework.batch.infrastructure.item.file.mapping.FieldSetMapper;
+import org.springframework.batch.infrastructure.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;
 
 public class CVRSegFieldSetMapper implements FieldSetMapper<CVRSegRecord> {

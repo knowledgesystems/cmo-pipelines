@@ -34,9 +34,9 @@ package org.cbioportal.cmo.pipelines.cvr.variants;
 
 import java.io.File;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.*;
+import org.springframework.batch.infrastructure.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.*;
@@ -53,13 +53,13 @@ public class GMLVariantsWriter implements ItemStreamWriter<String> {
     @Autowired
     public CVRUtilities cvrUtilities;
 
-    private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+    private FlatFileItemWriter<String> flatFileItemWriter;
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         File stagingFile = new File(privateDirectory, cvrUtilities.GML_FILE);
         PassThroughLineAggregator aggr = new PassThroughLineAggregator();
-        flatFileItemWriter.setLineAggregator(aggr);
+        flatFileItemWriter = new FlatFileItemWriter<>(aggr);
         flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
         flatFileItemWriter.open(ec);
     }

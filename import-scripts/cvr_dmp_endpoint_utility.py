@@ -35,6 +35,8 @@ MASTERLIST_ACCESS = 'dmp.tokens.retrieve_master_list.access'
 MASTERLIST_RAINDANCE = 'dmp.tokens.retrieve_master_list.rdts'
 
 RETRIEVE_VARIANTS_MSKIMPMACT = 'dmp.tokens.retrieve_variants.impact'
+
+CVR_QUEUE_MAX_SIZE = 300
 RETRIEVE_VARIANTS_HEMEPACT = 'dmp.tokens.retrieve_variants.heme'
 RETRIEVE_VARIANTS_ARCHER = 'dmp.tokens.retrieve_variants.archer'
 RETRIEVE_VARIANTS_ACCESS = 'dmp.tokens.retrieve_variants.access'
@@ -88,7 +90,7 @@ RETRIEVE_VARIANTS_DMP_SAMPLE_ID = 'dmp_sample_id'
 CONSUME_AFFECTED_ROWS = 'affectedRows'
 
 DMP_STUDY_IDS = ['mskimpact', 'mskimpact_heme', 'mskraindance', 'mskarcher', 'mskaccess']
-DMP_SAMPLE_ID_PATTERN = re.compile('P-\d+-(T|N)\d+-(IH|TB|TS|AH|AS|IM|XS)\d+')
+DMP_SAMPLE_ID_PATTERN = re.compile('P-\d+-(T|N)\d+-(IH|TB|TS|AH|AS|IM|XS|XH)\d+')
 
 MASTERLIST_CHECK_ARG_DESCRIPTION = '[optional] Fetches masterlist for study and reports samples from samples file that are missing from masterlist.'
 REQUEUE_SAMPLES_ARG_DESCRIPTION = '[optional] Requeues samples and reports whether requeue was successful or not. If requeue failed then attempts to determine if failure is due to sample(s) missing from study masterlist or if sample is already queued for next CVR fetch.'
@@ -403,6 +405,24 @@ def run_requeue_samples_mode(portal_properties, session_data, study_id, study_ma
                 signed out or is considered a failed sample. 
                 ** These cases must be reported to CVR. **
     '''
+    # Pre-filter: skip samples already in the current queue to avoid redundant API calls
+    already_in_queue = get_samples_in_queue(current_study_sample_queue, sample_ids)
+    if already_in_queue:
+        print >> OUTPUT_FILE, 'Skipping %d sample(s) already in the study queue:\n\t%s' % (len(already_in_queue), '\n\t'.join(already_in_queue))
+    sample_ids = sample_ids - set(already_in_queue)
+    if not sample_ids:
+        print >> OUTPUT_FILE, 'All samples are already in the study queue; nothing to requeue.'
+        return
+
+    # Cap requeue attempts to available queue slots to avoid futile API calls when queue is at capacity
+    available_slots = CVR_QUEUE_MAX_SIZE - len(current_study_sample_queue)
+    if available_slots <= 0:
+        print >> OUTPUT_FILE, 'CVR queue is at capacity (%d/%d); no slots available to requeue samples this run.' % (len(current_study_sample_queue), CVR_QUEUE_MAX_SIZE)
+        return
+    if len(sample_ids) > available_slots:
+        print >> OUTPUT_FILE, 'Capping requeue to %d available queue slot(s) (%d sample(s) deferred to subsequent runs).' % (available_slots, len(sample_ids) - available_slots)
+        sample_ids = set(list(sample_ids)[:available_slots])
+
     requeue_success_samples = set()
     requeue_failure_samples = set()
     for sample_id in sample_ids:

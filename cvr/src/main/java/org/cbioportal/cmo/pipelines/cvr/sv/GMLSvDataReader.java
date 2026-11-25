@@ -43,10 +43,10 @@ import org.cbioportal.cmo.pipelines.cvr.model.GMLData;
 import org.cbioportal.cmo.pipelines.cvr.model.GMLResult;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
 import org.cbioportal.cmo.pipelines.cvr.sv.SvUtilities;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
 
@@ -137,7 +137,7 @@ public class GMLSvDataReader implements ItemStreamReader<CVRSvRecord> {
         mapper.setLineTokenizer(tokenizer);
         mapper.setFieldSetMapper(new CVRSvFieldSetMapper());
 
-        FlatFileItemReader<CVRSvRecord> reader = new FlatFileItemReader<>();
+        FlatFileItemReader<CVRSvRecord> reader = new FlatFileItemReader<>(mapper);
         reader.setResource(new FileSystemResource(gmlSvFile));
         reader.setLineMapper(mapper);
         reader.setLinesToSkip(1);

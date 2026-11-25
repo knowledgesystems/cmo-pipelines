@@ -41,7 +41,7 @@ import org.junit.Test;
 import org.mskcc.cmo.ks.redcap.pipeline.ClinicalDataReader;
 import org.mskcc.cmo.ks.redcap.pipeline.ClinicalDataReaderTestConfiguration;
 import org.mskcc.cmo.ks.redcap.pipeline.util.JobParameterUtils;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.beans.factory.config.BeanExpressionContext;
 import org.springframework.test.context.ContextConfiguration;

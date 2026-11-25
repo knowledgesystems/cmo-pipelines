@@ -32,8 +32,22 @@ jobs:
            name: Install requests in python 2
            command: python -m pip install requests
       - run:
+          name: Install Python 3.11 without replacing Python 2
+          command: |
+            curl --fail --location --retry 3 https://github.com/astral-sh/uv/releases/download/0.13.6/uv-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /tmp
+            /tmp/uv-x86_64-unknown-linux-gnu/uv venv --python 3.11.15 --seed "$HOME/ci-python3"
+            # Expose only python3: Maven's legacy suite must still use Python 2.
+            mkdir -p "$HOME/ci-python3-bin"
+            printf '#!/bin/sh\nexec "%s/ci-python3/bin/python3" "$@"\n' "$HOME" > "$HOME/ci-python3-bin/python3"
+            chmod +x "$HOME/ci-python3-bin/python3"
+            echo 'export PATH="$HOME/ci-python3-bin:$PATH"' >> "$BASH_ENV"
+            python --version
+            "$HOME/ci-python3-bin/python3" --version
+      - run:
            name: Install pandas in python 3
-           command: python3 -m pip install pandas
+           # Newer pandas changes outer-join order and missing-value grouping.
+           # Keep existing script behavior while upgrading the interpreter.
+           command: python3 -m pip install pandas==2.1.4 numpy==1.26.4
       - run:
            name: Install GitPython in python 3
            command: python3 -m pip install GitPython

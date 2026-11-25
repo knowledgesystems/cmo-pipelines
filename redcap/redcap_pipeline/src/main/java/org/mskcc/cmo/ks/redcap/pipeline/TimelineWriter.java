@@ -38,13 +38,13 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemStreamException;
-import org.springframework.batch.item.ItemStreamWriter;
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.file.FlatFileHeaderCallback;
-import org.springframework.batch.item.file.FlatFileItemWriter;
-import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ItemStreamException;
+import org.springframework.batch.infrastructure.item.ItemStreamWriter;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.file.FlatFileHeaderCallback;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemWriter;
+import org.springframework.batch.infrastructure.item.file.transform.PassThroughLineAggregator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 
@@ -73,7 +73,7 @@ public class TimelineWriter  implements ItemStreamWriter<String> {
 
     private static final String OUTPUT_FILENAME_PREFIX = "data_timeline";
     private File stagingFile;
-    private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<String>();
+    private FlatFileItemWriter<String> flatFileItemWriter;
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
@@ -85,7 +85,7 @@ public class TimelineWriter  implements ItemStreamWriter<String> {
         }
         if (writeTimelineData) {
             PassThroughLineAggregator<String> aggr = new PassThroughLineAggregator<>();
-            flatFileItemWriter.setLineAggregator(aggr);
+            flatFileItemWriter = new FlatFileItemWriter<>(aggr);
             flatFileItemWriter.setResource(new FileSystemResource(stagingFile));
             flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
                 @Override

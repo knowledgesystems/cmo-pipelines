@@ -18,9 +18,10 @@ CLINICAL_SAMPLE_FILEPATH=""
 CLINICAL_SAMPLE_FILENAME="data_clinical_sample.txt"
 CLINICAL_SAMPLE_S3_FILEPATH="sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
 CDM_DELIVERABLE="$CDSI_DATA_HOME/sample-files/$COHORT/$CLINICAL_SAMPLE_FILENAME"
+declare -a S3_BUCKETS=("cdm-deliverable" "cdm-deliverable-dev")
 
 function check_args() {
-    if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" ]]; then
+    if [[ -z $COHORT ]] || [[ "$COHORT" != "mskimpact" && "$COHORT" != "mskimpact_heme" && "$COHORT" != "mskaccess" && "$COHORT" != "mskarcher" && "$COHORT" != "msk_solid_heme" ]]; then
         usage
         exit 1
     fi
@@ -28,7 +29,7 @@ function check_args() {
 
 function usage {
     echo "update-cdm-deliverable.sh \$COHORT_ID"
-    echo -e "\t\$COHORT_ID                      one of: ['mskimpact', 'mskimpact_heme', 'mskaccess', 'mskarcher']"
+    echo -e "\t\$COHORT_ID                      one of: ['mskimpact', 'mskimpact_heme', 'mskaccess', 'mskarcher', 'msk_solid_heme']"
 }
 
 function set_cohort_filepaths() {
@@ -41,6 +42,8 @@ function set_cohort_filepaths() {
         CLINICAL_SAMPLE_FILEPATH="$MSK_ARCHER_UNFILTERED_DATA_HOME/data_clinical_mskarcher_data_clinical.txt"
     elif [ "$COHORT" == "mskaccess" ] ; then
         CLINICAL_SAMPLE_FILEPATH="$MSK_ACCESS_DATA_HOME/data_clinical_mskaccess_data_clinical.txt"
+    elif [ "$COHORT" == "msk_solid_heme" ] ; then
+        CLINICAL_SAMPLE_FILEPATH="$MSK_SOLID_HEME_DATA_HOME/data_clinical_sample.txt"
     fi
 
     # Check that required files exist
@@ -64,15 +67,15 @@ function filter_sample_file() {
 }
 
 function upload_to_s3() {
-    BUCKET_NAME="cdm-deliverable"
-
-    # Authenticate and upload into S3 bucket
-    $PORTAL_HOME/scripts/authenticate_service_account.sh eks
-    aws s3 cp $CDM_DELIVERABLE s3://$BUCKET_NAME/$CLINICAL_SAMPLE_S3_FILEPATH --profile saml
-    if [ $? -ne 0 ] ; then
-        echo "`date`: Failed to upload CDM deliverable to S3, exiting..."
-        exit 1
-    fi
+    for BUCKET_NAME in ${S3_BUCKETS[@]}; do
+        # Authenticate and upload into S3 bucket
+        $PORTAL_HOME/scripts/authenticate_service_account.sh eks
+        aws s3 cp $CDM_DELIVERABLE s3://$BUCKET_NAME/$CLINICAL_SAMPLE_S3_FILEPATH --profile saml
+        if [ $? -ne 0 ] ; then
+            echo "`date`: Failed to upload CDM deliverable to S3, exiting..."
+            exit 1
+        fi
+    done
 }
 
 function trigger_cdm_dags() {
@@ -86,15 +89,19 @@ function trigger_cdm_dags() {
 
     # Trigger CDM DAG to pull updated data_clinical_sample.txt from S3
     # This DAG will kick off the rest of the CDM pipeline when it completes
-    HTTP_STATUS_CODE=$(curl -X POST --write-out "%{http_code}" --silent --output $TMP_LOG_FILE --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --data "$DATA" $AIRFLOW_API_ENDPOINT)
+    # Capture curl's own error (e.g. DNS/connect/TLS failure) since HTTP code 000 alone doesn't say why
+    CURL_ERR_FILE=$(mktemp -q)
+    HTTP_STATUS_CODE=$(curl -X POST --write-out "%{http_code}" --silent --show-error --output $TMP_LOG_FILE --header "Authorization: Basic ${AIRFLOW_CREDS}" --header "Content-Type: application/json" --data "$DATA" $AIRFLOW_API_ENDPOINT 2>$CURL_ERR_FILE)
+    CURL_EXIT_CODE=$?
     if [ $HTTP_STATUS_CODE -ne 200 ] ; then
         # Send alert for HTTP status code if not 200
-        echo "`date`: Failed attempt to trigger DAG ${DAG_ID} on Airflow server ${AIRFLOW_URL}. HTTP status code = ${HTTP_STATUS_CODE}, exiting..."
-        # Write out failed HTTP response contents and exit with error
-        cat $TMP_LOG_FILE
-        rm $TMP_LOG_FILE
+        echo "`date`: Failed attempt to trigger DAG ${DAG_ID} on Airflow server ${AIRFLOW_URL}. HTTP status code = ${HTTP_STATUS_CODE}, curl exit code = ${CURL_EXIT_CODE}, exiting..."
+        # Write out curl error and failed HTTP response contents and exit with error
+        cat $CURL_ERR_FILE $TMP_LOG_FILE
+        rm $TMP_LOG_FILE $CURL_ERR_FILE
         exit 1
     fi
+    rm $TMP_LOG_FILE $CURL_ERR_FILE
 }
 
 date

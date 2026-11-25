@@ -35,8 +35,8 @@ package org.cbioportal.cmo.pipelines.cvr.clinical;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
-import org.springframework.batch.item.file.mapping.FieldSetMapper;
-import org.springframework.batch.item.file.transform.FieldSet;
+import org.springframework.batch.infrastructure.item.file.mapping.FieldSetMapper;
+import org.springframework.batch.infrastructure.item.file.transform.FieldSet;
 import org.springframework.validation.BindException;
 
 /**
@@ -141,10 +141,17 @@ public class CVRClinicalFieldSetMapper implements  FieldSetMapper<CVRClinicalRec
                 record.setCVR_TMB_TT_COHORT_PERCENTILE(value);
                 break;
             case "PATH_SLIDE_EXISTS":
-                record.setPATH_SLIDE_EXISTS(value);
-                break;
             case "MSK_SLIDE_ID":
-                record.setMSK_SLIDE_ID(value);
+                // no longer produced; ignore the columns in staging files written by earlier runs
+                break;
+            case "DNA_ELUTION_BUFFER_VOLUME":
+                record.setDNA_ELUTION_BUFFER_VOLUME(value);
+                break;
+            case "PLASMA_USED_VOLUME":
+                record.setPLASMA_USED_VOLUME(value);
+                break;
+            case "DNA_CONCENTRATION":
+                record.setDNA_CONCENTRATION(value);
                 break;
             default:
                 log.info("No set method exists for '" + field + "'");

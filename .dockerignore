@@ -1,0 +1,9 @@
+# Allowlist for docker/Dockerfile's context; does not apply to core.Dockerfile,
+# which builds from a cbioportal-core checkout.
+*
+!docker/
+!dags/
+!import-scripts/
+docker/*.md
+**/__pycache__/
+**/*.py[cod]

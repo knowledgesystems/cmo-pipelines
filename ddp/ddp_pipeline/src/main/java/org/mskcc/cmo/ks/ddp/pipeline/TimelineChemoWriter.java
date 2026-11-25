@@ -36,9 +36,9 @@ import java.io.*;
 import java.util.*;
 import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 import org.mskcc.cmo.ks.ddp.pipeline.model.TimelineChemoRecord;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.transform.*;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.*;
+import org.springframework.batch.infrastructure.item.file.transform.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 
@@ -55,14 +55,14 @@ public class TimelineChemoWriter implements ItemStreamWriter<CompositeResult> {
     @Value("#{jobParameters[includeChemotherapy]}")
     private Boolean includeChemotherapy;
 
-    private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+    private FlatFileItemWriter<String> flatFileItemWriter;
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         if (includeChemotherapy) {
             File stagingFile = new File(outputDirectory, timelineChemotherapyFilename);
             LineAggregator<String> aggr = new PassThroughLineAggregator<>();
-            flatFileItemWriter.setLineAggregator(aggr);
+            flatFileItemWriter = new FlatFileItemWriter<>(aggr);
             flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
                 @Override
                 public void writeHeader(Writer writer) throws IOException {

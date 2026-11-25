@@ -36,7 +36,7 @@ import java.util.*;
 import org.cbioportal.cmo.pipelines.cvr.CvrSampleListUtil;
 import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -104,7 +104,8 @@ public class CVRSvDataProcessor implements ItemProcessor<CVRSvRecord, String> {
             case "Tumor_Variant_Count": return record.getTumor_Variant_Count();
             case "Normal_Paired_End_Read_Count": return record.getNormal_Paired_End_Read_Count();
             case "Normal_Split_End_Read_Count": return record.getNormal_Split_End_Read_Count();
-            case "Comments": return record.getComments();
+            // Comments: sensitive free-text may arrive from the API; emit empty for staging TSV output.
+            case "Comments": return "";
             default: return "";
         }
     }

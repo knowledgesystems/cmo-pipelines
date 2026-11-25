@@ -41,7 +41,7 @@ import java.util.*;
 import com.google.common.base.Strings;
 import java.text.ParseException;
 import org.apache.log4j.Logger;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
 /**

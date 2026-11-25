@@ -38,9 +38,9 @@ import java.util.*;
 import org.mskcc.cmo.ks.ddp.pipeline.model.CompositeResult;
 import org.mskcc.cmo.ks.ddp.pipeline.model.SuppVitalStatusRecord;
 import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.transform.*;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.*;
+import org.springframework.batch.infrastructure.item.file.transform.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 
@@ -62,14 +62,14 @@ public class SuppVitalStatusWriter implements ItemStreamWriter<CompositeResult> 
     @Value("#{jobParameters[cohortName]}")
     private String cohortName;
 
-    private FlatFileItemWriter<String> flatFileItemWriter = new FlatFileItemWriter<>();
+    private FlatFileItemWriter<String> flatFileItemWriter;
 
     @Override
     public void open(ExecutionContext ec) throws ItemStreamException {
         if (DDPUtils.isMskimpactCohort(cohortName) || DDPUtils.isHemepactCohort(cohortName) || DDPUtils.isMskaccessCohort(cohortName)) {
             File stagingFile = new File(outputDirectory, ddpSuppDirname + File.separator + ddpSuppVitalStatusFilename);
             LineAggregator<String> aggr = new PassThroughLineAggregator<>();
-            flatFileItemWriter.setLineAggregator(aggr);
+            flatFileItemWriter = new FlatFileItemWriter<>(aggr);
             flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
                 @Override
                 public void writeHeader(Writer writer) throws IOException {

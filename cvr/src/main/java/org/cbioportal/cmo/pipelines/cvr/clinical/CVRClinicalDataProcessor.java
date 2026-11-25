@@ -39,7 +39,7 @@ import org.cbioportal.cmo.pipelines.cvr.CVRUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.composite.CompositeClinicalRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRClinicalRecord;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.MskimpactSeqDate;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -85,14 +85,16 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
             case "CANCER_TYPE_DETAILED": return record.getCANCER_TYPE_DETAILED();
             case "GENE_PANEL": return record.getGENE_PANEL();
             case "OTHER_PATIENT_ID": return record.getOTHER_PATIENT_ID();
-            case "SO_COMMENTS": return record.getSO_COMMENTS();
+            // SO_COMMENTS: sensitive free-text may arrive from the API; emit empty for staging TSV output.
+            case "SO_COMMENTS": return "";
             case "SAMPLE_COVERAGE": return record.getSAMPLE_COVERAGE();
             case "CYCLE_THRESHOLD": return record.getCYCLE_THRESHOLD();
             case "TUMOR_PURITY": return record.getTUMOR_PURITY();
             case "ONCOTREE_CODE": return record.getONCOTREE_CODE();
             case "PARTA_CONSENTED_12_245": return record.getPARTA_CONSENTED_12_245();
             case "PARTC_CONSENTED_12_245": return record.getPARTC_CONSENTED_12_245();
-            case "MSI_COMMENT": return record.getMSI_COMMENT();
+            // MSI_COMMENT: sensitive free-text may arrive from the API; emit empty for staging TSV output.
+            case "MSI_COMMENT": return "";
             case "MSI_SCORE": return record.getMSI_SCORE();
             case "MSI_TYPE": return record.getMSI_TYPE();
             case "INSTITUTE": return record.getINSTITUTE();
@@ -101,8 +103,9 @@ public class CVRClinicalDataProcessor implements ItemProcessor<CVRClinicalRecord
             case "CVR_TMB_COHORT_PERCENTILE": return record.getCVR_TMB_COHORT_PERCENTILE();
             case "CVR_TMB_SCORE": return record.getCVR_TMB_SCORE();
             case "CVR_TMB_TT_COHORT_PERCENTILE": return record.getCVR_TMB_TT_COHORT_PERCENTILE();
-            case "PATH_SLIDE_EXISTS": return record.getPATH_SLIDE_EXISTS();
-            case "MSK_SLIDE_ID": return record.getMSK_SLIDE_ID();
+            case "DNA_ELUTION_BUFFER_VOLUME": return record.getDNA_ELUTION_BUFFER_VOLUME();
+            case "PLASMA_USED_VOLUME": return record.getPLASMA_USED_VOLUME();
+            case "DNA_CONCENTRATION": return record.getDNA_CONCENTRATION();
             case "SEQ_DATE": return record.getSEQ_DATE();
             default: return "";
         }

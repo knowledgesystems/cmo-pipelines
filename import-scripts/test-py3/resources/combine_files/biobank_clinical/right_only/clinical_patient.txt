@@ -1,0 +1,3 @@
+PATIENT_ID	OTHER_FIELD
+P-001	old-value-1
+P-002	old-value-2

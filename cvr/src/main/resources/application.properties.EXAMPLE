@@ -48,7 +48,6 @@ dmp.email.sender=
 dmp.email.recipient=
 
 # computational pathology settings
-comppath.wsv.baseurl=https://slides-dev.mskcc.org/viewer?ids=IMAGE_ID.svs@annotation=off
 
 # smile connection properties
 

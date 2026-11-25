@@ -39,10 +39,10 @@ import org.cbioportal.cmo.pipelines.cvr.*;
 import org.cbioportal.cmo.pipelines.cvr.sv.SvUtilities;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
 import org.cbioportal.cmo.pipelines.cvr.model.staging.CVRSvRecord;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
 
@@ -92,7 +92,7 @@ public class CVRSvDataReader implements ItemStreamReader<CVRSvRecord> {
             DefaultLineMapper<CVRSvRecord> mapper = new DefaultLineMapper<>();
             mapper.setLineTokenizer(tokenizer);
             mapper.setFieldSetMapper(new CVRSvFieldSetMapper());
-            FlatFileItemReader<CVRSvRecord> reader = new FlatFileItemReader<>();
+            FlatFileItemReader<CVRSvRecord> reader = new FlatFileItemReader<>(mapper);
             reader.setResource(new FileSystemResource(svFile));
             reader.setLineMapper(mapper);
             reader.setLinesToSkip(1);
