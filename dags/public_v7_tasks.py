@@ -51,7 +51,7 @@ def pod(image, memory, java_opts=None):
 
 # The scheduler needs the images before task pods can read the ConfigMap.
 CMO = "ghcr.io/cbioportal/containerized-importer-cmo@sha256:1286f2d45ca7dfdf4643eb3c3bad560af94e941647a06e4fedbafcdae5e6dc9b"
-CORE = "ghcr.io/cbioportal/containerized-importer-core@sha256:f6ca4431f401ff737f2330d7dd760dfc3e85f552ddd1a3b53807d32a953c2b35"
+CORE = "ghcr.io/cbioportal/containerized-importer-core@sha256:b0b9f7b30db842a20dfbf145aeadaeb04419e6854b4a6b8c4633948219e83d98"
 INFRA = pod(CMO, "3Gi")
 VALIDATE = pod(CORE, "3Gi")
 IMPORT = pod(CORE, "26Gi", "-Xmx22g")
