@@ -94,6 +94,10 @@ class ContainerizedTargetsTest(unittest.TestCase):
     def test_bucket_defaults_and_overrides(self):
         from dags.study_sources import DEFAULT_BUCKET, HGNC_BUCKET, target_buckets
         self.assertEqual(self.dag.params["buckets"], [])
+        # Airflow renders the multiselect as required unless the schema accepts null.
+        for key in ("buckets", "skip_tasks"):
+            self.assertIn("null", self.dag.params.get_param(key).schema["type"])
+        self.assertEqual(target_buckets("public_v7", None), [HGNC_BUCKET])
         self.assertEqual(target_buckets("public_v7", []), [HGNC_BUCKET])
         self.assertEqual(target_buckets("public_v7", [HGNC_BUCKET]), [HGNC_BUCKET])
         for target in ("public", "containerized"):

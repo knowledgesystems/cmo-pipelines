@@ -210,7 +210,8 @@ def _start_write_stage(stage, params, ti):
 
 
 def _first_write_stage(params):
-    return next((stage for stage in SKIPPABLE_TASK_IDS if stage not in params["skip_tasks"]), None)
+    skipped = params.get("skip_tasks") or []
+    return next((stage for stage in SKIPPABLE_TASK_IDS if stage not in skipped), None)
 
 
 def _run_management_script(script, target):
@@ -391,7 +392,7 @@ def _activate_standby_properties(env: str) -> str:
         ),
         "buckets": Param(
             [],
-            type="array",
+            type=["null", "array"],
             examples=[*S3_SOURCES, HGNC_BUCKET],
             items={"type": "string", "enum": [*S3_SOURCES, HGNC_BUCKET]},
             uniqueItems=True,
@@ -400,7 +401,7 @@ def _activate_standby_properties(env: str) -> str:
         ),
         "skip_tasks": Param(
             [],
-            type="array",
+            type=["null", "array"],
             examples=list(SKIPPABLE_TASK_IDS),
             description=(
                 "Task IDs to skip this run (dry-run support). Skipping "
@@ -602,7 +603,7 @@ def import_containerized_dag():
         actually swapped, otherwise 'abandoned' so the next run re-clones standby."""
         transfer_state = ti.get_dagrun().get_task_instance("transfer_deployment_color").state
         if params["target"] == "public_v7":
-            if set(params["skip_tasks"]) == set(SKIPPABLE_TASK_IDS):
+            if _first_write_stage(params) is None:
                 return
             if transfer_state == "success":
                 return hgnc.complete(_hgnc_plan(ti))
