@@ -41,7 +41,7 @@ def pod(image, memory, java_opts=None):
         volumes=[
             k8s.V1Volume(name="v7-credentials", secret=k8s.V1SecretVolumeSource(secret_name="public-v7-import-credentials", default_mode=0o440, optional=True)),
             k8s.V1Volume(name="v7-config", config_map=k8s.V1ConfigMapVolumeSource(name="public-v7-config", optional=True)),
-            k8s.V1Volume(name="studies", persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(claim_name="databricks-s3-pvc", read_only=True)),
+            k8s.V1Volume(name="studies", persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(claim_name="cdsi-curation-hgnc-s3-pvc", read_only=True)),
             # The deployed worker template supplies airflow-logs at
             # /opt/airflow/logs. Airflow extends these lists during merging;
             # redefining it here would produce duplicate volumes/mounts.

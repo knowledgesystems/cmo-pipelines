@@ -24,7 +24,7 @@ CONFIG = Path("/v7-config/environment.json")
 SCRIPTS = Path("/data/portal-cron/scripts")
 MANAGE = CREDS / "public_v7.manage.properties"
 IMPORTER = Path("/scripts/importer")
-INPUT = Path("/mnt/s3-data")
+INPUT = Path("/mnt/hgnc-studies")
 REPORTS = Path("/opt/airflow/logs/public_v7")
 
 
@@ -34,9 +34,8 @@ def settings():
     cfg = json.loads(CONFIG.read_text())
     if cfg["portal"] != "public_v7" or cfg["databases"] != DATABASES or cfg["preview_host"] != PREVIEW_HOST:
         raise ValueError("Unexpected environment mapping")
-    prefix = cfg["study_prefix"]
-    if not re.fullmatch(r"[A-Za-z0-9_-]+", prefix) or prefix in {"public", ""}:
-        raise ValueError("Use a dedicated v7 input prefix")
+    if cfg.get("study_bucket") != "cdsi-curation-hgnc":
+        raise ValueError("Expected the dedicated HGNC study bucket")
     props = load_properties(MANAGE)
     validate_management(props)
     for color in DATABASES:
@@ -92,8 +91,8 @@ def fingerprint(path):
     return digest.hexdigest()
 
 
-def study_path(cfg, study):
-    root = INPUT / cfg["study_prefix"]
+def study_path(study):
+    root = INPUT
     choices = [p for p in [root / study, root / (study + ".tar.gz")] if p.exists()]
     if len(choices) != 1 or not choices[0].resolve().is_relative_to(root.resolve()):
         raise ValueError("Missing, ambiguous, or escaping study input: " + study)
@@ -197,7 +196,7 @@ def prepare(selected_studies, run_id, core_image, cmo_image):
         "target_color": "blue" if color == "green" else "green",
         "reference_sha256": reference_hash(refs),
         "reference_release": refs["reference_release"],
-        "studies": {study: fingerprint(study_path(cfg, study)) for study in selected},
+        "studies": {study: fingerprint(study_path(study)) for study in selected},
         "report_dir": str(report_dir),
         "core_image": cfg["core_image"],
         "cmo_image": cfg["cmo_image"],
@@ -208,7 +207,7 @@ def prepare(selected_studies, run_id, core_image, cmo_image):
 
 def validate_study(study, plan):
     cfg, _, _, refs = check_plan(plan)
-    path = study_path(cfg, study)
+    path = study_path(study)
     if fingerprint(path) != plan["studies"][study]:
         raise ValueError("Study input changed after selection: " + study)
     with unpack(path) as directory, tempfile.TemporaryDirectory(prefix="v7-refs-") as tmp:
@@ -253,7 +252,7 @@ def import_studies(plan):
         reference_files(refs, directory)
         env = activate(props, plan["target_color"], directory)
         for study, expected_hash in plan["studies"].items():
-            path = study_path(cfg, study)
+            path = study_path(study)
             if fingerprint(path) != expected_hash:
                 raise ValueError("Study input changed after validation: " + study)
             with unpack(path) as data:
