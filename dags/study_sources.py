@@ -4,6 +4,7 @@ import re
 from urllib.parse import urlsplit
 
 DEFAULT_BUCKET = 'sc-203403084713-pp-4rxlzd426npxu-bucket-kswubqqre3jr'
+HGNC_BUCKET = 'cdsi-curation-hgnc'
 STUDY_LIST_VARIABLE_KEY = 'available_study_sources'
 S3_SOURCES = {
     DEFAULT_BUCKET: {'mount': '/mnt/s3-data', 'claim': 'databricks-s3-pvc'},
@@ -70,6 +71,14 @@ def search_buckets(buckets):
         raise ValueError('Buckets to search must be configured S3 buckets')
     buckets = list(dict.fromkeys(buckets))
     return buckets
+
+
+def target_buckets(target, selected):
+    if target == "public_v7":
+        if selected and selected != [HGNC_BUCKET]:
+            raise ValueError(f"HGNC studies must come from {HGNC_BUCKET}")
+        return [HGNC_BUCKET]
+    return search_buckets(selected or [DEFAULT_BUCKET])
 
 
 def resolve_studies(study_ids, buckets):

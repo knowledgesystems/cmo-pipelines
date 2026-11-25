@@ -73,33 +73,75 @@ class ContainerizedTargetsTest(unittest.TestCase):
                 self.dag.get_task("finalize_import_state").python_callable(params=params, ti=ti)
                 abandon.assert_not_called()
 
-    def test_hgnc_stages_use_the_selected_plan_and_promote_only_after_transfer(self):
-        from unittest.mock import Mock, call
-        ti = Mock()
-        plan = {"studies": {"a": "digest"}}
-        ti.xcom_pull.return_value = plan
+    def test_first_enabled_write_stage_acquires_management(self):
+        from dags.containerized_workflow import SKIPPABLE_TASK_IDS
+        from unittest.mock import Mock
+        task = self.dag.get_task("collect_valid_studies").python_callable
+        start = task.__globals__["_start_write_stage"]
+        plan = {"studies": {"a": "hash"}}
+        for index, first in enumerate(SKIPPABLE_TASK_IDS):
+            with self.subTest(first=first), patch("dags.public_v7_runtime.begin") as begin:
+                params = dict(self.dag.params, target="public_v7", skip_tasks=list(SKIPPABLE_TASK_IDS[:index]))
+                ti = Mock()
+                ti.xcom_pull.return_value = plan
+                self.assertEqual(task(["a"], params, ti), ["a"])
+                begin.assert_not_called()
+                for stage in SKIPPABLE_TASK_IDS[index:]:
+                    start(stage, params, ti)
+                begin.assert_called_once_with(plan)
+                ti.xcom_push.assert_called_once_with(key="hgnc_began", value=True)
+
+    def test_bucket_defaults_and_overrides(self):
+        from dags.study_sources import DEFAULT_BUCKET, HGNC_BUCKET, target_buckets
+        self.assertEqual(self.dag.params["buckets"], [])
+        self.assertEqual(target_buckets("public_v7", []), [HGNC_BUCKET])
+        self.assertEqual(target_buckets("public_v7", [HGNC_BUCKET]), [HGNC_BUCKET])
+        for target in ("public", "containerized"):
+            self.assertEqual(target_buckets(target, []), [DEFAULT_BUCKET])
+            self.assertEqual(target_buckets(target, ["cdsi-testing"]), ["cdsi-testing"])
+            with self.assertRaises(ValueError):
+                target_buckets(target, [HGNC_BUCKET])
+        with self.assertRaises(ValueError):
+            target_buckets("public_v7", ["cdsi-testing"])
+
+    def test_shared_importer_commands_use_hgnc_inputs_and_standby(self):
+        from contextlib import nullcontext
+        from tempfile import TemporaryDirectory
+        from unittest.mock import Mock
         params = dict(self.dag.params, target="public_v7", skip_tasks=[])
-        run = SimpleNamespace(run_id="manual__test", conf=params)
-        bodies = {t.task_id: t.python_callable for t in self.dag.tasks}
-        with patch.dict(bodies["verify_studies_exist"].__globals__, hgnc=Mock()) as globals_:
-            runtime = globals_["hgnc"]
-            runtime.prepare.return_value = plan
-            runtime.validate_study.return_value = "a"
-            self.assertEqual(bodies["verify_studies_exist"](["a"], params, ti, run), ["a"])
-            ti.xcom_push.assert_called_with(key="hgnc_plan", value=plan)
-            bodies["verify_cluster_state"](params=params, ti=ti)
-            valid = bodies["pull_and_validate_study"]("a", params, ti)
-            bodies["collect_valid_studies"]([valid], params, ti)
-            ti.xcom_push.assert_called_with(key="hgnc_began", value=True)
-            bodies["clone_live_database_into_standby"](params=params, ti=ti)
-            bodies["import_into_standby_database"]([valid], params, ti)
-            bodies["create_derived_tables_in_standby_database"]([valid], params, ti)
-            bodies["transfer_deployment_color"](params=params, ti=ti)
-            ti.get_dagrun.return_value.get_task_instance.return_value.state = "success"
-            bodies["finalize_import_state"](params=params, ti=ti)
-            self.assertEqual(runtime.mock_calls[1:], [call.verify_portal(plan), call.validate_study("a", plan),
-                             call.begin(plan), call.clone(plan), call.import_studies(plan),
-                             call.derive(plan, publish=True), call.transfer(plan), call.complete(plan)])
-            ti.get_dagrun.return_value.get_task_instance.return_value.state = "skipped"
-            bodies["finalize_import_state"](params=dict(params, skip_tasks=["transfer_deployment_color"]), ti=ti)
-            runtime.abandon.assert_called_once_with(plan)
+        ti = Mock()
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = {"PORTAL_HOME": tmp}
+            ti.xcom_pull.return_value = {"studies": {"a": "hash"}, "report_dir": tmp}
+            bodies = {t.task_id: t.python_callable for t in self.dag.tasks}
+            run = Mock(return_value=SimpleNamespace(returncode=0))
+            with patch.dict(bodies["verify_studies_exist"].__globals__, _run_and_stream=run,
+                            _pinned_inputs=lambda *a, **kw: nullcontext((root, lambda sid: nullcontext(root / sid), root)),
+                            _standby_environment=lambda *a: nullcontext((env, root))):
+                valid = bodies["pull_and_validate_study"]("a", params, ti)
+                bodies["import_into_standby_database"]([valid], params, ti)
+                bodies["create_derived_tables_in_standby_database"]([valid], params, ti)
+                calls = run.call_args_list
+                self.assertEqual([Path(c.args[0][1]).name for c in calls],
+                                 ["validateData.py", "metaImport.py", "metaImport.py", "cbioportalImporter.py"])
+                self.assertEqual(calls[1].args[0][2:], ["-s", str(root / "a"), "-p", tmp, "-o", "--no-derive-tables"])
+                self.assertEqual(calls[2].args[0][2:], ["derive-tables", "--derived-table-sql", str(root / "clickhouse.sql")])
+                self.assertEqual(calls[3].args[0][2:], ["make-studies-available", "-ids", "a"])
+                for c in calls[1:]:
+                    self.assertEqual(c.kwargs["env"], env)
+
+    def test_hgnc_failure_cleanup_checks_which_task_acquired_management(self):
+        from unittest.mock import Mock
+        from airflow.exceptions import AirflowException
+        report = self.dag.get_task("report_failure").python_callable
+        ti = Mock()
+        run = ti.get_dagrun.return_value
+        run.get_task_instances.return_value = [SimpleNamespace(state="failed")]
+        run.get_task_instance.return_value.state = "upstream_failed"
+        plan = {"studies": {"a": "hash"}}
+        ti.xcom_pull.side_effect = lambda task_ids, key: plan if key == "hgnc_plan" else task_ids == "import_into_standby_database"
+        params = dict(self.dag.params, target="public_v7", skip_tasks=["clone_live_database_into_standby"])
+        with patch("dags.public_v7_runtime.failure_cleanup") as cleanup, self.assertRaises(AirflowException):
+            report(ti=ti, params=params)
+        cleanup.assert_called_once_with(plan, began=True, transfer_started=False)

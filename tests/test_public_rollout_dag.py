@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from dags import public_rollout
-from dags.study_sources import DEFAULT_BUCKET, bucket_mount, parse_study_source
+from dags.study_sources import DEFAULT_BUCKET, bucket_mount, parse_study_source, target_buckets
 
 
 class TaskTests(unittest.TestCase):
@@ -42,12 +42,12 @@ class TaskTests(unittest.TestCase):
         tree = ast.parse(source.read_text())
         nodes = []
         wanted = {'_validate_skips', '_public_reference_manifest', 'pull_and_validate_study',
-                  '_public_study_entries', '_input_root',
+                  '_public_study_entries', '_input_root', '_pinned_inputs', '_standby_environment',
                   'collect_valid_studies', 'import_into_standby_database',
                   'create_derived_tables_in_standby_database', 'verify_studies_exist'}
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name in wanted:
-                node.decorator_list = []
+                node.decorator_list = [d for d in node.decorator_list if isinstance(d, ast.Name) and d.id == "contextmanager"]
                 nodes.append(node)
         self.assertEqual(len(nodes), len(wanted))
         @contextmanager
@@ -56,7 +56,8 @@ class TaskTests(unittest.TestCase):
         @contextmanager
         def study(*args):
             yield Path('/study')
-        self.env = dict(Path=Path, AirflowException=RuntimeError,
+        self.env = dict(Path=Path, AirflowException=RuntimeError, contextmanager=contextmanager,
+                        logging=logging, target_buckets=target_buckets, _start_write_stage=Mock(),
                         sys=SimpleNamespace(executable='python'),
                         VALIDATE_SCRIPT_PATH='/importer/validateStudies.py',
                         IMPORT_SCRIPT_PATH='/importer/metaImport.py', S3_MOUNT_PATH='/s3',

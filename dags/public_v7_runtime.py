@@ -7,13 +7,13 @@ import re
 import shutil
 import subprocess
 import sys
-import tarfile
 import tempfile
-import yaml
 from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dags.public_rollout import sha256, study_input
+from dags.study_sources import verified_study_directory
 from public_v7_common import (
     ClickHouse, DATABASES, PREVIEW_HOST, active_color, load_properties,
     study_ids, validate_application, validate_management,
@@ -23,7 +23,6 @@ CREDS = Path("/data/portal-cron/pipelines-credentials")
 CONFIG = Path("/v7-config/environment.json")
 SCRIPTS = Path("/data/portal-cron/scripts")
 MANAGE = CREDS / "public_v7.manage.properties"
-IMPORTER = Path("/scripts/importer")
 INPUT = Path("/mnt/hgnc-studies")
 REPORTS = Path("/opt/airflow/logs/public_v7")
 
@@ -74,17 +73,19 @@ def support(script, *args):
 
 
 def fingerprint(path):
+    if path.is_symlink():
+        raise ValueError("Study inputs must not contain symlinks")
+    if path.is_file():
+        return sha256(path)
     digest = hashlib.sha256()
-    entries = [path] if path.is_file() else list(path.rglob("*"))
+    entries = list(path.rglob("*"))
     if any(p.is_symlink() for p in entries):
         raise ValueError("Study inputs must not contain symlinks")
     files = sorted(p for p in entries if p.is_file())
     if not files:
         raise ValueError("Empty study input")
     for file in files:
-        if file.is_symlink() or path.is_symlink():
-            raise ValueError("Study inputs must not contain symlinks")
-        digest.update(str(file.relative_to(path) if path.is_dir() else file.name).encode() + b"\0")
+        digest.update(str(file.relative_to(path)).encode() + b"\0")
         with file.open("rb") as stream:
             for block in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(block)
@@ -94,25 +95,23 @@ def fingerprint(path):
 def study_path(study):
     root = INPUT
     choices = [p for p in [root / study, root / (study + ".tar.gz")] if p.exists()]
-    if len(choices) != 1 or not choices[0].resolve().is_relative_to(root.resolve()):
+    if len(choices) != 1 or choices[0].is_symlink() or not choices[0].resolve().is_relative_to(root.resolve()):
         raise ValueError("Missing, ambiguous, or escaping study input: " + study)
     return choices[0]
 
 
 @contextmanager
-def unpack(path):
-    if path.is_dir():
-        yield path
-        return
-    with tempfile.TemporaryDirectory(prefix="v7-study-") as temporary:
-        destination = Path(temporary)
-        with tarfile.open(path, "r:gz") as archive:
-            for member in archive.getmembers():
-                if not (member.isfile() or member.isdir()) or not (destination / member.name).resolve().is_relative_to(destination):
-                    raise ValueError("Unsafe archive member")
-            archive.extractall(destination, filter="data")
-        children = list(destination.iterdir())
-        yield children[0] if len(children) == 1 and children[0].is_dir() else destination
+def selected_input(plan, study):
+    path = study_path(study)
+    expected = plan["studies"][study]
+    if path.is_file():
+        entry = {"study_id": study, "key": path.name, "sha256": expected}
+        with study_input(INPUT, entry) as directory:
+            yield directory
+    else:
+        if fingerprint(path) != expected:
+            raise ValueError("Study input changed after selection: " + study)
+        yield Path(verified_study_directory(path, study))
 
 
 def references(client, database):
@@ -205,23 +204,28 @@ def prepare(selected_studies, run_id, core_image, cmo_image):
     return plan
 
 
-def validate_study(study, plan):
-    cfg, _, _, refs = check_plan(plan)
-    path = study_path(study)
-    if fingerprint(path) != plan["studies"][study]:
-        raise ValueError("Study input changed after selection: " + study)
-    with unpack(path) as directory, tempfile.TemporaryDirectory(prefix="v7-refs-") as tmp:
-        reference_files(refs, Path(tmp))
-        report = Path(plan["report_dir"]) / (study + ".validation")
-        # validateStudies normalizes valid-with-warning to exit zero.
-        run([sys.executable, "-u", str(IMPORTER / "validateStudies.py"),
-             "-l", str(directory), "-p", tmp, "-html", str(report)], str(report) + ".log")
-    return study
+@contextmanager
+def seeded_references(plan, importing):
+    _, _, client, refs = check_plan(plan, "running" if importing else "complete")
+    if importing:
+        target_refs = references(client, DATABASES[plan["target_color"]])
+        if reference_hash(target_refs) != plan["reference_sha256"]:
+            raise ValueError("Clone did not preserve reference data")
+    with tempfile.TemporaryDirectory(prefix="hgnc-refs-") as tmp:
+        directory = Path(tmp)
+        reference_files(refs, directory)
+        yield directory
 
 
 def begin(plan):
     check_plan(plan)
-    support("set_update_process_state.sh", MANAGE, "running")
+    if (SCRIPTS / "automation-environment.sh").is_file():
+        support("set_update_process_state.sh", MANAGE, "running")
+    else:
+        # Core workers run import and derive when the clone stage was skipped.
+        with tempfile.TemporaryDirectory(prefix="hgnc-management-") as tmp:
+            subprocess.run(["/scripts/clickhouse_import_support/set_update_process_state.sh",
+                            str(MANAGE), "running"], cwd=tmp, check=True)
 
 
 def clone(plan):
@@ -240,53 +244,6 @@ def activate(props, color, directory):
         "CLICKHOUSE_PASSWORD": props["clickhouse_server_password"], "CLICKHOUSE_DB": DATABASES[color],
     })
     return env
-
-
-def import_studies(plan):
-    cfg, props, client, refs = check_plan(plan, "running")
-    target_refs = references(client, DATABASES[plan["target_color"]])
-    if reference_hash(target_refs) != plan["reference_sha256"]:
-        raise ValueError("Clone did not preserve reference data")
-    with tempfile.TemporaryDirectory(prefix="v7-import-") as tmp:
-        directory = Path(tmp)
-        reference_files(refs, directory)
-        env = activate(props, plan["target_color"], directory)
-        for study, expected_hash in plan["studies"].items():
-            path = study_path(study)
-            if fingerprint(path) != expected_hash:
-                raise ValueError("Study input changed after validation: " + study)
-            with unpack(path) as data:
-                run([sys.executable, "-u", str(IMPORTER / "metaImport.py"), "-s", str(data),
-                     "-p", tmp, "-o", "--no-derive-tables"],
-                    str(Path(plan["report_dir"]) / (study + ".import.log")), env)
-
-
-def derive(plan, publish=True):
-    _, props, _, _ = check_plan(plan, "running")
-    with tempfile.TemporaryDirectory(prefix="v7-derive-") as tmp:
-        env = activate(props, plan["target_color"], Path(tmp))
-        # Explicit TLS and a private config file avoid relying on port-based
-        # TLS inference or putting a password in the process argument list.
-        native = Path(tmp) / "native.yaml"
-        native.write_text(yaml.safe_dump({
-            "host": props["clickhouse_server_host_name"],
-            "port": int(props["clickhouse_server_port"]),
-            "user": props["clickhouse_server_username"],
-            "password": props["clickhouse_server_password"],
-            "secure": props["clickhouse_server_port"] == "9440",
-        }))
-        native.chmod(0o600)
-        run(["clickhouse", "client", "--config-file", str(native),
-             "--database", DATABASES[plan["target_color"]], "--multiquery",
-             "--queries-file", str(Path(tmp) / "clickhouse.sql"), "--param_optimize_backoff_secs", "0"],
-            str(Path(plan["report_dir"]) / "derived.log"), env)
-        # Current core keeps imported studies unavailable until their derived
-        # tables exist. Do not expose a partial batch if derivation fails.
-        if not publish:
-            return
-        run([sys.executable, "-u", str(IMPORTER / "cbioportalImporter.py"),
-             "make-studies-available", "-ids", ",".join(plan["studies"])],
-            str(Path(plan["report_dir"]) / "availability.log"), env)
 
 
 def authenticate_portal():

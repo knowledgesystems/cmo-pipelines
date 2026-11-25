@@ -1,6 +1,9 @@
 """Blue/green ClickHouse import of public cancer studies from S3. Infrastructure
 tasks run the production import scripts in KubernetesExecutor workers;
 validation/import tasks run the cbioportal-core scripts directly."""
+from contextlib import contextmanager
+from functools import partial
+from tempfile import TemporaryDirectory
 import json
 import logging
 import os
@@ -19,7 +22,7 @@ from dags import public_v7_runtime as hgnc
 from dags.public_v7_workers import CMO as HGNC_CMO
 from dags.containerized_workflow import SKIPPABLE_TASK_IDS, wire_import
 from dags.study_sources import (DEFAULT_BUCKET, S3_SOURCES,
-                               bucket_mount, parse_study_source, resolve_studies, search_buckets, verified_study_directory)
+                               bucket_mount, parse_study_source, resolve_studies, HGNC_BUCKET, target_buckets, verified_study_directory)
 
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
@@ -35,6 +38,7 @@ def _run_and_stream(
     cmd: list[str],
     check: bool = False,
     timeout: int | None = 21600,
+    log_path=None,
     **kwargs,
 ) -> "subprocess.CompletedProcess":
     """Run a command, streaming its stdout/stderr via ``logging`` in real time, then
@@ -108,6 +112,8 @@ def _run_and_stream(
     if rc != 0:
         logger.warning("stderr was:\n%s", captured_stderr)
 
+    if log_path is not None:
+        Path(log_path).write_text(captured_stdout + "\n" + captured_stderr)
     if check and rc != 0:
         raise subprocess.CalledProcessError(rc, cmd)
 
@@ -164,6 +170,47 @@ def _validate_skips(params):
 
 def _hgnc_plan(ti):
     return ti.xcom_pull(task_ids="verify_studies_exist", key="hgnc_plan")
+
+
+@contextmanager
+def _pinned_inputs(target, ti, importing=False):
+    if target == "public_v7":
+        plan = _hgnc_plan(ti)
+        with hgnc.seeded_references(plan, importing) as refs:
+            yield refs, partial(hgnc.selected_input, plan), Path(plan["report_dir"])
+    else:
+        manifest = _public_reference_manifest()
+        entries = _public_study_entries(ti)
+
+        def open_study(study_id):
+            entry = entries[study_id]
+            return study_input(_input_root(entry), entry)
+
+        with reference_input(_input_root(manifest["references"]), manifest, Path(IMPORT_SCRIPT_PATH).parent) as refs:
+            yield refs, open_study, None
+
+
+@contextmanager
+def _standby_environment(target, ti):
+    if target == "public_v7":
+        plan = _hgnc_plan(ti)
+        _, props, _, _ = hgnc.check_plan(plan, "running")
+        with TemporaryDirectory(prefix="hgnc-standby-") as tmp:
+            yield hgnc.activate(props, plan["target_color"], Path(tmp)), Path(tmp)
+    else:
+        _activate_standby_properties(target)
+        yield None, Path("/tmp")
+
+
+def _start_write_stage(stage, params, ti):
+    _skip_if_requested(stage, params)
+    if params["target"] == "public_v7" and stage == _first_write_stage(params):
+        hgnc.begin(_hgnc_plan(ti))
+        ti.xcom_push(key="hgnc_began", value=True)
+
+
+def _first_write_stage(params):
+    return next((stage for stage in SKIPPABLE_TASK_IDS if stage not in params["skip_tasks"]), None)
 
 
 def _run_management_script(script, target):
@@ -322,6 +369,11 @@ def _activate_standby_properties(env: str) -> str:
             "containerized",
             type="string",
             enum=["containerized", "public", "public_v7"],
+            values_display={
+                "containerized": f"Containerized test (default bucket: {DEFAULT_BUCKET})",
+                "public": f"Public (default bucket: {DEFAULT_BUCKET})",
+                "public_v7": f"HGNC preview (bucket: {HGNC_BUCKET})",
+            },
             description=(
                 "Which database environment to import into. 'containerized' targets the "
                 "test databases and containerized.cbioportal.org; 'public' targets the "
@@ -338,14 +390,13 @@ def _activate_standby_properties(env: str) -> str:
             title="Studies to Import",
         ),
         "buckets": Param(
-            [DEFAULT_BUCKET],
+            [],
             type="array",
-            examples=list(S3_SOURCES),
-            items={"type": "string", "enum": list(S3_SOURCES)},
-            minItems=1,
+            examples=[*S3_SOURCES, HGNC_BUCKET],
+            items={"type": "string", "enum": [*S3_SOURCES, HGNC_BUCKET]},
             uniqueItems=True,
-            description="Search the roots of these buckets for each selected study. Multiple matching locations fail preflight.",
-            title="Buckets to Search",
+            description=f"Leave empty for the target default: HGNC uses {HGNC_BUCKET}; public and test use {DEFAULT_BUCKET}. Select buckets here to override the default.",
+            title="Buckets to Search (defaults by target)",
         ),
         "skip_tasks": Param(
             [],
@@ -373,8 +424,8 @@ def import_containerized_dag():
         if "database" in conf:
             raise AirflowException("Use target instead of database on import_containerized_dag")
         _validate_skips(params)
-        if target == "public_v7" and params["buckets"] != [DEFAULT_BUCKET]:
-            raise AirflowException("HGNC always reads the dedicated cdsi-curation-hgnc bucket; leave the bucket selector at its default")
+        buckets = target_buckets(target, params.get("buckets"))
+        logging.info("Searching bucket roots: %s", buckets)
 
         # render_template_as_native_obj may render the array Param as its string repr
         if isinstance(study_ids, str):
@@ -389,7 +440,6 @@ def import_containerized_dag():
             plan = hgnc.prepare(study_ids, dag_run.run_id, K8S_IMAGE_VALIDATE, HGNC_CMO)
             ti.xcom_push(key="hgnc_plan", value=plan)
             return list(plan["studies"])
-        buckets = search_buckets((params or {}).get('buckets', [DEFAULT_BUCKET]))
         resolved = resolve_studies(study_ids, buckets)
         if (params or {}).get('target') == 'public':
             entries = {}
@@ -412,7 +462,7 @@ def import_containerized_dag():
     @task(executor_config=executor_config("infra"))
     def clone_live_database_into_standby(params=None, ti=None):
         stage = "clone_live_database_into_standby"
-        _skip_if_requested(stage, params)
+        _start_write_stage(stage, params, ti)
         if params["target"] == "public_v7":
             return hgnc.clone(_hgnc_plan(ti))
         _run_and_stream([f"{SCRIPTS_DIR}/airflow-clone-db.sh", IMPORTER,
@@ -422,21 +472,17 @@ def import_containerized_dag():
     def pull_and_validate_study(study_id: str, params: dict | None = None, ti=None) -> str | None:
         import pathlib
 
-        if params["target"] == "public_v7":
-            return hgnc.validate_study(study_id, _hgnc_plan(ti))
-
-        if (params or {}).get('target') == 'public':
-            manifest = _public_reference_manifest()
-            importer = Path(VALIDATE_SCRIPT_PATH).parent
-            entry = _public_study_entries(ti)[study_id]
-            log_dir = Path('/tmp/validate_logs') / parse_study_source(study_id)[1]
-            log_dir.mkdir(parents=True, exist_ok=True)
-            with reference_input(_input_root(manifest['references']), manifest, importer) as refs:
-                with study_input(_input_root(entry), entry) as study:
+        if params["target"] in ("public", "public_v7"):
+            with _pinned_inputs(params["target"], ti) as (refs, open_study, reports):
+                name = parse_study_source(study_id)[1]
+                log_dir = (reports / (name + ".validation") if reports else Path("/tmp/validate_logs") / name)
+                log_dir.mkdir(parents=True, exist_ok=True)
+                with open_study(study_id) as study:
                     result = _run_and_stream(validation_command(
-                        sys.executable, importer, study, refs, log_dir / 'report.html'))
+                        sys.executable, Path(IMPORT_SCRIPT_PATH).parent, study, refs, log_dir / "report.html"),
+                        log_path=reports / (name + ".validation.log") if reports else None)
             if result.returncode not in (0, 3):
-                raise AirflowException(f'Selected study {study_id} failed pinned validation: {result.returncode}')
+                raise AirflowException(f"Selected study {study_id} failed pinned validation: {result.returncode}")
             return study_id
 
         try:
@@ -461,18 +507,11 @@ def import_containerized_dag():
 
     @task(executor_config=executor_config("infra"))
     def collect_valid_studies(results: list, params: dict | None = None, ti=None) -> list[str]:
-        if params["target"] == "public_v7":
-            plan = _hgnc_plan(ti)
-            validated = list(results)
-            if not validated or sorted(validated) != sorted(plan["studies"]):
-                raise AirflowException("Every selected HGNC study must pass validation")
-            if set(params["skip_tasks"]) != set(SKIPPABLE_TASK_IDS):
-                hgnc.begin(plan)
-                ti.xcom_push(key="hgnc_began", value=True)
-            return validated
-        if (params or {}).get('target') == 'public':
+        if params["target"] in ("public", "public_v7"):
+            expected = (_hgnc_plan(ti)["studies"] if params["target"] == "public_v7"
+                        else _public_study_entries(ti))
             results = list(results or [])
-            if not results or set(results) != set(_public_study_entries(ti)) or len(set(results)) != len(results):
+            if not results or len(results) != len(expected) or set(results) != set(expected):
                 raise AirflowException("Every selected public study must pass validation")
             return results
         valid = [sid for sid in (results or []) if sid is not None]
@@ -486,24 +525,18 @@ def import_containerized_dag():
 
     @task(executor_config=executor_config("import"), trigger_rule=TriggerRule.NONE_FAILED)
     def import_into_standby_database(valid_studies: list[str], params: dict | None = None, ti=None):
-        _skip_if_requested("import_into_standby_database", params)
-        if params["target"] == "public_v7":
-            return hgnc.import_studies(_hgnc_plan(ti))
-        if (params or {}).get('target') == 'public':
-            entries = _public_study_entries(ti)
-            manifest = _public_reference_manifest()
-            importer = Path(IMPORT_SCRIPT_PATH).parent
-            with reference_input(_input_root(manifest['references']), manifest, importer) as refs:
-                _activate_standby_properties(params['target'])
-                for study_id in valid_studies:
-                    entry = entries[study_id]
-                    with study_input(_input_root(entry), entry) as study:
-                        result = _run_and_stream([
-                            sys.executable, IMPORT_SCRIPT_PATH, '-s', str(study),
-                            '-p', str(refs),
-                            '-o', '--no-derive-tables'])
-                        if result.returncode != 0:
-                            raise AirflowException(f'Validator-passing study failed import: {study_id} (exit {result.returncode})')
+        _start_write_stage("import_into_standby_database", params, ti)
+        if params["target"] in ("public", "public_v7"):
+            with _pinned_inputs(params["target"], ti, importing=True) as (refs, open_study, reports):
+                with _standby_environment(params["target"], ti) as (env, _):
+                    for study_id in valid_studies:
+                        with open_study(study_id) as study:
+                            result = _run_and_stream([
+                                sys.executable, IMPORT_SCRIPT_PATH, "-s", str(study), "-p", str(refs),
+                                "-o", "--no-derive-tables"], env=env,
+                                log_path=reports / (study_id + ".import.log") if reports else None)
+                            if result.returncode:
+                                raise AirflowException(f"Validator-passing study failed import: {study_id} (exit {result.returncode})")
             return
         _activate_standby_properties(params["target"])
         if not valid_studies:
@@ -533,32 +566,32 @@ def import_containerized_dag():
 
     @task(executor_config=executor_config("import"), trigger_rule=TriggerRule.NONE_FAILED)
     def create_derived_tables_in_standby_database(valid_studies: list[str], params: dict | None = None, ti=None):
-        _skip_if_requested("create_derived_tables_in_standby_database", params)
-        if params["target"] == "public_v7":
-            return hgnc.derive(_hgnc_plan(ti), publish="import_into_standby_database" not in params["skip_tasks"])
-        _activate_standby_properties(params["target"])
-        rebuild = _run_and_stream(
-            [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables",
-             "--derived-table-sql", "/tmp/clickhouse.sql"],
-        )
-        if rebuild.returncode != 0:
-            raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode})")
+        _start_write_stage("create_derived_tables_in_standby_database", params, ti)
+        reports = Path(_hgnc_plan(ti)["report_dir"]) if params["target"] == "public_v7" else None
+        with _standby_environment(params["target"], ti) as (env, directory):
+            rebuild = _run_and_stream(
+                [sys.executable, IMPORT_SCRIPT_PATH, "derive-tables",
+                 "--derived-table-sql", str(directory / "clickhouse.sql")],
+                env=env, log_path=reports / "derived.log" if reports else None,
+            )
+            if rebuild.returncode != 0:
+                raise Exception(f"Derived table rebuild failed (exit {rebuild.returncode})")
 
-        if "import_into_standby_database" in (params.get("skip_tasks") or []):
-            return
-        study_ids = [parse_study_source(selection)[1] for selection in valid_studies]
-        if not study_ids:
-            raise AirflowException("Expected imported study IDs after rebuilding derived tables")
-        importer = Path(IMPORT_SCRIPT_PATH).with_name("cbioportalImporter.py")
-        result = _run_and_stream([
-            sys.executable, str(importer), "make-studies-available", "-ids", ",".join(study_ids),
-        ])
-        if result.returncode:
-            raise AirflowException(f"Failed to mark studies available on standby (exit {result.returncode})")
+            if "import_into_standby_database" in (params.get("skip_tasks") or []):
+                return
+            study_ids = [parse_study_source(selection)[1] for selection in valid_studies]
+            if not study_ids:
+                raise AirflowException("Expected imported study IDs after rebuilding derived tables")
+            importer = Path(IMPORT_SCRIPT_PATH).with_name("cbioportalImporter.py")
+            result = _run_and_stream([
+                sys.executable, str(importer), "make-studies-available", "-ids", ",".join(study_ids),
+            ], env=env, log_path=reports / "availability.log" if reports else None)
+            if result.returncode:
+                raise AirflowException(f"Failed to mark studies available on standby (exit {result.returncode})")
 
     @task(executor_config=executor_config("infra"), trigger_rule=TriggerRule.NONE_FAILED)
     def transfer_deployment_color(params=None, ti=None):
-        _skip_if_requested("transfer_deployment_color", params)
+        _start_write_stage("transfer_deployment_color", params, ti)
         if params["target"] == "public_v7":
             return hgnc.transfer(_hgnc_plan(ti))
         _run_management_script("airflow-transfer-deployment.sh", params["target"])
@@ -611,8 +644,9 @@ def import_containerized_dag():
         if params["target"] == "public_v7":
             plan = _hgnc_plan(ti)
             if plan:
+                first = _first_write_stage(params)
                 hgnc.failure_cleanup(
-                    plan, began=ti.xcom_pull(task_ids="collect_valid_studies", key="hgnc_began"),
+                    plan, began=first and ti.xcom_pull(task_ids=first, key="hgnc_began"),
                     transfer_started=transfer and transfer.state not in
                     (None, "upstream_failed", "skipped", "scheduled", "queued"),
                 )
