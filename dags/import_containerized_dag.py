@@ -440,7 +440,7 @@ def _activate_standby_properties(env: str) -> str:
             [],
             type="array",
             items={"type": "string"},
-            description="Enter one study ID per line. HGNC uses its dedicated prefix. Other targets resolve IDs at the selected bucket roots.",
+            description="Enter one study ID per line. HGNC reads the root of cdsi-curation-hgnc. Other targets resolve IDs at the selected bucket roots.",
             title="Studies to Import",
         ),
         "buckets": Param(
@@ -482,7 +482,7 @@ def import_containerized_dag():
             raise AirflowException("Use target instead of database on import_containerized_dag")
         _validate_skips(params)
         if target == "public_v7" and params["buckets"] != [DEFAULT_BUCKET]:
-            raise AirflowException("HGNC uses its configured study prefix in the default bucket")
+            raise AirflowException("HGNC always reads the dedicated cdsi-curation-hgnc bucket; leave the bucket selector at its default")
         return True
 
     @task(executor_config=_POD_OVERRIDE)
