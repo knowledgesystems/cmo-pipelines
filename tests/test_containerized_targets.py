@@ -48,7 +48,10 @@ class ContainerizedTargetsTest(unittest.TestCase):
                     pod = PodGenerator.reconcile_pods(pod, PodGenerator.deserialize_model_dict(profile))
                     secret_names = {v.secret.secret_name for v in pod.spec.volumes if v.secret}
                     hgnc = target == "public_v7"
-                    self.assertEqual(secret_names, {"public-v7-import-credentials" if hgnc else "pipelines-credentials"})
+                    expected_secrets = {"public-v7-import-credentials" if hgnc else "pipelines-credentials"}
+                    if not hgnc and task.task_id == "transfer_deployment_color":
+                        expected_secrets.add("airflow-git-secret")
+                    self.assertEqual(secret_names, expected_secrets)
                     claims = {v.persistent_volume_claim.claim_name for v in pod.spec.volumes if v.persistent_volume_claim}
                     self.assertEqual(claims, {"cdsi-curation-unpublished-s3-pvc"} if hgnc else
                                      {"testing-studies-s3-pvc", "cdsi-curation-unpublished-s3-pvc", "databricks-s3-pvc"})

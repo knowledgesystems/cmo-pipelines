@@ -79,6 +79,14 @@ _POD_OVERRIDE = _pod_override(
     ],
 )
 
+_SWITCH_POD_OVERRIDE = _pod_override(
+    image=K8S_IMAGE,
+    env=[_SAML2AWS_ENV, k8s.V1EnvVar(name="KUBECONFIG", value="")],
+    extra_volumes=[k8s.V1Volume(name="airflow-git", secret=k8s.V1SecretVolumeSource(
+        secret_name="airflow-git-secret", default_mode=0o440))],
+    extra_mounts=[k8s.V1VolumeMount(name="airflow-git", mount_path="/var/run/airflow-git", read_only=True)],
+)
+
 
 def _make_cbioportal_pod_override(java_opts: str | None = None, memory_request: str = "2Gi", memory_limit: str = "3Gi", jdbc_diagnostics: bool = False) -> dict:
     env = [
@@ -115,6 +123,7 @@ def executor_config(role):
 
     profiles = {
         "infra": (_POD_OVERRIDE, public_v7_workers.INFRA),
+        "switch": (_SWITCH_POD_OVERRIDE, public_v7_workers.INFRA),
         "validate": (_POD_OVERRIDE_VALIDATE, public_v7_workers.VALIDATE),
         "import": (_POD_OVERRIDE_IMPORT, public_v7_workers.IMPORT),
     }

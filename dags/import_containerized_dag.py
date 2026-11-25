@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import signal
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -218,8 +219,34 @@ def _run_management_script(script, target):
     env = os.environ.copy()
     env.pop("AWS_ROLE_ARN", None)
     env.pop("AWS_WEB_IDENTITY_TOKEN_FILE", None)
+    config_path = f"{CREDS_DIR}/{target}.color-swap.yaml"
+    if script == "airflow-transfer-deployment.sh" and target == "public":
+        import shlex
+        import yaml
+
+        with open(config_path) as config_file:
+            config = yaml.safe_load(config_file)
+        Path(config["temp_dir_path"]).mkdir(parents=True, exist_ok=True)
+        checkout = Path(config["ks_k8s_depl_repo_dirpath"])
+        checkout.parent.mkdir(parents=True, exist_ok=True)
+        with TemporaryDirectory(prefix="public-switch-key-") as key_dir:
+            key = Path(key_dir) / "id_ed25519"
+            shutil.copyfile("/var/run/airflow-git/id_ed25519", key)
+            key.chmod(0o600)
+            env["GIT_SSH_COMMAND"] = (f"ssh -i {shlex.quote(str(key))} -o IdentitiesOnly=yes "
+                                      "-o UserKnownHostsFile=/var/run/airflow-git/known_hosts "
+                                      "-o StrictHostKeyChecking=yes")
+            _run_and_stream(["git", "clone", "--branch", "master", "--single-branch",
+                             "git@github.com:knowledgesystems/knowledgesystems-k8s-deployment.git",
+                             str(checkout)], check=True, env=env)
+            for name, value in (("user.name", "cbioportalpipelines"),
+                                ("user.email", "cbioportalpipelines@users.noreply.github.com")):
+                _run_and_stream(["git", "-C", str(checkout), "config", name, value], check=True, env=env)
+            _run_and_stream([f"{SCRIPTS_DIR}/{script}", SCRIPTS_DIR, _manage_props_path(target),
+                             config_path], check=True, timeout=None, env=env)
+        return
     _run_and_stream([f"{SCRIPTS_DIR}/{script}", SCRIPTS_DIR, _manage_props_path(target),
-                     f"{CREDS_DIR}/{target}.color-swap.yaml"], check=True, timeout=None, env=env)
+                     config_path], check=True, timeout=None, env=env)
 
 
 def _skip_if_requested(task_id: str, params: dict | None) -> None:
@@ -585,7 +612,7 @@ def import_containerized_dag():
             if result.returncode:
                 raise AirflowException(f"Failed to mark studies available on standby (exit {result.returncode})")
 
-    @task(executor_config=executor_config("infra"), trigger_rule=TriggerRule.NONE_FAILED)
+    @task(executor_config=executor_config("switch"), trigger_rule=TriggerRule.NONE_FAILED)
     def transfer_deployment_color(params=None, ti=None):
         _start_write_stage("transfer_deployment_color", params, ti)
         if params["target"] == "public_v7":
