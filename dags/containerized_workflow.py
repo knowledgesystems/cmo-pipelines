@@ -1,4 +1,4 @@
-"""Ordering shared by the public and HGNC worker configurations."""
+"""Stage ordering and skip options for the containerized import DAG."""
 
 
 # Task IDs that may be listed in the skip_tasks param (dry-run support).

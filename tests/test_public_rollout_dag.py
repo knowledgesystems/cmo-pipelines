@@ -17,7 +17,7 @@ from dags.study_sources import DEFAULT_BUCKET, bucket_mount, parse_study_source
 
 class TaskTests(unittest.TestCase):
     def test_diagnostic_image_and_import_only_tracing(self):
-        source = Path(__file__).resolve().parents[1] / 'dags/import_containerized_dag.py'
+        source = Path(__file__).resolve().parents[1] / 'dags/containerized_workers.py'
         wanted = {'K8S_IMAGE_VALIDATE', '_POD_OVERRIDE_VALIDATE', '_POD_OVERRIDE_IMPORT'}
         nodes = [node for node in ast.parse(source.read_text()).body
                  if (isinstance(node, ast.FunctionDef) and node.name == '_make_cbioportal_pod_override')
