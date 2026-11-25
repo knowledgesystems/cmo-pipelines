@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /data/portal-cron/import-scripts/slack-message-functions.sh
+source /data/portal-cron/scripts/slack-message-functions.sh
 
 # converts timestamp (D:H:M:S) to seconds
 function convert_to_seconds () {

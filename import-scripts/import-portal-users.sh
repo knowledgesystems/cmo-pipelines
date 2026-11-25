@@ -10,10 +10,11 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-portal-users.lock"
     USERSGENIELOGFILENAME="$PORTAL_HOME/logs/import-user-dashi-genie.log"
     GMAIL_USERNAME=`grep gmail_username $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
     GMAIL_PASSWORD=`grep gmail_password $GMAIL_CREDS_FILE | sed 's/^.*=//g'`
+    SMTP_SERVER=`cat $MAIL_SMTP_SERVER`
     GENIE_BLUE_DATABASE_PROPERTIES_FILENAME="portal.properties.genie.blue"
     GENIE_GREEN_DATABASE_PROPERTIES_FILENAME="portal.properties.genie.green"
     GET_DATABASE_CURRENTLY_IN_PRODUCTION_SCRIPT="$PORTAL_HOME/scripts/get_database_currently_in_production.sh"
-    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_genie_database_update_tools.properties"
+    MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="$PORTAL_HOME/pipelines-credentials/manage_genie_clickhouse_database_update_tools.properties"
     CURRENT_DATABASE_OUTPUT_FILEPATH=$(mktemp $PORTAL_HOME/tmp/import-portal-users/get_current_database_output.txt.XXXXXX)
     rm -f $CURRENT_DATABASE_OUTPUT_FILEPATH
     if ! $GET_DATABASE_CURRENTLY_IN_PRODUCTION_SCRIPT $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH > $CURRENT_DATABASE_OUTPUT_FILEPATH; then
@@ -33,7 +34,7 @@ MY_FLOCK_FILEPATH="/data/portal-cron/cron-lock/import-portal-users.lock"
 
     echo "### Starting import" >> "$USERSGENIELOGFILENAME"
     date >> "$USERSGENIELOGFILENAME"
-    $PYTHON_BINARY $PORTAL_HOME/scripts/importUsers.py --port 3306 --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/${GENIE_PRODUCTION_DATABASE_PROPERTIES_FILENAME} --send-email-confirm true --sender GENIE --ssl-ca $PORTAL_HOME/pipelines-credentials/pipelines-genie-db-aws-rds-combined-ca-bundle.pem --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD >> "$USERSGENIELOGFILENAME" 2>&1
+    $PYTHON3_BINARY $PORTAL_HOME/scripts/importUsers.py --secrets-file $PIPELINES_CONFIG_HOME/google-docs/client_secrets.json --creds-file $PIPELINES_CONFIG_HOME/google-docs/creds.dat --properties-file $PIPELINES_CONFIG_HOME/properties/import-users/${GENIE_PRODUCTION_DATABASE_PROPERTIES_FILENAME} --send-email-confirm true --sender GENIE --gmail-username $GMAIL_USERNAME --gmail-password $GMAIL_PASSWORD --smtp-server $SMTP_SERVER >> "$USERSGENIELOGFILENAME" 2>&1
     CGDS_GENIE_IMPORT_STATUS=$?
 
     PIPELINES_EMAIL_LIST="cbioportal-pipelines@cbioportal.org"

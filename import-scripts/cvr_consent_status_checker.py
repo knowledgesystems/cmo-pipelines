@@ -2,7 +2,9 @@
 
 import ssl
 import os
+import subprocess
 import sys
+import tempfile
 import urllib
 import json
 from email.Utils import COMMASPACE, formatdate
@@ -57,7 +59,51 @@ def fetch_expected_consent_status_values():
         expected_consent_status_values[field] = consent_values
     return expected_consent_status_values
 
-def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password):
+def requeue_consent_changed_samples(samples_to_requeue, samples_to_remove, portal_properties_file, session_data_file, study_id):
+    '''
+        Requeues samples with consent status changes via cvr_dmp_endpoint_utility.py
+        so they are re-fetched from CVR with updated consent values in the next nightly run.
+    '''
+    granted_samples = set()
+    for field_samples in samples_to_requeue.values():
+        granted_samples.update(field_samples)
+
+    revoked_samples = set()
+    for field_samples in samples_to_remove.values():
+        revoked_samples.update(field_samples)
+
+    all_samples = granted_samples | revoked_samples
+    if not all_samples:
+        return
+
+    tmpfile_path = None
+    try:
+        fd, tmpfile_path = tempfile.mkstemp(prefix='consent_requeue_', suffix='.txt')
+        with os.fdopen(fd, 'w') as f:
+            f.write('\n'.join(sorted(all_samples)))
+
+        utility_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cvr_dmp_endpoint_utility.py')
+        cmd = [
+            sys.executable,
+            utility_script,
+            '-p', portal_properties_file,
+            '-s', session_data_file,
+            '-i', study_id,
+            '-f', tmpfile_path,
+            '-r'
+        ]
+        print >> ERROR_FILE, 'Requeueing %d consent-changed sample(s) for study %s (%d granted, %d revoked): %s' % (
+            len(all_samples), study_id, len(granted_samples), len(revoked_samples), ', '.join(sorted(all_samples)))
+        ret = subprocess.call(cmd)
+        if ret != 0:
+            print >> ERROR_FILE, 'WARNING: cvr_dmp_endpoint_utility.py requeue exited with code %d for study %s' % (ret, study_id)
+    except Exception as e:
+        print >> ERROR_FILE, 'WARNING: failed to requeue consent-changed samples for study %s: %s' % (study_id, str(e))
+    finally:
+        if tmpfile_path and os.path.exists(tmpfile_path):
+            os.remove(tmpfile_path)
+
+def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password, portal_properties_file=None, session_data_file=None, study_id=None):
     '''
         Checks the current consent status for
         Part A & C against the expected consent status values
@@ -67,10 +113,14 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
         from data set is emailed to recipients.
 
         Samples are added to the requeue list if their expected consent
-        status is 'YES' and their current status is 'NO'.
+        status is 'YES' and their current status is 'NO'. If portal_properties_file,
+        session_data_file, and study_id are all provided, those samples are also
+        automatically requeued via cvr_dmp_endpoint_utility.py.
 
         Samples are added to the removal list if their expected consent
-        status is 'NO' and their current status is 'YES'.
+        status is 'NO' and their current status is 'YES'. If portal_properties_file,
+        session_data_file, and study_id are all provided, those samples are also
+        automatically requeued so downstream clinical consent fields can be refreshed.
     '''
     samples_to_requeue = {}
     samples_to_remove = {}
@@ -84,6 +134,11 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
             record = dict(zip(header, map(str.strip, line.split('\t'))))
 
             for field in CVR_CONSENT_STATUS_ENDPOINTS.keys():
+                # If the API returned no data for this field, skip it entirely to avoid
+                # treating every patient as having revoked consent (the .get() default of 'NO'
+                # would otherwise cause all current-YES patients to appear as revoked).
+                if not expected_consent_status_values[field]:
+                    continue
                 current_consent_status = record[field]
                 expected_consent_status = expected_consent_status_values[field].get(record['PATIENT_ID'], 'NO')
                 # if current and expected values are the same then skip
@@ -104,8 +159,15 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
 
     removed_germline_mutations = False
     if samples_to_remove.get(PARTC_FIELD_NAME, set()):
-        # Attempt to remove germline mutation records where the Part C consent status has changed from YES => NO
-        removed_germline_mutations = remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
+        if not cvr_mutation_file:
+            # No mutation file was provided; germline records cannot be removed for Part C revocations.
+            print >> ERROR_FILE, "WARNING: Part C consent was revoked for %d sample(s) but no mutation file was provided; germline records will not be removed." % len(samples_to_remove[PARTC_FIELD_NAME])
+        else:
+            # Attempt to remove germline mutation records where the Part C consent status has changed from YES => NO
+            removed_germline_mutations = remove_germline_revoked_samples(cvr_mutation_file, samples_to_remove.get(PARTC_FIELD_NAME))
+
+    if (samples_to_requeue or samples_to_remove) and portal_properties_file and session_data_file and study_id:
+        requeue_consent_changed_samples(samples_to_requeue, samples_to_remove, portal_properties_file, session_data_file, study_id)
 
     if samples_to_requeue != {} or samples_to_remove != {}:
         email_consent_status_report(
@@ -113,8 +175,10 @@ def cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expect
             samples_to_remove,
             expected_consent_status_values,
             removed_germline_mutations,
+            cvr_mutation_file,
             gmail_username,
-            gmail_password)
+            gmail_password,
+            study_id)
 
 def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples):
     '''
@@ -148,6 +212,10 @@ def remove_germline_revoked_samples(cvr_mutation_file, revoked_germline_samples)
             tmpfile.write(line)
     tmpfile.close()
 
+    if num_germline_records == 0:
+        os.remove(tmpfile_name)
+        return True
+
     pct_removed = 100*(float(num_removed_records) / float(num_germline_records))
     cutoff = 20 # If we're trying to remove too many records, then something's probably wrong with the server response. 20% is an arbitrary cutoff
     if pct_removed >= cutoff:
@@ -171,8 +239,10 @@ def email_consent_status_report(
         samples_to_remove,
         expected_consent_status_values,
         removed_germline_mutations,
+        cvr_mutation_file,
         gmail_username,
-        gmail_password):
+        gmail_password,
+        study_id=None):
     '''
         Constructs and sends email reporting consent status updates.
     '''
@@ -196,8 +266,14 @@ def email_consent_status_report(
             if missing_data:
                 summary += '\n\t%s:\tNo action. No response from Part %s server.' % (field, "A" if field == PARTA_FIELD_NAME else "C")
             elif field == PARTC_FIELD_NAME and not removed_germline_mutations:
-                # If too many samples had their Part C cosent status changed, there is probably an issue with the upstream server, so we didn't remove any records.
-                summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.' % (field)
+                if not cvr_mutation_file:
+                    # No mutation file was provided, so germline records could not be removed. Still report the samples.
+                    summary += '\n\t%s:\t%s samples (no mutation file provided; germline records not removed)' % (field, len(samples))
+                    filename = field.lower() + '_consent_revoked_report.txt'
+                    generate_attachment(message, filename, samples)
+                else:
+                    # If too many samples had their Part C consent status changed, there is probably an issue with the upstream server, so we didn't remove any records.
+                    summary += '\n\t%s:\tConsent was revoked for an abnormally large number of samples-- no germline records were removed from the mutation file. Please double-check the response of the Part C server.' % (field)
             else:
                 summary += '\n\t%s:\t%s samples' % (field, len(samples))
                 filename = field.lower() + '_consent_revoked_report.txt'
@@ -206,7 +282,10 @@ def email_consent_status_report(
     body = MIMEText(summary, 'plain')
     message.attach(body)
 
-    message['Subject'] = CONSENT_STATUS_EMAIL_SUBJECT
+    subject = CONSENT_STATUS_EMAIL_SUBJECT
+    if study_id:
+        subject = '[%s] %s' % (study_id, CONSENT_STATUS_EMAIL_SUBJECT)
+    message['Subject'] = subject
     message['From'] = MESSAGE_SENDER
     message['To'] = COMMASPACE.join(MESSAGE_RECIPIENTS)
     message['Date'] = formatdate(localtime=True)
@@ -220,10 +299,14 @@ def email_consent_status_report(
 
 def main():
     parser = optparse.OptionParser()
-    parser.add_option('-c', '--clinical-file', action = 'store', dest = 'clinfile', help = 'CVR clinical file')
-    parser.add_option('-m', '--mutation-file', action = 'store', dest = 'maf', help = 'CVR MAF')
+    parser.add_option('-c', '--clinical-file', action = 'store', dest = 'clinfile', help = 'CVR clinical file [required]')
+    parser.add_option('-m', '--mutation-file', action = 'store', dest = 'maf', help = 'CVR MAF [optional; required only for Part C germline removal]')
     parser.add_option('-u', '--gmail-username', action = 'store', dest = 'gmail_username', help = 'Gmail username [required]')
     parser.add_option('-p', '--gmail-password', action = 'store', dest = 'gmail_password', help = 'Gmail SMTP password [required]')
+    parser.add_option('-f', '--portal-properties-file', action = 'store', dest = 'portal_properties_file', help = 'CVR portal properties file for requeue [optional; enables automatic requeue of NO->YES samples]')
+    parser.add_option('-s', '--session-data-file', action = 'store', dest = 'session_data_file', help = 'File to store CVR session data for requeue [optional; required with -f]')
+    parser.add_option('-i', '--study-id', action = 'store', dest = 'study_id', help = 'DMP study ID for requeue (e.g. mskimpact) [optional; required with -f]')
+    parser.add_option('-e', '--consent-cache-file', action = 'store', dest = 'consent_cache_file', help = 'JSON file to cache consent API values across cohort invocations [optional]')
 
     (options, args) = parser.parse_args()
 
@@ -231,21 +314,52 @@ def main():
     cvr_mutation_file = options.maf
     gmail_username = options.gmail_username
     gmail_password = options.gmail_password
+    portal_properties_file = options.portal_properties_file
+    session_data_file = options.session_data_file
+    study_id = options.study_id
+    consent_cache_file = options.consent_cache_file
+
     if not cvr_clinical_file or not os.path.exists(cvr_clinical_file):
         print >> ERROR_FILE, "Invalid CVR clinical file: %s, exiting..." % (cvr_clinical_file)
         sys.exit(2)
-    if not cvr_mutation_file or not os.path.exists(cvr_mutation_file):
+    if cvr_mutation_file and not os.path.exists(cvr_mutation_file):
         print >> ERROR_FILE, "Invalid CVR mutation file: %s, exiting..." % (cvr_mutation_file)
         sys.exit(2)
     if not gmail_username:
-        print >> ERROR_FILE, "Required option --gmail-username/-u missing, exiting..." % (cvr_mutation_file)
+        print >> ERROR_FILE, "Required option --gmail-username/-u missing, exiting..."
         sys.exit(2)
     if not gmail_password:
-        print >> ERROR_FILE, "Required option --gmail-password/-p missing, exiting..." % (cvr_mutation_file)
+        print >> ERROR_FILE, "Required option --gmail-password/-p missing, exiting..."
+        sys.exit(2)
+    if portal_properties_file and not os.path.exists(portal_properties_file):
+        print >> ERROR_FILE, "Invalid portal properties file: %s, exiting..." % (portal_properties_file)
+        sys.exit(2)
+    if portal_properties_file and (not session_data_file or not study_id):
+        print >> ERROR_FILE, "Options --session-data-file/-s and --study-id/-i are required when --portal-properties-file/-f is provided, exiting..."
         sys.exit(2)
 
-    expected_consent_status_values = fetch_expected_consent_status_values()
-    cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password)
+    if consent_cache_file and os.path.exists(consent_cache_file):
+        try:
+            with open(consent_cache_file, 'r') as f:
+                expected_consent_status_values = json.load(f)
+        except Exception as e:
+            print >> ERROR_FILE, 'WARNING: failed to load consent cache file %s, fetching from API: %s' % (consent_cache_file, str(e))
+            expected_consent_status_values = fetch_expected_consent_status_values()
+    else:
+        expected_consent_status_values = fetch_expected_consent_status_values()
+        if consent_cache_file:
+            if any(not expected_consent_status_values[f] for f in CVR_CONSENT_STATUS_ENDPOINTS):
+                # Don't cache if any field returned empty data -- a bad cache would propagate
+                # the API failure silently to all subsequent cohort invocations in this run.
+                print >> ERROR_FILE, 'WARNING: consent API returned empty data for one or more fields; skipping cache write to %s' % (consent_cache_file)
+            else:
+                try:
+                    with open(consent_cache_file, 'w') as f:
+                        json.dump(expected_consent_status_values, f)
+                except Exception as e:
+                    print >> ERROR_FILE, 'WARNING: failed to write consent cache file %s: %s' % (consent_cache_file, str(e))
+
+    cvr_consent_status_fetcher_main(cvr_clinical_file, cvr_mutation_file, expected_consent_status_values, gmail_username, gmail_password, portal_properties_file, session_data_file, study_id)
 
 if __name__ == '__main__':
     main()

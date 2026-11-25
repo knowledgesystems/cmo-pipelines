@@ -42,10 +42,10 @@ import java.io.*;
 import java.util.*;
 import org.apache.log4j.Logger;
 
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.*;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.*;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
 
@@ -116,6 +116,16 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
                 throw new ItemStreamException(e);
             }
         }
+        // Remove case-variant duplicates of all column names, keeping first occurrence
+        Set<String> seenLowercase = new HashSet<>();
+        header.removeIf(field -> {
+            String lowercase = field.toLowerCase();
+            if (seenLowercase.contains(lowercase)) {
+                return true; // Remove if we've already seen this field in a different case
+            }
+            seenLowercase.add(lowercase);
+            return false;
+        });
         // add header and filename to write to for writer
         ec.put("mutationHeader", new ArrayList(header));
         ec.put("mafFilename", CVRUtilities.MUTATION_FILE);
@@ -155,7 +165,7 @@ public class GMLMutationDataReader implements ItemStreamReader<AnnotatedRecord> 
         mapper.setLineTokenizer(tokenizer);
         mapper.setFieldSetMapper(new CVRMutationFieldSetMapper());
 
-        FlatFileItemReader<MutationRecord> reader = new FlatFileItemReader<>();
+        FlatFileItemReader<MutationRecord> reader = new FlatFileItemReader<>(mapper);
         reader.setResource(new FileSystemResource(mutationFile));
         reader.setLineMapper(mapper);
         reader.setLinesToSkip(1);

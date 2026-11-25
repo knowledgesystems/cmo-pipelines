@@ -38,7 +38,7 @@ import org.apache.log4j.Logger;
 import org.cbioportal.cmo.pipelines.common.util.HttpClientWithTimeoutAndRetry;
 import org.cbioportal.cmo.pipelines.common.util.InstantStringUtil;
 import org.cbioportal.cmo.pipelines.cvr.model.*;
-import org.springframework.batch.item.*;
+import org.springframework.batch.infrastructure.item.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
@@ -83,7 +83,7 @@ public class GMLVariantsReader implements ItemStreamReader<GMLVariant> {
                 dmpRetrieveVariantsInitialResponseTimeout,
                 dmpRetrieveVariantsMaximumResponseTimeout,
                 InstantStringUtil.createInstant(dropDeadInstantString),
-                true); // on a server error response, keep trying. If we cannot get the variants list, the overall fetch fails.
+                false); // on a server error response, do not keep trying. If we cannot get the variants list, the overall fetch fails.
         ResponseEntity<GMLVariant> responseEntity = client.exchange(dmpUrl, HttpMethod.GET, requestEntity, null, GMLVariant.class);
         if (responseEntity == null) {
             String message = "";

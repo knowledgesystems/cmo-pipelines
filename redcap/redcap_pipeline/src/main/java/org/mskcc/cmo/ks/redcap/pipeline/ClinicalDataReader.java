@@ -39,9 +39,9 @@ import org.mskcc.cmo.ks.redcap.source.MetadataManager;
 import org.mskcc.cmo.ks.redcap.pipeline.util.ConflictingAttributeValuesException;
 import org.mskcc.cmo.ks.redcap.pipeline.util.JobParameterUtils;
 import org.mskcc.cmo.ks.redcap.pipeline.util.RedcapUtils;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemStreamException;
-import org.springframework.batch.item.ItemStreamReader;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ItemStreamException;
+import org.springframework.batch.infrastructure.item.ItemStreamReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 

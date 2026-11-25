@@ -143,6 +143,7 @@ public class HttpClientWithTimeoutAndRetry {
                 }
                 return response;
             } catch (RestClientResponseException e) {
+                log.error("RestClientResponseException: " + e.getMessage());
                 // these exceptions typically occur when the response from the server is not properly deserialized/objectMapped.
                 // Perhaps the server has responded with a general message about server problems, or about an invalid request (as html when json was expected)
                 lastRestClientException = e;
@@ -152,6 +153,7 @@ public class HttpClientWithTimeoutAndRetry {
                 }
                 pauseForMilliseconds(lastTimeoutUsed);
             } catch (RestClientException e) {
+                log.error("RestClientException: " + e.getMessage());
                 // if the server responds with something which does not match the expected model, consider that a "server error"
                 // this would happen if the server sends a 200 "OK" http status but contains a message such as this json:
                 // { "error": "Error occurred while processing your request. get_seg_data cant be processed..." }

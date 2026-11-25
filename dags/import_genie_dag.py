@@ -1,149 +1,66 @@
 """
 import_genie_dag.py
-Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy.
+Imports Genie study.
 """
-from datetime import timedelta, datetime
-from airflow import DAG
-from airflow.decorators import task
-from airflow.exceptions import AirflowException
+import os
+import sys
+
 from airflow.models.param import Param
-from airflow.providers.ssh.operators.ssh import SSHOperator
-from airflow.utils.trigger_rule import TriggerRule
 
-args = {
-    "owner": "airflow",
-    "depends_on_past": False,
-    "email_on_failure": True,
-    "email_on_retry": False,
-    "retries": 0,
-    "retry_delay": timedelta(minutes=5),
-}
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dags.import_base import ImporterConfig, build_import_dag
 
-"""
-If any upstream tasks failed, this task will propagate the "Failed" status to the Dag Run.
-"""
-@task(trigger_rule=TriggerRule.ONE_FAILED, retries=0)
-def watcher():
-    raise AirflowException("Failing task because one or more upstream tasks failed.")
 
-with DAG(
+def _wire(tasks: dict[str, object]) -> None:
+    tasks["data_repos"] >> tasks["verify_management_state"]
+    tasks["verify_management_state"] >> [
+        tasks["fetch_data"],
+        tasks["clone_database"],
+    ]
+    [
+        tasks["fetch_data"],
+        tasks["clone_database"],
+    ] >> tasks["setup_import"]
+    tasks["setup_import"] >> tasks["import_direct_to_clickhouse"]
+    tasks["import_direct_to_clickhouse"] >> tasks["create_derived_tables"]
+    tasks["create_derived_tables"] >> tasks["transfer_deployment"]
+    tasks["transfer_deployment"] >> [
+        tasks["cleanup_data"],
+        tasks["send_update_notification"],
+    ]
+
+_GENIE_CONFIG = ImporterConfig(
     dag_id="import_genie_dag",
-    default_args=args,
-    description="Imports Genie study to MySQL and ClickHouse databases using blue/green deployment strategy",
-    max_active_runs=1,
-    start_date=datetime(2024, 12, 3),
-    schedule_interval=None,
+    description="Imports Genie study to ClickHouse database",
+    importer="genie",
     tags=["genie"],
+    target_nodes=("pipelines5_ssh",),
+    data_nodes=("pipelines5_ssh",),
+    task_names=(
+        "data_repos",
+        "verify_management_state",
+        "fetch_data",
+        "clone_database",
+        "setup_import",
+        "import_direct_to_clickhouse",
+        "create_derived_tables",
+        "transfer_deployment",
+        "send_update_notification",
+        "cleanup_data",
+        "set_import_abandoned",
+    ),
+    db_properties_filename="manage_genie_clickhouse_database_update_tools.properties",
+    color_swap_config_filename="genie-db-color-swap-config.yaml",
     params={
-        "importer": Param("genie", type="string", title="Import Pipeline", description="Determines which importer to use. Must be one of: ['genie']"),
-        "data_repos": Param("genie", type="string", title="Data Repositories", description="Comma-separated list of data repositories to pull updates from/cleanup. Accepted values: ['genie', 'dmp']")
-    }
-) as dag:
+        "data_repos": Param(
+            ["genie"],
+            type="array",
+            description="Comma-separated list of data repositories to pull updates from/cleanup.",
+            title="Data Repositories",
+            examples=["genie"],
+        ),
+    },
+    wire_dependencies=_wire,
+)
 
-    conn_id = "importer_ssh"
-    import_scripts_path = "/data/portal-cron/scripts"
-    db_properties_filepath="/data/portal-cron/pipelines-credentials/manage_genie_database_update_tools.properties"
-    
-    """
-    Parses and validates DAG arguments
-    """
-    @task
-    def parse_args(importer: str, data_repos: str):
-        to_use = []
-        if importer.strip() not in ['genie']:
-            raise TypeError('Required argument \'importer\' is incorrect or missing a value.')
-        
-        ACCEPTED_DATA_REPOS = ["genie"]
-        root_data_directory_path = "/data/portal-cron/cbio-portal-data"
-        for data_repo in data_repos.split(","):
-            if data_repo.strip() not in ACCEPTED_DATA_REPOS:
-                raise TypeError('Required argument \'data_repos\' is incorrect.')
-            to_use.append(root_data_directory_path + "/" + data_repo.strip())
-        
-        data_repositories_to_use = ' '.join(to_use)
-        return data_repositories_to_use
-        
-    datarepos = "{{ task_instance.xcom_pull(task_ids='parse_args') }}"
-
-    """
-    Determines which database is "production" vs "not production"
-    Drops tables in the non-production MySQL database
-    Clones the production MySQL database into the non-production database
-    """
-    clone_database = SSHOperator(
-        task_id="clone_database",
-        ssh_conn_id=conn_id,
-        command=f"{import_scripts_path}/genie-airflow-clone-db.sh {import_scripts_path} {db_properties_filepath}",
-        dag=dag,
-    )
-    
-    """
-    Does a db check for specified importer/pipeline
-    Fetches latest commit from GENIE repository
-    Refreshes CDD/Oncotree caches
-    """
-    setup_import = SSHOperator(
-        task_id="setup_import",
-        ssh_conn_id=conn_id,
-        command=f"{import_scripts_path}/genie-airflow-setup.sh {{{{ params.importer }}}} {import_scripts_path} {db_properties_filepath}",
-        dag=dag,
-    )
-
-    """
-    Imports cancer types
-    Imports genie-portal column in portal-configuration spreadsheet
-    """
-    import_genie = SSHOperator(
-        task_id="import_genie",
-        ssh_conn_id=conn_id,
-        command=f"{import_scripts_path}/genie-airflow-import-sql.sh {{{{ params.importer }}}} {import_scripts_path} {db_properties_filepath}",
-        dag=dag,
-    )
-
-    """
-    Drops ClickHouse tables
-    Copies MySQL tables to ClickHouse
-    Creates derived ClickHouse tables
-    """
-    import_clickhouse = SSHOperator(
-        task_id="import_clickhouse",
-        ssh_conn_id=conn_id,
-        command=f"{import_scripts_path}/genie-airflow-import-clickhouse.sh {import_scripts_path} {db_properties_filepath}",
-        dag=dag,
-    )
-
-    """
-    Transfers Genie deployment to newly updated database
-    """
-    transfer_deployment = SSHOperator(
-        task_id="transfer_deployment",
-        ssh_conn_id=conn_id,
-        command=f"{import_scripts_path}/genie-airflow-transfer-deployment.sh {import_scripts_path} {db_properties_filepath}",
-        dag=dag,
-    )
-
-    """
-    If any upstream tasks failed, mark the import attempt as abandoned.
-    """
-    set_import_status = SSHOperator(
-        task_id="set_import_status",
-        ssh_conn_id=conn_id,
-        trigger_rule=TriggerRule.ONE_FAILED,
-        command=f"{import_scripts_path}/set_update_process_state.sh {db_properties_filepath} abandoned",
-        dag=dag,
-    )
-
-    """
-    Removes untracked files/LFS objects from Genie repo.
-    """
-    cleanup_genie = SSHOperator(
-        task_id="cleanup_genie",
-        ssh_conn_id=conn_id,
-        trigger_rule=TriggerRule.ALL_DONE,
-        command=f"{import_scripts_path}/datasource-repo-cleanup.sh {datarepos}",
-        dag=dag,
-    )
-
-    parsed_args = parse_args("{{ params.importer }}", "{{ params.data_repos }}")
-    parsed_args >> clone_database >> setup_import >> import_genie >> import_clickhouse >> transfer_deployment >> set_import_status >> cleanup_genie
-    list(dag.tasks) >> watcher()
+globals()[_GENIE_CONFIG.dag_id] = build_import_dag(_GENIE_CONFIG)

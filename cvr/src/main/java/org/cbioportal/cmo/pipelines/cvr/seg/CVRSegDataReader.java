@@ -39,10 +39,10 @@ import org.cbioportal.cmo.pipelines.cvr.model.*;
 import java.io.*;
 import java.util.*;
 import org.apache.log4j.Logger;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.infrastructure.item.*;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.infrastructure.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.io.FileSystemResource;
 
@@ -95,7 +95,7 @@ public class CVRSegDataReader implements ItemStreamReader<CVRSegRecord> {
             mapper.setLineTokenizer(tokenizer);
             mapper.setFieldSetMapper(new CVRSegFieldSetMapper());
 
-            FlatFileItemReader<CVRSegRecord> reader = new FlatFileItemReader<>();
+            FlatFileItemReader<CVRSegRecord> reader = new FlatFileItemReader<>(mapper);
             reader.setResource(new FileSystemResource(segFile));
             reader.setLineMapper(mapper);
             reader.setLinesToSkip(1);

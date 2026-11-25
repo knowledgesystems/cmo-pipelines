@@ -39,7 +39,7 @@ import org.mskcc.cmo.ks.ddp.pipeline.util.DDPUtils;
 import java.util.*;
 import java.text.ParseException;
 import org.apache.log4j.Logger;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 
 /**

@@ -32,7 +32,7 @@
 package org.mskcc.cmo.ks.redcap.pipeline;
 
 import java.util.*;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 
 /**

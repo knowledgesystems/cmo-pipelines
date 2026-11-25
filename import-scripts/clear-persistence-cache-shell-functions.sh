@@ -31,29 +31,36 @@ function clearPersistenceCachesForPortals() {
 }
 
 # Cache clearing is organized by database. All portals based on the same (updated) cBioPortal mysql database are cleared
-function clearPersistenceCachesForMskPortals() {
-    all_msk_portals="msk msk-beta"
+function clearPersistenceCachesForMskBluePortals() {
+    send_slack_message="$1"
+    all_msk_portals="msk-blue msk-beta-blue private-blue sclc-blue"
     clearPersistenceCachesForPortals "$all_msk_portals"
-    send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK portal persistence cache was cleared :recycle:"
+    if [ "$send_slack_message" == "send-slack" ] ; then
+        send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK portal persistence cache was cleared :recycle:"
+    fi
 }
 
-function clearPersistenceCachesForExternalPortals() {
-    all_external_portals="private sclc"
-    clearPersistenceCachesForPortals "$all_external_portals"
-}
-
-function clearPersistenceCachesForTriagePortals() {
-    all_triage_portals="triage"
-    clearPersistenceCachesForPortals "$all_triage_portals"
-}
-
-function clearPersistenceCachesForHgncPortals() {
-    all_hgnc_portals="hgnc"
-    clearPersistenceCachesForPortals "$all_hgnc_portals"
+function clearPersistenceCachesForMskGreenPortals() {
+    send_slack_message="$1"
+    all_msk_portals="msk-green msk-beta-green private-green sclc-green"
+    clearPersistenceCachesForPortals "$all_msk_portals"
+    if [ "$send_slack_message" == "send-slack" ] ; then
+        send_slack_message_to_channel "#msk-pipeline-logs" "string" "MSK portal persistence cache was cleared :recycle:"
+    fi
 }
 
 function clearPersistenceCachesForPublicPortals() {
     all_public_portals="public"
+    clearPersistenceCachesForPortals "$all_public_portals"
+}
+
+function clearPersistenceCachesForPublicBluePortals() {
+    all_public_portals="public-blue public-beta-blue master-blue"
+    clearPersistenceCachesForPortals "$all_public_portals"
+}
+
+function clearPersistenceCachesForPublicGreenPortals() {
+    all_public_portals="public-green public-beta-green master-green"
     clearPersistenceCachesForPortals "$all_public_portals"
 }
 
@@ -67,7 +74,21 @@ function clearPersistenceCachesForGenieGreenPortals() {
     clearPersistenceCachesForPortals "$all_genie_portals"
 }
 
-function clearPersistenceCachesForCrdcPortals() {
-    all_crdc_portals="crdc"
-    clearPersistenceCachesForPortals "$all_crdc_portals"
+function clearPersistenceCachesForTriageBluePortals() {
+    all_triage_portals="triage-blue"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}
+
+function clearPersistenceCachesForTriageGreenPortals() {
+    all_triage_portals="triage-green"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}
+function clearPersistenceCachesForContainerizedBluePortals() {
+    all_triage_portals="containerized-blue"
+    clearPersistenceCachesForPortals "$all_triage_portals"
+}
+
+function clearPersistenceCachesForContainerizedGreenPortals() {
+    all_triage_portals="containerized-green"
+    clearPersistenceCachesForPortals "$all_triage_portals"
 }

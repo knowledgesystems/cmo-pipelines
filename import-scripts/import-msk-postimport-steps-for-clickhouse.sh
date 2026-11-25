@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+
+PORTAL_SCRIPTS_DIRECTORY="${PORTAL_SCRIPTS_DIRECTORY:-/data/portal-cron/scripts}"
+MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH="${MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH:-/data/portal-cron/pipelines-credentials/manage_msk_clickhouse_database_update_tools.properties}"
+
+AUTOMATION_ENV_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/automation-environment.sh"
+if [ ! -f $AUTOMATION_ENV_SCRIPT_FILEPATH ] ; then
+    echo "`date`: Unable to locate $AUTOMATION_ENV_SCRIPT_FILEPATH, exiting..."
+    exit 1
+fi
+source $AUTOMATION_ENV_SCRIPT_FILEPATH
+
+SET_UPDATE_PROCESS_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/set_update_process_state.sh"
+GET_DB_IN_PROD_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/get_database_currently_in_production.sh"
+DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/download_clickhouse_sql_scripts_py3.py"
+TRANSFER_COLOR_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/transfer-deployment-color.sh"
+COLOR_SWAP_CONFIG_FILEPATH="/data/portal-cron/pipelines-credentials/msk-db-color-swap-config.yaml"
+CREATE_DERIVED_TABLES_SCRIPT_FILEPATH="$PORTAL_SCRIPTS_DIRECTORY/create_derived_tables_in_clickhouse_database.sh"
+CREATE_DERIVED_TABLES_SQL_FILE_DIRPATH="$PORTAL_HOME/tmp/import-cron-dmp-wrapper/create_clickhouse_derived_tables_download"
+CLICKHOUSE_SCHEMA_BRANCH_NAME="msk-portal-db-clickhouse-sql-for-import"
+SCALE_CLICKHOUSE_CONFIG_FILEPATH="${PORTAL_HOME}/pipelines-credentials/scale_clickhouse_service_config.json"
+
+function scale_clickhouse_down() {
+    # Scale clickhouse back down
+    ${PORTAL_HOME}/scripts/scale_clickhouse_service.py ${SCALE_CLICKHOUSE_CONFIG_FILEPATH} -d msk --small -w 0
+}
+
+function output_source_database_color() {
+    # Get the current production database color
+    current_production_database_color=$(sh $GET_DB_IN_PROD_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH)
+    source_database_color="unset"
+    if [ ${current_production_database_color:0:4} == "blue" ] ; then
+        source_database_color="blue"
+    fi
+    if [ ${current_production_database_color:0:5} == "green" ] ; then
+        source_database_color="green"
+    fi
+    if [ "$destination_database_color" == "unset" ] ; then
+        echo "Error during determination of the destination database color" >&2
+        exit 1
+    fi
+    echo "$source_database_color"
+}
+
+function output_destination_database_color () {
+    source_database_color="$1"
+    if [ "$source_database_color" == "blue" ] ; then
+        echo "green"
+    fi
+    if [ "$source_database_color" == "green" ] ; then
+        echo "blue"
+    fi
+}
+
+function download_derived_table_construction_script() {
+    # Check if derived table sql script dirpath exists
+    # If not, try to create it
+    derived_table_sql_script_dirpath="$CREATE_DERIVED_TABLES_SQL_FILE_DIRPATH"
+    if ! [ -e "$derived_table_sql_script_dirpath" ] ; then
+        if ! mkdir -p "$derived_table_sql_script_dirpath" ; then
+            echo "Error: could not create target directory '$derived_table_sql_script_dirpath'" >&2
+            return 1
+        fi
+    fi
+    # Remove any scripts currently in the derived table sql script dirpath
+    if [[ -d "$derived_table_sql_script_dirpath" && "$derived_table_sql_script_dirpath" != "/" ]]; then
+        rm -rf "$derived_table_sql_script_dirpath"/*
+    fi
+    # Attempt to download the derived table SQL files from github
+    if ! $DOWNLOAD_DERVIED_TABLE_SQL_FILES_SCRIPT_FILEPATH --github_branch_name "$CLICKHOUSE_SCHEMA_BRANCH_NAME" "$derived_table_sql_script_dirpath" ; then
+        echo "Error during download of derived table construction .sql files from github" >&2
+        return 1
+    fi
+    echo "downloaded clickhouse derived table construction file(s) from branch "$CLICKHOUSE_SCHEMA_BRANCH_NAME" of cbioportal github repository"
+    return 0
+}
+
+function create_derived_tables_in_target_clickhouse_database() {
+    destination_database_color="$1"
+    if ! download_derived_table_construction_script ; then
+        return 1
+    fi
+    echo "creating derived tables in clickhouse database with color $destination_database_color"
+    $CREATE_DERIVED_TABLES_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $destination_database_color "$CREATE_DERIVED_TABLES_SQL_FILE_DIRPATH"/*
+}
+
+function create_temp_dir_if_necessary() {
+    if ! [ -d "$MSK_DMP_TMPDIR" ] ; then
+        if ! mkdir -p "$MSK_DMP_TMPDIR" ; then
+            echo "Error : could not create tmp directory '$MSK_DMP_TMPDIR'" >&2
+            scale_clickhouse_down
+            exit 1
+        fi
+    fi
+}
+
+function make_all_studies_available() {
+    destination_database_color="$1"
+    create_temp_dir_if_necessary
+    echo "setting all studies to status AVAILABLE in database color $destination_database_color"
+    JAVA_DD_AGENT_ARGS=''
+    MSK_IMPORTER_JAR_FILENAME="/data/portal-cron/lib/msk-importer-$destination_database_color.jar"
+    MSK_JAVA_IMPORTER_ARGS="$JAVA_PROXY_ARGS $java_debug_args $JAVA_SSL_ARGS $JAVA_DD_AGENT_ARGS -Dspring.profiles.active=dbcp -Djava.io.tmpdir=$MSK_DMP_TMPDIR -Dlog4j.appender.a.File=/data/portal-cron/logs/msk-dmp-importer.log -ea -cp $MSK_IMPORTER_JAR_FILENAME org.mskcc.cbio.importer.Admin"
+    $JAVA_BINARY -Xmx16g $MSK_JAVA_IMPORTER_ARGS --make-all-studies-available true
+    if [ $? -ne 0 ] ; then
+        echo "failed to set all studies to status AVAILABLE"
+        return 1
+    fi
+    return 0
+}
+
+function transfer_color_to_new_database() {
+    destination_database_color="$1"
+    echo "transferring to databases with color $destination_database_color"
+    $TRANSFER_COLOR_SCRIPT_FILEPATH $MANAGE_DATABASE_TOOL_PROPERTIES_FILEPATH $COLOR_SWAP_CONFIG_FILEPATH $destination_database_color
+}
+
+function main() {
+    echo "Performing Post-Import clickhouse processing steps"
+    source_database_color=$(output_source_database_color)
+    destination_database_color=$(output_destination_database_color $source_database_color)
+    echo "Source DB color: $source_database_color"
+    echo "Destination DB color: $destination_database_color"
+    create_derived_tables_in_target_clickhouse_database $destination_database_color
+    create_derived_tables_status=$?
+    sleep 120
+    scale_clickhouse_down
+    if [ $create_derived_tables_status -ne 0 ] ; then
+        return 1
+    fi
+    if ! make_all_studies_available $destination_database_color ; then
+        return 1
+    fi
+    if ! transfer_color_to_new_database $destination_database_color ; then
+        echo "Error : failed to transfer color to $destination_database_color --- manual adjustment needed"
+        return 1
+    fi
+    return 0
+}
+
+main $@
+exit $?
